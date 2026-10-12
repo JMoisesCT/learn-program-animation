@@ -24,6 +24,12 @@
      leccion.desbloquear()              habilita "Continuar" en el paso actual
      leccion.listoParaComprobar(bool)   habilita / deshabilita "Comprobar"
      leccion.siguiente(), leccion.anterior()
+     leccion.reiniciar()                borra el avance y empieza la lección desde cero
+
+   Un paso con data-comprobar ya resuelto se puede volver a intentar: si el alumno
+   elige otra respuesta (listoParaComprobar(true)), el botón vuelve a decir "Comprobar".
+   Cualquier botón con data-accion="reiniciar" reinicia la lección, y abrir la página
+   con #reiniciar (p. ej. desde la portada) también.
 */
 (function () {
   "use strict";
@@ -52,13 +58,27 @@
     var listo = false;        // ¿se puede pulsar "Comprobar"?
     var actual = -1;
 
-    // Retomar donde se quedó el alumno
+    // Empezar de nuevo si se pidió desde la portada
+    if (window.location.hash === "#reiniciar") {
+      borrarAvance();
+      if (window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    }
+
+    // Retomar donde se quedó el alumno (si la terminó, repasa desde el principio)
     var guardado = window.Progreso ? Progreso.obtener(id) : null;
     var inicio = 0;
     if (guardado) {
-      var maximo = guardado.completada ? total : Math.min(guardado.maximo || 0, total - 1);
+      var maximo = Math.min(guardado.maximo || 0, total - 1);
       for (var i = 0; i < maximo; i++) desbloqueados[i] = true;
-      if (!guardado.completada) inicio = Math.min(guardado.paso || 0, total - 1);
+      var paso = Math.min(guardado.paso || 0, total - 1);
+      inicio = paso === total - 1 ? 0 : paso;
+    }
+
+    /* Vuelve al paso 0 sin perder la marca de "completada" en la portada */
+    function borrarAvance() {
+      if (window.Progreso) Progreso.guardar(id, { paso: 0, maximo: 0 });
     }
 
     var leccion = {
@@ -72,6 +92,10 @@
       },
       siguiente: function () { ir(actual + 1); },
       anterior: function () { ir(actual - 1); },
+      reiniciar: function () {
+        borrarAvance();
+        window.location.reload();
+      },
       get indice() { return actual; }
     };
 
@@ -81,7 +105,7 @@
     }
 
     function modoComprobar() {
-      return pasos[actual].hasAttribute("data-comprobar") && !desbloqueados[actual];
+      return pasos[actual].hasAttribute("data-comprobar") && (!desbloqueados[actual] || listo);
     }
 
     function actualizarBotones() {
@@ -156,6 +180,7 @@
         var fn = comprobar[pasos[actual].id];
         var acierto = fn ? fn(pasos[actual], leccion) : true;
         if (acierto) {
+          listo = false;
           leccion.desbloquear();
           btnPrincipal.focus();
         } else {
@@ -172,6 +197,9 @@
 
     btnPrincipal.addEventListener("click", accionPrincipal);
     btnAtras.addEventListener("click", function () { ir(actual - 1); });
+    raiz.querySelectorAll('[data-accion="reiniciar"]').forEach(function (b) {
+      b.addEventListener("click", leccion.reiniciar);
+    });
 
     // Enter avanza cuando el foco no está en un control que ya usa Enter
     document.addEventListener("keydown", function (e) {
