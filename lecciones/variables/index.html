@@ -14,7 +14,7 @@
     .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
     .campos-dobles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-4); }
     .pista-campo { min-height: 1.5em; margin: calc(-1 * var(--esp-2)) 0 var(--esp-4); font-size: var(--texto-sm); color: var(--color-pista); font-weight: 600; }
-    .reto-cajas[hidden] { display: none; }
+    .reto-cajas[hidden], .explicacion[hidden], .fila-botones[hidden] { display: none; }
     .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
     .resumen-codigo { margin-top: var(--esp-5); }
     @media (max-width: 480px) { .campos-dobles { grid-template-columns: 1fr; gap: 0; } }
@@ -131,7 +131,7 @@
       <h2 class="paso__titulo" id="t-reto">¿Cuánto vale <code>b</code> al final?</h2>
 
       <div class="tarjeta">
-        <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">a</span> = <span class="tk-numero">4</span></span><span class="linea" id="reto-linea-2"><span class="tk-variable">b</span> = <span class="tk-variable">a</span> + <span class="tk-numero">2</span></span><span class="linea"><span class="tk-variable">a</span> = <span class="tk-numero">10</span></span></code></pre>
+        <pre class="codigo" id="reto-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">a</span> = <span class="tk-numero">4</span></span><span class="linea" id="reto-linea-2"><span class="tk-variable">b</span> = <span class="tk-variable">a</span> + <span class="tk-numero">2</span></span><span class="linea"><span class="tk-variable">a</span> = <span class="tk-numero">10</span></span></code></pre>
 
         <fieldset class="opciones" id="opciones-reto">
           <legend class="visualmente-oculto">Valor final de b</legend>
@@ -150,6 +150,10 @@
             <code class="caja__nombre">b</code>
           </div>
         </div>
+        <p class="explicacion" id="reto-explicacion" aria-live="polite" hidden></p>
+        <div class="fila-botones" id="reto-repetir" hidden>
+          <button type="button" class="btn btn-secundario" id="btn-reto-repetir">↺ Ver otra vez</button>
+        </div>
         <div class="feedback" id="fb-reto" role="status" aria-live="polite"></div>
       </div>
     </section>
@@ -161,6 +165,9 @@
       <div class="tarjeta">
         <p class="resumen-linea">Una variable es una caja con nombre que guarda un valor que puede cambiar.</p>
         <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-variable">nombre</span> = <span class="tk-numero">5</span>  <span class="tk-comentario"># crear</span></span><span class="linea"><span class="tk-variable">nombre</span> = <span class="tk-numero">7</span>  <span class="tk-comentario"># cambiar</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
       </div>
     </section>
 
@@ -176,6 +183,7 @@
 
 <script src="../../assets/js/progreso.js"></script>
 <script src="../../assets/js/caja.js"></script>
+<script src="../../assets/js/codigo.js"></script>
 <script src="../../assets/js/pasos.js"></script>
 <script>
 (function () {
@@ -298,22 +306,61 @@
     "10": "10 es lo que acaba valiendo a, pero b es otra caja. ¿Qué se guardó en b en la línea 2?"
   };
 
-  function entrarReto(paso, leccion, info) {
-    var radios = paso.querySelectorAll('input[name="reto"]');
-    radios.forEach(function (r) {
+  /* Ejecución animada del reto: cada línea se resalta mientras cambia su caja */
+  var guionReto = [
+    { linea: 0, caja: "caja-a", valor: 4, texto: "Línea 1: <strong>a</strong> guarda 4." },
+    { linea: 1, caja: "caja-b", valor: 6, texto: "Línea 2: <strong>b = a + 2</strong> → 4 + 2 = <strong>6</strong>." },
+    { linea: 2, caja: "caja-a", valor: 10, texto: "Línea 3: <strong>a</strong> cambia a 10. La caja <strong>b</strong> sigue con 6." }
+  ];
+  var temporizadoresReto = [];
+
+  function pararAnimacionReto() {
+    temporizadoresReto.forEach(clearTimeout);
+    temporizadoresReto = [];
+  }
+
+  function animarReto() {
+    pararAnimacionReto();
+    $("reto-cajas").hidden = false;
+    $("reto-explicacion").hidden = false;
+    $("reto-repetir").hidden = true;
+    Caja.vaciar($("caja-a"));
+    Caja.vaciar($("caja-b"));
+    Codigo.limpiar($("reto-codigo"));
+    guionReto.forEach(function (p, i) {
+      temporizadoresReto.push(setTimeout(function () {
+        Codigo.marcar($("reto-codigo"), { activas: [p.linea] });
+        Caja.poner($(p.caja), p.valor);
+        $("reto-explicacion").innerHTML = p.texto;
+        if (i === guionReto.length - 1) $("reto-repetir").hidden = false;
+      }, 300 + i * 1400));
+    });
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso, leccion) {
+    pararAnimacionReto();
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
       r.onchange = function () {
         paso.querySelectorAll(".opcion").forEach(function (o) {
           o.classList.remove("opcion--correcta", "opcion--incorrecta");
         });
-        $("reto-linea-2").classList.remove("linea--activa");
+        Codigo.limpiar($("reto-codigo"));
         Pasos.limpiarFeedback($("fb-reto"));
         leccion.listoParaComprobar(true);
       };
     });
-    if (!info.desbloqueado) {
-      var marcada = paso.querySelector('input[name="reto"]:checked');
-      leccion.listoParaComprobar(!!marcada);
-    }
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    Codigo.limpiar($("reto-codigo"));
+    Pasos.limpiarFeedback($("fb-reto"));
+    $("reto-cajas").hidden = true;
+    $("reto-explicacion").hidden = true;
+    $("reto-repetir").hidden = true;
+    $("btn-reto-repetir").onclick = animarReto;
   }
 
   function comprobarReto(paso) {
@@ -325,19 +372,13 @@
       opcion.classList.add("opcion--correcta");
       Pasos.feedback($("fb-reto"), "ok",
         "¡Exacto! b se calculó cuando a valía 4. Cambiar a después no toca la caja b.");
-      var cajas = $("reto-cajas");
-      cajas.hidden = false;
-      Caja.vaciar($("caja-a"));
-      Caja.vaciar($("caja-b"));
-      Caja.poner($("caja-a"), 4);
-      setTimeout(function () { Caja.poner($("caja-b"), 6); }, Pasos.reducirMovimiento ? 0 : 450);
-      setTimeout(function () { Caja.poner($("caja-a"), 10); }, Pasos.reducirMovimiento ? 0 : 1100);
       paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      animarReto();
       return true;
     }
 
     opcion.classList.add("opcion--incorrecta");
-    $("reto-linea-2").classList.add("linea--activa");
+    Codigo.marcar($("reto-codigo"), { activas: [1] });
     Pasos.feedback($("fb-reto"), "pista", pistasReto[marcada.value] || "Repasa el código línea a línea.");
     return false;
   }
