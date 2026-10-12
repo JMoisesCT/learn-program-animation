@@ -35,3 +35,5 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - Commits pequeños y descriptivos, en español o inglés pero consistentes.
 - Autoría: commits y PRs solo a nombre de Moisés Cumpa <moises.cumpa@gmail.com>. No añadir `Co-Authored-By` de Claude, enlaces de sesión ni firmas tipo "Generated with Claude Code".
 - Publicación: cada cambio va en una rama → PR → fusión inmediata a `main` (GitHub Pages publica desde `main`). No hacer push directo a `main`.
+- Ramas con nombre descriptivo: `leccion/<tema>` para lecciones nuevas, `mejora/<tema>` o `arreglo/<tema>` para el resto (p. ej. `leccion/funciones`, `arreglo/progreso-portada`). No usar la rama aleatoria que asigna la sesión.
+- Títulos de PR cortos y en frase nominal, como los escribiría una persona (p. ej. «Lección de Bucles», «Resaltado de líneas en el reto»).
