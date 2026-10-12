@@ -33,3 +33,4 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - Una lección nueva = su carpeta + una tarjeta en `index.html`.
 - Probar cada página en el navegador (escritorio y ancho móvil) antes de dar la tarea por terminada.
 - Commits pequeños y descriptivos, en español o inglés pero consistentes.
+- Autoría: commits y PRs solo a nombre de Moisés Cumpa <moises.cumpa@gmail.com>. No añadir `Co-Authored-By` de Claude, enlaces de sesión ni firmas tipo "Generated with Claude Code".
