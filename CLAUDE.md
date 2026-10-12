@@ -25,7 +25,7 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - Enseñar **haciendo**: manipular antes de leer. Sliders, arrastrar y soltar, botones "paso a paso", código editable con resultado en vivo.
 - Orden de cada lección: intuición visual → interacción guiada → pequeño reto → resumen de una línea.
 - Texto mínimo, frases cortas, vocabulario simple. Analogías cotidianas (cajas, semáforos, repetir una tarea).
-- Mostrar el código real (JavaScript o pseudocódigo en español) junto a la visualización, resaltando la línea que se ejecuta.
+- El lenguaje que se enseña es **Python**: mostrar el código real en Python junto a la visualización, resaltando la línea que se ejecuta. (La lógica de las páginas sigue siendo JavaScript; la ejecución de Python se simula.)
 - Los retos tienen respuesta verificable en el navegador, sin servidor.
 
 ## Convenciones de trabajo
