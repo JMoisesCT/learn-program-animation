@@ -5,6 +5,8 @@
    Codigo.limpiar(preEl)
    Codigo.consola(consolaEl, ["línea 1", …])
        muestra la salida de print(); con [] muestra "(sin salida)".
+   Codigo.agregar(consolaEl, "texto")
+       añade una línea de salida sin repintar las anteriores.
    Codigo.booleano(el, valor)
        pinta un chip True / False con una pequeña animación al cambiar.
 */
@@ -43,6 +45,15 @@
     });
   }
 
+  function agregar(el, texto) {
+    var vacia = el.querySelector(".consola__vacia");
+    if (vacia) vacia.remove();
+    var l = document.createElement("span");
+    l.className = "consola__linea";
+    l.textContent = texto;
+    el.appendChild(l);
+  }
+
   function booleano(el, valor) {
     var texto = valor ? "True" : "False";
     var cambia = el.textContent !== texto;
@@ -54,5 +65,5 @@
     }
   }
 
-  window.Codigo = { marcar: marcar, limpiar: limpiar, consola: consola, booleano: booleano };
+  window.Codigo = { marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano };
 })();
