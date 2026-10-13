@@ -10,6 +10,8 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
   - `assets/css/base.css`: tokens de diseño y componentes compartidos.
   - `assets/js/`: utilidades compartidas (motor de pasos, progreso en `localStorage`).
   - `lecciones/<tema>/index.html`: una carpeta por tema (`variables/`, `condicionales/`, `bucles/`, …).
+  - `lecciones/<tema>/<sublección>/index.html`: sublecciones que profundizan un tema (p. ej. `variables/formulas/`, `variables/reuso/`). Las rutas a `assets/` suben un nivel más (`../../../`).
+- Orden actual de lecciones: Variables → Fórmulas → Reúso → Condicionales → Bucles → Funciones → (Listas, próximamente).
 - Rutas relativas siempre (el sitio vive bajo `/learn-program-animation/` en GitHub Pages).
 - Accesible: contraste suficiente, navegable con teclado, `prefers-reduced-motion` respetado, funciona en móvil.
 
@@ -31,7 +33,9 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 ## Convenciones de trabajo
 - Reutilizar `base.css` y las utilidades de `assets/js/` antes de crear estilos o scripts nuevos.
 - Tarjetas interactivas: `<div class="tarjeta lab">` con hasta tres grupos: `lab__principal` (código y controles), `lab__visual` (cajas, escenas) y `lab__resultado` (salida, notas, feedback). En escritorio (≥1024px) se reparten en dos columnas; en móvil se apilan en el orden del HTML, así que ese orden debe ser el que se quiere ver en el móvil.
-- Una lección nueva = su carpeta + una tarjeta en `index.html`.
+- Una lección nueva = su carpeta + una tarjeta en `index.html`, en su lugar según el orden de lecciones.
+- `data-leccion` (en la lección y en su tarjeta de la portada) es la clave del progreso: el nombre del tema, o `<tema>-<sublección>` en las sublecciones (p. ej. `variables-reuso`). No cambiarla una vez publicada o se pierde el avance guardado.
+- El resumen final enlaza a la lección siguiente con un botón «Siguiente: <Lección> →»; al añadir una lección, actualizar también el enlace de la anterior.
 - Probar cada página en el navegador (escritorio y ancho móvil) antes de dar la tarea por terminada.
 - Commits pequeños y descriptivos, en español o inglés pero consistentes.
 - Autoría: commits y PRs solo a nombre de Moisés Cumpa <moises.cumpa@gmail.com>. No añadir `Co-Authored-By` de Claude, enlaces de sesión ni firmas tipo "Generated with Claude Code".
