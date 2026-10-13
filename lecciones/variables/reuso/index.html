@@ -54,6 +54,11 @@
     .expresion--aparece > :nth-child(4) { animation-delay: 400ms; }
     .expresion__resultado { color: var(--color-acento); }
     .expresion__viejo { color: var(--color-pista); }
+
+    /* Pasos 3 y 4: el código crece una línea por cada acción */
+    .codigo .linea--pasada { opacity: 0.6; }
+    .codigo .linea--nueva { animation: aparecer var(--dur) ease; }
+    .codigo .linea--hueco::before { content: "⋮"; counter-increment: none; }
   </style>
 </head>
 <body>
@@ -151,7 +156,7 @@
       <p>En un juego recoges monedas. La línea 2 usa <code>monedas</code> a los dos lados del <code>=</code>. Recoge unas cuantas y mira qué pasa.</p>
       <div class="tarjeta lab">
         <div class="lab__principal">
-          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">monedas</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-variable">monedas</span> = <span class="tk-variable">monedas</span> + <span class="tk-numero">1</span></span></code></pre>
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">monedas</span> = <span class="tk-numero">0</span>  <span class="tk-comentario"># vale 0</span></span></code></pre>
           <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
           <div class="fila-botones">
             <button type="button" class="btn btn-secundario" id="p3-reiniciar" hidden>↺ Reiniciar</button>
@@ -183,10 +188,10 @@
     <!-- 4. La forma corta: += -= *= -->
     <section class="paso" id="paso-corta" data-requiere aria-labelledby="t-corta">
       <h2 class="paso__titulo" id="t-corta">La forma corta: <code>+=</code></h2>
-      <p>Tu hucha tiene 20 soles. Ahorra, gasta y duplica. Prueba los tres botones.</p>
+      <p>Tu monedero tiene 20 soles. Ahorra, gasta y duplica. Prueba los tres botones.</p>
       <div class="tarjeta lab">
         <div class="lab__principal">
-          <pre class="codigo" id="p4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">dinero</span> = <span class="tk-numero">20</span></span><span class="linea"><span class="tk-variable">dinero</span> <span id="p4-operador">+=</span> <span class="tk-numero" id="p4-cantidad">5</span></span></code></pre>
+          <pre class="codigo" id="p4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">dinero</span> = <span class="tk-numero">20</span>  <span class="tk-comentario"># vale 20</span></span></code></pre>
           <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
           <div class="fila-botones">
             <button type="button" class="btn btn-secundario" data-op="+=">+ Ahorrar 5</button>
@@ -369,11 +374,44 @@
     };
   }
 
+  /* ---------- Código que crece (pasos 3 y 4) ---------- */
+  var MAX_LINEAS = 6;
+
+  // lineas: [{ html, valor }], una por cada vez que se ejecutó algo.
+  // La última queda resaltada y cada una lleva un comentario con el valor.
+  // Si no caben, se ven la primera y las últimas, con un comentario en medio;
+  // los números de línea siguen siendo los reales.
+  function pintarCodigo(pre, lineas) {
+    var code = pre.querySelector("code");
+    var ocultas = lineas.length > MAX_LINEAS ? lineas.length - MAX_LINEAS + 1 : 0;
+    code.textContent = "";
+    lineas.forEach(function (l, i) {
+      if (i > 0 && i <= ocultas) {
+        if (i === 1) {
+          var hueco = document.createElement("span");
+          hueco.className = "linea linea--hueco";
+          hueco.innerHTML = '<span class="tk-comentario"># … ' + ocultas +
+            (ocultas === 1 ? " línea más" : " líneas más") + "</span>";
+          code.appendChild(hueco);
+        }
+        return;
+      }
+      var ultima = i === lineas.length - 1;
+      var el = document.createElement("span");
+      el.className = "linea " + (ultima ? "linea--activa" : "linea--pasada");
+      if (ultima && i > 0) el.classList.add("linea--nueva");
+      if (ocultas && i === ocultas + 1) el.style.counterSet = "linea " + i;
+      el.innerHTML = l.html + '  <span class="tk-comentario"># vale ' + l.valor + "</span>";
+      code.appendChild(el);
+    });
+  }
+
   /* ---------- 3. Usar su propio valor ---------- */
   var MAX_MONEDAS_VISIBLES = 10;
 
   function entrarContador(paso, leccion) {
     var monedas = 0;
+    var lineas = [];
     var btnRecoger = $("p3-recoger");
     var btnReiniciar = $("p3-reiniciar");
 
@@ -406,8 +444,9 @@
 
     function preparar() {
       monedas = 0;
+      lineas = [{ html: '<span class="tk-variable">monedas</span> = <span class="tk-numero">0</span>', valor: 0 }];
       Caja.actualizar($("caja-monedas"), 0);
-      Codigo.marcar($("p3-codigo"), { activas: [0] });
+      pintarCodigo($("p3-codigo"), lineas);
       $("p3-expresion").hidden = true;
       $("p3-explicacion").innerHTML = "La línea 1 ya se ejecutó: <strong>monedas</strong> empieza en 0.";
       Pasos.limpiarFeedback($("fb-contador"));
@@ -418,7 +457,11 @@
     btnRecoger.onclick = function () {
       var viejo = monedas;
       monedas++;
-      Codigo.marcar($("p3-codigo"), { activas: [1] });
+      lineas.push({
+        html: '<span class="tk-variable">monedas</span> = <span class="tk-variable">monedas</span> + <span class="tk-numero">1</span>',
+        valor: monedas
+      });
+      pintarCodigo($("p3-codigo"), lineas);
 
       var exp = $("p3-expresion");
       $("p3-viejo").textContent = viejo;
@@ -430,7 +473,7 @@
 
       Caja.poner($("caja-monedas"), monedas);
       pintarMonedero();
-      $("p3-explicacion").innerHTML = "Primero la derecha, con el valor <strong>viejo</strong>: " +
+      $("p3-explicacion").innerHTML = "Línea " + lineas.length + ": primero la derecha, con el valor <strong>viejo</strong>: " +
         viejo + " + 1 = " + monedas + ". Después se guarda en la caja: <strong>monedas</strong> vale " + monedas + ".";
       btnReiniciar.hidden = false;
 
@@ -461,6 +504,7 @@
   function entrarCorta(paso, leccion) {
     var dinero = DINERO_INICIAL;
     var usados = {};
+    var lineas = [];
     var botones = paso.querySelectorAll("[data-op]");
     var btnReiniciar = $("p4-reiniciar");
 
@@ -475,11 +519,10 @@
     function preparar() {
       dinero = DINERO_INICIAL;
       usados = {};
-      $("p4-operador").textContent = "+=";
-      $("p4-cantidad").textContent = "5";
+      lineas = [{ html: '<span class="tk-variable">dinero</span> = <span class="tk-numero">' + DINERO_INICIAL + "</span>", valor: dinero }];
       Caja.actualizar($("caja-dinero"), dinero);
-      Codigo.marcar($("p4-codigo"), { activas: [0] });
-      $("p4-explicacion").innerHTML = "La hucha empieza con 20. Pulsa un botón.";
+      pintarCodigo($("p4-codigo"), lineas);
+      $("p4-explicacion").innerHTML = "El monedero empieza con " + DINERO_INICIAL + ". Pulsa un botón.";
       Pasos.limpiarFeedback($("fb-corta"));
       btnReiniciar.hidden = true;
       actualizarBotones();
@@ -493,9 +536,11 @@
         dinero = op.calcular(dinero);
         usados[clave] = true;
 
-        $("p4-operador").textContent = clave;
-        $("p4-cantidad").textContent = op.cantidad;
-        Codigo.marcar($("p4-codigo"), { activas: [1] });
+        lineas.push({
+          html: '<span class="tk-variable">dinero</span> ' + clave + ' <span class="tk-numero">' + op.cantidad + "</span>",
+          valor: dinero
+        });
+        pintarCodigo($("p4-codigo"), lineas);
         Caja.poner($("caja-dinero"), dinero);
         $("p4-explicacion").innerHTML = "<code>dinero " + clave + " " + op.cantidad + "</code> es lo mismo que " +
           "<code>dinero = dinero " + op.signo + " " + op.cantidad + "</code>: " +
