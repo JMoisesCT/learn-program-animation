@@ -11,7 +11,7 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
   - `assets/js/`: utilidades compartidas (motor de pasos, progreso en `localStorage`).
   - `lecciones/<tema>/index.html`: una carpeta por tema (`variables/`, `condicionales/`, `bucles/`, …).
   - `lecciones/<tema>/<sublección>/index.html`: sublecciones que profundizan un tema (p. ej. `variables/formulas/`, `variables/reuso/`). Las rutas a `assets/` suben un nivel más (`../../../`).
-- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Condicionales → Bucles → Funciones → (Listas, próximamente).
+- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales → Bucles → Funciones → (Listas, próximamente).
 - Rutas relativas siempre (el sitio vive bajo `/learn-program-animation/` en GitHub Pages).
 - Accesible: contraste suficiente, navegable con teclado, `prefers-reduced-motion` respetado, funciona en móvil.
 
