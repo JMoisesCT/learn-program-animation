@@ -72,14 +72,16 @@
     <section class="paso" id="paso-receta" data-requiere aria-labelledby="t-receta">
       <span class="paso__etiqueta">Funciones</span>
       <h1 class="paso__titulo" id="t-receta">Una función es una receta con nombre</h1>
-      <p>Escribes las instrucciones <strong>una vez</strong> y las usas cuando quieras, llamándola por su nombre. Pulsa el botón varias veces.</p>
+      <p>Escribes las instrucciones <strong>una vez</strong> y las usas cuando quieras, llamándola por su nombre. Úsala varias veces: de golpe o línea a línea.</p>
 
       <div class="tarjeta">
         <pre class="codigo" id="p1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">saludar</span>():</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Hola!"</span>)</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"¿Qué tal?"</span>)</span></code></pre>
-        <div class="fila-botones">
-          <button type="button" class="btn btn-secundario btn-llamada" id="p1-llamar">saludar()</button>
-        </div>
         <p class="estado-fila" aria-live="polite">Llamadas: <strong id="p1-llamadas">0</strong></p>
+        <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+        <div class="fila-botones">
+          <button type="button" class="btn btn-secundario btn-llamada" id="p1-llamar" aria-pressed="false">saludar()</button>
+          <button type="button" class="btn btn-secundario" id="p1-ejecutar">Ejecutar línea ▸</button>
+        </div>
         <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
         <p class="nota"><code>def</code> solo <strong>define</strong> la receta: no hace nada hasta que la llamas con <code>saludar()</code>.</p>
         <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
@@ -124,8 +126,10 @@
           </div>
         </div>
         <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">saludar</span>(<span class="tk-variable">nombre</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Hola, "</span> + <span class="tk-variable">nombre</span> + <span class="tk-texto">"!"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">saludar</span>(<span class="tk-texto">"<span id="p3-codigo-nombre">Ana</span>"</span>)</span></code></pre>
+        <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
         <div class="fila-botones">
-          <button type="button" class="btn btn-secundario" id="p3-ejecutar">Ejecutar ▸</button>
+          <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+          <button type="button" class="btn btn-secundario" id="p3-ejecutar">Ejecutar línea ▸</button>
         </div>
         <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
         <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
@@ -228,32 +232,16 @@
   function $(id) { return document.getElementById(id); }
 
   var leccion; // se asigna al final, con Pasos.iniciar
-  var pausa = Pasos.reducirMovimiento ? 150 : 450;
 
   /* ---------- 1. Receta con nombre ---------- */
   var p1Llamadas = 0;
 
-  function llamarP1() {
-    var boton = $("p1-llamar");
-    var codigo = $("p1-codigo");
-    boton.disabled = true;
-    Codigo.marcar(codigo, { activas: [1] });
-    Codigo.agregar($("p1-consola"), "¡Hola!");
-    setTimeout(function () {
-      Codigo.marcar(codigo, { activas: [2] });
-      Codigo.agregar($("p1-consola"), "¿Qué tal?");
-    }, pausa);
-    setTimeout(function () {
-      Codigo.limpiar(codigo);
-      boton.disabled = false;
-      boton.focus();
-      p1Llamadas++;
-      $("p1-llamadas").textContent = p1Llamadas;
-      if (p1Llamadas >= 2) {
-        Pasos.feedback($("p1-fb"), "ok", "Escrita una vez, usada " + p1Llamadas + " veces. Esa es la idea.");
-        leccion.desbloquear();
-      }
-    }, pausa * 2);
+  function trazaReceta() {
+    return [
+      { linea: 0, texto: "Llamas a <strong>saludar()</strong>: Python salta a la receta." },
+      { linea: 1, salida: "¡Hola!", texto: "Imprime «¡Hola!»." },
+      { linea: 2, salida: "¿Qué tal?", texto: "Imprime «¿Qué tal?». La receta terminó." }
+    ];
   }
 
   /* ---------- 2. Llamar y volver ---------- */
@@ -280,37 +268,36 @@
 
   /* ---------- 3. Parámetros ---------- */
   var p3Nombres = {};
+  var p3Nombre = "";
 
   function nombreP3() { return $("p3-nombre").value.trim(); }
 
-  function ejecutarP3() {
-    var nombre = nombreP3();
-    if (!nombre) {
-      Pasos.feedback($("p3-fb"), "pista", "Escribe un nombre primero.");
-      $("p3-nombre").focus();
-      return;
+  function trazaParametro() {
+    p3Nombre = nombreP3();
+    var texto = '"' + p3Nombre + '"';
+    return [
+      { linea: 3, texto: "Llama a <strong>saludar(" + texto + ")</strong>: salta a la función llevando ese texto.", estado: { nombre: null } },
+      { linea: 0, texto: "El parámetro <strong>nombre</strong> recibe " + texto + ".", estado: { nombre: texto } },
+      { linea: 1, salida: "¡Hola, " + p3Nombre + "!", texto: "Imprime «¡Hola, " + p3Nombre + "!»." }
+    ];
+  }
+
+  // Sin nombre no se ejecuta: avisa y no deja que el botón haga nada
+  function exigirNombreP3(e) {
+    if (nombreP3()) return;
+    e.stopImmediatePropagation();
+    Pasos.feedback($("p3-fb"), "pista", "Escribe un nombre primero.");
+    $("p3-nombre").focus();
+  }
+
+  function terminarP3() {
+    p3Nombres[p3Nombre.toLowerCase()] = true;
+    if (Object.keys(p3Nombres).length >= 2) {
+      Pasos.feedback($("p3-fb"), "ok", "La misma función, otro resultado: depende del valor que le pases.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p3-fb"), "pista", "Ahora cambia el nombre y ejecútalo otra vez.");
     }
-    var codigo = $("p3-codigo");
-    var boton = $("p3-ejecutar");
-    boton.disabled = true;
-    Codigo.marcar(codigo, { activas: [3] });
-    setTimeout(function () {
-      Codigo.marcar(codigo, { activas: [0] });
-      Caja.poner($("p3-caja"), '"' + nombre + '"');
-    }, pausa);
-    setTimeout(function () {
-      Codigo.marcar(codigo, { activas: [1] });
-      Codigo.agregar($("p3-consola"), "¡Hola, " + nombre + "!");
-      boton.disabled = false;
-      p3Nombres[nombre.toLowerCase()] = true;
-      var distintos = Object.keys(p3Nombres).length;
-      if (distintos >= 2) {
-        Pasos.feedback($("p3-fb"), "ok", "La misma función, otro resultado: depende del valor que le pases.");
-        leccion.desbloquear();
-      } else {
-        Pasos.feedback($("p3-fb"), "pista", "Ahora cambia el nombre y ejecútalo otra vez.");
-      }
-    }, pausa * 2);
   }
 
   /* ---------- 4. return ---------- */
@@ -414,7 +401,24 @@
   }
 
   /* ---------- Conexiones ---------- */
-  $("p1-llamar").addEventListener("click", llamarP1);
+  var trazaP1 = Traza.crear({
+    codigo: $("p1-codigo"),
+    explicacion: $("p1-explicacion"),
+    consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"),
+    reproducir: $("p1-llamar"),
+    generar: trazaReceta,
+    intervalo: 900,
+    repetible: true,
+    alTerminar: function () {
+      p1Llamadas++;
+      $("p1-llamadas").textContent = p1Llamadas;
+      if (p1Llamadas >= 2) {
+        Pasos.feedback($("p1-fb"), "ok", "Escrita una vez, usada " + p1Llamadas + " veces. Esa es la idea.");
+        leccion.desbloquear();
+      }
+    }
+  });
 
   Traza.crear({
     codigo: $("p2-codigo"),
@@ -439,16 +443,39 @@
     }
   });
 
+  // Se capturan antes que los de Traza para poder frenar la ejecución sin nombre
+  $("p3-reproducir").addEventListener("click", exigirNombreP3);
+  $("p3-ejecutar").addEventListener("click", exigirNombreP3);
+
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    generar: trazaParametro,
+    intervalo: 900,
+    repetible: true,
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.nombre === null) Caja.vaciar($("p3-caja"));
+      else if (e.nombre !== undefined) Caja.poner($("p3-caja"), e.nombre);
+    },
+    alTerminar: terminarP3
+  });
+
   $("p3-nombre").addEventListener("input", function () {
     $("p3-codigo-nombre").textContent = nombreP3();
+    trazaP3.cancelar();
+    Caja.vaciar($("p3-caja"));
   });
   // Enter en el campo ejecuta el código (en vez de pulsar "Continuar")
   $("p3-nombre").addEventListener("keydown", function (e) {
     if (e.key !== "Enter" || e.isComposing) return;
     e.preventDefault();
-    if (!$("p3-ejecutar").disabled) ejecutarP3();
+    if (nombreP3()) trazaP3.reproducir();
+    else exigirNombreP3(e);
   });
-  $("p3-ejecutar").addEventListener("click", ejecutarP3);
 
   var trazaP4 = Traza.crear({
     codigo: $("p4-codigo"),
@@ -495,8 +522,18 @@
     r.addEventListener("change", cambiarReto);
   });
 
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() { trazaP1.detener(); trazaP3.detener(); }
+
   leccion = Pasos.iniciar({
-    alEntrar: { "paso-reto": entrarReto },
+    alEntrar: {
+      "paso-receta": pausar,
+      "paso-salto": pausar,
+      "paso-parametro": pausar,
+      "paso-return": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
     comprobar: { "paso-reto": comprobarReto }
   });
 })();

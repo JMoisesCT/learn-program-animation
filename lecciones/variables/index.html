@@ -151,8 +151,10 @@
           </div>
         </div>
         <p class="explicacion" id="reto-explicacion" aria-live="polite" hidden></p>
-        <div class="fila-botones" id="reto-repetir" hidden>
-          <button type="button" class="btn btn-secundario" id="btn-reto-repetir">↺ Ver otra vez</button>
+        <div class="fila-botones" id="reto-botones" hidden>
+          <button type="button" class="btn btn-secundario" id="btn-reto-reiniciar">↺ Reiniciar</button>
+          <button type="button" class="btn btn-secundario" id="btn-reto-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+          <button type="button" class="btn btn-secundario" id="btn-reto-ejecutar">Ejecutar línea ▸</button>
         </div>
         <div class="feedback" id="fb-reto" role="status" aria-live="polite"></div>
       </div>
@@ -184,6 +186,7 @@
 <script src="../../assets/js/progreso.js"></script>
 <script src="../../assets/js/caja.js"></script>
 <script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/traza.js"></script>
 <script src="../../assets/js/pasos.js"></script>
 <script>
 (function () {
@@ -306,40 +309,37 @@
     "10": "10 es lo que acaba valiendo a, pero b es otra caja. ¿Qué se guardó en b en la línea 2?"
   };
 
-  /* Ejecución animada del reto: cada línea se resalta mientras cambia su caja */
-  var guionReto = [
-    { linea: 0, caja: "caja-a", valor: 4, texto: "Línea 1: <strong>a</strong> guarda 4." },
-    { linea: 1, caja: "caja-b", valor: 6, texto: "Línea 2: <strong>b = a + 2</strong> → 4 + 2 = <strong>6</strong>." },
-    { linea: 2, caja: "caja-a", valor: 10, texto: "Línea 3: <strong>a</strong> cambia a 10. La caja <strong>b</strong> sigue con 6." }
-  ];
-  var temporizadoresReto = [];
+  /* Ejecución del reto: cada línea se resalta mientras cambia su caja */
+  var trazaReto = Traza.crear({
+    codigo: $("reto-codigo"),
+    explicacion: $("reto-explicacion"),
+    ejecutar: $("btn-reto-ejecutar"),
+    reproducir: $("btn-reto-reproducir"),
+    reiniciar: $("btn-reto-reiniciar"),
+    intervalo: 1400,
+    generar: function () {
+      return [
+        { linea: 0, estado: { caja: "caja-a", valor: 4 }, texto: "Línea 1: <strong>a</strong> guarda 4." },
+        { linea: 1, estado: { caja: "caja-b", valor: 6 }, texto: "Línea 2: <strong>b = a + 2</strong> → 4 + 2 = <strong>6</strong>." },
+        { linea: 2, estado: { caja: "caja-a", valor: 10 }, texto: "Línea 3: <strong>a</strong> cambia a 10. La caja <strong>b</strong> sigue con 6." }
+      ];
+    },
+    alReiniciar: function () {
+      Caja.vaciar($("caja-a"));
+      Caja.vaciar($("caja-b"));
+    },
+    alPaso: function (paso) { Caja.poner($(paso.estado.caja), paso.estado.valor); }
+  });
 
-  function pararAnimacionReto() {
-    temporizadoresReto.forEach(clearTimeout);
-    temporizadoresReto = [];
-  }
-
-  function animarReto() {
-    pararAnimacionReto();
-    $("reto-cajas").hidden = false;
-    $("reto-explicacion").hidden = false;
-    $("reto-repetir").hidden = true;
-    Caja.vaciar($("caja-a"));
-    Caja.vaciar($("caja-b"));
-    Codigo.limpiar($("reto-codigo"));
-    guionReto.forEach(function (p, i) {
-      temporizadoresReto.push(setTimeout(function () {
-        Codigo.marcar($("reto-codigo"), { activas: [p.linea] });
-        Caja.poner($(p.caja), p.valor);
-        $("reto-explicacion").innerHTML = p.texto;
-        if (i === guionReto.length - 1) $("reto-repetir").hidden = false;
-      }, 300 + i * 1400));
-    });
+  function mostrarReto(visible) {
+    $("reto-cajas").hidden = !visible;
+    $("reto-explicacion").hidden = !visible;
+    $("reto-botones").hidden = !visible;
   }
 
   /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
   function entrarReto(paso, leccion) {
-    pararAnimacionReto();
+    trazaReto.reiniciar();
     paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
       r.checked = false;
       r.disabled = false;
@@ -357,10 +357,7 @@
     });
     Codigo.limpiar($("reto-codigo"));
     Pasos.limpiarFeedback($("fb-reto"));
-    $("reto-cajas").hidden = true;
-    $("reto-explicacion").hidden = true;
-    $("reto-repetir").hidden = true;
-    $("btn-reto-repetir").onclick = animarReto;
+    mostrarReto(false);
   }
 
   function comprobarReto(paso) {
@@ -373,7 +370,9 @@
       Pasos.feedback($("fb-reto"), "ok",
         "¡Exacto! b se calculó cuando a valía 4. Cambiar a después no toca la caja b.");
       paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
-      animarReto();
+      mostrarReto(true);
+      trazaReto.reiniciar();
+      trazaReto.reproducir();
       return true;
     }
 
