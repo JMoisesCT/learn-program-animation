@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reúso · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: reutilizar una variable en varios sitios y actualizarla con su propio valor (x = x + 1, +=).">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong { color: var(--color-texto); }
+    .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .control-slider { margin-top: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .cajas { gap: var(--esp-5) var(--esp-6); }
+    .lab__visual > .expresion { margin: var(--esp-2) 0 var(--esp-3); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* Paso 1: números que se tocan dentro del código */
+    .codigo .numero-editable {
+      font: inherit;
+      color: var(--tk-numero);
+      background: rgba(255, 212, 121, 0.12);
+      border: 0;
+      border-bottom: 2px dashed var(--tk-numero);
+      border-radius: 4px 4px 0 0;
+      padding: 0 0.45em;
+      cursor: pointer;
+    }
+    .codigo .numero-editable:hover { background: rgba(255, 212, 121, 0.24); }
+    .codigo .numero-editable:disabled { background: none; border-bottom-color: transparent; cursor: default; }
+    .numero-editable--cambiado { animation: valor-pulso 260ms ease-out; }
+
+    /* Paso 2: los usos de la variable se iluminan al cambiarla */
+    .uso { border-radius: 4px; transition: background-color var(--dur); }
+    .uso--brilla { background: rgba(142, 199, 255, 0.28); box-shadow: 0 0 0 2px rgba(142, 199, 255, 0.5); }
+    .contador-cambios { margin: var(--esp-2) 0 0; text-align: center; font-weight: 600; color: var(--color-azul); }
+
+    /* Paso 3: monedero que se llena */
+    .monedero { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.15rem; min-height: 2.6rem; max-width: 18rem; margin: 0 auto; }
+    .moneda { font-size: 1.5rem; line-height: 1; animation: moneda-cae 420ms var(--curva-rebote) both; }
+    .monedero__vacio { color: var(--color-texto-suave); font-size: var(--texto-sm); }
+    .monedero__mas { font-weight: 700; color: var(--color-texto-suave); }
+    @keyframes moneda-cae { from { transform: translateY(-1.5rem) scale(0.6); opacity: 0; } }
+
+    /* La expresión aparece por partes: fórmula → valores → resultado */
+    .expresion--aparece > * { animation: aparecer var(--dur) ease both; }
+    .expresion--aparece > :nth-child(3) { animation-delay: 250ms; }
+    .expresion--aparece > :nth-child(5) { animation-delay: 500ms; }
+    .expresion--aparece > :nth-child(2) { animation-delay: 150ms; }
+    .expresion--aparece > :nth-child(4) { animation-delay: 400ms; }
+    .expresion__resultado { color: var(--color-acento); }
+    .expresion__viejo { color: var(--color-pista); }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="variables-reuso">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: el mismo número repetido obliga a cambiarlo en todas partes -->
+    <section class="paso" id="paso-repetido" data-requiere aria-labelledby="t-repetido">
+      <span class="paso__etiqueta">Variables · Reúso</span>
+      <h1 class="paso__titulo" id="t-repetido">Un cambio, tres sitios</h1>
+      <p>Preparas una fiesta para 6 amigos. ¡Al final vienen <strong>8</strong>! Toca cada <code>6</code> del código para cambiarlo.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">vasos</span> = <button type="button" class="numero-editable" data-caja="caja-vasos" data-calculo="n">6</button></span><span class="linea"><span class="tk-variable">platos</span> = <button type="button" class="numero-editable" data-caja="caja-platos" data-calculo="n*2">6</button> * <span class="tk-numero">2</span></span><span class="linea"><span class="tk-variable">globos</span> = <button type="button" class="numero-editable" data-caja="caja-globos" data-calculo="n+3">6</button> + <span class="tk-numero">3</span></span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar" hidden>↺ Reiniciar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja" id="caja-vasos">
+              <div class="caja__cuerpo"><span class="caja__valor">6</span></div>
+              <code class="caja__nombre">vasos</code>
+            </div>
+            <div class="caja" id="caja-platos">
+              <div class="caja__cuerpo"><span class="caja__valor">12</span></div>
+              <code class="caja__nombre">platos</code>
+            </div>
+            <div class="caja" id="caja-globos">
+              <div class="caja__cuerpo"><span class="caja__valor">9</span></div>
+              <code class="caja__nombre">globos</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="fb-repetido" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Con una variable: un solo cambio -->
+    <section class="paso" id="paso-variable" data-requiere aria-labelledby="t-variable">
+      <h2 class="paso__titulo" id="t-variable">Con una variable, un solo cambio</h2>
+      <p>Ahora el número vive en una caja, <code>invitados</code>, y las demás líneas la <strong>reutilizan</strong>. Mueve el control.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea linea--activa"><span class="tk-variable">invitados</span> = <span class="tk-numero" id="p2-valor">6</span></span><span class="linea"><span class="tk-variable">vasos</span> = <span class="tk-variable uso">invitados</span></span><span class="linea"><span class="tk-variable">platos</span> = <span class="tk-variable uso">invitados</span> * <span class="tk-numero">2</span></span><span class="linea"><span class="tk-variable">globos</span> = <span class="tk-variable uso">invitados</span> + <span class="tk-numero">3</span></span></code></pre>
+          <div class="control-slider">
+            <label for="p2-slider"><span>Valor de <code>invitados</code></span> <output id="p2-salida" for="p2-slider">6</output></label>
+            <input type="range" id="p2-slider" min="1" max="20" value="6">
+          </div>
+          <p class="nota">Además, el nombre explica qué significa el número: <code>invitados</code> dice más que un <code>6</code> suelto.</p>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja" id="caja-invitados">
+              <div class="caja__cuerpo"><span class="caja__valor">6</span></div>
+              <code class="caja__nombre">invitados</code>
+            </div>
+          </div>
+          <div class="cajas">
+            <div class="caja" id="caja-vasos2">
+              <div class="caja__cuerpo"><span class="caja__valor">6</span></div>
+              <code class="caja__nombre">vasos</code>
+            </div>
+            <div class="caja" id="caja-platos2">
+              <div class="caja__cuerpo"><span class="caja__valor">12</span></div>
+              <code class="caja__nombre">platos</code>
+            </div>
+            <div class="caja" id="caja-globos2">
+              <div class="caja__cuerpo"><span class="caja__valor">9</span></div>
+              <code class="caja__nombre">globos</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <p class="contador-cambios" id="p2-contador" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Actualizar con su propio valor -->
+    <section class="paso" id="paso-contador" data-requiere aria-labelledby="t-contador">
+      <h2 class="paso__titulo" id="t-contador">Usar su propio valor</h2>
+      <p>En un juego recoges monedas. La línea 2 usa <code>monedas</code> a los dos lados del <code>=</code>. Recoge unas cuantas y mira qué pasa.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">monedas</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-variable">monedas</span> = <span class="tk-variable">monedas</span> + <span class="tk-numero">1</span></span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-recoger">🪙 Recoger moneda</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="monedero" id="p3-monedero" aria-hidden="true"></div>
+          <div class="expresion" id="p3-expresion" hidden>
+            <span>monedas + 1</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span><span class="expresion__viejo" id="p3-viejo">0</span> + 1</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__resultado" id="p3-nuevo">1</span>
+          </div>
+          <div class="cajas">
+            <div class="caja" id="caja-monedas">
+              <div class="caja__cuerpo"><span class="caja__valor">0</span></div>
+              <code class="caja__nombre">monedas</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="fb-contador" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. La forma corta: += -= *= -->
+    <section class="paso" id="paso-corta" data-requiere aria-labelledby="t-corta">
+      <h2 class="paso__titulo" id="t-corta">La forma corta: <code>+=</code></h2>
+      <p>Tu hucha tiene 20 soles. Ahorra, gasta y duplica. Prueba los tres botones.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">dinero</span> = <span class="tk-numero">20</span></span><span class="linea"><span class="tk-variable">dinero</span> <span id="p4-operador">+=</span> <span class="tk-numero" id="p4-cantidad">5</span></span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" data-op="+=">+ Ahorrar 5</button>
+            <button type="button" class="btn btn-secundario" data-op="-=">− Gastar 3</button>
+            <button type="button" class="btn btn-secundario" data-op="*=">× Duplicar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar" hidden>↺ Reiniciar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja" id="caja-dinero">
+              <div class="caja__cuerpo"><span class="caja__valor">20</span></div>
+              <code class="caja__nombre">dinero</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="fb-corta" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Cuántas <code>vidas</code> quedan?</h2>
+      <p>Empiezas con 3 vidas. Te golpean, encuentras 2 corazones y luego una estrella duplica tus vidas.</p>
+      <div class="tarjeta">
+        <pre class="codigo" id="reto-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">vidas</span> = <span class="tk-numero">3</span></span><span class="linea"><span class="tk-variable">vidas</span> = <span class="tk-variable">vidas</span> - <span class="tk-numero">1</span></span><span class="linea"><span class="tk-variable">vidas</span> += <span class="tk-numero">2</span></span><span class="linea"><span class="tk-variable">vidas</span> = <span class="tk-variable">vidas</span> * <span class="tk-numero">2</span></span></code></pre>
+        <fieldset class="opciones" id="opciones-reto">
+          <legend class="visualmente-oculto">Valor final de vidas</legend>
+          <label class="opcion"><input type="radio" name="reto" value="6"><span>6</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="10"><span>10</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="8"><span>8</span></label>
+        </fieldset>
+        <div class="cajas" id="reto-cajas" hidden>
+          <div class="caja" id="reto-caja-vidas">
+            <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+            <code class="caja__nombre">vidas</code>
+          </div>
+        </div>
+        <p class="explicacion" id="reto-explicacion" aria-live="polite" hidden></p>
+        <div class="fila-botones" id="reto-botones" hidden>
+          <button type="button" class="btn btn-secundario" id="btn-reto-reiniciar">↺ Reiniciar</button>
+          <button type="button" class="btn btn-secundario" id="btn-reto-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+          <button type="button" class="btn btn-secundario" id="btn-reto-ejecutar">Ejecutar línea ▸</button>
+        </div>
+        <div class="feedback" id="fb-reto" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="btn-reto-otra">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Guarda un dato una vez y reutilízalo; para actualizarlo, usa su propio valor.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-variable">platos</span> = <span class="tk-variable">invitados</span> * <span class="tk-numero">2</span></span><span class="linea"><span class="tk-variable">monedas</span> = <span class="tk-variable">monedas</span> + <span class="tk-numero">1</span></span><span class="linea"><span class="tk-variable">monedas</span> += <span class="tk-numero">1</span>  <span class="tk-comentario"># lo mismo, corto</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../condicionales/index.html">Siguiente: Condicionales →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  /* ---------- 1. Un cambio, tres sitios ---------- */
+  var calculos = {
+    "n": function (n) { return n; },
+    "n*2": function (n) { return n * 2; },
+    "n+3": function (n) { return n + 3; }
+  };
+
+  function entrarRepetido(paso, leccion) {
+    var botones = paso.querySelectorAll(".numero-editable");
+    var btnReiniciar = $("p1-reiniciar");
+
+    function pendientes() {
+      return Array.prototype.filter.call(botones, function (b) { return b.textContent === "6"; }).length;
+    }
+
+    function preparar() {
+      botones.forEach(function (b) {
+        b.textContent = "6";
+        b.disabled = false;
+        b.setAttribute("aria-label", "Cambiar este 6 por 8");
+        Caja.actualizar($(b.getAttribute("data-caja")), calculos[b.getAttribute("data-calculo")](6));
+      });
+      Codigo.limpiar($("p1-codigo"));
+      $("p1-explicacion").innerHTML = "Hay <strong>3</strong> seises que cambiar.";
+      Pasos.limpiarFeedback($("fb-repetido"));
+      btnReiniciar.hidden = true;
+    }
+
+    botones.forEach(function (b, i) {
+      b.onclick = function () {
+        b.textContent = "8";
+        b.disabled = true;
+        b.removeAttribute("aria-label");
+        b.classList.remove("numero-editable--cambiado");
+        void b.offsetWidth;
+        b.classList.add("numero-editable--cambiado");
+        Codigo.marcar($("p1-codigo"), { activas: [i] });
+        Caja.poner($(b.getAttribute("data-caja")), calculos[b.getAttribute("data-calculo")](8));
+
+        var quedan = pendientes();
+        if (quedan) {
+          $("p1-explicacion").innerHTML = "Quedan <strong>" + quedan + "</strong> " +
+            (quedan === 1 ? "seis" : "seises") + ". Si olvidas uno, las cuentas no cuadran.";
+          var siguiente = Array.prototype.find.call(botones, function (x) { return !x.disabled; });
+          if (siguiente) siguiente.focus();
+          return;
+        }
+        $("p1-explicacion").innerHTML = "Listo: <strong>3 cambios</strong> para una sola idea, «vienen 8».";
+        Pasos.feedback($("fb-repetido"), "ok",
+          "¡Hecho! Funciona, pero cuesta: con más líneas sería fácil olvidar un 6. Veamos una forma mejor.");
+        btnReiniciar.hidden = false;
+        btnReiniciar.focus();
+        leccion.desbloquear();
+      };
+    });
+
+    btnReiniciar.onclick = function () {
+      preparar();
+      botones[0].focus();
+    };
+
+    preparar();
+  }
+
+  /* ---------- 2. Con una variable ---------- */
+  function entrarVariable(paso, leccion) {
+    var slider = $("p2-slider");
+    var inicial = Number(slider.value);
+    var usos = paso.querySelectorAll(".uso");
+    var timer = null;
+
+    slider.oninput = function () {
+      var n = Number(slider.value);
+      $("p2-salida").textContent = n;
+      $("p2-valor").textContent = n;
+      Caja.actualizar($("caja-invitados"), n);
+      Caja.actualizar($("caja-vasos2"), n);
+      Caja.actualizar($("caja-platos2"), n * 2);
+      Caja.actualizar($("caja-globos2"), n + 3);
+
+      // Los tres sitios donde se reutiliza la variable se iluminan
+      usos.forEach(function (u) { u.classList.add("uso--brilla"); });
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        usos.forEach(function (u) { u.classList.remove("uso--brilla"); });
+      }, 600);
+
+      if (n !== inicial) {
+        $("p2-contador").textContent = "1 cambio → 3 resultados al día";
+        leccion.desbloquear();
+      }
+    };
+  }
+
+  /* ---------- 3. Usar su propio valor ---------- */
+  var MAX_MONEDAS_VISIBLES = 10;
+
+  function entrarContador(paso, leccion) {
+    var monedas = 0;
+    var btnRecoger = $("p3-recoger");
+    var btnReiniciar = $("p3-reiniciar");
+
+    function pintarMonedero() {
+      var m = $("p3-monedero");
+      m.textContent = "";
+      if (!monedas) {
+        var vacio = document.createElement("span");
+        vacio.className = "monedero__vacio";
+        vacio.textContent = "Sin monedas todavía";
+        m.appendChild(vacio);
+        return;
+      }
+      var visibles = Math.min(monedas, MAX_MONEDAS_VISIBLES);
+      for (var k = 0; k < visibles; k++) {
+        var c = document.createElement("span");
+        c.className = "moneda";
+        c.textContent = "🪙";
+        // Solo la última cae; las demás ya estaban
+        if (k < visibles - 1) c.style.animation = "none";
+        m.appendChild(c);
+      }
+      if (monedas > MAX_MONEDAS_VISIBLES) {
+        var mas = document.createElement("span");
+        mas.className = "monedero__mas";
+        mas.textContent = "+" + (monedas - MAX_MONEDAS_VISIBLES);
+        m.appendChild(mas);
+      }
+    }
+
+    function preparar() {
+      monedas = 0;
+      Caja.actualizar($("caja-monedas"), 0);
+      Codigo.marcar($("p3-codigo"), { activas: [0] });
+      $("p3-expresion").hidden = true;
+      $("p3-explicacion").innerHTML = "La línea 1 ya se ejecutó: <strong>monedas</strong> empieza en 0.";
+      Pasos.limpiarFeedback($("fb-contador"));
+      btnReiniciar.hidden = true;
+      pintarMonedero();
+    }
+
+    btnRecoger.onclick = function () {
+      var viejo = monedas;
+      monedas++;
+      Codigo.marcar($("p3-codigo"), { activas: [1] });
+
+      var exp = $("p3-expresion");
+      $("p3-viejo").textContent = viejo;
+      $("p3-nuevo").textContent = monedas;
+      exp.hidden = false;
+      exp.classList.remove("expresion--aparece");
+      void exp.offsetWidth;
+      exp.classList.add("expresion--aparece");
+
+      Caja.poner($("caja-monedas"), monedas);
+      pintarMonedero();
+      $("p3-explicacion").innerHTML = "Primero la derecha, con el valor <strong>viejo</strong>: " +
+        viejo + " + 1 = " + monedas + ". Después se guarda en la caja: <strong>monedas</strong> vale " + monedas + ".";
+      btnReiniciar.hidden = false;
+
+      if (monedas === 3) {
+        Pasos.feedback($("fb-contador"), "ok",
+          "¡Eso es un contador! La misma línea, ejecutada otra vez, suma uno más al valor que ya había.");
+        leccion.desbloquear();
+      }
+    };
+
+    btnReiniciar.onclick = function () {
+      preparar();
+      btnRecoger.focus();
+    };
+
+    preparar();
+  }
+
+  /* ---------- 4. La forma corta ---------- */
+  var operaciones = {
+    "+=": { cantidad: 5, signo: "+", calcular: function (d) { return d + 5; } },
+    "-=": { cantidad: 3, signo: "-", calcular: function (d) { return d - 3; } },
+    "*=": { cantidad: 2, signo: "*", calcular: function (d) { return d * 2; } }
+  };
+  var DINERO_INICIAL = 20;
+  var DINERO_MAX = 999;
+
+  function entrarCorta(paso, leccion) {
+    var dinero = DINERO_INICIAL;
+    var usados = {};
+    var botones = paso.querySelectorAll("[data-op]");
+    var btnReiniciar = $("p4-reiniciar");
+
+    function actualizarBotones() {
+      botones.forEach(function (b) {
+        var op = operaciones[b.getAttribute("data-op")];
+        var res = op.calcular(dinero);
+        b.disabled = res < 0 || res > DINERO_MAX;
+      });
+    }
+
+    function preparar() {
+      dinero = DINERO_INICIAL;
+      usados = {};
+      $("p4-operador").textContent = "+=";
+      $("p4-cantidad").textContent = "5";
+      Caja.actualizar($("caja-dinero"), dinero);
+      Codigo.marcar($("p4-codigo"), { activas: [0] });
+      $("p4-explicacion").innerHTML = "La hucha empieza con 20. Pulsa un botón.";
+      Pasos.limpiarFeedback($("fb-corta"));
+      btnReiniciar.hidden = true;
+      actualizarBotones();
+    }
+
+    botones.forEach(function (b) {
+      b.onclick = function () {
+        var clave = b.getAttribute("data-op");
+        var op = operaciones[clave];
+        var viejo = dinero;
+        dinero = op.calcular(dinero);
+        usados[clave] = true;
+
+        $("p4-operador").textContent = clave;
+        $("p4-cantidad").textContent = op.cantidad;
+        Codigo.marcar($("p4-codigo"), { activas: [1] });
+        Caja.poner($("caja-dinero"), dinero);
+        $("p4-explicacion").innerHTML = "<code>dinero " + clave + " " + op.cantidad + "</code> es lo mismo que " +
+          "<code>dinero = dinero " + op.signo + " " + op.cantidad + "</code>: " +
+          viejo + " " + op.signo + " " + op.cantidad + " = <strong>" + dinero + "</strong>.";
+        btnReiniciar.hidden = false;
+        actualizarBotones();
+        if (b.disabled) btnReiniciar.focus();
+
+        var probados = Object.keys(usados).length;
+        if (probados === 3) {
+          Pasos.feedback($("fb-corta"), "ok",
+            "¡Bien! += suma, -= resta y *= multiplica lo que ya hay en la caja. Es solo una forma más corta de escribirlo.");
+          leccion.desbloquear();
+        } else {
+          Pasos.feedback($("fb-corta"), "pista",
+            "Te " + (3 - probados === 1 ? "falta 1 botón" : "faltan 2 botones") + " por probar.");
+        }
+      };
+    });
+
+    btnReiniciar.onclick = function () {
+      preparar();
+      botones[0].focus();
+    };
+
+    preparar();
+  }
+
+  /* ---------- 5. Reto ---------- */
+  var pistasReto = {
+    "6": "Parece que usaste el 3 del principio en la última línea (3 * 2). Cada línea usa lo que hay en la caja en ese momento.",
+    "10": "La línea 2 también cambia la caja: después de ella, vidas vale 2, no 3."
+  };
+
+  var trazaReto = Traza.crear({
+    codigo: $("reto-codigo"),
+    explicacion: $("reto-explicacion"),
+    ejecutar: $("btn-reto-ejecutar"),
+    reproducir: $("btn-reto-reproducir"),
+    reiniciar: $("btn-reto-reiniciar"),
+    intervalo: 1500,
+    generar: function () {
+      return [
+        { linea: 0, valor: 3, texto: "Línea 1: <strong>vidas</strong> empieza en 3." },
+        { linea: 1, valor: 2, texto: "Línea 2: 3 - 1 = 2. La caja guarda <strong>2</strong>." },
+        { linea: 2, valor: 4, texto: "Línea 3: vidas += 2 es vidas = vidas + 2. 2 + 2 = <strong>4</strong>." },
+        { linea: 3, valor: 8, texto: "Línea 4: 4 * 2 = <strong>8</strong>. Quedan 8 vidas." }
+      ];
+    },
+    alReiniciar: function () { Caja.vaciar($("reto-caja-vidas")); },
+    alPaso: function (paso) { Caja.poner($("reto-caja-vidas"), paso.valor); }
+  });
+
+  function mostrarReto(visible) {
+    $("reto-cajas").hidden = !visible;
+    $("reto-explicacion").hidden = !visible;
+    $("reto-botones").hidden = !visible;
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso, leccion) {
+    trazaReto.reiniciar();
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        paso.querySelectorAll(".opcion").forEach(function (o) {
+          o.classList.remove("opcion--correcta", "opcion--incorrecta");
+        });
+        Codigo.limpiar($("reto-codigo"));
+        Pasos.limpiarFeedback($("fb-reto"));
+        leccion.listoParaComprobar(true);
+      };
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    Codigo.limpiar($("reto-codigo"));
+    Pasos.limpiarFeedback($("fb-reto"));
+    mostrarReto(false);
+    $("reto-otra").hidden = true;
+    // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+    $("btn-reto-otra").onclick = function () {
+      entrarReto(paso, leccion);
+      paso.querySelector('input[name="reto"]').focus();
+    };
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+
+    if (marcada.value === "8") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("fb-reto"), "ok",
+        "¡Exacto! 3 → 2 → 4 → 8. Cada línea parte del valor que dejó la anterior.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      mostrarReto(true);
+      $("reto-otra").hidden = false;
+      trazaReto.reiniciar();
+      trazaReto.reproducir();
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Codigo.marcar($("reto-codigo"), { activas: [marcada.value === "10" ? 1 : 3] });
+    Pasos.feedback($("fb-reto"), "pista", pistasReto[marcada.value] || "Repasa el código línea a línea.");
+    return false;
+  }
+
+  Pasos.iniciar({
+    alEntrar: {
+      "paso-repetido": entrarRepetido,
+      "paso-variable": entrarVariable,
+      "paso-contador": entrarContador,
+      "paso-corta": entrarCorta,
+      "paso-reto": entrarReto
+    },
+    comprobar: {
+      "paso-reto": comprobarReto
+    }
+  });
+})();
+</script>
+</body>
+</html>
