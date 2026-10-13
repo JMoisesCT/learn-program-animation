@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Texto y números · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: los tipos int y str en Python, unir texto, convertir con int() y str(), e input().">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    /* Color del texto (str); los números (int) usan el azul de siempre */
+    :root { --tipo-str: #a8480a; --tipo-str-suave: #fff1e3; }
+
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .control-slider { margin-top: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .btn--invisible { visibility: hidden; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .consola__linea--error { color: var(--color-error); }
+    .opciones legend { padding: 0; margin-bottom: var(--esp-1); font-weight: 600; }
+
+    /* ---------- Cajas con tipo ---------- */
+    .caja__cuerpo, .caja__valor, .caja__nombre { transition: border-color var(--dur), background-color var(--dur), color var(--dur); }
+    .caja__tipo { font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); min-height: 1.3em; }
+    .caja--str .caja__cuerpo { border-color: var(--tipo-str); background: linear-gradient(to bottom, transparent 30%, var(--tipo-str-suave) 30%); }
+    .caja--str .caja__cuerpo::before, .caja--str .caja__cuerpo::after { background: var(--tipo-str); }
+    .caja--str .caja__valor { border-color: var(--tipo-str); }
+    .caja--str .caja__nombre { color: var(--tipo-str); background: var(--tipo-str-suave); }
+    .caja--str .caja__tipo { color: var(--tipo-str); }
+    .caja--int .caja__tipo { color: var(--color-azul); }
+    .caja--neutra .caja__cuerpo { border-color: #8a929c; background: linear-gradient(to bottom, transparent 30%, var(--color-superficie-2) 30%); }
+    .caja--neutra .caja__cuerpo::before, .caja--neutra .caja__cuerpo::after { background: #8a929c; }
+    .caja--neutra .caja__valor { border-color: #8a929c; }
+    .caja--neutra .caja__nombre { color: var(--color-texto); background: var(--color-superficie-2); }
+
+    /* Paso 1: cajas que se tocan */
+    .caja-boton { font: inherit; color: inherit; background: none; border: 0; padding: var(--esp-2); border-radius: var(--radio); cursor: pointer; }
+    .caja-boton:hover .caja__cuerpo { transform: translateY(-2px); }
+    .caja-boton .caja__cuerpo { transition: transform var(--dur-rapida), border-color var(--dur), background-color var(--dur); }
+
+    /* ---------- Fichas: un valor suelto ---------- */
+    .ficha {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--fuente-codigo);
+      font-size: var(--texto-lg);
+      font-weight: 700;
+      line-height: 1.4;
+      padding: 0.1em 0.55em;
+      border: 2px solid;
+      border-radius: var(--radio-sm);
+      white-space: pre;
+    }
+    .ficha--int { color: var(--color-azul); background: var(--color-azul-suave); border-color: var(--color-azul); }
+    .ficha--str { color: var(--tipo-str); background: var(--tipo-str-suave); border-color: var(--tipo-str); }
+    .ficha__esp { opacity: 0.5; }
+
+    /* Unión de fichas: a + b → se juntan */
+    .union { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); min-height: 3.5rem; transition: gap var(--dur) ease; }
+    .union__op { display: inline-block; max-width: 2rem; overflow: hidden; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; color: var(--color-texto-suave); transition: opacity var(--dur), max-width var(--dur); }
+    .union--juntar { gap: 0; }
+    .union--juntar .union__op { opacity: 0; max-width: 0; }
+    .union__op--mal { color: var(--color-error); }
+    .union--choca .ficha { animation: sacudir 420ms ease; }
+    .union__resultado { animation: valor-pulso 300ms ease-out, aparecer var(--dur) ease; }
+    .flecha-abajo { text-align: center; color: var(--color-texto-suave); font-size: var(--texto-lg); margin: var(--esp-1) 0; }
+
+    /* Paso 2: montones de bolitas */
+    .fila-suma { display: grid; gap: var(--esp-2); justify-items: center; padding: var(--esp-3) 0; }
+    .fila-suma + .fila-suma { border-top: 1px solid var(--color-borde); }
+    .fila-suma__codigo { font-family: var(--fuente-codigo); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .monton { display: inline-grid; justify-items: center; gap: var(--esp-1); }
+    .monton__bolitas { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; width: 3.6rem; padding: 6px; border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); }
+    .monton--grande .monton__bolitas { width: 6rem; }
+    .bolita { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--color-azul); }
+    .monton__num { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* Paso 4: clasificar */
+    .bandeja { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-3); min-height: 4rem; padding: var(--esp-3); border-radius: var(--radio); background: var(--color-superficie-2); }
+    .bandeja__vacia { color: var(--color-texto-suave); font-size: var(--texto-sm); }
+    .cubos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); margin-top: var(--esp-4); }
+    .cubo { display: flex; flex-direction: column; gap: var(--esp-2); min-height: 9rem; padding: var(--esp-3); border: 3px dashed; border-radius: var(--radio); cursor: pointer; transition: box-shadow var(--dur-rapida); }
+    .cubo--int { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .cubo--str { border-color: var(--tipo-str); background: var(--tipo-str-suave); }
+    .cubo--sobre { box-shadow: 0 0 0 5px rgba(11, 122, 62, 0.25); }
+    .cubo__destino { font: inherit; font-weight: 700; background: none; border: 0; padding: var(--esp-1); cursor: pointer; text-align: center; }
+    .cubo--int .cubo__destino { color: var(--color-azul); }
+    .cubo--str .cubo__destino { color: var(--tipo-str); }
+    .cubo__destino small { display: block; font-weight: 400; font-size: var(--texto-xs); }
+    .cubo__contenido { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); }
+    .ficha-boton { cursor: grab; font-size: var(--texto-md); transition: transform var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .ficha--neutra { color: var(--color-texto); background: var(--color-superficie); border-color: var(--color-borde); box-shadow: 0 3px 0 var(--color-borde); }
+    .ficha-boton[aria-pressed="true"] { border-color: var(--color-acento); box-shadow: 0 0 0 4px var(--color-acento-suave); transform: translateY(-3px); }
+    .ficha--mal { color: var(--color-pista); background: var(--color-pista-suave); border-color: var(--color-pista); animation: sacudir 360ms ease; }
+
+    /* Paso 6: máquinas de convertir */
+    .maquina { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); padding: var(--esp-2) 0; }
+    .maquina__flecha { color: var(--color-texto-suave); font-size: var(--texto-lg); }
+    .maquina__cuerpo { display: grid; justify-items: center; padding: var(--esp-1) var(--esp-3); border-radius: var(--radio); background: var(--color-codigo-fondo); color: var(--color-codigo-texto); font-family: var(--fuente-codigo); font-weight: 700; }
+    .maquina__engranaje { font-size: 1.4rem; line-height: 1.2; }
+    .maquina--trabajando .maquina__engranaje { animation: girar 600ms linear; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    /* Paso 7: consola que espera una respuesta */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 5.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:disabled { border-color: transparent; background: none; color: var(--tipo-str); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+
+    /* Pasos 8 y 9: opciones con código */
+    .opciones--codigo { grid-template-columns: 1fr; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre-wrap; padding: var(--esp-3) var(--esp-4); }
+    .opciones--cortas { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+    .opciones--cortas .opcion span { font-size: var(--texto-md); white-space: nowrap; }
+    .cambio { font-weight: inherit; color: var(--color-azul); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+    #p8-resultado .expresion { margin: var(--esp-3) 0 0; }
+
+    /* Paso 9: pruebas del reto */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; gap: var(--esp-1); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__entrada { color: var(--color-texto-suave); font-family: var(--fuente); }
+    .prueba__res { font-weight: 700; overflow-wrap: anywhere; }
+    .prueba__res--ok { color: var(--color-ok); }
+    .prueba__res--mal { color: var(--color-pista); }
+    .prueba__res--error { color: var(--color-error); }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="variables-tipos">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: dos cajas que se parecen -->
+    <section class="paso" id="paso-parecidos" data-requiere aria-labelledby="t-parecidos">
+      <span class="paso__etiqueta">Variables · Texto y números</span>
+      <h1 class="paso__titulo" id="t-parecidos">Dos cajas casi iguales</h1>
+      <p>Las dos guardan un 5… ¿o no? Toca cada caja para ver qué hay dentro.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">a</span> = <span class="tk-numero">5</span></span><span class="linea"><span class="tk-variable">b</span> = <span class="tk-texto">"5"</span></span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <button type="button" class="caja caja-boton caja--neutra" data-var="a" aria-label="Ver qué guarda a">
+              <span class="caja__cuerpo"><span class="caja__valor">5</span></span>
+              <code class="caja__nombre">a</code>
+              <span class="caja__tipo">?</span>
+            </button>
+            <button type="button" class="caja caja-boton caja--neutra" data-var="b" aria-label="Ver qué guarda b">
+              <span class="caja__cuerpo"><span class="caja__valor">"5"</span></span>
+              <code class="caja__nombre">b</code>
+              <span class="caja__tipo">?</span>
+            </button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="fb-parecidos" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. La sorpresa: 5 + 5 y "5" + "5" -->
+    <section class="paso" id="paso-sorpresa" data-comprobar aria-labelledby="t-sorpresa">
+      <h2 class="paso__titulo" id="t-sorpresa">¿Cuánto da?</h2>
+      <p>Adivina qué muestra cada línea antes de ejecutarla.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-numero">5</span> + <span class="tk-numero">5</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"5"</span> + <span class="tk-texto">"5"</span>)</span></code></pre>
+          <fieldset class="opciones" id="p2-l1">
+            <legend>Línea 1 muestra:</legend>
+            <label class="opcion"><input type="radio" name="p2-l1" value="10"><span>10</span></label>
+            <label class="opcion"><input type="radio" name="p2-l1" value="55"><span>55</span></label>
+            <label class="opcion"><input type="radio" name="p2-l1" value="error"><span>Error</span></label>
+          </fieldset>
+          <fieldset class="opciones" id="p2-l2">
+            <legend>Línea 2 muestra:</legend>
+            <label class="opcion"><input type="radio" name="p2-l2" value="10"><span>10</span></label>
+            <label class="opcion"><input type="radio" name="p2-l2" value="55"><span>55</span></label>
+            <label class="opcion"><input type="radio" name="p2-l2" value="error"><span>Error</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="fila-suma">
+            <span class="fila-suma__codigo">5 + 5</span>
+            <div class="union" id="p2-num"></div>
+          </div>
+          <div class="fila-suma">
+            <span class="fila-suma__codigo">"5" + "5"</span>
+            <div class="union" id="p2-txt"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="fb-sorpresa" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Unir texto -->
+    <section class="paso" id="paso-unir" data-requiere aria-labelledby="t-unir">
+      <h2 class="paso__titulo" id="t-unir">Pegar textos con <code>+</code></h2>
+      <p>Con textos, <code>+</code> los pega uno detrás de otro. Escribe tu nombre y luego quita el espacio para ver qué pasa.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">nombre</span> = <span class="tk-texto">"<span id="p3-codigo-nombre">Ana</span>"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Hola,<span id="p3-codigo-espacio"> </span>"</span> + <span class="tk-variable">nombre</span>)</span></code></pre>
+          <div class="campo" style="margin-top: var(--esp-4)">
+            <label for="p3-nombre">Tu nombre</label>
+            <input type="text" id="p3-nombre" value="Ana" maxlength="12" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-espacio" aria-pressed="false">Quitar el espacio</button>
+          </div>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="union" id="p3-union"></div>
+          <div class="flecha-abajo">↓</div>
+          <div class="union" id="p3-resultado"></div>
+          <p class="explicacion" id="p3-explicacion"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="fb-unir" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Clasificar: ¿número o texto? -->
+    <section class="paso" id="paso-clasificar" data-comprobar aria-labelledby="t-clasificar">
+      <h2 class="paso__titulo" id="t-clasificar">¿Número o texto?</h2>
+      <p>Toca un valor y luego su caja (o arrástralo). Fíjate bien en las comillas.</p>
+      <div class="tarjeta">
+        <div class="bandeja" id="p4-bandeja" aria-label="Valores por clasificar"></div>
+        <div class="cubos">
+          <div class="cubo cubo--int" data-tipo="int">
+            <button type="button" class="cubo__destino">int<small>números</small></button>
+            <div class="cubo__contenido"></div>
+          </div>
+          <div class="cubo cubo--str" data-tipo="str">
+            <button type="button" class="cubo__destino">str<small>textos</small></button>
+            <div class="cubo__contenido"></div>
+          </div>
+        </div>
+        <div class="feedback" id="fb-clasificar" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. El error: mezclar tipos -->
+    <section class="paso" id="paso-error" data-requiere aria-labelledby="t-error">
+      <h2 class="paso__titulo" id="t-error">Texto + número = error</h2>
+      <p>Queremos escribir «Tengo 12 años». Ejecuta el código y mira qué pasa en la línea 2.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-numero">12</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Tengo "</span> + <span class="tk-variable">edad</span> + <span class="tk-texto">" años"</span>)</span></code></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja caja--int" id="p5-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">edad</code>
+              <span class="caja__tipo"></span>
+            </div>
+          </div>
+          <div class="union" id="p5-union" aria-hidden="true"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="fb-error" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Convertir: str() e int() -->
+    <section class="paso" id="paso-convertir" data-requiere aria-labelledby="t-convertir">
+      <h2 class="paso__titulo" id="t-convertir">Convertir: <code>str()</code> e <code>int()</code></h2>
+      <p><code>str()</code> convierte un número en texto; <code>int()</code>, un texto en número. Mueve la edad.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p6-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-numero" id="p6-valor">12</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Tengo "</span> + <span class="tk-funcion">str</span>(<span class="tk-variable">edad</span>) + <span class="tk-texto">" años"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">int</span>(<span class="tk-texto">"5"</span>) + <span class="tk-funcion">int</span>(<span class="tk-texto">"5"</span>))</span></code></pre>
+          <div class="control-slider">
+            <label for="p6-slider"><span>Valor de <code>edad</code></span> <output id="p6-salida" for="p6-slider">12</output></label>
+            <input type="range" id="p6-slider" min="1" max="99" value="12">
+          </div>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="maquina" id="p6-maquina-str">
+            <span id="p6-entra"></span>
+            <span class="maquina__flecha">→</span>
+            <span class="maquina__cuerpo"><span class="maquina__engranaje">⚙️</span>str()</span>
+            <span class="maquina__flecha">→</span>
+            <span id="p6-sale"></span>
+          </div>
+          <div class="maquina">
+            <span class="ficha ficha--str">"5"</span>
+            <span class="maquina__flecha">→</span>
+            <span class="maquina__cuerpo"><span class="maquina__engranaje">⚙️</span>int()</span>
+            <span class="maquina__flecha">→</span>
+            <span class="ficha ficha--int">5</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="fb-convertir" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. input() siempre da texto -->
+    <section class="paso" id="paso-input" data-requiere aria-labelledby="t-input">
+      <h2 class="paso__titulo" id="t-input"><code>input()</code>: preguntar al usuario</h2>
+      <p><code>input()</code> espera a que alguien escriba algo. Responde en la consola y mira qué guarda <code>edad</code>.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p7-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"¿Edad? "</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">edad</span> + <span class="tk-numero">1</span>)</span></code></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario btn--invisible" id="p7-reiniciar">↺ Reiniciar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja" id="p7-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">edad</code>
+              <span class="caja__tipo"></span>
+            </div>
+          </div>
+          <div class="union" id="p7-union" aria-hidden="true"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="entrada">
+              <label for="p7-entrada">¿Edad?</label>
+              <input type="text" id="p7-entrada" inputmode="numeric" maxlength="3" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="p7-enviar">Enviar ⏎</button>
+            </div>
+            <span class="consola__linea consola__linea--error" id="p7-error" aria-live="polite" hidden>TypeError: can only concatenate str (not "int") to str</span>
+          </div>
+          <div class="feedback" id="fb-input" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Arreglar el programa -->
+    <section class="paso" id="paso-arreglar" data-comprobar aria-labelledby="t-arreglar">
+      <h2 class="paso__titulo" id="t-arreglar">Arréglalo con <code>int()</code></h2>
+      <p>Queremos que, si escribes <strong id="p8-n">12</strong>, muestre <strong id="p8-n1">13</strong>. ¿Qué arreglo funciona?</p>
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p8-opciones">
+          <legend class="visualmente-oculto">Elige el arreglo</legend>
+          <label class="opcion"><input type="radio" name="p8" value="c"><span>edad = input("¿Edad? ")
+print(<b class="cambio">int(</b>edad + 1<b class="cambio">)</b>)</span></label>
+          <label class="opcion"><input type="radio" name="p8" value="a"><span>edad = <b class="cambio">int(</b>input("¿Edad? ")<b class="cambio">)</b>
+print(edad + 1)</span></label>
+          <label class="opcion"><input type="radio" name="p8" value="d"><span>edad = input("¿Edad? ")
+print(<b class="cambio">str(</b>edad<b class="cambio">)</b> + 1)</span></label>
+          <label class="opcion"><input type="radio" name="p8" value="b"><span>edad = input("¿Edad? ")
+print(<b class="cambio">int(</b>edad<b class="cambio">)</b> + 1)</span></label>
+        </fieldset>
+        <div id="p8-resultado" hidden>
+          <div class="cajas">
+            <div class="caja" id="p8-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">edad</code>
+              <span class="caja__tipo"></span>
+            </div>
+          </div>
+          <div class="expresion" id="p8-expresion"></div>
+          <div class="consola" id="p8-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+        </div>
+        <div class="feedback" id="fb-arreglar" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="p8-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="btn-p8-otra">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">El cumpleaños</h2>
+      <p>Completa el hueco para que diga la edad que tendrás el año que viene. Lo probaremos con tres personas.</p>
+      <div class="tarjeta">
+        <pre class="codigo" id="reto-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">nombre</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"¿Nombre? "</span>)</span><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"¿Edad? "</span>))</span><span class="linea"><span class="tk-variable">frase</span> = <span class="tk-texto">"Hola "</span> + <span class="tk-variable">nombre</span> + <span class="tk-texto">", tendrás "</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">frase</span> + <span class="hueco" id="reto-hueco">?</span> + <span class="tk-texto">" años"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--cortas" id="opciones-reto">
+          <legend class="visualmente-oculto">¿Qué va en el hueco?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="a"><span>edad + 1</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="b"><span>str(edad) + "1"</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="c"><span>str(edad + 1)</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" aria-label="Pruebas" hidden></ul>
+        <div class="feedback" id="fb-reto" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 10. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Los números suman, el texto se pega; usa <code>int()</code> y <code>str()</code> para pasar de uno a otro.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-numero">5</span> + <span class="tk-numero">5</span>)      <span class="tk-comentario"># 10</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"5"</span> + <span class="tk-texto">"5"</span>)  <span class="tk-comentario"># 55</span></span><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"Edad: "</span>))</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Tengo "</span> + <span class="tk-funcion">str</span>(<span class="tk-variable">edad</span>) + <span class="tk-texto">" años"</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../condicionales/index.html">Siguiente: Condicionales →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  var ESPERA = Pasos.reducirMovimiento ? 0 : 550;
+  var ERROR_TIPO = 'TypeError: can only concatenate str (not "int") to str';
+
+  /* ---------- Fichas y uniones (compartido) ---------- */
+  function escapar(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Los espacios de un texto se ven como ␣ para que se note si faltan
+  function conEspacios(s) {
+    return escapar(s).replace(/ /g, '<span class="ficha__esp">␣</span>');
+  }
+
+  // Un número se pinta azul; un texto, naranja y con comillas
+  function ficha(valor, extra) {
+    var clase = "ficha " + (typeof valor === "number" ? "ficha--int" : "ficha--str") + (extra ? " " + extra : "");
+    var contenido = typeof valor === "number" ? String(valor) : '"' + conEspacios(valor) + '"';
+    return '<span class="' + clase + '">' + contenido + "</span>";
+  }
+
+  var OP = '<span class="union__op">+</span>';
+
+  function pintarUnion(el, valores) {
+    clearTimeout(el._timer);
+    el.classList.remove("union--juntar", "union--choca");
+    el.innerHTML = valores.map(function (v) { return ficha(v); }).join(OP);
+  }
+
+  // Las piezas se acercan y se convierten en el resultado (html)
+  function juntar(el, resultado, fin) {
+    clearTimeout(el._timer);
+    el.classList.remove("union--juntar");
+    void el.offsetWidth;
+    el.classList.add("union--juntar");
+    el._timer = setTimeout(function () {
+      el.classList.remove("union--juntar");
+      el.innerHTML = resultado;
+      if (fin) fin();
+    }, ESPERA);
+  }
+
+  // Las piezas no encajan: el primer + se vuelve ✗ y todo tiembla
+  function chocar(el) {
+    clearTimeout(el._timer);
+    var op = el.querySelector(".union__op");
+    if (op) {
+      op.textContent = "✗";
+      op.classList.add("union__op--mal");
+    }
+    el.classList.remove("union--choca");
+    void el.offsetWidth;
+    el.classList.add("union--choca");
+  }
+
+  /* ---------- Cajas con tipo ---------- */
+  function tipoDe(valor) { return typeof valor === "number" ? "int" : "str"; }
+  function mostrar(valor) { return typeof valor === "number" ? String(valor) : '"' + valor + '"'; }
+
+  function tipoCaja(caja, tipo) {
+    caja.classList.toggle("caja--int", tipo === "int");
+    caja.classList.toggle("caja--str", tipo === "str");
+    caja.querySelector(".caja__tipo").textContent = tipo || "";
+  }
+
+  function ponerValor(caja, valor) {
+    tipoCaja(caja, tipoDe(valor));
+    Caja.poner(caja, mostrar(valor));
+  }
+
+  function vaciarCaja(caja) {
+    tipoCaja(caja, "");
+    Caja.vaciar(caja);
+  }
+
+  // Temporizadores de las animaciones encadenadas; se cancelan al cambiar de paso
+  var timers = [];
+  function despues(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function cancelarTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+  }
+
+  function limpiarOpciones(paso) {
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+  }
+
+  /* ---------- 1. Dos cajas casi iguales ---------- */
+  var textosParecidos = {
+    a: "<strong>a</strong> guarda el <strong>número</strong> 5. Python lo llama <code>int</code> (de <em>integer</em>, entero).",
+    b: "<strong>b</strong> guarda el <strong>texto</strong> \"5\": las comillas lo convierten en texto. Python lo llama <code>str</code> (de <em>string</em>, cadena)."
+  };
+
+  function entrarParecidos(paso, leccion) {
+    var vistos = {};
+    var cajas = paso.querySelectorAll("[data-var]");
+    cajas.forEach(function (c) {
+      c.className = "caja caja-boton caja--neutra";
+      c.querySelector(".caja__tipo").textContent = "?";
+      c.onclick = function () {
+        var v = c.getAttribute("data-var");
+        vistos[v] = true;
+        c.classList.remove("caja--neutra");
+        tipoCaja(c, v === "a" ? "int" : "str");
+        Codigo.marcar($("p1-codigo"), { activas: [v === "a" ? 0 : 1] });
+        $("p1-explicacion").innerHTML = textosParecidos[v];
+        if (vistos.a && vistos.b) {
+          Pasos.feedback($("fb-parecidos"), "ok",
+            "Se ven casi iguales, pero son de tipos distintos. Y el tipo cambia lo que puedes hacer con ellos.");
+          leccion.desbloquear();
+        }
+      };
+    });
+    Codigo.limpiar($("p1-codigo"));
+    $("p1-explicacion").textContent = "Toca la caja a y la caja b.";
+    Pasos.limpiarFeedback($("fb-parecidos"));
+  }
+
+  /* ---------- 2. ¿Cuánto da? ---------- */
+  function monton(n, grande) {
+    var bolitas = "";
+    for (var i = 0; i < n; i++) bolitas += '<span class="bolita"></span>';
+    return '<span class="monton' + (grande ? " monton--grande" : "") + '"><span class="monton__bolitas">' +
+      bolitas + '</span><span class="monton__num">' + n + "</span></span>";
+  }
+
+  function prepararSorpresa() {
+    cancelarTimers();
+    clearTimeout($("p2-num")._timer);
+    $("p2-num").classList.remove("union--juntar");
+    $("p2-num").innerHTML = monton(5) + OP + monton(5);
+    pintarUnion($("p2-txt"), ["5", "5"]);
+    Codigo.limpiar($("p2-codigo"));
+    Codigo.consola($("p2-consola"), []);
+  }
+
+  function entrarSorpresa(paso, leccion) {
+    prepararSorpresa();
+    limpiarOpciones(paso);
+    Pasos.limpiarFeedback($("fb-sorpresa"));
+    var radios = paso.querySelectorAll('input[type="radio"]');
+    radios.forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        r.closest("fieldset").querySelectorAll(".opcion").forEach(function (o) {
+          o.classList.remove("opcion--correcta", "opcion--incorrecta");
+        });
+        Pasos.limpiarFeedback($("fb-sorpresa"));
+        var listas = paso.querySelectorAll('input[type="radio"]:checked').length === 2;
+        leccion.listoParaComprobar(listas);
+      };
+    });
+  }
+
+  var pistasSorpresa = {
+    l1: {
+      "55": "Línea 1: sin comillas, 5 es un número. Con números, + suma de verdad.",
+      "error": "Línea 1: sumar dos números es justo lo que + sabe hacer."
+    },
+    l2: {
+      "10": "Línea 2: con comillas son textos. + no los suma: los pega uno detrás de otro.",
+      "error": "Línea 2: dos textos sí se pueden unir con +. Se pegan."
+    }
+  };
+
+  function comprobarSorpresa(paso) {
+    var r1 = paso.querySelector('input[name="p2-l1"]:checked');
+    var r2 = paso.querySelector('input[name="p2-l2"]:checked');
+    if (!r1 || !r2) return false;
+    var ok1 = r1.value === "10";
+    var ok2 = r2.value === "55";
+    r1.closest(".opcion").classList.add(ok1 ? "opcion--correcta" : "opcion--incorrecta");
+    r2.closest(".opcion").classList.add(ok2 ? "opcion--correcta" : "opcion--incorrecta");
+
+    if (!ok1 || !ok2) {
+      var pistas = [];
+      if (!ok1) pistas.push(pistasSorpresa.l1[r1.value]);
+      if (!ok2) pistas.push(pistasSorpresa.l2[r2.value]);
+      Pasos.feedback($("fb-sorpresa"), "pista", pistas.join(" "));
+      return false;
+    }
+
+    paso.querySelectorAll('input[type="radio"]').forEach(function (r) { r.disabled = true; });
+    prepararSorpresa();
+    Codigo.marcar($("p2-codigo"), { activas: [0] });
+    juntar($("p2-num"), '<span class="union__resultado">' + monton(10, true) + "</span>", function () {
+      Codigo.agregar($("p2-consola"), "10");
+      despues(700, function () {
+        Codigo.marcar($("p2-codigo"), { activas: [1] });
+        juntar($("p2-txt"), ficha("55", "union__resultado"), function () {
+          Codigo.agregar($("p2-consola"), "55");
+        });
+      });
+    });
+    Pasos.feedback($("fb-sorpresa"), "ok",
+      "¡Exacto! Los números se suman: 5 + 5 = 10. Los textos se pegan: \"5\" + \"5\" = \"55\".");
+    return true;
+  }
+
+  /* ---------- 3. Pegar textos ---------- */
+  function entrarUnir(paso, leccion) {
+    var campo = $("p3-nombre");
+    var btnEspacio = $("p3-espacio");
+    var conEspacio = true;
+    var cambioNombre = false;
+    var cambioEspacio = false;
+
+    function pintar() {
+      var saludo = conEspacio ? "Hola, " : "Hola,";
+      var nombre = campo.value;
+      $("p3-codigo-nombre").textContent = nombre;
+      $("p3-codigo-espacio").textContent = conEspacio ? " " : "";
+      pintarUnion($("p3-union"), [saludo, nombre]);
+      $("p3-resultado").innerHTML = ficha(saludo + nombre, "union__resultado");
+      Codigo.consola($("p3-consola"), [saludo + nombre]);
+      btnEspacio.textContent = conEspacio ? "Quitar el espacio" : "Poner el espacio";
+      btnEspacio.setAttribute("aria-pressed", conEspacio ? "false" : "true");
+      $("p3-explicacion").innerHTML = conEspacio
+        ? "El espacio va <strong>dentro</strong> de las comillas de \"Hola, \"."
+        : "Sin espacio, las palabras quedan pegadas: <strong>+ no añade nada</strong>, solo une.";
+    }
+
+    function revisar() {
+      if (cambioNombre && cambioEspacio) {
+        Pasos.feedback($("fb-unir"), "ok",
+          "+ pega los textos tal cual, sin añadir espacios. Si quieres uno, tienes que ponerlo tú.");
+        leccion.desbloquear();
+      } else if (cambioNombre) {
+        Pasos.feedback($("fb-unir"), "pista", "Ahora pulsa «Quitar el espacio» y mira la salida.");
+      } else if (cambioEspacio) {
+        Pasos.feedback($("fb-unir"), "pista", "Ahora escribe tu nombre en el campo.");
+      }
+    }
+
+    campo.value = "Ana";
+    campo.oninput = function () {
+      cambioNombre = campo.value.trim() !== "" && campo.value !== "Ana";
+      pintar();
+      revisar();
+    };
+    btnEspacio.onclick = function () {
+      conEspacio = !conEspacio;
+      cambioEspacio = true;
+      pintar();
+      revisar();
+    };
+    Pasos.limpiarFeedback($("fb-unir"));
+    pintar();
+  }
+
+  /* ---------- 4. ¿Número o texto? ---------- */
+  var VALORES = [
+    { texto: "7", tipo: "int" },
+    { texto: '"hola"', tipo: "str" },
+    { texto: '"7"', tipo: "str" },
+    { texto: "100", tipo: "int" },
+    { texto: '"3 gatos"', tipo: "str" },
+    { texto: "0", tipo: "int" },
+    { texto: '"100"', tipo: "str" }
+  ];
+
+  function entrarClasificar(paso, leccion) {
+    var lugar = VALORES.map(function () { return null; });   // null | "int" | "str"
+    var elegido = null;
+    var resuelto = false;
+    var bandeja = $("p4-bandeja");
+    var cubos = paso.querySelectorAll(".cubo");
+
+    function contenido(tipo) {
+      return paso.querySelector('.cubo[data-tipo="' + tipo + '"] .cubo__contenido');
+    }
+
+    function crearFicha(i) {
+      var v = VALORES[i];
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "ficha ficha-boton ficha--neutra";
+      if (resuelto) b.className = "ficha ficha-boton ficha--" + v.tipo;
+      b.textContent = v.texto;
+      b.setAttribute("data-i", i);
+      if (lugar[i] === null) {
+        b.setAttribute("aria-pressed", elegido === i ? "true" : "false");
+        b.draggable = true;
+      } else {
+        b.setAttribute("aria-label", v.texto + ", en la caja " + lugar[i] + ". Toca para sacarlo.");
+        b.draggable = !resuelto;
+      }
+      b.disabled = resuelto;
+      b.addEventListener("dragstart", function (e) {
+        e.dataTransfer.setData("text/plain", String(i));
+        e.dataTransfer.effectAllowed = "move";
+      });
+      return b;
+    }
+
+    function pintar(foco) {
+      bandeja.textContent = "";
+      contenido("int").textContent = "";
+      contenido("str").textContent = "";
+      var quedan = 0;
+      VALORES.forEach(function (v, i) {
+        var b = crearFicha(i);
+        if (lugar[i] === null) { bandeja.appendChild(b); quedan++; }
+        else contenido(lugar[i]).appendChild(b);
+      });
+      if (!quedan) {
+        var vacia = document.createElement("span");
+        vacia.className = "bandeja__vacia";
+        vacia.textContent = resuelto ? "¡Todo en su sitio!" : "Todo clasificado. Pulsa «Comprobar».";
+        bandeja.appendChild(vacia);
+      }
+      if (!resuelto) leccion.listoParaComprobar(!quedan);
+      if (foco !== undefined && foco !== null) {
+        var f = paso.querySelector('[data-i="' + foco + '"]');
+        if (f) f.focus();
+      }
+    }
+
+    function mover(i, tipo) {
+      lugar[i] = tipo;
+      elegido = null;
+      Pasos.limpiarFeedback($("fb-clasificar"));
+      // El foco pasa al siguiente valor por clasificar
+      var siguiente = lugar.indexOf(null);
+      pintar(siguiente !== -1 ? siguiente : undefined);
+      if (siguiente === -1) paso.querySelector('.cubo[data-tipo="' + tipo + '"] .cubo__destino').focus();
+    }
+
+    function soltarEn(tipo) {
+      if (resuelto) return;
+      if (elegido === null) {
+        Pasos.feedback($("fb-clasificar"), "pista", "Primero toca un valor de arriba; luego, su caja.");
+        return;
+      }
+      mover(elegido, tipo);
+    }
+
+    bandeja.onclick = function (e) {
+      var b = e.target.closest(".ficha-boton");
+      if (!b || resuelto) return;
+      var i = Number(b.getAttribute("data-i"));
+      elegido = elegido === i ? null : i;
+      pintar(i);
+    };
+    bandeja.ondragover = function (e) { e.preventDefault(); };
+    bandeja.ondrop = function (e) {
+      e.preventDefault();
+      var i = Number(e.dataTransfer.getData("text/plain"));
+      if (!isNaN(i) && !resuelto) { lugar[i] = null; elegido = null; pintar(); }
+    };
+
+    cubos.forEach(function (c) {
+      var tipo = c.getAttribute("data-tipo");
+      c.onclick = function (e) {
+        var b = e.target.closest(".ficha-boton");
+        if (b) {
+          // Sacar un valor de la caja: vuelve arriba
+          if (resuelto) return;
+          lugar[Number(b.getAttribute("data-i"))] = null;
+          elegido = null;
+          Pasos.limpiarFeedback($("fb-clasificar"));
+          pintar();
+          c.querySelector(".cubo__destino").focus();
+          return;
+        }
+        soltarEn(tipo);
+      };
+      c.ondragover = function (e) { e.preventDefault(); c.classList.add("cubo--sobre"); };
+      c.ondragleave = function () { c.classList.remove("cubo--sobre"); };
+      c.ondrop = function (e) {
+        e.preventDefault();
+        c.classList.remove("cubo--sobre");
+        var i = Number(e.dataTransfer.getData("text/plain"));
+        if (!isNaN(i) && !resuelto) mover(i, tipo);
+      };
+    });
+
+    paso._comprobar = function () {
+      var mal = [];
+      VALORES.forEach(function (v, i) { if (lugar[i] !== v.tipo) mal.push(i); });
+      if (!mal.length) {
+        resuelto = true;
+        pintar();
+        Pasos.feedback($("fb-clasificar"), "ok",
+          "¡Perfecto! Si tiene comillas, es texto (str), aunque dentro haya un número.");
+        return true;
+      }
+      mal.forEach(function (i) {
+        var b = paso.querySelector('[data-i="' + i + '"]');
+        b.classList.remove("ficha--neutra");
+        b.classList.add("ficha--mal");
+      });
+      var textoEnInt = mal.some(function (i) { return VALORES[i].tipo === "str"; });
+      Pasos.feedback($("fb-clasificar"), "pista",
+        (textoEnInt
+          ? "¿Tiene comillas? Entonces es texto (str), aunque dentro haya un número."
+          : "Sin comillas, un número es int.") +
+        (mal.length === 1 ? " Hay 1 valor" : " Hay " + mal.length + " valores") + " fuera de su sitio: vuelven arriba.");
+      despues(Pasos.reducirMovimiento ? 600 : 1100, function () {
+        mal.forEach(function (i) { lugar[i] = null; });
+        pintar();
+      });
+      return false;
+    };
+
+    cancelarTimers();
+    Pasos.limpiarFeedback($("fb-clasificar"));
+    pintar();
+  }
+
+  /* ---------- 5. Texto + número = error ---------- */
+  var trazaError = Traza.crear({
+    codigo: $("p5-codigo"),
+    explicacion: $("p5-explicacion"),
+    consola: $("p5-consola"),
+    ejecutar: $("p5-ejecutar"),
+    reproducir: $("p5-reproducir"),
+    reiniciar: $("p5-reiniciar"),
+    intervalo: 1600,
+    generar: function () {
+      return [
+        { linea: 0, estado: "caja", texto: "Línea 1: <strong>edad</strong> guarda el número 12 (un <code>int</code>)." },
+        {
+          linea: 1, estado: "error", salida: ERROR_TIPO,
+          texto: "Línea 2: Python une de izquierda a derecha y <code>\"Tengo \" + 12</code> ya no encaja. " +
+            "El error dice: «solo se puede unir texto con texto, no con int»."
+        }
+      ];
+    },
+    alReiniciar: function () {
+      vaciarCaja($("p5-caja"));
+      $("p5-union").textContent = "";
+    },
+    alPaso: function (paso) {
+      if (paso.estado === "caja") {
+        ponerValor($("p5-caja"), 12);
+        return;
+      }
+      pintarUnion($("p5-union"), ["Tengo ", 12, " años"]);
+      chocar($("p5-union"));
+      $("p5-consola").lastElementChild.classList.add("consola__linea--error");
+    },
+    alTerminar: function () {
+      Pasos.feedback($("fb-error"), "ok",
+        "Python no adivina si quieres sumar o pegar: los dos lados del + tienen que ser del mismo tipo.");
+      if (leccionActual) leccionActual.desbloquear();
+    }
+  });
+
+  var leccionActual = null;
+
+  function entrarError(paso, leccion) {
+    leccionActual = leccion;
+    trazaError.reiniciar();
+    Pasos.limpiarFeedback($("fb-error"));
+  }
+
+  /* ---------- 6. Convertir ---------- */
+  var EDAD_INICIAL = 12;
+
+  function pintarConvertir(n, animar) {
+    $("p6-valor").textContent = n;
+    $("p6-salida").textContent = n;
+    $("p6-entra").innerHTML = ficha(n);
+    $("p6-sale").innerHTML = ficha(String(n));
+    Codigo.consola($("p6-consola"), ["Tengo " + n + " años", "10"]);
+    if (animar) {
+      var m = $("p6-maquina-str");
+      m.classList.remove("maquina--trabajando");
+      void m.offsetWidth;
+      m.classList.add("maquina--trabajando");
+    }
+  }
+
+  function entrarConvertir(paso, leccion) {
+    var slider = $("p6-slider");
+    slider.value = EDAD_INICIAL;
+    pintarConvertir(EDAD_INICIAL, false);
+    Pasos.limpiarFeedback($("fb-convertir"));
+    slider.oninput = function () {
+      var n = Number(slider.value);
+      pintarConvertir(n, true);
+      if (n !== EDAD_INICIAL) {
+        Pasos.feedback($("fb-convertir"), "ok",
+          "str(edad) convierte " + n + " en \"" + n + "\": ahora sí se puede pegar al texto.");
+        leccion.desbloquear();
+      }
+    };
+  }
+
+  /* ---------- 7. input() ---------- */
+  var edadUsuario = 12;   // lo que se respondió en el paso 7 (si es un número)
+
+  function entrarInput(paso, leccion) {
+    var campo = $("p7-entrada");
+    var btnEnviar = $("p7-enviar");
+    var btnReiniciar = $("p7-reiniciar");
+
+    function preparar() {
+      cancelarTimers();
+      campo.value = "";
+      campo.disabled = false;
+      btnEnviar.hidden = false;
+      $("p7-error").hidden = true;
+      $("p7-union").textContent = "";
+      vaciarCaja($("p7-caja"));
+      Codigo.marcar($("p7-codigo"), { activas: [0] });
+      $("p7-explicacion").innerHTML = "Python se para en la línea 1 y <strong>espera</strong>. Escribe tu edad en la consola.";
+      Pasos.limpiarFeedback($("fb-input"));
+      btnReiniciar.classList.add("btn--invisible");
+    }
+
+    function enviar() {
+      var texto = campo.value.trim();
+      if (!texto) {
+        Pasos.feedback($("fb-input"), "pista", "Escribe tu edad primero.");
+        campo.focus();
+        return;
+      }
+      if (/^\d{1,3}$/.test(texto)) edadUsuario = Number(texto);
+      campo.value = texto;
+      campo.disabled = true;
+      btnEnviar.hidden = true;
+      Pasos.limpiarFeedback($("fb-input"));
+      ponerValor($("p7-caja"), texto);
+      $("p7-explicacion").innerHTML = "<code>input()</code> guarda lo que escribiste como <strong>texto</strong>: " +
+        escapar('"' + texto + '"') + ", con comillas.";
+      btnReiniciar.classList.remove("btn--invisible");
+      btnReiniciar.focus();
+
+      despues(Pasos.reducirMovimiento ? 900 : 1600, function () {
+        Codigo.marcar($("p7-codigo"), { activas: [1] });
+        pintarUnion($("p7-union"), [texto, 1]);
+        chocar($("p7-union"));
+        $("p7-error").hidden = false;
+        $("p7-explicacion").innerHTML = "Línea 2: <code>" + escapar('"' + texto + '"') + " + 1</code> mezcla texto y número. ¡Error!";
+        Pasos.feedback($("fb-input"), "ok",
+          "input() siempre te da texto, aunque escribas un número. Para sumar, hay que convertirlo.");
+        leccion.desbloquear();
+      });
+    }
+
+    btnEnviar.onclick = enviar;
+    // Enter en el campo envía la respuesta (en vez de pulsar "Continuar")
+    campo.onkeydown = function (e) {
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      enviar();
+    };
+    btnReiniciar.onclick = function () {
+      preparar();
+      campo.focus();
+    };
+    preparar();
+  }
+
+  /* ---------- 8. Arreglarlo ---------- */
+  var pistasArreglo = {
+    c: "int() llega tarde: primero se calcula edad + 1, y ahí ya falla porque edad es texto.",
+    d: "str() convierte en texto, pero edad ya era texto. Para sumar 1 necesitas un número: int()."
+  };
+
+  function entrarArreglar(paso, leccion) {
+    cancelarTimers();
+    $("p8-n").textContent = edadUsuario;
+    $("p8-n1").textContent = edadUsuario + 1;
+    $("p8-resultado").hidden = true;
+    $("p8-otra").hidden = true;
+    limpiarOpciones(paso);
+    Pasos.limpiarFeedback($("fb-arreglar"));
+    paso.querySelectorAll('input[name="p8"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        limpiarOpciones(paso);
+        Pasos.limpiarFeedback($("fb-arreglar"));
+        leccion.listoParaComprobar(true);
+      };
+    });
+    $("btn-p8-otra").onclick = function () {
+      entrarArreglar(paso, leccion);
+      paso.querySelector('input[name="p8"]').focus();
+    };
+  }
+
+  function expresion(partes) {
+    return partes.map(function (p, i) {
+      return (i ? '<span class="expresion__flecha" aria-hidden="true">→</span>' : "") + "<span>" + p + "</span>";
+    }).join("");
+  }
+
+  function comprobarArreglar(paso) {
+    var marcada = paso.querySelector('input[name="p8"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    var n = edadUsuario;
+
+    if (marcada.value !== "a" && marcada.value !== "b") {
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback($("fb-arreglar"), "pista", pistasArreglo[marcada.value]);
+      return false;
+    }
+
+    opcion.classList.add("opcion--correcta");
+    paso.querySelectorAll('input[name="p8"]').forEach(function (r) { r.disabled = true; });
+    $("p8-resultado").hidden = false;
+    $("p8-otra").hidden = false;
+    Codigo.consola($("p8-consola"), []);
+    $("p8-expresion").innerHTML = "";
+    var caja = $("p8-caja");
+    ponerValor(caja, String(n));
+
+    if (marcada.value === "a") {
+      // int() convierte nada más leer: la caja pasa de texto a número
+      despues(ESPERA + 400, function () {
+        ponerValor(caja, n);
+        $("p8-expresion").innerHTML = expresion(["edad + 1", n + " + 1", "<strong>" + (n + 1) + "</strong>"]);
+        Codigo.agregar($("p8-consola"), String(n + 1));
+      });
+      Pasos.feedback($("fb-arreglar"), "ok",
+        "¡Eso es! int() convierte el texto nada más leerlo: edad ya es un número. (También valía int(edad) + 1.)");
+    } else {
+      despues(ESPERA, function () {
+        $("p8-expresion").innerHTML = expresion(["int(edad) + 1", n + " + 1", "<strong>" + (n + 1) + "</strong>"]);
+        Codigo.agregar($("p8-consola"), String(n + 1));
+      });
+      Pasos.feedback($("fb-arreglar"), "ok",
+        "¡Bien! edad sigue siendo texto, pero int(edad) lo convierte justo para la suma. (También valía int(input(…)).)");
+    }
+    return true;
+  }
+
+  /* ---------- 9. Reto ---------- */
+  var PRUEBAS = [["Ana", 12], ["Luis", 9], ["Sol", 30]];
+  var HUECOS = { a: "edad + 1", b: 'str(edad) + "1"', c: "str(edad + 1)" };
+  var pistasReto = {
+    a: "edad es un número y el resto es texto: hay que convertirla con str() antes de pegarla.",
+    b: "str(edad) + \"1\" pega un 1 detrás: 12 → \"121\". Primero suma y luego convierte."
+  };
+
+  function salidaReto(opcion, nombre, edad) {
+    if (opcion === "a") return { error: true, texto: ERROR_TIPO };
+    var trozo = opcion === "b" ? String(edad) + "1" : String(edad + 1);
+    return { texto: "Hola " + nombre + ", tendrás " + trozo + " años", ok: opcion === "c" };
+  }
+
+  function entrarReto(paso, leccion) {
+    $("reto-hueco").textContent = "?";
+    $("reto-pruebas").hidden = true;
+    limpiarOpciones(paso);
+    Pasos.limpiarFeedback($("fb-reto"));
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        $("reto-hueco").textContent = HUECOS[r.value];
+        $("reto-pruebas").hidden = true;
+        limpiarOpciones(paso);
+        Pasos.limpiarFeedback($("fb-reto"));
+        leccion.listoParaComprobar(true);
+      };
+    });
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var lista = $("reto-pruebas");
+    lista.textContent = "";
+    PRUEBAS.forEach(function (p) {
+      var res = salidaReto(marcada.value, p[0], p[1]);
+      var li = document.createElement("li");
+      var entrada = document.createElement("span");
+      entrada.className = "prueba__entrada";
+      entrada.textContent = "Escribe: " + p[0] + " y " + p[1];
+      var salida = document.createElement("span");
+      salida.className = "prueba__res prueba__res--" + (res.error ? "error" : res.ok ? "ok" : "mal");
+      salida.textContent = (res.error ? "✗ " : res.ok ? "✓ " : "✗ ") + res.texto;
+      li.appendChild(entrada);
+      li.appendChild(salida);
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+
+    var opcion = marcada.closest(".opcion");
+    if (marcada.value === "c") {
+      opcion.classList.add("opcion--correcta");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      Pasos.feedback($("fb-reto"), "ok",
+        "¡Reto superado! Primero sumas con números (edad + 1) y luego conviertes a texto para pegarlo.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("fb-reto"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* Al cambiar de paso se cortan las animaciones pendientes del anterior */
+  function alEntrar(fn) {
+    return function (paso, leccion, info) {
+      cancelarTimers();
+      trazaError.detener();
+      fn(paso, leccion, info);
+    };
+  }
+
+  Pasos.iniciar({
+    alEntrar: {
+      "paso-parecidos": alEntrar(entrarParecidos),
+      "paso-sorpresa": alEntrar(entrarSorpresa),
+      "paso-unir": alEntrar(entrarUnir),
+      "paso-clasificar": alEntrar(entrarClasificar),
+      "paso-error": alEntrar(entrarError),
+      "paso-convertir": alEntrar(entrarConvertir),
+      "paso-input": alEntrar(entrarInput),
+      "paso-arreglar": alEntrar(entrarArreglar),
+      "paso-reto": alEntrar(entrarReto)
+    },
+    comprobar: {
+      "paso-sorpresa": comprobarSorpresa,
+      "paso-clasificar": function (paso) { return paso._comprobar ? paso._comprobar() : false; },
+      "paso-arreglar": comprobarArreglar,
+      "paso-reto": comprobarReto
+    }
+  });
+})();
+</script>
+</body>
+</html>
