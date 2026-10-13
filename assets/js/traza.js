@@ -7,7 +7,7 @@
      consola: el,                (opcional) salida acumulada de print()
      ejecutar: btn,              "Ejecutar línea ▸": avanza un paso
      reproducir: btn,            (opcional) "▶ Ejecutar todo": avanza solo; se convierte en "⏸ Pausa"
-     reiniciar: btn,             (opcional)
+     reiniciar: btn,             (opcional) se oculta hasta que termina la primera ejecución
      generar: function () {      devuelve la lista de pasos que ejecuta Python
        return [{ linea: 0, texto: "…", salida: "…", estado: { … } }, …];
      },
@@ -64,6 +64,7 @@
       if (o.consola) Codigo.consola(o.consola, []);
       o.ejecutar.disabled = false;
       if (o.reproducir) o.reproducir.disabled = false;
+      if (o.reiniciar) o.reiniciar.hidden = true;
       if (o.alReiniciar) o.alReiniciar();
     }
 
@@ -81,6 +82,7 @@
       if (o.alPaso) o.alPaso(paso, i - 1);
       if (terminado()) {
         detener();
+        if (o.reiniciar) o.reiniciar.hidden = false;
         if (!o.repetible) {
           o.ejecutar.disabled = true;
           if (o.reproducir) o.reproducir.disabled = true;
@@ -104,7 +106,11 @@
 
     o.ejecutar.addEventListener("click", function () { detener(); avanzar(); });
     if (o.reproducir) o.reproducir.addEventListener("click", alternar);
-    if (o.reiniciar) o.reiniciar.addEventListener("click", reiniciar);
+    // El botón se oculta al reiniciar: el foco pasa a "Ejecutar línea"
+    if (o.reiniciar) o.reiniciar.addEventListener("click", function () {
+      reiniciar();
+      o.ejecutar.focus();
+    });
 
     reiniciar();
     return { reiniciar: reiniciar, reproducir: reproducir, detener: detener, cancelar: cancelar };
