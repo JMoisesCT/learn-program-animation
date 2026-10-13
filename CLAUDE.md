@@ -30,6 +30,7 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 
 ## Convenciones de trabajo
 - Reutilizar `base.css` y las utilidades de `assets/js/` antes de crear estilos o scripts nuevos.
+- Tarjetas interactivas: `<div class="tarjeta lab">` con hasta tres grupos: `lab__principal` (código y controles), `lab__visual` (cajas, escenas) y `lab__resultado` (salida, notas, feedback). En escritorio (≥1024px) se reparten en dos columnas; en móvil se apilan en el orden del HTML, así que ese orden debe ser el que se quiere ver en el móvil.
 - Una lección nueva = su carpeta + una tarjeta en `index.html`.
 - Probar cada página en el navegador (escritorio y ancho móvil) antes de dar la tarea por terminada.
 - Commits pequeños y descriptivos, en español o inglés pero consistentes.
