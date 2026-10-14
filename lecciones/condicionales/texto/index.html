@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comparar textos · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: comparar textos en Python con ==, ignorar mayúsculas con .lower(), buscar con in y comparar números que llegan de input() con int().">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    /* Color del texto (str), como en «Texto y números» */
+    :root { --tipo-str: #a8480a; --tipo-str-suave: #fff1e3; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .lab__visual > .expresion { margin: var(--esp-4) 0 var(--esp-2); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .btn code { font-weight: 700; }
+    .expresion { overflow-wrap: anywhere; }
+
+    /* ---------- Consola que espera una respuesta ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 8.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); white-space: pre; }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada input.entrada--corta { width: 3.5rem; text-align: center; }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .consola__linea--error { color: var(--color-error); }
+    .sugerencias { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .sugerencias .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); white-space: pre; }
+    .campo-trozo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-4); font-weight: 600; }
+    .campo-trozo input { width: 9rem; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .campo-trozo input:focus-visible { border-radius: var(--radio-sm); }
+
+    /* ---------- Letras: un texto partido en casillas ---------- */
+    .comparar { display: grid; gap: var(--esp-2); justify-content: center; margin: var(--esp-2) 0; }
+    .comparar__fila { display: flex; align-items: center; gap: var(--esp-2); }
+    .comparar__nombre { width: 4.25rem; flex: none; text-align: right; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .comparar--ancho .comparar__nombre { width: 8.5rem; }
+    .letras { display: flex; flex-wrap: wrap; gap: 4px; min-height: 2.5rem; }
+    .letras--centro { justify-content: center; }
+    .letra { display: grid; place-items: center; width: 2.1rem; height: 2.5rem; font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; background: var(--color-superficie); border: 2px solid var(--color-borde); border-radius: 8px; transition: background-color var(--dur-rapida), border-color var(--dur-rapida), color var(--dur-rapida); }
+    .letra--espacio { color: var(--color-texto-suave); font-weight: 400; }
+    .letra--igual { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .letra--distinta { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+    .letra--falta { border-style: dashed; border-color: var(--color-pista); background: none; }
+    .letra--cambio { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); animation: valor-pulso 300ms ease-out; }
+    .letra--encontrada { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); animation: valor-pulso 300ms ease-out both; }
+    .letras--frase { justify-content: center; row-gap: var(--esp-2); }
+    .letras--frase .letra { width: 1.55rem; height: 2.1rem; font-size: var(--texto-sm); border-radius: 6px; }
+    .palabra { display: inline-flex; gap: 3px; }
+    .maquina-lower { display: flex; align-items: center; justify-content: center; gap: var(--esp-2); margin: var(--esp-2) 0; color: var(--color-texto-suave); }
+    .maquina-lower code { padding: var(--esp-1) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: var(--color-codigo-texto); font-weight: 700; }
+    .vacio { color: var(--color-texto-suave); font-size: var(--texto-sm); font-style: italic; align-self: center; }
+
+    /* ---------- Fichas: número o texto ---------- */
+    .ficha { display: inline-flex; font-family: var(--fuente-codigo); font-weight: 700; padding: 0 0.5em; border: 2px solid; border-radius: var(--radio-sm); }
+    .ficha--int { color: var(--color-azul); background: var(--color-azul-suave); border-color: var(--color-azul); }
+    .ficha--str { color: var(--tipo-str); background: var(--tipo-str-suave); border-color: var(--tipo-str); }
+    .choca .ficha { animation: sacudir 420ms ease; }
+    .error-chip { color: var(--color-error); font-size: var(--texto-md); }
+
+    /* ---------- ¿True o False? ---------- */
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+    .prediccion .fila-botones { margin-top: 0; }
+    .prediccion .btn { font-family: var(--fuente-codigo); min-width: 5.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: 1fr; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre-wrap; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { white-space: nowrap; display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 250ms; }
+    .pruebas li:nth-child(3) { animation-delay: 500ms; }
+
+    @media (max-width: 480px) {
+      .letra { width: 1.85rem; height: 2.25rem; font-size: var(--texto-sm); }
+      .letras--frase .letra { width: 1.35rem; height: 1.9rem; font-size: var(--texto-xs); }
+      .comparar__nombre { width: 3.6rem; font-size: var(--texto-xs); }
+      .comparar--ancho .comparar__nombre { width: 7rem; }
+      .pruebas li { font-size: var(--texto-sm); padding: var(--esp-2) var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="condicionales-texto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: == compara letra a letra -->
+    <section class="paso" id="paso-igual" data-requiere aria-labelledby="t-igual">
+      <span class="paso__etiqueta">Condicionales 3/3 · Comparar textos</span>
+      <h1 class="paso__titulo" id="t-igual">¿Es la misma palabra?</h1>
+      <p>La contraseña secreta es <strong>gato</strong>. Escríbela en la consola y después prueba con <strong>Gato</strong>, con mayúscula.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">clave</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Contraseña: "</span>)</span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">clave</span> == <span class="tk-texto">"gato"</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"🔓 Adelante"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"🔒 Incorrecta"</span>)</span></code></pre>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="entrada">
+              <label for="s1-entrada">Contraseña:</label>
+              <input type="text" id="s1-entrada" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s1-enviar">Enviar ⏎</button>
+            </div>
+            <div id="s1-salida" aria-live="polite"></div>
+          </div>
+          <div class="sugerencias" role="group" aria-label="Respuestas para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="gato">gato</button>
+            <button type="button" class="btn btn-secundario" data-valor="Gato">Gato</button>
+            <button type="button" class="btn btn-secundario" data-valor="gato " aria-label="gato con un espacio al final">gato␣</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="comparar" aria-hidden="true">
+            <div class="comparar__fila"><span class="comparar__nombre">clave</span><div class="letras" id="s1-a"></div></div>
+            <div class="comparar__fila"><span class="comparar__nombre">"gato"</span><div class="letras" id="s1-b"></div></div>
+          </div>
+          <div class="expresion" aria-live="polite">
+            <span id="s1-expr">clave == "gato"</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano booleano--false" id="s1-resultado">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. .lower(): todo a minúsculas -->
+    <section class="paso" id="paso-lower" data-requiere aria-labelledby="t-lower">
+      <h2 class="paso__titulo" id="t-lower"><code>.lower()</code>: todo en minúsculas</h2>
+      <p>Así la contraseña funciona la escribas como la escribas. Prueba con <strong>dos</strong> formas distintas de mayúsculas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">clave</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Contraseña: "</span>)</span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">clave</span>.<span class="tk-funcion">lower</span>() == <span class="tk-texto">"gato"</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"🔓 Adelante"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"🔒 Incorrecta"</span>)</span></code></pre>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="entrada">
+              <label for="s2-entrada">Contraseña:</label>
+              <input type="text" id="s2-entrada" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s2-enviar">Enviar ⏎</button>
+            </div>
+            <div id="s2-salida" aria-live="polite"></div>
+          </div>
+          <div class="sugerencias" role="group" aria-label="Respuestas para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="GATO">GATO</button>
+            <button type="button" class="btn btn-secundario" data-valor="Gato">Gato</button>
+            <button type="button" class="btn btn-secundario" data-valor="gAtO">gAtO</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="comparar" aria-hidden="true">
+            <div class="comparar__fila"><span class="comparar__nombre">clave</span><div class="letras" id="s2-antes"></div></div>
+          </div>
+          <div class="maquina-lower" aria-hidden="true"><span>⬇</span><code>.lower()</code><span>⬇</span></div>
+          <div class="comparar" aria-hidden="true">
+            <div class="comparar__fila"><span class="comparar__nombre"></span><div class="letras" id="s2-despues"></div></div>
+          </div>
+          <div class="expresion" aria-live="polite">
+            <span id="s2-expr">clave.lower() == "gato"</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano booleano--false" id="s2-resultado">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <p class="nota">Las letras que cambia <code>.lower()</code> se ven en azul. También existe <code>.upper()</code>, que lo pasa todo a mayúsculas.</p>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Predecir: ¿True o False? -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">¿True o False?</h2>
+      <p>Compara letra a letra, sin ejecutar nada.</p>
+
+      <div class="tarjeta">
+        <ol class="predicciones">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">"Hola" == "hola"</code>
+              <div class="fila-botones" role="group" aria-label='Respuesta para "Hola" == "hola"'>
+                <button type="button" class="btn btn-secundario" data-valor="true" aria-pressed="false">True</button>
+                <button type="button" class="btn btn-secundario" data-valor="false" aria-pressed="false">False</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">"Hola".lower() == "hola"</code>
+              <div class="fila-botones" role="group" aria-label='Respuesta para "Hola".lower() == "hola"'>
+                <button type="button" class="btn btn-secundario" data-valor="true" aria-pressed="false">True</button>
+                <button type="button" class="btn btn-secundario" data-valor="false" aria-pressed="false">False</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">"LIMA".lower() == "Lima"</code>
+              <div class="fila-botones" role="group" aria-label='Respuesta para "LIMA".lower() == "Lima"'>
+                <button type="button" class="btn btn-secundario" data-valor="true" aria-pressed="false">True</button>
+                <button type="button" class="btn btn-secundario" data-valor="false" aria-pressed="false">False</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="feedback" id="pr-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 4. in: ¿está dentro? -->
+    <section class="paso" id="paso-in" data-requiere aria-labelledby="t-in">
+      <h2 class="paso__titulo" id="t-in"><code>in</code>: ¿está dentro?</h2>
+      <p><code>in</code> busca un trozo de texto dentro de otro. Busca trozos que estén en la frase y alguno que no.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">frase</span> = <span class="tk-texto">"me gusta el chocolate"</span></span><span class="linea"><span class="tk-variable">trozo</span> = <span class="tk-texto" id="s4-codigo-trozo">"choco"</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">trozo</span> <span class="tk-palabra">in</span> <span class="tk-variable">frase</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Está dentro!"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"No está"</span>)</span></code></pre>
+          <div class="campo-trozo">
+            <label for="s4-trozo">Valor de <code>trozo</code>:</label>
+            <input type="text" id="s4-trozo" value="choco" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="sugerencias" role="group" aria-label="Trozos para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="gusta">gusta</button>
+            <button type="button" class="btn btn-secundario" data-valor="late">late</button>
+            <button type="button" class="btn btn-secundario" data-valor="Choco">Choco</button>
+            <button type="button" class="btn btn-secundario" data-valor="fresa">fresa</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="letras letras--frase" id="s4-frase" aria-hidden="true"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s4-expr">"choco" in frase</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano booleano--true" id="s4-resultado">True</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. ¿Es vocal? in + .lower() -->
+    <section class="paso" id="paso-vocal" data-requiere aria-labelledby="t-vocal">
+      <h2 class="paso__titulo" id="t-vocal">¿Es vocal?</h2>
+      <p>Con <code>in</code> también se mira si una letra está en una lista de letras. Prueba una <strong>vocal</strong>, una <strong>consonante</strong> y una vocal en <strong>mayúscula</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">letra</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Letra: "</span>)</span><span class="linea" id="s5-linea-if"></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Es vocal"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"No es vocal"</span>)</span></code></pre>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="entrada">
+              <label for="s5-entrada">Letra:</label>
+              <input type="text" class="entrada--corta" id="s5-entrada" maxlength="1" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s5-enviar">Enviar ⏎</button>
+            </div>
+            <div id="s5-salida" aria-live="polite"></div>
+          </div>
+          <div class="sugerencias" role="group" aria-label="Letras para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="e">e</button>
+            <button type="button" class="btn btn-secundario" data-valor="m">m</button>
+            <button type="button" class="btn btn-secundario" data-valor="A">A</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-lower" aria-pressed="false">Añadir <code>.lower()</code></button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="comparar comparar--ancho" aria-hidden="true">
+            <div class="comparar__fila"><span class="comparar__nombre" id="s5-nombre">letra</span><div class="letras" id="s5-letra"></div></div>
+            <div class="comparar__fila"><span class="comparar__nombre">"aeiou"</span><div class="letras" id="s5-vocales"></div></div>
+          </div>
+          <div class="expresion" aria-live="polite">
+            <span id="s5-expr">letra in "aeiou"</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano booleano--false" id="s5-resultado">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Números que llegan como texto -->
+    <section class="paso" id="paso-numeros" data-requiere aria-labelledby="t-numeros">
+      <h2 class="paso__titulo" id="t-numeros">Números que llegan como texto</h2>
+      <p>Recuerda: <code>input()</code> siempre da <strong>texto</strong>. ¿Qué pasa si lo comparamos con un número? Escribe una edad.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Código"><code><span class="linea" id="s6-linea-input"></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">edad</span> &gt;= <span class="tk-numero">18</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Puedes votar"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Todavía no"</span>)</span></code></pre>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="entrada">
+              <label for="s6-entrada">¿Edad?</label>
+              <input type="text" class="entrada--corta" id="s6-entrada" inputmode="numeric" maxlength="3" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s6-enviar">Enviar ⏎</button>
+            </div>
+            <div id="s6-salida" aria-live="polite"></div>
+          </div>
+          <div class="fila-botones" id="s6-arreglo" hidden>
+            <button type="button" class="btn btn-secundario" id="s6-int" aria-pressed="false">🔧 Arreglar con <code>int()</code></button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="expresion" id="s6-visual" aria-live="polite">
+            <span class="ficha ficha--str" id="s6-izq">edad</span>
+            <span>&gt;=</span>
+            <span class="ficha ficha--int">18</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span id="s6-resultado">?</span>
+          </div>
+          <p class="nota" id="s6-nota" style="text-align:center">Naranja: texto (<code>str</code>). Azul: número (<code>int</code>).</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Quieres postre?</h2>
+      <p>El programa debe dar postre si la respuesta es <strong>sí</strong>, la escriban como la escriban: «Sí», «SÍ» o «sí». ¿Qué condición va en el hueco? Lo probaremos con tres respuestas.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">respuesta</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"¿Postre? "</span>)</span><span class="linea"><span class="tk-palabra">if</span> <span class="hueco" id="reto-hueco">?</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"🍰 ¡Aquí tienes!"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Vale, sin postre"</span>)</span></code></pre>
+
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué condición va en el hueco?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="igual"><span>respuesta == "sí"</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="lower-mal"><span>respuesta.lower() == "Sí"</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="lower"><span>respuesta.lower() == "sí"</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="in"><span>"sí" in respuesta</span></label>
+        </fieldset>
+
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>==</code> compara letra a letra; <code>.lower()</code> olvida las mayúsculas, <code>in</code> busca un trozo e <code>int()</code> convierte la respuesta en número.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-texto">"Hola"</span> == <span class="tk-texto">"hola"</span>          <span class="tk-comentario"># False</span></span><span class="linea"><span class="tk-texto">"Hola"</span>.<span class="tk-funcion">lower</span>() == <span class="tk-texto">"hola"</span>  <span class="tk-comentario"># True</span></span><span class="linea"><span class="tk-texto">"choco"</span> <span class="tk-palabra">in</span> <span class="tk-texto">"chocolate"</span>    <span class="tk-comentario"># True</span></span><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"¿Edad? "</span>))</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../bucles/index.html">Siguiente: Bucles →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  // Un texto tal como lo escribe Python, con sus comillas
+  function comillas(s) { return '"' + s + '"'; }
+
+  /* Recuerda qué casos ha visto el alumno en cada paso */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); },
+      tiene: function (clave) { return !!s[clave]; },
+      cuantos: function () { return Object.keys(s).length; }
+    };
+  }
+
+  /* Un if / else ya resuelto: resalta el camino que se ejecuta.
+     lineaIf es el índice de la línea del if; el bloque del else va dos líneas más abajo. */
+  function caminoIfElse(pre, lineaIf, r) {
+    Codigo.marcar(pre, r
+      ? { activas: [lineaIf, lineaIf + 1], saltadas: [lineaIf + 2, lineaIf + 3] }
+      : { activas: [lineaIf, lineaIf + 2, lineaIf + 3], saltadas: [lineaIf + 1] });
+  }
+
+  /* Pinta un texto en casillas, una por letra. clases[i] añade una clase a la casilla i. */
+  function pintarLetras(el, texto, clases) {
+    el.textContent = "";
+    var letras = Array.from(texto);
+    if (!letras.length) {
+      var vacio = document.createElement("span");
+      vacio.className = "vacio";
+      vacio.textContent = '"" (vacío)';
+      el.appendChild(vacio);
+      return;
+    }
+    letras.forEach(function (c, i) {
+      var s = document.createElement("span");
+      s.className = "letra" + (c === " " ? " letra--espacio" : "") + (clases && clases[i] ? " " + clases[i] : "");
+      s.textContent = c === " " ? "␣" : c;
+      el.appendChild(s);
+    });
+  }
+
+  /* Muestra la salida de print() debajo de la entrada de la consola */
+  function salida(el, lineas, error) {
+    el.textContent = "";
+    lineas.forEach(function (t) {
+      var l = document.createElement("span");
+      l.className = "consola__linea" + (error ? " consola__linea--error" : "");
+      l.textContent = t;
+      el.appendChild(l);
+    });
+  }
+
+  /* Conecta una entrada de consola: Enviar, Enter en el campo y los botones de sugerencia */
+  function conectarEntrada(paso, campo, boton, alEnviar) {
+    function enviar() { alEnviar(campo.value); }
+    boton.addEventListener("click", enviar);
+    // Enter en el campo envía la respuesta (en vez de pulsar "Continuar")
+    campo.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      enviar();
+    });
+    paso.querySelectorAll(".sugerencias [data-valor]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        campo.value = b.getAttribute("data-valor");
+        enviar();
+      });
+    });
+  }
+
+  /* ---------- 1. == compara letra a letra ---------- */
+  var s1 = vistos();
+  var CLAVE = "gato";
+
+  function pintarIgual(valor) {
+    var a = Array.from(valor);
+    var b = Array.from(CLAVE);
+    var n = Math.max(a.length, b.length);
+    var ca = [];
+    var cb = [];
+    for (var i = 0; i < n; i++) {
+      var igual = a[i] === b[i];
+      ca[i] = a[i] === undefined ? "" : igual ? "letra--igual" : "letra--distinta";
+      cb[i] = b[i] === undefined ? "" : igual ? "letra--igual" : a[i] === undefined ? "letra--falta" : "letra--distinta";
+    }
+    pintarLetras($("s1-a"), valor, ca);
+    pintarLetras($("s1-b"), CLAVE, cb);
+  }
+
+  function enviarIgual(valor, leccion) {
+    var r = valor === CLAVE;
+    pintarIgual(valor);
+    $("s1-expr").textContent = comillas(valor) + ' == "gato"';
+    Codigo.booleano($("s1-resultado"), r);
+    caminoIfElse($("s1-codigo"), 1, r);
+    salida($("s1-salida"), [r ? "🔓 Adelante" : "🔒 Incorrecta"]);
+
+    if (r) s1.marcar("exacta");
+    else if (valor.toLowerCase() === CLAVE) s1.marcar("mayuscula");
+    else if (valor.trim() === CLAVE) s1.marcar("espacio");
+
+    var fb = $("s1-fb");
+    if (s1.tiene("exacta") && s1.tiene("mayuscula")) {
+      Pasos.feedback(fb, "ok", "== compara letra a letra: para Python «G» y «g» son letras distintas. ¡Hasta un espacio de más cuenta!");
+      leccion.desbloquear();
+    } else if (r) {
+      Pasos.feedback(fb, "pista", "¡Adentro! Ahora prueba con «Gato», con mayúscula.");
+    } else if (valor.toLowerCase() === CLAVE) {
+      Pasos.feedback(fb, "pista", "Casi… Mira la casilla naranja: «G» no es igual que «g». Ahora escribe la contraseña exacta.");
+    } else if (valor.trim() === CLAVE) {
+      Pasos.feedback(fb, "pista", "¡Ese espacio también es una letra! Por eso no son iguales.");
+    } else {
+      Pasos.feedback(fb, "pista", "Esa no es. La contraseña es «gato».");
+    }
+  }
+
+  /* ---------- 2. .lower() ---------- */
+  var s2 = {};   // formas distintas que han pasado gracias a .lower()
+
+  function enviarLower(valor, leccion) {
+    var bajo = valor.toLowerCase();
+    var r = bajo === CLAVE;
+    var antes = Array.from(valor);
+    pintarLetras($("s2-antes"), valor);
+    pintarLetras($("s2-despues"), bajo, Array.from(bajo).map(function (c, i) {
+      return c !== antes[i] ? "letra--cambio" : "";
+    }));
+    $("s2-expr").textContent = comillas(bajo) + ' == "gato"';
+    Codigo.booleano($("s2-resultado"), r);
+    caminoIfElse($("s2-codigo"), 1, r);
+    salida($("s2-salida"), [r ? "🔓 Adelante" : "🔒 Incorrecta"]);
+
+    var conMayusculas = r && valor !== CLAVE;
+    if (conMayusculas) s2[valor] = true;
+    var cuantas = Object.keys(s2).length;
+    var fb = $("s2-fb");
+    if (cuantas >= 2) {
+      Pasos.feedback(fb, "ok", ".lower() pasa el texto a minúsculas antes de comparar: así da igual cómo lo escriban.");
+      leccion.desbloquear();
+    } else if (conMayusculas) {
+      Pasos.feedback(fb, "pista", "¡Entró! Prueba otra forma con mayúsculas en otro sitio.");
+    } else if (r) {
+      Pasos.feedback(fb, "pista", "Esa ya estaba en minúsculas. Prueba con alguna mayúscula.");
+    } else {
+      Pasos.feedback(fb, "pista", "Después de .lower() queda " + comillas(bajo) + ", que no es «gato».");
+    }
+  }
+
+  /* ---------- 3. ¿True o False? ---------- */
+  var predicciones = [
+    {
+      correcta: false,
+      ok: "La primera letra no coincide: «H» y «h» son distintas.",
+      pista: "Compara la primera letra de cada lado. ¿Son exactamente iguales?"
+    },
+    {
+      correcta: true,
+      ok: "\"Hola\".lower() da \"hola\", y \"hola\" == \"hola\" es True.",
+      pista: "Primero haz .lower(): ¿qué texto queda? Compáralo con \"hola\"."
+    },
+    {
+      correcta: false,
+      ok: "¡Bien visto! .lower() da \"lima\", pero a la derecha pone \"Lima\" con L mayúscula.",
+      pista: ".lower() da \"lima\", todo en minúsculas. Mira la primera letra de \"Lima\"."
+    }
+  ];
+  var aciertos = [false, false, false];
+
+  /* ---------- 4. in ---------- */
+  var FRASE = "me gusta el chocolate";
+  var s4 = vistos();
+
+  function pintarIn() {
+    var trozo = $("s4-trozo").value;
+    var cont = $("s4-frase");
+    cont.textContent = "";
+    var pos = trozo ? FRASE.indexOf(trozo) : -1;
+    var r = trozo !== "" && pos !== -1;
+    // Una palabra por grupo (con su espacio) para que la frase no se corte a mitad de palabra
+    var i = 0;
+    FRASE.split(/(?<= )/).forEach(function (palabra) {
+      var grupo = document.createElement("span");
+      grupo.className = "palabra";
+      Array.from(palabra).forEach(function (c) {
+        var s = document.createElement("span");
+        s.className = "letra" + (c === " " ? " letra--espacio" : "");
+        if (r && i >= pos && i < pos + trozo.length) {
+          s.classList.add("letra--encontrada");
+          if (!Pasos.reducirMovimiento) s.style.animationDelay = ((i - pos) * 40) + "ms";
+        }
+        s.textContent = c === " " ? "␣" : c;
+        grupo.appendChild(s);
+        i++;
+      });
+      cont.appendChild(grupo);
+    });
+
+    $("s4-codigo-trozo").textContent = comillas(trozo);
+    $("s4-expr").textContent = comillas(trozo) + " in frase";
+    if (trozo === "") {
+      $("s4-resultado").textContent = "?";
+      $("s4-resultado").className = "booleano booleano--false";
+      Codigo.limpiar($("s4-codigo"));
+      Codigo.consola($("s4-consola"), []);
+      return null;
+    }
+    Codigo.booleano($("s4-resultado"), r);
+    caminoIfElse($("s4-codigo"), 2, r);
+    Codigo.consola($("s4-consola"), [r ? "¡Está dentro!" : "No está"]);
+    if (!r && trozo.toLowerCase() !== trozo && FRASE.indexOf(trozo.toLowerCase()) !== -1) return "mayuscula";
+    return r ? "dentro" : "fuera";
+  }
+
+  function alCambiarIn(leccion) {
+    var caso = pintarIn();
+    if (!caso) return;
+    s4.marcar(caso === "mayuscula" ? "fuera" : caso);
+    if (caso === "mayuscula") s4.marcar("mayuscula");
+    var fb = $("s4-fb");
+    if (s4.todos(["dentro", "fuera"])) {
+      Pasos.feedback(fb, "ok", s4.tiene("mayuscula")
+        ? "in busca el trozo exacto: «Choco» no está, porque en la frase va en minúscula."
+        : "in da True si el trozo aparece, aunque sea dentro de una palabra. Y también distingue mayúsculas.");
+      leccion.desbloquear();
+    } else if (caso === "dentro") {
+      Pasos.feedback(fb, "pista", "¡Encontrado! Ahora busca algo que no esté en la frase.");
+    } else {
+      Pasos.feedback(fb, "pista", "No está. Ahora busca un trozo que sí esté.");
+    }
+  }
+
+  /* ---------- 5. ¿Es vocal? ---------- */
+  var s5 = vistos();
+  var conLower = false;
+  var letraActual = "";
+  var IF_SIN = '<span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:';
+  var IF_CON = '<span class="tk-palabra">if</span> <span class="tk-variable">letra</span>.<span class="tk-funcion">lower</span>() <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:';
+
+  function pintarVocal() {
+    $("s5-linea-if").innerHTML = conLower ? IF_CON : IF_SIN;
+    $("s5-nombre").textContent = conLower ? "letra.lower()" : "letra";
+    $("s5-expr").textContent = (letraActual ? comillas(conLower ? letraActual.toLowerCase() : letraActual) : conLower ? "letra.lower()" : "letra") +
+      ' in "aeiou"';
+    var buscada = conLower ? letraActual.toLowerCase() : letraActual;
+    var pos = buscada ? "aeiou".indexOf(buscada) : -1;
+    pintarLetras($("s5-vocales"), "aeiou", Array.from("aeiou").map(function (c, i) {
+      return i === pos ? "letra--igual" : "";
+    }));
+    if (!letraActual) {
+      $("s5-letra").textContent = "";
+      Codigo.marcar($("s5-codigo"), { activas: [0] });
+      return null;
+    }
+    pintarLetras($("s5-letra"), buscada, [pos !== -1 ? "letra--igual" : "letra--distinta"]);
+    var r = pos !== -1;
+    Codigo.booleano($("s5-resultado"), r);
+    caminoIfElse($("s5-codigo"), 1, r);
+    salida($("s5-salida"), [r ? "Es vocal" : "No es vocal"]);
+    return r;
+  }
+
+  function enviarVocal(valor, leccion) {
+    var fb = $("s5-fb");
+    if (valor.length !== 1 || valor === " ") {
+      Pasos.feedback(fb, "pista", "Escribe una sola letra.");
+      return;
+    }
+    letraActual = valor;
+    var r = pintarVocal();
+    var mayuscula = valor !== valor.toLowerCase();
+    var esVocal = "aeiou".indexOf(valor.toLowerCase()) !== -1;
+    if (r && !mayuscula) s5.marcar("vocal");
+    if (!r && !esVocal) s5.marcar("consonante");
+    if (r && mayuscula) s5.marcar("mayuscula");
+
+    if (s5.todos(["vocal", "consonante", "mayuscula"])) {
+      Pasos.feedback(fb, "ok", "letra in \"aeiou\" mira si la letra es una de esas cinco. Con .lower() también valen las mayúsculas.");
+      leccion.desbloquear();
+    } else if (!r && esVocal && mayuscula) {
+      Pasos.feedback(fb, "pista", "¡«" + valor + "» es vocal! Pero «" + valor + "» no está en \"aeiou\", que va en minúsculas. Pulsa «Añadir .lower()» y vuelve a enviarla.");
+    } else if (r && mayuscula) {
+      Pasos.feedback(fb, "pista", ".lower() la pasó a minúscula y ya la encuentra. Te falta probar " +
+        (s5.tiene("vocal") ? "una consonante." : "una vocal en minúscula."));
+    } else {
+      var faltan = [];
+      if (!s5.tiene("vocal")) faltan.push("una vocal");
+      if (!s5.tiene("consonante")) faltan.push("una consonante");
+      if (!s5.tiene("mayuscula")) faltan.push("una vocal en mayúscula");
+      Pasos.feedback(fb, "pista", (r ? "Es vocal. " : "No es vocal. ") + "Te falta probar " + faltan.join(" y ") + ".");
+    }
+  }
+
+  /* ---------- 6. input() + int() ---------- */
+  var conInt = false;
+  var s6 = vistos();
+  var INPUT_SIN = '<span class="tk-variable">edad</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"¿Edad? "</span>)';
+  var INPUT_CON = '<span class="tk-variable">edad</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"¿Edad? "</span>))';
+
+  function prepararNumeros() {
+    $("s6-linea-input").innerHTML = conInt ? INPUT_CON : INPUT_SIN;
+    var izq = $("s6-izq");
+    izq.className = "ficha " + (conInt ? "ficha--int" : "ficha--str");
+    izq.textContent = "edad";
+    $("s6-resultado").textContent = "?";
+    $("s6-resultado").className = "";
+    $("s6-visual").classList.remove("choca");
+    Codigo.marcar($("s6-codigo"), { activas: [0] });
+    salida($("s6-salida"), []);
+    var btn = $("s6-int");
+    btn.setAttribute("aria-pressed", String(conInt));
+    btn.innerHTML = conInt ? "↺ Quitar <code>int()</code>" : "🔧 Arreglar con <code>int()</code>";
+  }
+
+  function enviarNumero(valor, leccion) {
+    var fb = $("s6-fb");
+    var texto = valor.trim();
+    if (!/^\d{1,3}$/.test(texto)) {
+      Pasos.feedback(fb, "pista", "Escribe tu edad con números, por ejemplo 12.");
+      return;
+    }
+    var izq = $("s6-izq");
+    var res = $("s6-resultado");
+    var visual = $("s6-visual");
+    visual.classList.remove("choca");
+
+    if (!conInt) {
+      izq.textContent = comillas(texto);
+      res.className = "error-chip";
+      res.textContent = "💥 Error";
+      void visual.offsetWidth;
+      visual.classList.add("choca");
+      Codigo.marcar($("s6-codigo"), { activas: [1], saltadas: [2, 3, 4] });
+      salida($("s6-salida"), ["TypeError: '>=' not supported between instances of 'str' and 'int'"], true);
+      $("s6-arreglo").hidden = false;
+      s6.marcar("error");
+      Pasos.feedback(fb, "pista", "input() dio el texto " + comillas(texto) + ", y Python no sabe comparar texto con un número. Pulsa «Arreglar con int()».");
+      return;
+    }
+
+    var n = Number(texto);
+    var r = n >= 18;
+    izq.textContent = String(n);
+    Codigo.booleano(res, r);
+    caminoIfElse($("s6-codigo"), 1, r);
+    salida($("s6-salida"), [r ? "Puedes votar" : "Todavía no"]);
+    s6.marcar("ok");
+    if (s6.todos(["error", "ok"])) {
+      Pasos.feedback(fb, "ok", "int() convierte el texto " + comillas(texto) + " en el número " + n + ", y ya se puede comparar con >=.");
+      leccion.desbloquear();
+    }
+  }
+
+  /* ---------- 7. Reto ---------- */
+  var pistasReto = {
+    "igual": "Así funciona con «sí», pero no con «Sí» ni con «SÍ»: == distingue mayúsculas.",
+    "lower-mal": ".lower() lo pasa todo a minúsculas, así que nunca será igual a \"Sí\", que lleva mayúscula. ¡Nadie tendría postre!",
+    "in": "in también distingue mayúsculas: «Sí» no contiene \"sí\"."
+  };
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+
+    if (marcada.value === "lower") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! Con .lower() todas las formas de «sí» se convierten en \"sí\".");
+      var lista = $("reto-pruebas");
+      lista.innerHTML = "";
+      ["Sí", "SÍ", "no"].forEach(function (resp) {
+        var si = resp.toLowerCase() === "sí";
+        var li = document.createElement("li");
+        li.innerHTML = "<span>" + comillas(resp) + "</span>" + chip(si) +
+          "<span>" + (si ? "🍰 ¡Aquí tienes!" : "Vale, sin postre") + "</span>";
+        lista.appendChild(li);
+      });
+      lista.hidden = false;
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  conectarEntrada($("paso-igual"), $("s1-entrada"), $("s1-enviar"), function (v) { enviarIgual(v, leccion); });
+  conectarEntrada($("paso-lower"), $("s2-entrada"), $("s2-enviar"), function (v) { enviarLower(v, leccion); });
+  conectarEntrada($("paso-vocal"), $("s5-entrada"), $("s5-enviar"), function (v) { enviarVocal(v, leccion); });
+  conectarEntrada($("paso-numeros"), $("s6-entrada"), $("s6-enviar"), function (v) { enviarNumero(v, leccion); });
+
+  var campoTrozo = $("s4-trozo");
+  campoTrozo.addEventListener("input", function () { alCambiarIn(leccion); });
+  campoTrozo.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") e.preventDefault();   // aquí Enter no avanza de paso
+  });
+  document.querySelectorAll("#paso-in .sugerencias [data-valor]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      campoTrozo.value = b.getAttribute("data-valor");
+      alCambiarIn(leccion);
+    });
+  });
+
+  $("s5-lower").addEventListener("click", function () {
+    conLower = !conLower;
+    var btn = $("s5-lower");
+    btn.setAttribute("aria-pressed", String(conLower));
+    btn.innerHTML = conLower ? "Quitar <code>.lower()</code>" : "Añadir <code>.lower()</code>";
+    pintarVocal();
+  });
+
+  $("s6-int").addEventListener("click", function () {
+    conInt = !conInt;
+    prepararNumeros();
+    Pasos.limpiarFeedback($("s6-fb"));
+    $("s6-entrada").focus();
+  });
+
+  document.querySelectorAll("#paso-predecir .prediccion").forEach(function (fila, i) {
+    var botones = fila.querySelectorAll("button[data-valor]");
+    botones.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = predicciones[i];
+        var acierta = (btn.getAttribute("data-valor") === "true") === p.correcta;
+        botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+        Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pista);
+        if (!acierta) return;
+        fila.classList.add("prediccion--ok");
+        botones.forEach(function (b) { b.disabled = true; });
+        aciertos[i] = true;
+        if (aciertos.every(Boolean)) {
+          Pasos.feedback($("pr-fb"), "ok", "¡Las tres bien! Primero aplica .lower() y luego compara letra a letra.");
+          leccion.desbloquear();
+        }
+      });
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial de cada paso
+  pintarLetras($("s1-b"), CLAVE);
+  Codigo.marcar($("s1-codigo"), { activas: [0] });
+  Codigo.marcar($("s2-codigo"), { activas: [0] });
+  pintarIn();
+  pintarVocal();
+  prepararNumeros();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: { "paso-reto": entrarReto },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
