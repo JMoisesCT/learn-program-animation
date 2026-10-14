@@ -38,6 +38,7 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - `data-leccion` (en la lección y en su entrada de la portada) es la clave del progreso: el nombre del tema, o `<tema>-<sublección>` en las sublecciones (p. ej. `variables-reuso`). No cambiarla una vez publicada o se pierde el avance guardado.
 - El resumen final enlaza a la lección siguiente con un botón «Siguiente: <Lección> →»; al añadir una lección, actualizar también el enlace de la anterior.
 - Probar cada página en el navegador (escritorio y ancho móvil) antes de dar la tarea por terminada.
+- Las capturas de prueba se guardan en `capturas/` (ignorada por git), nunca en la raíz ni en el commit.
 - Commits pequeños y descriptivos, en español o inglés pero consistentes.
 - Autoría: commits y PRs solo a nombre de Moisés Cumpa <moises.cumpa@gmail.com>. No añadir `Co-Authored-By` de Claude, enlaces de sesión ni firmas tipo "Generated with Claude Code".
 - Publicación: cada cambio va en una rama → PR → fusión inmediata a `main` (GitHub Pages publica desde `main`). No hacer push directo a `main`.
