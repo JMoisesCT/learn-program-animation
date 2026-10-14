@@ -11,8 +11,7 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
   - `assets/js/`: utilidades compartidas (motor de pasos, progreso en `localStorage`).
   - `lecciones/<tema>/index.html`: una carpeta por tema (`variables/`, `condicionales/`, `bucles/`, …).
   - `lecciones/<tema>/<sublección>/index.html`: sublecciones que profundizan un tema (p. ej. `variables/formulas/`, `condicionales/logicos/`). Las rutas a `assets/` suben un nivel más (`../../../`).
-- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Bucles → Funciones → (Listas, próximamente).
-- Próxima sublección de Condicionales: Proyecto (`condicionales/proyecto`: mini programa con `input()`, `if/elif/else` y f-string).
+- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles → Funciones → (Listas, próximamente).
 - Rutas relativas siempre (el sitio vive bajo `/learn-program-animation/` en GitHub Pages).
 - Accesible: contraste suficiente, navegable con teclado, `prefers-reduced-motion` respetado, funciona en móvil.
 
