@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Condiciones anidadas · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: un if dentro de otro en Python, árboles de decisiones, la sangría y cuándo se puede juntar con and.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .control-slider { margin-top: var(--esp-5); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__principal > .fila-botones:first-child { margin-top: 0; }
+    .btn code { font-weight: 700; }
+
+    /* ---------- Árbol de decisiones ---------- */
+    .arbol { display: block; width: 100%; max-width: 24rem; margin: 0 auto; overflow: visible; }
+    .arbol__arista { fill: none; stroke: var(--color-borde); stroke-width: 3; stroke-linecap: round; transition: stroke var(--dur), stroke-width var(--dur); }
+    .arbol__arista.activo { stroke: var(--color-acento); stroke-width: 5; }
+    .arbol__etiqueta { font-family: var(--fuente-codigo); font-size: 12px; font-weight: 700; fill: var(--color-texto-suave); text-anchor: middle; transition: fill var(--dur); }
+    .arbol__etiqueta.activo { fill: var(--color-acento); }
+    .arbol__nodo rect { fill: var(--color-superficie); stroke: var(--color-borde); stroke-width: 2; transition: fill var(--dur), stroke var(--dur); }
+    .arbol__nodo text { font-family: var(--fuente-codigo); font-size: 14px; font-weight: 700; fill: var(--color-texto); text-anchor: middle; dominant-baseline: central; }
+    .arbol__nodo.activo rect { fill: var(--color-azul-suave); stroke: var(--color-azul); }
+    .arbol__hoja.activo rect { fill: var(--color-acento-suave); stroke: var(--color-acento); }
+    .arbol__hoja.activo { animation: valor-pulso 320ms ease-out; transform-box: fill-box; transform-origin: center; }
+    .arbol .apagado { opacity: 0.4; }
+    .arbol__nodo, .arbol__arista, .arbol__etiqueta { transition: opacity var(--dur), fill var(--dur), stroke var(--dur); }
+    .arbol__hoja--vista rect { stroke-dasharray: none; }
+    .arbol__check { font-size: 12px; fill: var(--color-ok); font-weight: 700; text-anchor: middle; opacity: 0; transition: opacity var(--dur); }
+    .arbol__hoja--vista .arbol__check { opacity: 1; }
+
+    /* ---------- Bloques: una caja dentro de otra ---------- */
+    .bloque { display: grid; gap: var(--esp-2); padding: var(--esp-2) var(--esp-3) var(--esp-3); border: 2px dashed var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur); }
+    .bloque--programa { border-style: solid; padding-top: var(--esp-3); }
+    .bloque--true { border-style: solid; border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .bloque__titulo { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-2); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); }
+    .bloque__titulo .booleano { font-size: var(--texto-xs); }
+    .bloque .bloque { margin-left: var(--esp-3); }
+    .sentencia { justify-self: start; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; padding: var(--esp-1) var(--esp-3); border-radius: 8px; background: var(--color-superficie-2); border: 2px solid transparent; transition: opacity var(--dur); }
+    .sentencia--no { opacity: 0.4; }
+    .sentencia--movil { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .sentencia--llega { animation: aparecer var(--dur) var(--curva-rebote); }
+
+    /* ---------- Dos preguntas que se juntan ---------- */
+    .partes { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin: var(--esp-2) 0; font-family: var(--fuente-codigo); font-weight: 700; }
+    .parte { display: grid; justify-items: center; gap: var(--esp-1); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie); border: 2px solid var(--color-borde); }
+    .parte__expr { white-space: nowrap; }
+    .partes__op { color: #c0266b; font-size: var(--texto-md); }
+    .partes .expresion__flecha { font-size: var(--texto-lg); }
+    .partes > .booleano { font-size: var(--texto-lg); }
+
+    /* ---------- ¿Qué se imprime? ---------- */
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__valor { margin: 0 0 var(--esp-2); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); }
+    .prediccion .fila-botones { margin-top: 0; justify-content: flex-start; gap: var(--esp-2); }
+    .prediccion .btn { font-size: var(--texto-sm); min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: 1fr; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 250ms; }
+    .pruebas li:nth-child(3) { animation-delay: 500ms; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    @media (max-width: 480px) {
+      .partes > .booleano, .partes .expresion__flecha { font-size: var(--texto-md); }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="condicionales-anidados">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: un árbol de decisiones -->
+    <section class="paso" id="paso-arbol" data-requiere aria-labelledby="t-arbol">
+      <span class="paso__etiqueta">Condicionales 4/4 · Condiciones anidadas</span>
+      <h1 class="paso__titulo" id="t-arbol">Una pregunta lleva a otra</h1>
+      <p>Para elegir qué ponerte, primero miras si llueve y, solo si llueve, si hace frío. Cambia el tiempo y llega a las <strong>tres</strong> hojas del árbol.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="fila-botones" role="group" aria-label="El tiempo">
+            <button type="button" class="btn btn-secundario" id="a1-llueve" aria-pressed="true"><code>llueve = <span>True</span></code></button>
+            <button type="button" class="btn btn-secundario" id="a1-frio" aria-pressed="false"><code>frio = <span>False</span></code></button>
+          </div>
+          <pre class="codigo" id="a1-codigo" aria-label="Código" style="margin-top:var(--esp-4)"><code><span class="linea"><span class="tk-variable">llueve</span> = <span class="tk-numero" id="a1-codigo-llueve">True</span></span><span class="linea"><span class="tk-variable">frio</span> = <span class="tk-numero" id="a1-codigo-frio">False</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">llueve</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">frio</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"🧥 Abrigo y paraguas"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"☂️ Solo paraguas"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"😎 Gafas de sol"</span>)</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <svg class="arbol" id="a1-arbol" viewBox="0 0 340 236" aria-hidden="true"></svg>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="a1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="a1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. La sangría decide dónde está cada línea -->
+    <section class="paso" id="paso-sangria" data-requiere aria-labelledby="t-sangria">
+      <h2 class="paso__titulo" id="t-sangria">La sangría manda</h2>
+      <p>Los espacios del principio dicen <strong>dentro de qué <code>if</code></strong> está una línea. Mueve la línea azul a los tres niveles y prueba con notas distintas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="sg-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">nota</span> = <span class="tk-numero" id="sg-codigo-nota">7</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">5</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Aprobado"</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">9</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Sobresaliente"</span>)</span><span class="linea"><span id="sg-espacios"></span><span class="tk-funcion">print</span>(<span class="tk-texto">"🎉 ¡Bien!"</span>)</span></code></pre>
+          <div class="fila-botones" role="group" aria-label="Sangría de la última línea">
+            <button type="button" class="btn btn-secundario" id="sg-menos">⇤ Menos sangría</button>
+            <button type="button" class="btn btn-secundario" id="sg-mas">Más sangría ⇥</button>
+          </div>
+          <div class="control-slider">
+            <label for="sg-nota"><span>Valor de <code>nota</code></span> <output id="sg-salida-nota" for="sg-nota">7</output></label>
+            <input type="range" id="sg-nota" min="0" max="10" value="7">
+          </div>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="bloque bloque--programa" id="sg-programa">
+            <div class="bloque" id="sg-b1">
+              <div class="bloque__titulo"><span>if nota &gt;= 5:</span><span class="booleano booleano--true" id="sg-r1">True</span></div>
+              <span class="sentencia" id="sg-s1">print("Aprobado")</span>
+              <div class="bloque" id="sg-b2">
+                <div class="bloque__titulo"><span>if nota &gt;= 9:</span><span class="booleano booleano--false" id="sg-r2">False</span></div>
+                <span class="sentencia" id="sg-s2">print("Sobresaliente")</span>
+              </div>
+            </div>
+            <span class="sentencia sentencia--movil" id="sg-movil">print("🎉 ¡Bien!")</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="sg-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="sg-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Línea a línea -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="t-traza">
+      <h2 class="paso__titulo" id="t-traza">Línea a línea</h2>
+      <p>En el cine hay tres entradas. Ejecuta el programa línea a línea y mira cómo Python baja por el árbol. Después cambia la edad y llega a <strong>otra</strong> entrada.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="tz-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">edad</span> = <span class="tk-numero" id="tz-codigo-edad">15</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">edad</span> &gt;= <span class="tk-numero">12</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">edad</span> &gt;= <span class="tk-numero">18</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Entrada de adulto"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Entrada juvenil"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Entrada infantil"</span>)</span></code></pre>
+          <p class="explicacion" id="tz-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="tz-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="tz-ejecutar">Ejecutar línea ▸</button>
+          </div>
+          <div class="control-slider">
+            <label for="tz-edad"><span>Valor de <code>edad</code></span> <output id="tz-salida-edad" for="tz-edad">15</output></label>
+            <input type="range" id="tz-edad" min="3" max="40" value="15">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <svg class="arbol" id="tz-arbol" viewBox="0 0 340 236" aria-hidden="true"></svg>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="tz-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="tz-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Anidado o con and -->
+    <section class="paso" id="paso-and" data-requiere aria-labelledby="t-and">
+      <h2 class="paso__titulo" id="t-and">¿Anidado o con <code>and</code>?</h2>
+      <p>Al tobogán grande se sube con <strong>140&nbsp;cm o más</strong> y <strong>sabiendo nadar</strong>. Prueba a alguien que sube y a alguien que no, y pulsa «Juntar con and».</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="an-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">altura</span> = <span class="tk-numero" id="an-codigo-altura">150</span></span><span class="linea"><span class="tk-variable">sabe_nadar</span> = <span class="tk-numero" id="an-codigo-nadar">True</span></span><span class="linea" id="an-l2"></span><span class="linea" id="an-l3"></span><span class="linea" id="an-l4"></span></code></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="an-juntar" aria-pressed="false">🔗 Juntar con <code>and</code></button>
+          </div>
+          <div class="control-slider">
+            <label for="an-altura"><span>Valor de <code>altura</code> (cm)</span> <output id="an-salida-altura" for="an-altura">150</output></label>
+            <input type="range" id="an-altura" min="100" max="190" step="5" value="150">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="an-nadar" aria-pressed="true"><code>sabe_nadar = <span>True</span></code></button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="partes" aria-live="polite">
+            <span class="parte"><span class="parte__expr" id="an-e1">150 &gt;= 140</span><span class="booleano booleano--true" id="an-r1">True</span></span>
+            <span class="partes__op" id="an-op">y dentro</span>
+            <span class="parte"><span class="parte__expr">sabe_nadar</span><span class="booleano booleano--true" id="an-r2">True</span></span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano booleano--true" id="an-total">True</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="an-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="an-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. ¿Qué se imprime? -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">¿Qué se imprime?</h2>
+      <p>Sigue el camino con el dedo, sin ejecutar nada.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">hora</span> &lt; <span class="tk-numero">12</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">hora</span> &lt; <span class="tk-numero">7</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Muy temprano"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Buenos días"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">hora</span> &lt; <span class="tk-numero">20</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Buenas tardes"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Buenas noches"</span>)</span></code></pre>
+        <ol class="predicciones" id="pr-lista"></ol>
+        <div class="feedback" id="pr-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 6. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Entradas del zoo</h2>
+      <p>Los <strong>menores de 6</strong> entran gratis. Los demás pagan <strong>5 €</strong> si son socios y <strong>10 €</strong> si no. ¿Qué programa lo hace bien? Lo probaremos con tres visitantes.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué programa calcula bien la entrada?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="dentro"><span>if edad &lt; 6:
+    print("Gratis")
+    if socio:
+        print("5 €")
+    else:
+        print("10 €")</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>if edad &lt; 6:
+    print("Gratis")
+else:
+    if socio:
+        print("5 €")
+    else:
+        print("10 €")</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="orden"><span>if socio:
+    print("5 €")
+else:
+    if edad &lt; 6:
+        print("Gratis")
+    else:
+        print("10 €")</span></label>
+        </fieldset>
+
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Un <code>if</code> dentro de otro solo se pregunta si el de fuera fue <code>True</code>. La sangría dice qué está dentro de qué.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">a</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">b</span>:</span><span class="linea">        <span class="tk-comentario"># a y b son True</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-comentario"># a True, b False</span></span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-comentario"># a False (b ni se mira)</span></span><span class="linea"></span><span class="linea"><span class="tk-comentario"># sin else dentro, es lo mismo que:</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">a</span> <span class="tk-palabra">and</span> <span class="tk-variable">b</span>:</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../bucles/index.html">Siguiente: Bucles →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function texto(valor) { return valor ? "True" : "False"; }
+
+  /* ---------- Árbol de decisiones ----------
+     Siempre tiene la misma forma: una pregunta arriba; si es True baja a otra
+     pregunta con dos hojas, y si es False va directa a la tercera hoja. */
+  var SVG = "http://www.w3.org/2000/svg";
+
+  function nuevo(tag, attrs, padre) {
+    var el = document.createElementNS(SVG, tag);
+    Object.keys(attrs).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    if (padre) padre.appendChild(el);
+    return el;
+  }
+
+  function nodo(svg, cx, cy, ancho, txt, hoja) {
+    var g = nuevo("g", { "class": "arbol__nodo" + (hoja ? " arbol__hoja" : "") }, svg);
+    nuevo("rect", { x: cx - ancho / 2, y: cy - 20, width: ancho, height: 40, rx: 10 }, g);
+    nuevo("text", { x: cx, y: cy }, g).textContent = txt;
+    if (hoja) nuevo("text", { "class": "arbol__check", x: cx, y: cy + 33 }, g).textContent = "✓ visto";
+    return g;
+  }
+
+  function arista(svg, d, etiqueta, ex, ey) {
+    return {
+      linea: nuevo("path", { "class": "arbol__arista", d: d }, svg),
+      etiqueta: (function () {
+        var t = nuevo("text", { "class": "arbol__etiqueta", x: ex, y: ey }, svg);
+        t.textContent = etiqueta;
+        return t;
+      })()
+    };
+  }
+
+  /* t = { raiz, pregunta2, hojas: [si-si, si-no, no] } */
+  function crearArbol(svg, t) {
+    var a = {
+      aSi: arista(svg, "M150 48 L110 92", "True", 112, 66),
+      aNo: arista(svg, "M200 48 L268 92", "False", 254, 66),
+      bSi: arista(svg, "M85 132 L60 176", "True", 54, 152),
+      bNo: arista(svg, "M135 132 L165 176", "False", 172, 152)
+    };
+    a.raiz = nodo(svg, 175, 28, 140, t.raiz);
+    a.p2 = nodo(svg, 110, 112, 140, t.pregunta2);
+    a.h3 = nodo(svg, 272, 112, 116, t.hojas[2], true);
+    a.h1 = nodo(svg, 60, 196, 112, t.hojas[0], true);
+    a.h2 = nodo(svg, 180, 196, 112, t.hojas[1], true);
+    return a;
+  }
+
+  /* estado: { a: bool?, b: bool?, hoja: bool } — lo que ya se ha decidido.
+     Sin nada decidido el árbol se ve neutro. */
+  function marcarArbol(arb, e) {
+    function poner(el, activo, apagado) {
+      el.classList.toggle("activo", !!activo);
+      el.classList.toggle("apagado", !!apagado);
+    }
+    function poner2(ar, activo, apagado) { poner(ar.linea, activo, apagado); poner(ar.etiqueta, activo, apagado); }
+    var a = e.a;
+    var b = e.b;
+    poner(arb.raiz, e.raiz || a !== undefined, false);
+    poner2(arb.aSi, a === true, a === false);
+    poner2(arb.aNo, a === false, a === true);
+    poner(arb.p2, a === true, a === false);
+    poner2(arb.bSi, b === true, a === false || b === false);
+    poner2(arb.bNo, b === false, a === false || b === true);
+    poner(arb.h1, e.hoja && b === true, a === false || b === false);
+    poner(arb.h2, e.hoja && b === false, a === false || b === true);
+    poner(arb.h3, e.hoja && a === false, a === true);
+  }
+
+  function hojaDe(a, b) { return !a ? "h3" : b ? "h1" : "h2"; }
+
+  function marcarVista(arb, cual) { arb[cual].classList.add("arbol__hoja--vista"); }
+
+  /* Camino que se ejecuta en un if / else con otro if / else dentro del primer bloque.
+     o es el índice de la línea del if de fuera. */
+  function caminoAnidado(o, a, b) {
+    if (!a) return { activas: [o, o + 5, o + 6], saltadas: [o + 1, o + 2, o + 3, o + 4] };
+    if (b) return { activas: [o, o + 1, o + 2], saltadas: [o + 3, o + 4, o + 5, o + 6] };
+    return { activas: [o, o + 1, o + 3, o + 4], saltadas: [o + 2, o + 5, o + 6] };
+  }
+
+  /* ---------- 1. ¿Qué me pongo? ---------- */
+  var arbol1 = crearArbol($("a1-arbol"), {
+    raiz: "¿llueve?",
+    pregunta2: "¿frio?",
+    hojas: ["🧥 + ☂️", "☂️", "😎"]
+  });
+  var tiempo = { llueve: true, frio: false };
+  var hojas1 = {};
+
+  function pintarTiempo() {
+    var a = tiempo.llueve;
+    var b = tiempo.frio;
+    ["llueve", "frio"].forEach(function (n) {
+      var btn = $("a1-" + n);
+      btn.setAttribute("aria-pressed", String(tiempo[n]));
+      btn.querySelector("span").textContent = texto(tiempo[n]);
+      $("a1-codigo-" + n).textContent = texto(tiempo[n]);
+    });
+    var camino = caminoAnidado(2, a, b);
+    camino.activas = [0, 1].concat(camino.activas);
+    Codigo.marcar($("a1-codigo"), camino);
+    marcarArbol(arbol1, { a: a, b: a ? b : undefined, hoja: true });
+    Codigo.consola($("a1-consola"), [!a ? "😎 Gafas de sol" : b ? "🧥 Abrigo y paraguas" : "☂️ Solo paraguas"]);
+    return hojaDe(a, b);
+  }
+
+  /* ---------- 2. La sangría manda ---------- */
+  var nivel = 0;
+  var niveles = {};
+  var zonas = {};
+
+  function pintarSangria(animar) {
+    var nota = Number($("sg-nota").value);
+    var r1 = nota >= 5;
+    var r2 = nota >= 9;
+    $("sg-salida-nota").textContent = nota;
+    $("sg-codigo-nota").textContent = nota;
+    $("sg-espacios").textContent = "    ".repeat(nivel);
+    $("sg-menos").disabled = nivel === 0;
+    $("sg-mas").disabled = nivel === 2;
+
+    // La línea azul se mete en la caja de su nivel
+    var movil = $("sg-movil");
+    var destino = [$("sg-programa"), $("sg-b1"), $("sg-b2")][nivel];
+    if (movil.parentNode !== destino) {
+      destino.appendChild(movil);
+      if (animar && !Pasos.reducirMovimiento) {
+        movil.classList.remove("sentencia--llega");
+        void movil.offsetWidth;
+        movil.classList.add("sentencia--llega");
+      }
+    }
+
+    $("sg-b1").classList.toggle("bloque--true", r1);
+    $("sg-b2").classList.toggle("bloque--true", r1 && r2);
+    Codigo.booleano($("sg-r1"), r1);
+    Codigo.booleano($("sg-r2"), r2);
+    $("sg-r2").parentNode.style.opacity = r1 ? "" : "0.4";   // si no entra en el primero, ni se pregunta
+
+    var corre = [true, r1, r1 && r2][nivel];
+    $("sg-s1").classList.toggle("sentencia--no", !r1);
+    $("sg-s2").classList.toggle("sentencia--no", !(r1 && r2));
+    movil.classList.toggle("sentencia--no", !corre);
+
+    var activas = [0, 1];
+    var saltadas = [];
+    if (r1) { activas.push(2, 3); (r2 ? activas : saltadas).push(4); } else saltadas.push(2, 3, 4);
+    (corre ? activas : saltadas).push(5);
+    Codigo.marcar($("sg-codigo"), { activas: activas, saltadas: saltadas });
+
+    var salida = [];
+    if (r1) salida.push("Aprobado");
+    if (r1 && r2) salida.push("Sobresaliente");
+    if (corre) salida.push("🎉 ¡Bien!");
+    Codigo.consola($("sg-consola"), salida);
+    return nota < 5 ? "baja" : nota < 9 ? "media" : "alta";
+  }
+
+  function comprobarSangria(leccion) {
+    var fb = $("sg-fb");
+    var cuantos = Object.keys(niveles).length;
+    if (cuantos === 3 && Object.keys(zonas).length >= 2) {
+      Pasos.feedback(fb, "ok", "Sin sangría se ejecuta siempre. Con 4 espacios, solo si nota >= 5. Con 8, solo si se cumplen los dos if.");
+      leccion.desbloquear();
+    } else if (cuantos === 3) {
+      Pasos.feedback(fb, "pista", "Ya la has movido a los tres niveles. Ahora cambia la nota para ver cuándo sale «🎉 ¡Bien!».");
+    }
+  }
+
+  /* ---------- 3. Línea a línea ---------- */
+  var arbol3 = crearArbol($("tz-arbol"), {
+    raiz: "¿edad >= 12?",
+    pregunta2: "¿edad >= 18?",
+    hojas: ["Adulto", "Juvenil", "Infantil"]
+  });
+  var salidas3 = {};
+
+  function trazaCine() {
+    var edad = Number($("tz-edad").value);
+    var a = edad >= 12;
+    var b = edad >= 18;
+    var p = [{ linea: 0, texto: "<code>edad</code> vale <strong>" + edad + "</strong>.", arbol: {} }];
+    p.push({
+      linea: 1,
+      texto: "¿" + edad + " &gt;= 12? <strong>" + texto(a) + "</strong>" + (a ? ": entra en el bloque." : ": salta al <code>else</code> de fuera."),
+      arbol: { raiz: true, a: a }
+    });
+    if (a) {
+      p.push({
+        linea: 2,
+        texto: "Dentro, otra pregunta: ¿" + edad + " &gt;= 18? <strong>" + texto(b) + "</strong>.",
+        arbol: { a: a, b: b }
+      });
+      if (b) {
+        p.push({ linea: 3, texto: "Imprime y termina: el <code>else</code> se salta.", salida: "Entrada de adulto", arbol: { a: a, b: b, hoja: true } });
+      } else {
+        p.push({ linea: 4, texto: "Era <strong>False</strong>: va al <code>else</code> de dentro.", arbol: { a: a, b: b } });
+        p.push({ linea: 5, texto: "Imprime y termina.", salida: "Entrada juvenil", arbol: { a: a, b: b, hoja: true } });
+      }
+    } else {
+      p.push({ linea: 6, texto: "Era <strong>False</strong>: el <code>if</code> de dentro ni se mira.", arbol: { a: a } });
+      p.push({ linea: 7, texto: "Imprime y termina.", salida: "Entrada infantil", arbol: { a: a, hoja: true } });
+    }
+    return p;
+  }
+
+  /* ---------- 4. Anidado o con and ---------- */
+  var juntado = false;
+  var nadar = true;
+  var an = {};
+  var ANIDADO = [
+    '<span class="tk-palabra">if</span> <span class="tk-variable">altura</span> &gt;= <span class="tk-numero">140</span>:',
+    '    <span class="tk-palabra">if</span> <span class="tk-variable">sabe_nadar</span>:',
+    '        <span class="tk-funcion">print</span>(<span class="tk-texto">"🌊 ¡Al tobogán!"</span>)'
+  ];
+  var JUNTO = [
+    '<span class="tk-palabra">if</span> <span class="tk-variable">altura</span> &gt;= <span class="tk-numero">140</span> <span class="tk-palabra">and</span> <span class="tk-variable">sabe_nadar</span>:',
+    '    <span class="tk-funcion">print</span>(<span class="tk-texto">"🌊 ¡Al tobogán!"</span>)',
+    ""
+  ];
+
+  function pintarAnd() {
+    var altura = Number($("an-altura").value);
+    var r1 = altura >= 140;
+    var r2 = nadar;
+    var r = r1 && r2;
+    var lineas = juntado ? JUNTO : ANIDADO;
+    [2, 3, 4].forEach(function (n, i) {
+      var l = $("an-l" + n);
+      l.innerHTML = lineas[i];
+      l.hidden = !lineas[i];
+    });
+    $("an-salida-altura").textContent = altura;
+    $("an-codigo-altura").textContent = altura;
+    $("an-codigo-nadar").textContent = texto(nadar);
+    $("an-nadar").setAttribute("aria-pressed", String(nadar));
+    $("an-nadar").querySelector("span").textContent = texto(nadar);
+    $("an-e1").textContent = altura + " >= 140";
+    $("an-op").textContent = juntado ? "and" : "y dentro";
+    Codigo.booleano($("an-r1"), r1);
+    Codigo.booleano($("an-r2"), r2);
+    Codigo.booleano($("an-total"), r);
+
+    var activas = [0, 1, 2];
+    var saltadas = [];
+    if (juntado) (r ? activas : saltadas).push(3);
+    else if (r1) { activas.push(3); (r2 ? activas : saltadas).push(4); }
+    else saltadas.push(3, 4);
+    Codigo.marcar($("an-codigo"), { activas: activas, saltadas: saltadas });
+    Codigo.consola($("an-consola"), r ? ["🌊 ¡Al tobogán!"] : []);
+    return (juntado ? "junto-" : "anidado-") + r;
+  }
+
+  function comprobarAnd(leccion) {
+    var fb = $("an-fb");
+    var vistoJunto = an["junto-true"] || an["junto-false"];
+    var ambos = (an["anidado-true"] || an["junto-true"]) && (an["anidado-false"] || an["junto-false"]);
+    if (vistoJunto && ambos) {
+      Pasos.feedback(fb, "ok", "Las dos versiones hacen lo mismo. Cuando el if de dentro no tiene else, se puede juntar con el de fuera usando and.");
+      leccion.desbloquear();
+    } else if (!vistoJunto && ambos) {
+      Pasos.feedback(fb, "pista", "Ahora pulsa «Juntar con and» y comprueba que da lo mismo.");
+    } else if (!ambos) {
+      var subio = an["anidado-true"] || an["junto-true"];
+      Pasos.feedback(fb, "pista", subio ? "¡Al tobogán! Ahora prueba con alguien que no pueda subir." : "No sube. Ahora prueba con alguien que sí pueda.");
+    }
+  }
+
+  /* ---------- 5. ¿Qué se imprime? ---------- */
+  var SALUDOS = ["Muy temprano", "Buenos días", "Buenas tardes", "Buenas noches"];
+  var predicciones = [
+    { hora: 10, pista: "10 < 12 es True: entra arriba. ¿Y 10 < 7?" },
+    { hora: 21, pista: "21 < 12 es False: va al else de fuera. Allí, ¿21 < 20?" },
+    { hora: 6, pista: "6 < 12 es True: entra arriba. ¿Y 6 < 7?" }
+  ];
+  var aciertos = [false, false, false];
+
+  function saludo(h) { return h < 12 ? (h < 7 ? SALUDOS[0] : SALUDOS[1]) : (h < 20 ? SALUDOS[2] : SALUDOS[3]); }
+
+  /* ---------- 6. Reto ---------- */
+  var VISITANTES = [
+    { edad: 4, socio: true, texto: "4 años, socio" },
+    { edad: 30, socio: true, texto: "30 años, socio" },
+    { edad: 30, socio: false, texto: "30 años, no socio" }
+  ];
+  var programas = {
+    dentro: function (v) {
+      if (v.edad < 6) return ["Gratis", v.socio ? "5 €" : "10 €"];
+      return [];
+    },
+    bien: function (v) { return [v.edad < 6 ? "Gratis" : v.socio ? "5 €" : "10 €"]; },
+    orden: function (v) { return [v.socio ? "5 €" : v.edad < 6 ? "Gratis" : "10 €"]; }
+  };
+  var pistasReto = {
+    dentro: "El if socio está dentro del bloque de los pequeños: los adultos no reciben precio, y el niño recibe dos.",
+    orden: "Primero hay que mirar la edad: aquí un niño socio paga 5 €, cuando debería entrar gratis."
+  };
+
+  function cambiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  /* Prueba el programa elegido con los tres visitantes y enseña qué imprime */
+  function probar(valor) {
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    VISITANTES.forEach(function (v) {
+      var esperado = programas.bien(v).join(" · ");
+      var sale = programas[valor](v).join(" · ");
+      var ok = sale === esperado;
+      var li = document.createElement("li");
+      li.className = ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = "<span></span><span class=\"prueba__salida\"></span>" +
+        '<span class="prueba__marca">' + (ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = v.texto;
+      li.children[1].textContent = sale || "(sin salida)";
+      li.setAttribute("aria-label", v.texto + ": " + (sale || "no imprime nada") + (ok ? ", correcto" : ", debería ser " + esperado));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    probar(marcada.value);
+
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! Primero la edad; y solo si no es gratis, se pregunta si es socio.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  ["llueve", "frio"].forEach(function (n) {
+    $("a1-" + n).addEventListener("click", function () {
+      tiempo[n] = !tiempo[n];
+      var h = pintarTiempo();
+      hojas1[h] = true;
+      marcarVista(arbol1, h);
+      var fb = $("a1-fb");
+      var cuantas = Object.keys(hojas1).length;
+      if (cuantas === 3) {
+        Pasos.feedback(fb, "ok", "¡Las tres! Si no llueve, Python ni pregunta por el frío: va directo al else de fuera.");
+        leccion.desbloquear();
+      } else if (!tiempo.llueve) {
+        Pasos.feedback(fb, "pista", "Sin lluvia, frio da igual: prueba a cambiarlo y verás que no pasa nada. Te falta otra hoja.");
+      } else {
+        Pasos.feedback(fb, "pista", "Llevas " + cuantas + " de 3 hojas.");
+      }
+    });
+  });
+
+  $("sg-menos").addEventListener("click", function () { nivel--; niveles[nivel] = true; pintarSangria(true); comprobarSangria(leccion); });
+  $("sg-mas").addEventListener("click", function () { nivel++; niveles[nivel] = true; pintarSangria(true); comprobarSangria(leccion); });
+  $("sg-nota").addEventListener("input", function () { zonas[pintarSangria(false)] = true; comprobarSangria(leccion); });
+
+  var traza = Traza.crear({
+    codigo: $("tz-codigo"),
+    explicacion: $("tz-explicacion"),
+    consola: $("tz-consola"),
+    ejecutar: $("tz-ejecutar"),
+    reproducir: $("tz-reproducir"),
+    generar: trazaCine,
+    intervalo: 900,
+    repetible: true,
+    alPaso: function (paso) { marcarArbol(arbol3, paso.arbol); },
+    alTerminar: function () {
+      var edad = Number($("tz-edad").value);
+      var h = hojaDe(edad >= 12, edad >= 18);
+      salidas3[h] = true;
+      marcarVista(arbol3, h);
+      var fb = $("tz-fb");
+      if (Object.keys(salidas3).length >= 2) {
+        Pasos.feedback(fb, "ok", "Python pregunta de arriba abajo y solo entra en los bloques cuya condición es True.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", "Cambia la edad y ejecútalo otra vez para llegar a otra entrada.");
+      }
+    }
+  });
+
+  $("tz-edad").addEventListener("input", function () {
+    var edad = $("tz-edad").value;
+    $("tz-salida-edad").textContent = edad;
+    $("tz-codigo-edad").textContent = edad;
+    traza.cancelar();   // la próxima ejecución empieza de nuevo con la edad nueva
+    marcarArbol(arbol3, {});
+  });
+
+  $("an-juntar").addEventListener("click", function () {
+    juntado = !juntado;
+    var btn = $("an-juntar");
+    btn.setAttribute("aria-pressed", String(juntado));
+    btn.innerHTML = juntado ? "↺ Separar en dos <code>if</code>" : "🔗 Juntar con <code>and</code>";
+    an[pintarAnd()] = true;
+    comprobarAnd(leccion);
+  });
+  $("an-altura").addEventListener("input", function () { an[pintarAnd()] = true; comprobarAnd(leccion); });
+  $("an-nadar").addEventListener("click", function () { nadar = !nadar; an[pintarAnd()] = true; comprobarAnd(leccion); });
+
+  // Las tres predicciones: cada una con sus cuatro respuestas posibles
+  var listaPr = $("pr-lista");
+  predicciones.forEach(function (p, i) {
+    var li = document.createElement("li");
+    li.className = "prediccion";
+    li.innerHTML = '<p class="prediccion__valor">hora = ' + p.hora + "</p>" +
+      '<div class="fila-botones" role="group" aria-label="¿Qué se imprime con hora = ' + p.hora + '?"></div>' +
+      '<div class="feedback" role="status" aria-live="polite"></div>';
+    var grupo = li.querySelector(".fila-botones");
+    SALUDOS.forEach(function (s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn btn-secundario";
+      b.setAttribute("aria-pressed", "false");
+      b.textContent = s;
+      grupo.appendChild(b);
+    });
+    var botones = grupo.querySelectorAll("button");
+    botones.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var acierta = btn.textContent === saludo(p.hora);
+        botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+        Pasos.feedback(li.querySelector(".feedback"), acierta ? "ok" : "pista",
+          acierta ? "¡Sí! Con hora = " + p.hora + " sale «" + saludo(p.hora) + "»." : p.pista);
+        if (!acierta) return;
+        li.classList.add("prediccion--ok");
+        botones.forEach(function (b) { b.disabled = true; });
+        aciertos[i] = true;
+        if (aciertos.every(Boolean)) {
+          Pasos.feedback($("pr-fb"), "ok", "¡Las tres bien! Primero la pregunta de fuera, luego la de dentro de ese camino.");
+          leccion.desbloquear();
+        }
+      });
+    });
+    listaPr.appendChild(li);
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial de cada paso
+  pintarTiempo();
+  niveles[nivel] = true;
+  pintarSangria(false);
+  marcarArbol(arbol3, {});
+  pintarAnd();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: { "paso-reto": entrarReto },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
