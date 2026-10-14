@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: la taquilla · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Condicionales: construir por partes la taquilla de un cine en Python con input(), int(), if / elif / else, and, .lower() y una f-string.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    /* Color del texto (str), como en «Texto y números» */
+    :root { --tipo-str: #a8480a; --tipo-str-suave: #fff1e3; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo { color: var(--tk-palabra); font-weight: 700; }
+    .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; }
+
+    /* ---------- Consola que espera respuestas ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 8rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .consola__linea--error { color: var(--color-error); }
+
+    /* ---------- La entrada de cine ---------- */
+    .ticket { position: relative; display: grid; justify-items: center; gap: var(--esp-1); max-width: 17rem; margin: var(--esp-2) auto; padding: var(--esp-4) var(--esp-5); border-radius: var(--radio); background: var(--color-superficie); border: 2px dashed var(--color-borde); text-align: center; }
+    .ticket::before, .ticket::after { content: ""; position: absolute; top: 50%; width: 1.25rem; height: 1.25rem; margin-top: -0.625rem; border-radius: 50%; background: var(--color-fondo); border: 2px dashed var(--color-borde); }
+    .ticket::before { left: -0.7rem; }
+    .ticket::after { right: -0.7rem; }
+    .lab__visual .ticket::before, .lab__visual .ticket::after { background: var(--color-superficie-2); }
+    .ticket__cabecera { font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.1em; color: var(--color-texto-suave); }
+    .ticket__nombre { font-size: var(--texto-lg); font-weight: 700; min-height: 1.4em; overflow-wrap: anywhere; }
+    .ticket__precio { font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; color: var(--color-texto-suave); }
+    .ticket__nota { font-size: var(--texto-xs); font-weight: 700; min-height: 1.3em; color: var(--color-acento); }
+    .ticket--impreso { border-style: solid; border-color: var(--color-acento); background: var(--color-acento-suave); animation: imprimir 520ms var(--curva-rebote); }
+    .ticket--impreso::before, .ticket--impreso::after { border-style: solid; border-color: var(--color-acento); }
+    .ticket--impreso .ticket__precio { color: var(--color-acento); }
+    @keyframes imprimir { from { transform: translateY(-1rem) scale(0.92); opacity: 0; } }
+
+    .tarifas { list-style: none; margin: var(--esp-4) 0 0; padding: var(--esp-3) var(--esp-4); display: grid; gap: var(--esp-1); border-radius: var(--radio); background: var(--color-superficie-2); font-size: var(--texto-sm); }
+    .tarifas li { display: flex; justify-content: space-between; gap: var(--esp-3); }
+    .tarifas strong { font-family: var(--fuente-codigo); white-space: nowrap; }
+    .tarifas__titulo { font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+
+    /* ---------- Variables del programa ---------- */
+    .vars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-1) var(--esp-3); max-width: 17rem; margin: var(--esp-4) auto 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .vars dt { font-weight: 700; color: var(--color-azul); }
+    .vars dd { margin: 0; font-weight: 700; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .vars dd.vars--str { color: var(--tipo-str); }
+    .vars dd.vars--int { color: var(--color-azul); }
+    .vars dd.vars--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Ordenar las ramas ---------- */
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+    .ramas { list-style: none; margin: var(--esp-2) 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .rama { display: flex; align-items: stretch; gap: var(--esp-2); }
+    .rama .codigo { flex: 1; align-content: center; padding: var(--esp-2) 0; border: 2px solid transparent; }
+    .rama code { font-size: inherit; background: none; padding: 0; border-radius: 0; }
+    .rama--movida .codigo { animation: valor-pulso 300ms ease-out; border-color: var(--color-azul); }
+    .rama__botones { display: grid; gap: var(--esp-1); }
+    .rama__botones .btn { min-height: 2.5rem; min-width: 2.75rem; padding: 0; font-size: var(--texto-md); }
+    .codigo--fijo { padding: var(--esp-2) 0; }
+
+    /* ---------- Opciones y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas li:nth-child(4) { animation-delay: 600ms; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="condicionales-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Lo que vamos a construir -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="t-demo">
+      <span class="paso__etiqueta">Condicionales 5/5 · Proyecto</span>
+      <h1 class="paso__titulo" id="t-demo">Proyecto: la taquilla del cine</h1>
+      <p>Vas a programar una taquilla que pregunta, decide el precio y te da tu entrada. Primero, pruébala terminada.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="d-registro" aria-live="polite"></div>
+            <div class="entrada" id="d-fila">
+              <label for="d-campo" id="d-pregunta"></label>
+              <input type="text" id="d-campo" maxlength="12" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="d-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Otra persona</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="ticket" id="d-ticket">
+            <span class="ticket__cabecera">🎬 CINE · ENTRADA</span>
+            <span class="ticket__nombre"></span>
+            <span class="ticket__precio">? soles</span>
+            <span class="ticket__nota"></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="tarifas" aria-label="Precios">
+            <li class="tarifas__titulo">Precios</li>
+            <li><span>Menores de 4 años</span> <strong>gratis</strong></li>
+            <li><span>De 4 a 11 años</span> <strong>5 soles</strong></li>
+            <li><span>65 años o más</span> <strong>4 soles</strong></li>
+            <li><span>El resto</span> <strong>8 soles</strong></li>
+            <li><span>Socios (si no es gratis)</span> <strong>−2 soles</strong></li>
+          </ul>
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: preguntar -->
+    <section class="paso" id="paso-preguntar" data-comprobar aria-labelledby="t-preguntar">
+      <span class="paso__etiqueta">Parte 1 de 4</span>
+      <h2 class="paso__titulo" id="t-preguntar">Preguntar nombre y edad</h2>
+      <p>La edad la vamos a comparar con números. ¿Qué dos líneas empiezan bien el programa? Lo probaremos con «Ana» y «10».</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea"><span class="hueco" id="p1-hueco-0">?</span></span><span class="linea"><span class="hueco" id="p1-hueco-1">?</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">¿Qué dos líneas empiezan el programa?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="texto"><span>nombre = input("¿Cómo te llamas? ")
+edad = input("¿Edad? ")</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>nombre = input("¿Cómo te llamas? ")
+edad = int(input("¿Edad? "))</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="todo-int"><span>nombre = int(input("¿Cómo te llamas? "))
+edad = int(input("¿Edad? "))</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: el precio -->
+    <section class="paso" id="paso-precio" data-comprobar aria-labelledby="t-precio">
+      <span class="paso__etiqueta">Parte 2 de 4</span>
+      <h2 class="paso__titulo" id="t-precio">Decidir el precio</h2>
+      <p>Las tres preguntas están bien escritas, pero en mal <strong>orden</strong>. Muévelas con las flechas y comprueba con cuatro edades: 2, 8, 30 y 70.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros codigo--fijo" aria-label="Parte 1, ya hecha"><code id="p2-antes"></code></pre>
+        <ol class="ramas" id="p2-ramas" aria-label="Ramas del if, en orden"></ol>
+        <pre class="codigo codigo--sin-numeros codigo--fijo" aria-label="Rama final"><code><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-variable">precio</span> = <span class="tk-numero">8</span></span></code></pre>
+        <p class="nota">Recuerda: <code>elif</code> solo pregunta si las de arriba fueron <code>False</code>. La primera que sea <code>True</code> gana.</p>
+        <ul class="pruebas" id="p2-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: socios -->
+    <section class="paso" id="paso-socio" data-comprobar aria-labelledby="t-socio">
+      <span class="paso__etiqueta">Parte 3 de 4</span>
+      <h2 class="paso__titulo" id="t-socio">Descuento para socios</h2>
+      <p>Los socios pagan <strong>2 soles menos</strong>, pero una entrada gratis sigue siendo gratis. Y el «sí» puede llegar con mayúsculas. ¿Qué condición va en el hueco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea linea--hecha"><span class="tk-comentario"># Parte 1: nombre y edad ✓</span></span><span class="linea linea--hecha"><span class="tk-comentario"># Parte 2: precio con if / elif / else ✓</span></span><span class="linea"><span class="tk-variable">socio</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"¿Eres socio? "</span>)</span><span class="linea"><span class="tk-palabra">if</span> <span class="hueco" id="p3-hueco">?</span>:</span><span class="linea">    <span class="tk-variable">precio</span> = <span class="tk-variable">precio</span> - <span class="tk-numero">2</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p3-opciones">
+          <legend class="visualmente-oculto">¿Qué condición va en el hueco?</legend>
+          <label class="opcion"><input type="radio" name="p3" value="or"><span>socio == "sí" or precio &gt; 0</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="sin-precio"><span>socio.lower() == "sí"</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="bien"><span>socio.lower() == "sí" and precio &gt; 0</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="mayuscula"><span>socio == "Sí" and precio &gt; 0</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: la respuesta -->
+    <section class="paso" id="paso-mensaje" data-comprobar aria-labelledby="t-mensaje">
+      <span class="paso__etiqueta">Parte 4 de 4</span>
+      <h2 class="paso__titulo" id="t-mensaje">Dar la respuesta</h2>
+      <p>Falta el mensaje final. Con <code>nombre = "Ana"</code> y <code>precio = 6</code> debe salir: <strong>Ana, tu entrada cuesta 6 soles</strong>.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea linea--hecha"><span class="tk-comentario"># Partes 1, 2 y 3 ✓</span></span><span class="linea"><span class="hueco" id="p4-hueco">?</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">¿Qué línea da la respuesta?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="sin-f"><span>print("{nombre}, tu entrada cuesta {precio} soles")</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="mas"><span>print(nombre + ", tu entrada cuesta " + precio + " soles")</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>print(f"{nombre}, tu entrada cuesta {precio} soles")</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="sin-llaves"><span>print(f"nombre, tu entrada cuesta precio soles")</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Salida"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: el programa completo -->
+    <section class="paso" id="paso-probar" data-requiere aria-labelledby="t-probar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-probar">¡Tu taquilla funciona!</h2>
+      <p>Este es tu programa completo. Atiende a varias personas hasta cumplir las <strong>tres misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="t-codigo" aria-label="Tu programa completo"><code id="t-codigo-lineas"></code></pre>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo" id="t-pregunta"></label>
+              <input type="text" id="t-campo" maxlength="12" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Otra persona</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="ticket" id="t-ticket">
+            <span class="ticket__cabecera">🎬 CINE · ENTRADA</span>
+            <span class="ticket__nombre"></span>
+            <span class="ticket__precio">? soles</span>
+            <span class="ticket__nota"></span>
+          </div>
+          <dl class="vars" id="t-vars" aria-label="Variables"></dl>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="gratis">Una entrada gratis</li>
+            <li data-mision="descuento">Un socio con descuento</li>
+            <li data-mision="ocho">Una entrada de 8 soles</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎬</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Tu programa pregunta, decide y responde: eso es lo que hacen casi todos los programas.</p>
+        <ul class="usado" aria-label="Lo que has usado">
+          <li>input()</li><li>int()</li><li>if / elif / else</li><li>and</li><li>.lower()</li><li>f"…{ }"</li>
+        </ul>
+        <pre class="codigo resumen-codigo" id="r-codigo" aria-label="Tu programa completo"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../bucles/index.html">Siguiente: Bucles →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function comillas(s) { return '"' + s + '"'; }
+
+  /* ---------- El programa completo, línea a línea ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+
+  var L = [
+    v("nombre") + " = " + f("input") + "(" + s('"¿Cómo te llamas? "') + ")",
+    v("edad") + " = " + f("int") + "(" + f("input") + "(" + s('"¿Edad? "') + "))",
+    kw("if") + " " + v("edad") + " &lt; " + n("4") + ":",
+    "    " + v("precio") + " = " + n("0"),
+    kw("elif") + " " + v("edad") + " &lt; " + n("12") + ":",
+    "    " + v("precio") + " = " + n("5"),
+    kw("elif") + " " + v("edad") + " &gt;= " + n("65") + ":",
+    "    " + v("precio") + " = " + n("4"),
+    kw("else") + ":",
+    "    " + v("precio") + " = " + n("8"),
+    v("socio") + " = " + f("input") + "(" + s('"¿Eres socio? "') + ")",
+    kw("if") + " " + v("socio") + "." + f("lower") + "() == " + s('"sí"') + " " + kw("and") + " " + v("precio") + " &gt; " + n("0") + ":",
+    "    " + v("precio") + " = " + v("precio") + " - " + n("2"),
+    f("print") + '(<span class="tk-prefijo">f</span>' + s('"' + llave("nombre") + ", tu entrada cuesta " + llave("precio") + ' soles"') + ")"
+  ];
+
+  function pintarLineas(code, lineas, clase) {
+    code.innerHTML = lineas.map(function (h) {
+      return '<span class="linea' + (clase ? " " + clase : "") + '">' + h + "</span>";
+    }).join("");
+  }
+
+  /* Lo que decide el programa: precio y si se aplica el descuento */
+  function precioBase(edad) { return edad < 4 ? 0 : edad < 12 ? 5 : edad >= 65 ? 4 : 8; }
+  function calcular(edad, socio) {
+    var base = precioBase(edad);
+    var descuento = socio.toLowerCase() === "sí" && base > 0;
+    return { base: base, descuento: descuento, precio: descuento ? base - 2 : base };
+  }
+
+  /* Pinta una lista de pruebas: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = p.etiqueta;
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* ---------- Pasos de elegir una opción (partes 1, 3 y 4) ----------
+     cfg: { id, nombre, correcta, alElegir(valor), probar(valor) → filas, ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiarMarcas() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiarMarcas();
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      cfg.alElegir(null);
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiarMarcas();
+        lista.hidden = true;
+        Pasos.limpiarFeedback(fb);
+        cfg.alElegir(r.value, r.nextElementSibling.textContent);
+        leccion.listoParaComprobar(true);
+      });
+    });
+    // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- La taquilla en marcha (pasos 1 y 6) ----------
+     o: { prefijo, codigo (pre o null), vars (dl o null), alTerminar(datos) } */
+  var PREGUNTAS = [
+    { texto: "¿Cómo te llamas?", linea: 0 },
+    { texto: "¿Edad?", linea: 1 },
+    { texto: "¿Eres socio?", linea: 10 }
+  ];
+
+  function crearTaquilla(o) {
+    var p = o.prefijo;
+    var registro = $(p + "-registro");
+    var fila = $(p + "-fila");
+    var campo = $(p + "-campo");
+    var pregunta = $(p + "-pregunta");
+    var otra = $(p + "-otra");
+    var ticket = $(p + "-ticket");
+    var fb = $(p + "-fb");
+    var paso = 0;
+    var datos = {};
+
+    function marcar(opciones) { if (o.codigo) Codigo.marcar(o.codigo, opciones); }
+
+    function pintarVars(cambia) {
+      if (!o.vars) return;
+      o.vars.innerHTML = "";
+      [["nombre", "str"], ["edad", "int"], ["precio", "int"], ["socio", "str"]].forEach(function (par) {
+        var dt = document.createElement("dt");
+        dt.textContent = par[0];
+        var dd = document.createElement("dd");
+        var valor = datos[par[0]];
+        if (valor === undefined) {
+          dd.textContent = "—";
+        } else {
+          dd.textContent = par[1] === "str" ? comillas(valor) : String(valor);
+          dd.className = "vars--" + par[1] + (cambia.indexOf(par[0]) !== -1 ? " vars--cambio" : "");
+        }
+        o.vars.appendChild(dt);
+        o.vars.appendChild(dd);
+      });
+    }
+
+    function preguntar() {
+      pregunta.textContent = PREGUNTAS[paso].texto;
+      campo.value = "";
+      campo.setAttribute("inputmode", paso === 1 ? "numeric" : "text");
+      marcar({ activas: [PREGUNTAS[paso].linea] });
+    }
+
+    function anotar(preg, resp) {
+      var l = document.createElement("span");
+      l.className = "consola__linea";
+      l.innerHTML = '<span class="registro__pregunta"></span> <span class="registro__respuesta"></span>';
+      l.children[0].textContent = preg;
+      l.children[1].textContent = resp;
+      registro.appendChild(l);
+    }
+
+    function empezar() {
+      paso = 0;
+      datos = {};
+      registro.textContent = "";
+      fila.hidden = false;
+      otra.hidden = true;
+      ticket.classList.remove("ticket--impreso");
+      ticket.querySelector(".ticket__nombre").textContent = "";
+      ticket.querySelector(".ticket__precio").textContent = "? soles";
+      ticket.querySelector(".ticket__nota").textContent = "";
+      pintarVars([]);
+      preguntar();
+    }
+
+    function enviar() {
+      var valor = campo.value.trim();
+      if (paso === 0 && !valor) {
+        Pasos.feedback(fb, "pista", "Escribe un nombre.");
+        return;
+      }
+      if (paso === 1 && !/^\d{1,3}$/.test(valor)) {
+        Pasos.feedback(fb, "pista", "Escribe la edad con números, por ejemplo 30.");
+        return;
+      }
+      if (paso === 2 && !valor) {
+        Pasos.feedback(fb, "pista", "Responde «sí» o «no».");
+        return;
+      }
+      Pasos.limpiarFeedback(fb);
+      anotar(PREGUNTAS[paso].texto, valor);
+
+      if (paso === 0) {
+        datos.nombre = valor;
+        pintarVars(["nombre"]);
+      } else if (paso === 1) {
+        datos.edad = Number(valor);
+        datos.precio = precioBase(datos.edad);
+        pintarVars(["edad", "precio"]);
+        // Camino del if / elif / else hasta la rama que gana
+        var rama = [0, 5, 4, 8].indexOf(datos.precio);
+        var preguntadas = [2, 4, 6, 8].slice(0, rama + 1);
+        var activas = preguntadas.concat([preguntadas[preguntadas.length - 1] + 1]);
+        var saltadas = [2, 3, 4, 5, 6, 7, 8, 9].filter(function (i) { return activas.indexOf(i) === -1; });
+        marcar({ activas: activas.concat([10]), saltadas: saltadas });
+      } else {
+        datos.socio = valor;
+        var r = calcular(datos.edad, valor);
+        datos.precio = r.precio;
+        pintarVars(["socio"].concat(r.descuento ? ["precio"] : []));
+        marcar(r.descuento ? { activas: [11, 12, 13] } : { activas: [11, 13], saltadas: [12] });
+        var linea = datos.nombre + ", tu entrada cuesta " + r.precio + " soles";
+        var out = document.createElement("span");
+        out.className = "consola__linea";
+        out.textContent = linea;
+        registro.appendChild(out);
+
+        ticket.querySelector(".ticket__nombre").textContent = datos.nombre;
+        ticket.querySelector(".ticket__precio").textContent = r.precio === 0 ? "Gratis" : r.precio + " soles";
+        ticket.querySelector(".ticket__nota").textContent = r.descuento ? "⭐ Socio: −2 soles" : "";
+        ticket.classList.remove("ticket--impreso");
+        void ticket.offsetWidth;
+        ticket.classList.add("ticket--impreso");
+
+        fila.hidden = true;
+        otra.hidden = false;
+        otra.focus();
+        o.alTerminar({ precio: r.precio, descuento: r.descuento });
+        return;
+      }
+      paso++;
+      preguntar();
+      campo.focus();
+    }
+
+    $(p + "-enviar").addEventListener("click", enviar);
+    // Enter en el campo envía la respuesta (en vez de pulsar "Continuar")
+    campo.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      enviar();
+    });
+    otra.addEventListener("click", function () {
+      empezar();
+      campo.focus();
+    });
+    empezar();
+  }
+
+  /* ---------- 1. Demo ---------- */
+  crearTaquilla({
+    prefijo: "d",
+    codigo: null,
+    vars: null,
+    alTerminar: function () {
+      Pasos.feedback($("d-fb"), "ok", "¡Así funcionará! Prueba con más personas si quieres; luego la construimos en cuatro partes.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 2. Parte 1: preguntar ---------- */
+  var parte1 = crearEleccion({
+    id: "paso-preguntar",
+    nombre: "p1",
+    correcta: "bien",
+    alElegir: function (valor, textoOpcion) {
+      var lineas = textoOpcion ? textoOpcion.split("\n") : ["?", "?"];
+      $("p1-hueco-0").textContent = lineas[0];
+      $("p1-hueco-1").textContent = lineas[1];
+    },
+    probar: function (valor) {
+      if (valor === "todo-int") {
+        return [
+          { etiqueta: "nombre ← «Ana»", salida: "💥 ValueError", ok: false },
+          { etiqueta: "edad ← «10»", salida: "(no llega)", ok: false }
+        ];
+      }
+      return [
+        { etiqueta: "nombre ← «Ana»", salida: '"Ana"', ok: true },
+        { etiqueta: "edad ← «10»", salida: valor === "bien" ? "10" : '"10"', ok: valor === "bien" }
+      ];
+    },
+    ok: "¡Bien! El nombre se queda como texto y la edad se convierte en número para poder compararla.",
+    pistas: {
+      "texto": "Así edad sería el texto \"10\", y edad < 4 daría error: no se puede comparar texto con un número.",
+      "todo-int": "int(\"Ana\") falla: un nombre no se puede convertir en número. Solo la edad necesita int()."
+    }
+  });
+
+  /* ---------- 3. Parte 2: el orden de las ramas ---------- */
+  var RAMAS = {
+    bebe: { cond: v("edad") + " &lt; " + n("4"), precio: 0, texto: "edad < 4", cumple: function (e) { return e < 4; } },
+    nino: { cond: v("edad") + " &lt; " + n("12"), precio: 5, texto: "edad < 12", cumple: function (e) { return e < 12; } },
+    mayor: { cond: v("edad") + " &gt;= " + n("65"), precio: 4, texto: "edad >= 65", cumple: function (e) { return e >= 65; } }
+  };
+  var orden = ["nino", "mayor", "bebe"];
+
+  function precioConOrden(edad) {
+    for (var i = 0; i < orden.length; i++) {
+      if (RAMAS[orden[i]].cumple(edad)) return RAMAS[orden[i]].precio;
+    }
+    return 8;
+  }
+
+  function pintarRamas(movida) {
+    var ol = $("p2-ramas");
+    ol.innerHTML = "";
+    orden.forEach(function (id, i) {
+      var r = RAMAS[id];
+      var li = document.createElement("li");
+      li.className = "rama" + (id === movida ? " rama--movida" : "");
+      li.innerHTML = '<pre class="codigo codigo--sin-numeros"><code>' +
+        '<span class="linea">' + kw(i === 0 ? "if" : "elif") + " " + r.cond + ":</span>" +
+        '<span class="linea">    ' + v("precio") + " = " + n(r.precio) + "</span></code></pre>" +
+        '<div class="rama__botones">' +
+        '<button type="button" class="btn btn-secundario" data-id="' + id + '" data-mover="-1"' + (i === 0 ? " disabled" : "") + ' aria-label="Subir la rama ' + r.texto + '">↑</button>' +
+        '<button type="button" class="btn btn-secundario" data-id="' + id + '" data-mover="1"' + (i === orden.length - 1 ? " disabled" : "") + ' aria-label="Bajar la rama ' + r.texto + '">↓</button>' +
+        "</div>";
+      ol.appendChild(li);
+    });
+  }
+
+  $("p2-ramas").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-mover]");
+    if (!btn) return;
+    var id = btn.getAttribute("data-id");
+    var dir = Number(btn.getAttribute("data-mover"));
+    var i = orden.indexOf(id);
+    orden.splice(i, 1);
+    orden.splice(i + dir, 0, id);
+    pintarRamas(Pasos.reducirMovimiento ? null : id);
+    // El foco sigue a la rama movida
+    var mismo = $("p2-ramas").querySelector('button[data-id="' + id + '"][data-mover="' + dir + '"]');
+    var otro = $("p2-ramas").querySelector('button[data-id="' + id + '"][data-mover="' + -dir + '"]');
+    (mismo && !mismo.disabled ? mismo : otro).focus();
+    $("p2-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("p2-fb"));
+    leccion.listoParaComprobar(true);
+  });
+
+  function comprobarPrecio() {
+    var edades = [2, 8, 30, 70];
+    var fallo = null;
+    pintarPruebas($("p2-pruebas"), edades.map(function (edad) {
+      var sale = precioConOrden(edad);
+      var ok = sale === precioBase(edad);
+      if (!ok && fallo === null) fallo = { edad: edad, sale: sale, debe: precioBase(edad) };
+      return { etiqueta: edad + " años", salida: "precio = " + sale, ok: ok };
+    }));
+    if (!fallo) {
+      Pasos.feedback($("p2-fb"), "ok", "¡Perfecto! edad < 4 tiene que ir antes que edad < 12: si no, un bebé ya cumple edad < 12 y se queda en 5 soles.");
+      return true;
+    }
+    var gana = orden.filter(function (id) { return RAMAS[id].cumple(fallo.edad); })[0];
+    Pasos.feedback($("p2-fb"), "pista", "Con " + fallo.edad + " años sale " + fallo.sale + " en vez de " + fallo.debe +
+      ": la primera pregunta que da True es " + RAMAS[gana].texto + ", y elif ya no mira las demás.");
+    return false;
+  }
+
+  /* ---------- 4. Parte 3: socios ---------- */
+  var VISITANTES = [
+    { nombre: "Ana", edad: 30, socio: "sí" },
+    { nombre: "Leo", edad: 2, socio: "Sí" },
+    { nombre: "Eva", edad: 70, socio: "no" }
+  ];
+  var CONDICIONES = {
+    "or": function (sc, precio) { return sc === "sí" || precio > 0; },
+    "sin-precio": function (sc) { return sc.toLowerCase() === "sí"; },
+    "bien": function (sc, precio) { return sc.toLowerCase() === "sí" && precio > 0; },
+    "mayuscula": function (sc, precio) { return sc === "Sí" && precio > 0; }
+  };
+
+  var parte3 = crearEleccion({
+    id: "paso-socio",
+    nombre: "p3",
+    correcta: "bien",
+    alElegir: function (valor, textoOpcion) { $("p3-hueco").textContent = textoOpcion || "?"; },
+    probar: function (valor) {
+      return VISITANTES.map(function (p) {
+        var base = precioBase(p.edad);
+        var sale = CONDICIONES[valor](p.socio, base) ? base - 2 : base;
+        var debe = calcular(p.edad, p.socio).precio;
+        return { etiqueta: p.nombre + ", " + p.edad + " años, «" + p.socio + "»", salida: "precio = " + sale, ok: sale === debe };
+      });
+    },
+    ok: "¡Exacto! .lower() acepta «Sí» y «sí», y precio > 0 evita que una entrada gratis cueste −2 soles.",
+    pistas: {
+      "or": "Con or basta con que una parte sea True: Eva no es socia, pero como su precio es mayor que 0, ¡también tendría descuento!",
+      "sin-precio": "Leo tiene 2 años y entra gratis. Si es socio, ¡su entrada costaría −2 soles! Hay que comprobar también que el precio sea mayor que 0.",
+      "mayuscula": "Ana respondió «sí» en minúscula y no tuvo descuento: == distingue mayúsculas. Usa .lower()."
+    }
+  });
+
+  /* ---------- 5. Parte 4: la respuesta ---------- */
+  var SALIDAS = {
+    "sin-f": { texto: "{nombre}, tu entrada cuesta {precio} soles", ok: false },
+    "mas": { texto: "💥 TypeError: can only concatenate str (not \"int\") to str", ok: false },
+    "bien": { texto: "Ana, tu entrada cuesta 6 soles", ok: true },
+    "sin-llaves": { texto: "nombre, tu entrada cuesta precio soles", ok: false }
+  };
+
+  var parte4 = crearEleccion({
+    id: "paso-mensaje",
+    nombre: "p4",
+    correcta: "bien",
+    alElegir: function (valor, textoOpcion) { $("p4-hueco").textContent = textoOpcion || "?"; },
+    probar: function (valor) {
+      return [{ etiqueta: "Salida", salida: SALIDAS[valor].texto, ok: SALIDAS[valor].ok }];
+    },
+    ok: "¡Eso es! La f delante y las llaves meten el valor de cada variable en el texto.",
+    pistas: {
+      "sin-f": "Sin la f delante, las llaves se imprimen tal cual.",
+      "mas": "precio es un número y no se puede pegar con + a un texto. La f-string lo convierte sola.",
+      "sin-llaves": "Sin llaves, nombre y precio son solo palabras del texto."
+    }
+  });
+
+  /* ---------- 6. El programa completo ---------- */
+  var misiones = {};
+  pintarLineas($("t-codigo-lineas"), L);
+  pintarLineas($("r-codigo-lineas"), L);
+
+  crearTaquilla({
+    prefijo: "t",
+    codigo: $("t-codigo"),
+    vars: $("t-vars"),
+    alTerminar: function (r) {
+      var nuevas = [];
+      if (r.precio === 0) nuevas.push("gratis");
+      if (r.descuento) nuevas.push("descuento");
+      if (r.precio === 8) nuevas.push("ocho");
+      nuevas.forEach(function (m) {
+        misiones[m] = true;
+        document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+      });
+      var faltan = ["gratis", "descuento", "ocho"].filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) {
+        Pasos.feedback($("t-fb"), "ok", "¡Misiones cumplidas! Tu programa decide bien en todos los casos.");
+        leccion.desbloquear();
+      } else {
+        var pistas = {
+          gratis: "¿Quién entra gratis? Mira los precios del principio: los menores de 4.",
+          descuento: "Para el descuento hay que ser socio y no entrar gratis.",
+          ocho: "8 soles paga quien no es niño, ni mayor de 64, ni socio."
+        };
+        Pasos.feedback($("t-fb"), "pista", (nuevas.length ? "¡Misión cumplida! " : "") + pistas[faltan[0]]);
+      }
+    }
+  });
+
+  pintarLineas($("p2-antes"), [L[0], L[1]], "linea--hecha");
+  pintarRamas(null);
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-preguntar": parte1.entrar,
+      "paso-precio": function (paso, l, info) { if (!info.desbloqueado) l.listoParaComprobar(true); },
+      "paso-socio": parte3.entrar,
+      "paso-mensaje": parte4.entrar
+    },
+    comprobar: {
+      "paso-preguntar": parte1.comprobar,
+      "paso-precio": comprobarPrecio,
+      "paso-socio": parte3.comprobar,
+      "paso-mensaje": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
