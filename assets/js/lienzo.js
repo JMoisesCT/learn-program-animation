@@ -15,7 +15,7 @@
    lz.escribir("*", { nota: 2, clase: "lienzo__celda--j" })
                                         escribe en el cursor y lo avanza; nota: número pequeño en la esquina
    lz.saltar()                          print(): el cursor baja a la línea siguiente
-   lz.mostrar(["*", "**"], { animar: true, notas: function (f, c) { … } })
+   lz.mostrar(["*", "**"], { animar: true, notas: function (f, c) { … }, clases: function (f, c) { … } })
                                         pinta una salida completa (las casillas entran en orden)
    lz.comparar(["*", "**"], ["*", "***"])
                                         pinta la salida junto a un patrón objetivo:
@@ -173,10 +173,10 @@
       pintar();
     }
 
-    function cargar(salida, notas) {
+    function cargar(salida, notas, clases) {
       lineas = salida.map(function (t, f) {
         return t.split("").map(function (c, k) {
-          return { c: c, nota: notas ? notas(f, k) : undefined };
+          return { c: c, nota: notas ? notas(f, k) : undefined, clase: clases ? clases(f, k) : undefined };
         });
       });
       lineas.push([]);
@@ -187,7 +187,7 @@
       extra = extra || {};
       modo = null;
       raiz.classList.remove("lienzo--solo-objetivo");
-      cargar(salida, extra.notas);
+      cargar(salida, extra.notas, extra.clases);
       if (extra.animar !== false) {
         var total = salida.join("").length;
         var paso = Math.min(70, 1400 / Math.max(1, total));
