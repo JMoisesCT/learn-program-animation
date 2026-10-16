@@ -7,11 +7,12 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - No cargar recursos externos (CDN, fuentes web) salvo que sea imprescindible; preferir fuentes del sistema y SVG/CSS inline.
 - Estructura:
   - `index.html`: portada con una tarjeta por tema y el progreso. Un tema con sublecciones (`tarjeta-tema`) lista sus lecciones dentro, como un camino numerado.
-  - `assets/css/base.css`: tokens de diseño y componentes compartidos (código con líneas resaltadas, chips `True`/`False`, `expresion`, `regla` con zonas True, cajas de variable, consola, opciones, feedback, tarjeta `lab`).
+  - `assets/css/base.css`: tokens de diseño y componentes compartidos (código con líneas resaltadas, chips `True`/`False`, `expresion`, `regla` con zonas True, cajas de variable, consola, `lienzo` y `vueltas` para bucles anidados, opciones, feedback, tarjeta `lab`).
   - `assets/js/`: utilidades compartidas (motor de pasos, progreso en `localStorage`).
   - `lecciones/<tema>/index.html`: una carpeta por tema (`variables/`, `condicionales/`, `bucles/`, …).
   - `lecciones/<tema>/<sublección>/index.html`: sublecciones que profundizan un tema (p. ej. `variables/formulas/`, `condicionales/logicos/`). Las rutas a `assets/` suben un nivel más (`../../../`).
 - Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles (for, range y while) → Contar y acumular → Decidir en cada vuelta → Recorrer un texto → Salir antes: break y continue → Bucles anidados → Proyecto: adivina el número → Funciones → (Listas, próximamente).
+- La pantalla en casillas donde `print()` dibuja patrones (cursor, espacios visibles, comparar con un objetivo) está en `assets/js/lienzo.js` (`Lienzo.crear`).
 - La consola que pide un dato en cada vuelta de un bucle (`input()` dentro de un `for` o de un `while True` con `break`) está en `assets/js/bucle-input.js` (`BucleInput.crear`).
 - Ejemplos con notas: escala de 0 a 20, se aprueba con 11 o más.
 - Rutas relativas siempre (el sitio vive bajo `/learn-program-animation/` en GitHub Pages).
