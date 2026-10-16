@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recorrer un texto · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: recorrer un texto letra a letra con for en Python, contar vocales y medirlo con len().">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rotulo { text-align: center; font-family: var(--fuente-codigo); font-weight: 700; margin: 0; overflow-wrap: anywhere; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .cajas--dos { padding-top: var(--esp-4); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .contador-vueltas { display: block; text-align: center; margin-top: var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador-vueltas strong { color: var(--color-texto); }
+
+    /* ---------- Las letras del texto, con un cursor que las recorre ---------- */
+    .letras { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-3) 0 0; padding: 0 0 var(--esp-4); list-style: none; }
+    .letra { position: relative; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-lg); color: var(--color-texto); transition: background-color var(--dur), border-color var(--dur), transform var(--dur) var(--curva-rebote), color var(--dur), opacity var(--dur); }
+    .letra--espacio { border-style: dashed; color: var(--color-texto-suave); }
+    .letra--hecha { background: var(--color-superficie-2); }
+    .letra--true { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .letra--false { background: var(--color-superficie-2); color: #4b5563; }
+    .letra--actual { border-color: var(--color-azul); transform: translateY(-4px) scale(1.08); }
+    .letra--actual:not(.letra--true):not(.letra--false) { background: var(--color-azul-suave); color: var(--color-azul); }
+    /* El cursor: un triángulo bajo la letra en la que está el bucle */
+    .letra--actual::after { content: ""; position: absolute; top: calc(100% + 0.35rem); left: 50%; margin-left: -0.45rem; border: 0.45rem solid transparent; border-top-width: 0; border-bottom: 0.6rem solid var(--color-azul); }
+    /* Número de orden bajo cada carácter (paso de len) */
+    .letras--numeradas .letra { margin-bottom: 1.25rem; }
+    .letra__orden { position: absolute; top: calc(100% + 0.2rem); left: 0; right: 0; text-align: center; font-family: var(--fuente); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .letras__vacio { align-self: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+
+    /* ---------- Consola que pide un dato ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 9rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+
+    @media (max-width: 480px) {
+      .letra { width: 2.4rem; height: 2.4rem; font-size: var(--texto-md); }
+      .letras { gap: var(--esp-1); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="bucles-texto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: un for que recorre las letras -->
+    <section class="paso" id="paso-letras" data-requiere aria-labelledby="t-letras">
+      <span class="paso__etiqueta">Bucles 4/4 · Recorrer un texto</span>
+      <h1 class="paso__titulo" id="t-letras">Letra a letra</h1>
+      <p>Un <code>for</code> también recorre un texto: da <strong>una vuelta por cada letra</strong>. Escribe una palabra y recórrela.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="campo">
+            <label for="l-campo">Tu palabra</label>
+            <input type="text" id="l-campo" value="hola" maxlength="12" autocomplete="off" spellcheck="false">
+          </div>
+          <pre class="codigo" id="l-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"<span id="l-codigo-palabra">hola</span>"</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-variable">palabra</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">letra</span>)</span></code></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="l-recorrer">▶ Recorrer</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <ol class="letras" id="l-letras" aria-hidden="true"></ol>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="l-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">letra</code>
+            </div>
+          </div>
+          <span class="contador-vueltas" aria-live="polite">Vueltas: <strong id="l-vueltas">0</strong></span>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="l-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="l-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Línea a línea: contar las vocales -->
+    <section class="paso" id="paso-vocales" data-requiere aria-labelledby="t-vocales">
+      <h2 class="paso__titulo" id="t-vocales">Contar las vocales</h2>
+      <p>En cada vuelta, un <code>if</code> pregunta si la letra es una vocal. Si lo es, el contador sube. Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <p class="rotulo">"banana"</p>
+          <ol class="letras" id="v-letras" aria-label="Letras de banana">
+            <li class="letra">b</li><li class="letra">a</li><li class="letra">n</li><li class="letra">a</li><li class="letra">n</li><li class="letra">a</li>
+          </ol>
+          <div class="expresion" aria-hidden="true">
+            <span id="v-sustituida">letra in "aeiou"</span>
+            <span class="expresion__flecha" id="v-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="v-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="v-caja-letra">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">letra</code>
+            </div>
+            <div class="caja" id="v-caja-vocales">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">vocales</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="v-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">vocales</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"banana"</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">        <span class="tk-variable">vocales</span> += <span class="tk-numero">1</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Tiene <span class="tk-llave">{</span><span class="tk-variable">vocales</span><span class="tk-llave">}</span> vocales"</span>)</span></code></pre>
+          <p class="explicacion" id="v-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="v-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="v-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="v-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="v-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="v-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. len(): cuántos caracteres -->
+    <section class="paso" id="paso-len" data-requiere aria-labelledby="t-len">
+      <h2 class="paso__titulo" id="t-len">¿Cuántas letras tiene?</h2>
+      <p><code>len()</code> cuenta los caracteres de un texto. Añade un espacio y otra palabra: ¿el espacio cuenta?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="campo">
+            <label for="n-campo">Tu texto</label>
+            <input type="text" id="n-campo" value="hola" maxlength="14" autocomplete="off" spellcheck="false">
+          </div>
+          <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">texto</span> = <span class="tk-texto">"<span id="n-codigo-texto">hola</span>"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">texto</span>))</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <ol class="letras letras--numeradas" id="n-letras" aria-hidden="true"></ol>
+          <p class="rotulo" id="n-rotulo" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="n-consola"><span class="consola__titulo">Salida</span></div>
+          <p class="nota"><code>for letra in texto</code> da tantas vueltas como dice <code>len(texto)</code>: una por carácter.</p>
+          <div class="feedback" id="n-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Las vocales de la palabra que escribe el alumno -->
+    <section class="paso" id="paso-tuya" data-requiere aria-labelledby="t-tuya">
+      <h2 class="paso__titulo" id="t-tuya">Las vocales de tu palabra</h2>
+      <p>Ahora la palabra la escribes tú. <code>.lower()</code> la pasa a minúsculas, así una «A» también cuenta.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="c-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Palabra: "</span>)</span><span class="linea"><span class="tk-variable">vocales</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-variable">palabra</span>.<span class="tk-funcion">lower</span>():</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">        <span class="tk-variable">vocales</span> += <span class="tk-numero">1</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"<span class="tk-llave">{</span><span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>)<span class="tk-llave">}</span> letras, <span class="tk-llave">{</span><span class="tk-variable">vocales</span><span class="tk-llave">}</span> vocales"</span>)</span></code></pre>
+          <p class="explicacion" id="c-explicacion" aria-live="polite"></p>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="c-registro" aria-live="polite"></div>
+            <div class="entrada" id="c-fila">
+              <label for="c-campo">Palabra:</label>
+              <input type="text" id="c-campo" maxlength="12" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="c-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="c-otra" hidden>↺ Otra palabra</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="c-rotulo"></p>
+          <ol class="letras" id="c-letras" aria-hidden="true"></ol>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="c-caja-letra">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">letra</code>
+            </div>
+            <div class="caja" id="c-caja-vocales">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">vocales</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="c-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Las «a» de patata</h2>
+      <p>Queremos contar cuántas letras <strong>a</strong> tiene <code>"patata"</code>. La respuesta es 3. ¿Qué programa lo hace bien?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué programa cuenta bien las «a»?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="dentro"><span>for letra in "patata":
+    total = 0
+    if letra == "a":
+        total += 1
+print(total)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="sin-if"><span>total = 0
+for letra in "patata":
+    total += 1
+print(total)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>total = 0
+for letra in "patata":
+    if letra == "a":
+        total += 1
+print(total)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="texto"><span>total = 0
+for letra in "patata":
+    if "patata" == "a":
+        total += 1
+print(total)</span></label>
+        </fieldset>
+
+        <div class="consola" id="reto-consola" aria-live="polite" hidden><span class="consola__titulo">Salida</span></div>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>for letra in texto</code> da una vuelta por cada carácter, y <code>len(texto)</code> dice cuántos hay.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"hola"</span>:   <span class="tk-comentario"># "h", "o", "l", "a"</span></span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">        <span class="tk-variable">vocales</span> += <span class="tk-numero">1</span></span><span class="linea"></span><span class="linea"><span class="tk-funcion">len</span>(<span class="tk-texto">"hola mundo"</span>)   <span class="tk-comentario"># 10: el espacio cuenta</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../funciones/index.html">Siguiente: Funciones →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function comillas(s) { return '"' + s + '"'; }
+
+  /* Un carácter tal como se ve en una baldosa: el espacio se marca con ␣ */
+  function visible(c) { return c === " " ? "␣" : c; }
+
+  var VOCALES = "aeiou";
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* Pinta las baldosas de un texto. numeradas: con su número de orden debajo. */
+  function pintarLetras(lista, texto, numeradas) {
+    lista.textContent = "";
+    if (!texto.length) {
+      var vacio = document.createElement("li");
+      vacio.className = "letras__vacio";
+      vacio.textContent = "(texto vacío)";
+      lista.appendChild(vacio);
+      return;
+    }
+    Array.prototype.forEach.call(texto, function (c, k) {
+      var li = document.createElement("li");
+      li.className = "letra" + (c === " " ? " letra--espacio" : "");
+      li.textContent = visible(c);
+      if (numeradas) {
+        var orden = document.createElement("span");
+        orden.className = "letra__orden";
+        orden.textContent = k + 1;
+        li.appendChild(orden);
+      }
+      lista.appendChild(li);
+    });
+  }
+
+  /* El cursor está en la letra k (−1: en ninguna). Las anteriores quedan como hechas. */
+  function moverCursor(lista, k) {
+    Array.prototype.forEach.call(lista.querySelectorAll(".letra"), function (el, i) {
+      el.classList.toggle("letra--actual", i === k);
+      el.classList.toggle("letra--hecha", i < k || k === -2);
+    });
+  }
+
+  /* Recorre las letras una a una, con una pausa entre ellas.
+     alLetra(k) pinta la vuelta k; alFin() se llama tras la última. Devuelve una función para parar. */
+  function recorrer(cuantas, alLetra, alFin, intervalo) {
+    var k = 0;
+    var timer = null;
+    function vuelta() {
+      if (k >= cuantas) {
+        clearInterval(timer);
+        alFin();
+        return;
+      }
+      alLetra(k);
+      k++;
+    }
+    vuelta();
+    timer = setInterval(vuelta, intervalo);
+    return function () { clearInterval(timer); };
+  }
+
+  /* Una línea de la consola. Un espacio solo se ve como línea en blanco. */
+  function imprimir(consola, texto) {
+    Codigo.agregar(consola, texto.trim() ? texto : " ");
+  }
+
+  /* ---------- 1. Letra a letra ---------- */
+  var l = { parar: null, palabras: {} };
+
+  function pintarPalabra() {
+    var palabra = $("l-campo").value;
+    $("l-codigo-palabra").textContent = palabra;
+    pintarLetras($("l-letras"), palabra);
+  }
+
+  function pararLetras() {
+    if (l.parar) l.parar();
+    l.parar = null;
+    $("l-recorrer").disabled = false;
+  }
+
+  function recorrerPalabra() {
+    var palabra = $("l-campo").value;
+    pararLetras();
+    if (!palabra.length) {
+      Pasos.feedback($("l-fb"), "pista", "Escribe al menos una letra.");
+      return;
+    }
+    Pasos.limpiarFeedback($("l-fb"));
+    pintarLetras($("l-letras"), palabra);
+    Codigo.consola($("l-consola"), []);
+    Caja.vaciar($("l-caja"));
+    $("l-vueltas").textContent = "0";
+    $("l-recorrer").disabled = true;
+
+    l.parar = recorrer(palabra.length, function (k) {
+      moverCursor($("l-letras"), k);
+      Caja.poner($("l-caja"), comillas(palabra[k]));
+      Codigo.marcar($("l-codigo"), { activas: [1, 2] });
+      imprimir($("l-consola"), palabra[k]);
+      $("l-vueltas").textContent = k + 1;
+    }, function () {
+      l.parar = null;
+      $("l-recorrer").disabled = false;
+      moverCursor($("l-letras"), -2);
+      Codigo.limpiar($("l-codigo"));
+      l.palabras[palabra] = true;
+      var n = palabra.length;
+      var vueltas = n === 1 ? "1 vuelta" : n + " vueltas";
+      if (palabra !== "hola" || Object.keys(l.palabras).length > 1) {
+        Pasos.feedback($("l-fb"), "ok", "«" + palabra + "» tiene " + n + (n === 1 ? " carácter" : " caracteres") +
+          ", así que el bucle dio " + vueltas + ". En cada una, letra guarda el siguiente.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("l-fb"), "pista", "4 letras, 4 vueltas. Ahora escribe otra palabra (tu nombre, por ejemplo) y recórrela.");
+      }
+    }, Pasos.reducirMovimiento ? 450 : 600);
+  }
+
+  /* ---------- 2. Contar las vocales ---------- */
+  var BANANA = "banana";
+
+  function trazaVocales() {
+    var t = [{ linea: 0, texto: "<strong>vocales</strong> empieza en 0.", estado: { vocales: 0 } }];
+    var vocales = 0;
+    Array.prototype.forEach.call(BANANA, function (c, k) {
+      var es = VOCALES.indexOf(c) !== -1;
+      t.push({ linea: 1, texto: "<strong>letra</strong> toma el valor <strong>" + comillas(c) + "</strong>.", estado: { k: k, letra: c } });
+      t.push({
+        linea: 2,
+        texto: comillas(c) + " in \"aeiou\" es " + chip(es) + (es ? ": es una vocal." : ": no es una vocal."),
+        estado: { k: k, letra: c, es: es }
+      });
+      if (es) {
+        vocales++;
+        t.push({ linea: 3, texto: "Entra en el <code>if</code>: <strong>vocales</strong> sube a " + vocales + ".", estado: { vocales: vocales } });
+      }
+    });
+    t.push({ linea: 1, texto: "No quedan letras en \"banana\": fin del bucle.", estado: { fin: true } });
+    t.push({ linea: 4, salida: "Tiene " + vocales + " vocales", texto: "Imprime el contador." });
+    return t;
+  }
+
+  function pintarExpresion(texto, valor) {
+    $("v-sustituida").textContent = texto;
+    var hay = valor !== undefined;
+    $("v-flecha").hidden = !hay;
+    $("v-resultado").hidden = !hay;
+    if (hay) Codigo.booleano($("v-resultado"), valor);
+  }
+
+  /* ---------- 3. len() ---------- */
+  function pintarLen(alEscribir) {
+    var texto = $("n-campo").value;
+    $("n-codigo-texto").textContent = texto;
+    pintarLetras($("n-letras"), texto, true);
+    $("n-rotulo").textContent = "len(" + comillas(texto) + ") → " + texto.length;
+    Codigo.consola($("n-consola"), [String(texto.length)]);
+    if (!alEscribir) return;
+    var palabras = texto.trim().split(/\s+/).filter(Boolean).length;
+    if (texto.indexOf(" ") !== -1 && palabras >= 2) {
+      var espacios = texto.split(" ").length - 1;
+      Pasos.feedback($("n-fb"), "ok", "¡Sí! " + (espacios === 1 ? "El espacio también es un carácter" : "Los espacios también son caracteres") +
+        ": len cuenta letras, espacios y signos. Aquí da " + texto.length + ".");
+      leccion.desbloquear();
+    } else if (!texto.length) {
+      Pasos.feedback($("n-fb"), "pista", "Un texto vacío, \"\", tiene 0 caracteres. Escribe dos palabras separadas por un espacio.");
+    } else {
+      Pasos.limpiarFeedback($("n-fb"));
+    }
+  }
+
+  /* ---------- 4. Las vocales de tu palabra ---------- */
+  var c = { parar: null };
+
+  function anotar(pregunta, respuesta) {
+    var lin = document.createElement("span");
+    lin.className = "consola__linea";
+    lin.innerHTML = '<span class="registro__pregunta"></span> <span class="registro__respuesta"></span>';
+    lin.children[0].textContent = pregunta;
+    lin.children[1].textContent = respuesta;
+    $("c-registro").appendChild(lin);
+  }
+
+  function pararTuya() {
+    if (c.parar) c.parar();
+    c.parar = null;
+  }
+
+  function empezarTuya() {
+    pararTuya();
+    $("c-registro").textContent = "";
+    $("c-fila").hidden = false;
+    $("c-otra").hidden = true;
+    $("c-campo").value = "";
+    $("c-rotulo").textContent = "";
+    $("c-letras").textContent = "";
+    Caja.vaciar($("c-caja-letra"));
+    Caja.vaciar($("c-caja-vocales"));
+    Codigo.marcar($("c-codigo"), { activas: [0] });
+    $("c-explicacion").innerHTML = "<code>input()</code> espera una palabra.";
+  }
+
+  function enviarTuya() {
+    var palabra = $("c-campo").value;
+    if (!palabra.trim()) {
+      Pasos.feedback($("c-fb"), "pista", "Escribe una palabra, por ejemplo tu nombre.");
+      return;
+    }
+    Pasos.limpiarFeedback($("c-fb"));
+    anotar("Palabra:", palabra);
+    $("c-fila").hidden = true;
+
+    var minus = palabra.toLowerCase();
+    var vocales = 0;
+    $("c-rotulo").textContent = "palabra.lower() → " + comillas(minus);
+    pintarLetras($("c-letras"), minus);
+    Caja.poner($("c-caja-vocales"), 0);
+    var celdas = $("c-letras").children;
+
+    c.parar = recorrer(minus.length, function (k) {
+      var letra = minus[k];
+      var es = VOCALES.indexOf(letra) !== -1;
+      moverCursor($("c-letras"), k);
+      celdas[k].classList.add(es ? "letra--true" : "letra--false");
+      Caja.poner($("c-caja-letra"), comillas(letra));
+      if (es) {
+        vocales++;
+        Caja.poner($("c-caja-vocales"), vocales);
+        Codigo.marcar($("c-codigo"), { activas: [2, 3, 4] });
+      } else {
+        Codigo.marcar($("c-codigo"), { activas: [2, 3], saltadas: [4] });
+      }
+      $("c-explicacion").innerHTML = comillas(visible(letra)) + " in \"aeiou\" es " + chip(es) +
+        (es ? ": <strong>vocales</strong> sube a " + vocales + "." : ": se lo salta.");
+    }, function () {
+      c.parar = null;
+      moverCursor($("c-letras"), -2);
+      Codigo.marcar($("c-codigo"), { activas: [5] });
+      $("c-explicacion").innerHTML = "Se acabaron las letras: imprime <code>len(palabra)</code> y el contador.";
+      Codigo.agregar($("c-registro"), palabra.length + " letras, " + vocales + " vocales");
+      $("c-otra").hidden = false;
+      $("c-otra").focus();
+
+      var conTilde = palabra.match(/[áéíóúü]/i);
+      var mayus = /[AEIOU]/.test(palabra);
+      var texto;
+      if (conTilde) {
+        texto = "Ojo: «" + conTilde[0].toLowerCase() + "» no está en \"aeiou\". Para Python es otra letra, así que no contó. Se arreglaría con \"aeiouáéíóú\".";
+      } else if (mayus) {
+        texto = "Gracias a .lower(), las vocales en mayúscula también contaron.";
+      } else {
+        texto = "El cursor pasó por las " + minus.length + " letras y el contador solo subió en las vocales.";
+      }
+      Pasos.feedback($("c-fb"), "ok", texto);
+      leccion.desbloquear();
+    }, Pasos.reducirMovimiento ? 400 : 550);
+  }
+
+  /* ---------- 5. Reto ---------- */
+  var PATATA = "patata";
+  var programas = {
+    bien: function () { var t = 0; Array.prototype.forEach.call(PATATA, function (x) { if (x === "a") t++; }); return t; },
+    dentro: function () { var t = 0; Array.prototype.forEach.call(PATATA, function (x) { t = 0; if (x === "a") t++; }); return t; },
+    "sin-if": function () { return PATATA.length; },
+    texto: function () { return 0; }
+  };
+  var pistasReto = {
+    dentro: "Sale 1. total = 0 está dentro del bucle: se borra en cada vuelta. Solo queda la última «a».",
+    "sin-if": "Sale 6: sin el if, total sube con todas las letras. ¡Eso es lo mismo que len(\"patata\")!",
+    texto: "Sale 0. \"patata\" == \"a\" compara la palabra entera, no cada letra: siempre es False. Hay que preguntar por letra."
+  };
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-consola").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto() {
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    Codigo.consola($("reto-consola"), [String(programas[marcada.value]())]);
+    $("reto-consola").hidden = false;
+
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! total empieza en 0 antes del bucle, y en cada vuelta el if pregunta por esa letra.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("l-campo").addEventListener("input", function () {
+    pararLetras();
+    Codigo.limpiar($("l-codigo"));
+    pintarPalabra();
+  });
+  // Enter en el campo recorre la palabra (en vez de pulsar "Continuar")
+  $("l-campo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    recorrerPalabra();
+  });
+  $("l-recorrer").addEventListener("click", recorrerPalabra);
+
+  var traza = Traza.crear({
+    codigo: $("v-codigo"),
+    explicacion: $("v-explicacion"),
+    consola: $("v-consola"),
+    ejecutar: $("v-ejecutar"),
+    reproducir: $("v-reproducir"),
+    reiniciar: $("v-reiniciar"),
+    generar: trazaVocales,
+    intervalo: 750,
+    alReiniciar: function () {
+      Caja.vaciar($("v-caja-letra"));
+      Caja.vaciar($("v-caja-vocales"));
+      $("v-letras").querySelectorAll(".letra").forEach(function (el) {
+        el.classList.remove("letra--actual", "letra--hecha", "letra--true", "letra--false");
+      });
+      pintarExpresion("letra in \"aeiou\"");
+      Pasos.limpiarFeedback($("v-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.vocales !== undefined) Caja.poner($("v-caja-vocales"), e.vocales);
+      if (e.letra !== undefined && e.es === undefined) {
+        Caja.poner($("v-caja-letra"), comillas(e.letra));
+        moverCursor($("v-letras"), e.k);
+        pintarExpresion(comillas(e.letra) + " in \"aeiou\"");
+      }
+      if (e.es !== undefined) {
+        pintarExpresion(comillas(e.letra) + " in \"aeiou\"", e.es);
+        $("v-letras").children[e.k].classList.add(e.es ? "letra--true" : "letra--false");
+      }
+      if (e.fin) moverCursor($("v-letras"), -2);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("v-fb"), "ok", "Seis letras, seis vueltas y seis preguntas. vocales solo subió con las tres «a».");
+      leccion.desbloquear();
+    }
+  });
+
+  $("n-campo").addEventListener("input", function () { pintarLen(true); });
+
+  $("c-enviar").addEventListener("click", enviarTuya);
+  // Enter en el campo envía la palabra (en vez de pulsar "Continuar")
+  $("c-campo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    enviarTuya();
+  });
+  $("c-otra").addEventListener("click", function () {
+    empezarTuya();
+    $("c-campo").focus();
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso se para cualquier animación en marcha
+  function pausar() {
+    pararLetras();
+    traza.detener();
+    if (c.parar) empezarTuya();
+  }
+
+  pintarPalabra();
+  pintarLen(false);
+  empezarTuya();
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-letras": pausar,
+      "paso-vocales": pausar,
+      "paso-len": pausar,
+      "paso-tuya": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
