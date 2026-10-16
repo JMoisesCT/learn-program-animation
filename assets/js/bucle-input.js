@@ -2,8 +2,8 @@
    (un input() dentro de un for o de un while). Necesita codigo.js y pasos.js.
 
    Los elementos se buscan por id, con un prefijo común (p. ej. "ap"):
-     ap-codigo       bloque .codigo del programa
-     ap-explicacion  qué está pasando (admite HTML)
+     ap-codigo       (opcional) bloque .codigo del programa
+     ap-explicacion  (opcional) qué está pasando (admite HTML)
      ap-registro     dentro de la .consola: lo que se escribe y lo que se imprime
      ap-fila         .entrada con la etiqueta, ap-campo y ap-enviar
      ap-otra         botón para empezar de nuevo (oculto hasta el final)
@@ -16,6 +16,7 @@
      rotulo: "Vuelta",      (opcional) palabra del indicador: "Intento 3"
      pregunta: "Nota:",     texto del input() que queda escrito en la consola
      lineaInput: 2,         línea del input() (desde 0)
+     siguiente: "…",        (opcional) explicación al pedir otro dato; por defecto "Escribe el siguiente."
      validar: function (texto) { return "pista" o null; },
      alEmpezar: function () { return "explicación inicial"; },
      alDato: function (texto) {          texto: lo escrito, sin espacios a los lados
@@ -42,6 +43,9 @@
     var rotulo = o.rotulo || "Vuelta";
     var vuelta = 0;
 
+    function marcar(camino) { if (codigo) Codigo.marcar(codigo, camino); }
+    function explicar(html) { if (explicacion) explicacion.innerHTML = html; }
+
     function anotar(respuesta) {
       var l = document.createElement("span");
       l.className = "consola__linea";
@@ -54,7 +58,7 @@
     function pedir(previo) {
       campo.value = "";
       indicador.innerHTML = rotulo + " <strong>" + (vuelta + 1) + "</strong>" + (o.vueltas ? " de " + o.vueltas : "");
-      explicacion.innerHTML = previo + (vuelta === 0 ? " <code>input()</code> espera el primer dato." : " Escribe el siguiente.");
+      explicar(previo + (vuelta === 0 ? " <code>input()</code> espera el primer dato." : " " + (o.siguiente || "Escribe el siguiente.")));
     }
 
     function empezar() {
@@ -63,7 +67,7 @@
       fila.hidden = false;
       otra.hidden = true;
       Pasos.limpiarFeedback(fb);
-      Codigo.marcar(codigo, { activas: [o.lineaInput] });
+      marcar({ activas: [o.lineaInput] });
       pedir(o.alEmpezar());
     }
 
@@ -78,7 +82,7 @@
       anotar(valor);
       var r = o.alDato(valor);
       // Queda marcado el camino que acaba de recorrer esta vuelta
-      Codigo.marcar(codigo, r.camino);
+      marcar(r.camino);
       (r.salida || []).forEach(function (s) { Codigo.agregar(registro, s); });
       vuelta++;
       if (!r.fin && (!o.vueltas || vuelta < o.vueltas)) {
@@ -87,8 +91,8 @@
         return;
       }
       var f = o.alFinal ? o.alFinal() : {};
-      if (f.linea !== undefined) Codigo.marcar(codigo, { activas: [f.linea] });
-      explicacion.innerHTML = r.texto + (f.texto ? " " + f.texto : "");
+      if (f.linea !== undefined) marcar({ activas: [f.linea] });
+      explicar(r.texto + (f.texto ? " " + f.texto : ""));
       indicador.textContent = "Fin del bucle";
       if (f.salida !== undefined) Codigo.agregar(registro, f.salida);
       fila.hidden = true;
