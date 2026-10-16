@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Salir antes: break y continue · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: cortar un bucle con break, saltar una vuelta con continue, while True y cómo evitar bucles infinitos en Python.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .lab__principal > .fila-botones:first-child { margin-top: 0; }
+    .btn code { font-weight: 700; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rotulo { text-align: center; font-family: var(--fuente-codigo); font-weight: 700; margin: 0; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .cajas--dos { padding-top: var(--esp-4); }
+    .lab__visual .expresion { margin-top: var(--esp-4); }
+    .control-slider { margin-top: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .contador-vueltas { display: block; text-align: center; margin-top: var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador-vueltas strong { color: var(--color-texto); }
+
+    /* ---------- La cinta de vueltas ----------
+       Una casilla por vuelta. break corta la cinta (✂) y las que siguen no llegan;
+       continue se salta una casilla (↷) y el bucle sigue. */
+    .cinta { --n: 10; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: var(--esp-2); max-width: calc(var(--n) * 2.9rem); margin: var(--esp-5) auto 0; padding: 0; list-style: none; }
+    .casilla { position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); color: var(--color-texto-suave); transition: background-color var(--dur), border-color var(--dur), color var(--dur), opacity var(--dur), transform var(--dur) var(--curva-rebote); }
+    .casilla--hecha { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); animation: valor-pulso 280ms ease-out both; }
+    .casilla--actual { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); transform: translateY(-4px) scale(1.08); }
+    .casilla--saltada { border-style: dashed; border-color: var(--color-azul); background: transparent; color: var(--color-azul); }
+    .casilla--corte { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); animation: valor-pulso 280ms ease-out both; }
+    .casilla--fuera { border-style: dashed; background: transparent; opacity: 0.35; }
+    .casilla--saltada::after, .casilla--corte::after { position: absolute; top: -1.2rem; left: 0; right: 0; text-align: center; font-family: var(--fuente); font-size: var(--texto-sm); line-height: 1; }
+    .casilla--saltada::after { content: "↷"; color: var(--color-azul); }
+    .casilla--corte::after { content: "✂"; color: var(--color-pista); }
+    /* Cinta que crece vuelta a vuelta (while True) */
+    .cinta--abierta { display: flex; flex-wrap: wrap; justify-content: center; max-width: none; }
+    .cinta--abierta .casilla { width: 2.6rem; }
+    .casilla--pendiente { border-style: dashed; background: transparent; letter-spacing: 0.1em; }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-4) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda strong { font-family: var(--fuente-codigo); }
+    .leyenda__corte { color: var(--color-pista); }
+    .leyenda__salto { color: var(--color-azul); }
+
+    /* ---------- Consola que pide datos ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 8rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .vuelta-actual { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- Bucle infinito ---------- */
+    .consola--larga { max-height: 13rem; overflow-y: auto; }
+    .consola--larga .consola__titulo { position: sticky; top: calc(-1 * var(--esp-3)); margin-top: calc(-1 * var(--esp-3)); padding: var(--esp-3) 0 var(--esp-1); background: var(--color-superficie); }
+    .consola__linea--error { color: var(--color-error); }
+
+    /* ---------- Reto ---------- */
+    #reto-opciones { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+    #reto-opciones .opcion span { font-size: var(--texto-md); white-space: nowrap; }
+    .reto-cinta { margin-top: var(--esp-4); }
+
+    @media (max-width: 480px) {
+      .cinta { gap: var(--esp-1); }
+      .casilla { font-size: var(--texto-sm); }
+      .cinta--abierta .casilla { width: 2.3rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="bucles-break">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: cortar o saltar -->
+    <section class="paso" id="paso-cinta" data-requiere aria-labelledby="t-cinta">
+      <span class="paso__etiqueta">Bucles 5/5 · break y continue</span>
+      <h1 class="paso__titulo" id="t-cinta">Cortar o saltar</h1>
+      <p>Dos palabras cambian el camino de un bucle. Prueba <code>break</code> y <code>continue</code>, y mueve el número.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="fila-botones" role="group" aria-label="Palabra dentro del if">
+            <button type="button" class="btn btn-secundario" data-modo="break" aria-pressed="true"><code>break</code></button>
+            <button type="button" class="btn btn-secundario" data-modo="continue" aria-pressed="false"><code>continue</code></button>
+          </div>
+          <pre class="codigo" aria-label="Código" style="margin-top:var(--esp-4)"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">n</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-numero">11</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero" id="k-codigo-x">4</span>:</span><span class="linea">        <span class="tk-palabra" id="k-codigo-modo">break</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Fin"</span>)</span></code></pre>
+          <div class="control-slider">
+            <label for="k-slider"><span>Número del <code>if</code></span> <output id="k-salida" for="k-slider">4</output></label>
+            <input type="range" id="k-slider" min="2" max="9" value="4">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo">range(1, 11)</p>
+          <ol class="cinta" id="k-cinta" aria-hidden="true"></ol>
+          <p class="leyenda" aria-hidden="true"><span class="leyenda__corte">✂ <strong>break</strong>: el bucle termina</span><span class="leyenda__salto">↷ <strong>continue</strong>: salta esa vuelta</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="k-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="k-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Línea a línea: continue vuelve arriba -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="t-traza">
+      <h2 class="paso__titulo" id="t-traza"><code>continue</code>: de vuelta arriba</h2>
+      <p>Cuando se ejecuta <code>continue</code>, lo que queda de la vuelta no se ejecuta: el bucle salta a la siguiente. Síguelo línea a línea.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <p class="rotulo">range(1, 7)</p>
+          <ol class="cinta" id="tz-cinta" style="--n:6" aria-label="Números de range(1, 7)">
+            <li class="casilla">1</li><li class="casilla">2</li><li class="casilla">3</li><li class="casilla">4</li><li class="casilla">5</li><li class="casilla">6</li>
+          </ol>
+          <div class="expresion" aria-hidden="true">
+            <span id="tz-sustituida">n % 3 == 0</span>
+            <span class="expresion__flecha" id="tz-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="tz-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="tz-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">n</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="tz-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">n</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-numero">7</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> % <span class="tk-numero">3</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-palabra">continue</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Fin"</span>)</span></code></pre>
+          <p class="explicacion" id="tz-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="tz-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="tz-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="tz-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="tz-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="tz-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. while True + break -->
+    <section class="paso" id="paso-salir" data-requiere aria-labelledby="t-salir">
+      <h2 class="paso__titulo" id="t-salir"><code>while True</code>: hasta que digas «salir»</h2>
+      <p><code>while True</code> repite para siempre… salvo que un <code>break</code> lo corte. Escribe lo que quieras y, cuando te canses, <strong>salir</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="tk-variable">texto</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Escribe algo: "</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">texto</span> == <span class="tk-texto">"salir"</span>:</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Has dicho <span class="tk-llave">{</span><span class="tk-variable">texto</span><span class="tk-llave">}</span>"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"¡Adiós!"</span>)</span></code></pre>
+          <p class="explicacion" id="s-explicacion" aria-live="polite"></p>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="s-registro" aria-live="polite"></div>
+            <div class="entrada" id="s-fila">
+              <label for="s-campo">Escribe algo:</label>
+              <input type="text" id="s-campo" maxlength="12" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s-otra" hidden>↺ Otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo">while True</p>
+          <ol class="cinta cinta--abierta" id="s-cinta" aria-hidden="true"></ol>
+          <p class="vuelta-actual" id="s-vuelta" aria-live="polite"></p>
+          <div class="expresion" aria-hidden="true">
+            <span id="s-sustituida">texto == "salir"</span>
+            <span class="expresion__flecha" id="s-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="s-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="s-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">texto</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Bucles infinitos -->
+    <section class="paso" id="paso-infinito" data-requiere aria-labelledby="t-infinito">
+      <h2 class="paso__titulo" id="t-infinito">Un bucle que no para</h2>
+      <p>Este <code>while</code> no termina nunca. Ejecútalo, mira qué le pasa a <code>n</code> y luego elige la línea que lo arregla.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="fila-botones" role="group" aria-label="Línea 4 del programa">
+            <button type="button" class="btn btn-secundario" data-arreglo="nada" aria-pressed="true">Nada</button>
+            <button type="button" class="btn btn-secundario" data-arreglo="dentro" aria-pressed="false"><code>n += 1</code> dentro</button>
+            <button type="button" class="btn btn-secundario" data-arreglo="fuera" aria-pressed="false"><code>n += 1</code> fuera</button>
+            <button type="button" class="btn btn-secundario" data-arreglo="menos" aria-pressed="false"><code>n -= 1</code> dentro</button>
+          </div>
+          <pre class="codigo" id="i-codigo" aria-label="Código" style="margin-top:var(--esp-4)"><code><span class="linea"><span class="tk-variable">n</span> = <span class="tk-numero">1</span></span><span class="linea"><span class="tk-palabra">while</span> <span class="tk-variable">n</span> &lt;= <span class="tk-numero">5</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea" id="i-linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Fin"</span>)</span></code></pre>
+          <p class="explicacion" id="i-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="i-ejecutar">▶ Ejecutar</button>
+            <button type="button" class="btn btn-secundario" id="i-detener" hidden>⏹ Detener (Ctrl+C)</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="expresion" aria-hidden="true">
+            <span id="i-sustituida">n &lt;= 5</span>
+            <span class="expresion__flecha" id="i-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="i-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="i-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">n</code>
+            </div>
+          </div>
+          <span class="contador-vueltas">Vueltas: <strong id="i-vueltas">0</strong></span>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--larga" id="i-consola"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Si un programa se queda atrapado en un bucle infinito, <strong>Ctrl+C</strong> lo detiene.</p>
+          <div class="feedback" id="i-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Qué imprime?</h2>
+      <p>Este bucle tiene un <code>break</code> y un <code>continue</code>. ¿Qué números llegan al <code>print</code>?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">n</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-numero">10</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">6</span>:</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> % <span class="tk-numero">2</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-palabra">continue</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span></code></pre>
+
+        <fieldset class="opciones" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué números se imprimen?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="impares"><span>1 3 5 7 9</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="hasta5"><span>1 2 3 4 5</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>1 3 5</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="pares"><span>2 4</span></label>
+        </fieldset>
+
+        <div class="reto-cinta" id="reto-cinta" hidden>
+          <ol class="cinta" id="reto-casillas" style="--n:9" aria-label="Las vueltas del bucle"></ol>
+          <p class="leyenda" aria-hidden="true"><span class="leyenda__salto">↷ continue (par)</span><span class="leyenda__corte">✂ break (n == 6)</span></p>
+        </div>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>break</code> sale del bucle; <code>continue</code> salta a la siguiente vuelta. Un <code>while</code> termina cuando su condición cambia… o con un <code>break</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="tk-variable">dato</span> = <span class="tk-funcion">input</span>()</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">dato</span> == <span class="tk-texto">"salir"</span>:</span><span class="linea">        <span class="tk-palabra">break</span>      <span class="tk-comentario"># sale del bucle</span></span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">dato</span> == <span class="tk-texto">""</span>:</span><span class="linea">        <span class="tk-palabra">continue</span>   <span class="tk-comentario"># vuelve arriba</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">dato</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../../funciones/index.html">Siguiente: Funciones →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function comillas(s) { return '"' + s + '"'; }
+
+  /* Expresión de la parte visual: «4 <= 5 → True». Sin resultado, solo la pregunta. */
+  function pintarExpresion(p, texto, valor) {
+    $(p + "-sustituida").textContent = texto;
+    var hay = valor !== undefined;
+    $(p + "-flecha").hidden = !hay;
+    $(p + "-resultado").hidden = !hay;
+    if (hay) Codigo.booleano($(p + "-resultado"), valor);
+  }
+
+  /* Pinta una cinta con una casilla por vuelta.
+     estados: ["hecha" | "saltada" | "corte" | "fuera" | "", …], uno por número desde 1.
+     Las casillas se encienden en orden, para que se vea el recorrido. */
+  function pintarCinta(lista, estados) {
+    lista.textContent = "";
+    var orden = 0;
+    estados.forEach(function (estado, k) {
+      var li = document.createElement("li");
+      li.className = "casilla" + (estado ? " casilla--" + estado : "");
+      li.textContent = k + 1;
+      if (estado && estado !== "fuera") li.style.animationDelay = (orden++ * 70) + "ms";
+      lista.appendChild(li);
+    });
+  }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- 1. Cortar o saltar ---------- */
+  var k = { modo: "break", vistos: {} };
+
+  /* Lo que hace for n in range(1, 11) con «if n == x: break/continue» */
+  function recorridoCinta(modo, x) {
+    var estados = [];
+    var salida = [];
+    for (var n = 1; n <= 10; n++) {
+      if (n < x || (n > x && modo === "continue")) {
+        estados.push("hecha");
+        salida.push(String(n));
+      } else if (n === x) {
+        estados.push(modo === "break" ? "corte" : "saltada");
+      } else {
+        estados.push("fuera");
+      }
+    }
+    salida.push("Fin");
+    return { estados: estados, salida: salida };
+  }
+
+  function pintarModo() {
+    var x = Number($("k-slider").value);
+    $("k-salida").textContent = x;
+    $("k-codigo-x").textContent = x;
+    $("k-codigo-modo").textContent = k.modo;
+    document.querySelectorAll("#paso-cinta [data-modo]").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.getAttribute("data-modo") === k.modo));
+    });
+    var r = recorridoCinta(k.modo, x);
+    pintarCinta($("k-cinta"), r.estados);
+    Codigo.consola($("k-consola"), r.salida);
+    k.vistos[k.modo] = true;
+
+    var texto = k.modo === "break"
+      ? "break corta el bucle en el " + x + ": del " + x + " al 10 no se ejecuta nada y salta directo a print(\"Fin\")."
+      : "continue se salta solo la vuelta del " + x + ": no llega al print, pero el bucle sigue con el " + (x + 1) + ".";
+    if (k.vistos["break"] && k.vistos["continue"]) {
+      Pasos.feedback($("k-fb"), "ok", texto);
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("k-fb"), "pista", texto + " Ahora prueba " + (k.modo === "break" ? "continue." : "break."));
+    }
+  }
+
+  /* ---------- 2. continue: de vuelta arriba ---------- */
+  function trazaContinue() {
+    var t = [];
+    for (var n = 1; n <= 6; n++) {
+      var salta = n % 3 === 0;
+      t.push({ linea: 0, texto: "<strong>n</strong> toma el valor <strong>" + n + "</strong>.", estado: { n: n } });
+      t.push({
+        linea: 1,
+        texto: n + " % 3 da " + (n % 3) + ", así que la condición es " + chip(salta) + ".",
+        estado: { n: n, salta: salta }
+      });
+      if (salta) {
+        t.push({ linea: 2, texto: "<code>continue</code>: se salta el <code>print</code> y vuelve arriba a por el siguiente número.", estado: { n: n, marca: "saltada" } });
+      } else {
+        t.push({ linea: 3, salida: n, texto: "No entra en el <code>if</code>: imprime " + n + ".", estado: { n: n, marca: "hecha" } });
+      }
+    }
+    t.push({ linea: 0, texto: "<code>range(1, 7)</code> se acabó: fin del bucle.", estado: { fin: true } });
+    t.push({ linea: 4, salida: "Fin", texto: "Sigue después del bucle." });
+    return t;
+  }
+
+  function casillaActual(lista, n) {
+    lista.querySelectorAll(".casilla").forEach(function (el, i) {
+      el.classList.toggle("casilla--actual", i + 1 === n);
+    });
+  }
+
+  /* ---------- 3. while True + break ---------- */
+  var s = { vueltas: 0 };
+
+  function agregarCasilla(lista, numero, estado) {
+    var pendiente = lista.querySelector(".casilla--pendiente");
+    var li = document.createElement("li");
+    li.className = "casilla casilla--" + estado;
+    li.textContent = numero;
+    lista.insertBefore(li, pendiente);
+    if (estado === "corte" && pendiente) pendiente.remove();
+  }
+
+  BucleInput.crear({
+    prefijo: "s",
+    vueltas: null,
+    pregunta: "Escribe algo:",
+    lineaInput: 1,
+    validar: function (v) {
+      return v ? null : "Escribe algo, o «salir» para terminar.";
+    },
+    alEmpezar: function () {
+      s.vueltas = 0;
+      var cinta = $("s-cinta");
+      cinta.innerHTML = '<li class="casilla casilla--pendiente">…</li>';
+      Caja.vaciar($("s-caja"));
+      pintarExpresion("s", 'texto == "salir"');
+      return "<code>while True</code> no tiene nada que comprobar: siempre da otra vuelta.";
+    },
+    alDato: function (texto) {
+      var sale = texto === "salir";
+      Caja.poner($("s-caja"), comillas(texto));
+      pintarExpresion("s", comillas(texto) + ' == "salir"', sale);
+      if (sale) {
+        agregarCasilla($("s-cinta"), s.vueltas + 1, "corte");
+        return {
+          texto: '"salir" == "salir" es ' + chip(true) + ": <code>break</code> sale del bucle.",
+          camino: { activas: [1, 2, 3] },
+          fin: true
+        };
+      }
+      s.vueltas++;
+      agregarCasilla($("s-cinta"), s.vueltas, "hecha");
+      var mayus = texto.toLowerCase() === "salir"
+        ? " Ojo: con mayúsculas no es el mismo texto."
+        : "";
+      return {
+        texto: comillas(texto) + ' == "salir" es ' + chip(false) + ": imprime y vuelve arriba." + mayus,
+        camino: { activas: [1, 2, 4], saltadas: [3] },
+        salida: ["Has dicho " + texto]
+      };
+    },
+    alFinal: function () {
+      return { linea: 5, texto: "El programa sigue después del bucle.", salida: "¡Adiós!" };
+    },
+    alTerminar: function () {
+      var fb = $("s-fb");
+      if (s.vueltas > 0) {
+        Pasos.feedback(fb, "ok", "while True dio " + (s.vueltas + 1) + " vueltas sin preguntar nada. La única salida era el break.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", "Saliste en la primera vuelta. Pulsa «Otra vez» y escribe un par de cosas antes de «salir».");
+      }
+    }
+  });
+
+  /* ---------- 4. Un bucle que no para ---------- */
+  var LIMITE = 24;   // vueltas antes de pararlo nosotros, como un Ctrl+C
+  var ARREGLOS = {
+    nada: '<span class="tk-comentario">    # (nada)</span>',
+    dentro: '    <span class="tk-variable">n</span> += <span class="tk-numero">1</span>',
+    fuera: '<span class="tk-variable">n</span> += <span class="tk-numero">1</span>',
+    menos: '    <span class="tk-variable">n</span> -= <span class="tk-numero">1</span>'
+  };
+  var PISTAS_INFINITO = {
+    nada: "n vale 1 en todas las vueltas: n <= 5 es True para siempre. Algo dentro del bucle tiene que cambiar n.",
+    fuera: "n += 1 no tiene sangría: está fuera del bucle. Como el bucle nunca termina, esa línea no llega a ejecutarse.",
+    menos: "n baja: 1, 0, −1, −2… Siempre es menor que 5. Tiene que subir para llegar a 6."
+  };
+  var inf = { arreglo: "nada", timer: null, eventos: [], i: 0, vueltas: 0 };
+
+  /* Lo que ejecuta Python, paso a paso. En los infinitos se corta al llegar al límite. */
+  function eventosInfinito(arreglo) {
+    var ev = [{ linea: 0, n: 1 }];
+    var n = 1;
+    var vueltas = 0;
+    while (vueltas < LIMITE) {
+      var sigue = n <= 5;
+      ev.push({ linea: 1, n: n, cond: sigue });
+      if (!sigue) break;
+      vueltas++;
+      ev.push({ linea: 2, n: n, salida: String(n), vuelta: vueltas });
+      if (arreglo === "dentro") { n++; ev.push({ linea: 3, n: n }); }
+      if (arreglo === "menos") { n--; ev.push({ linea: 3, n: n }); }
+    }
+    if (vueltas < LIMITE) {
+      ev.push({ linea: 4, salida: "Fin", fin: true });
+    } else {
+      ev.push({ corte: true });
+    }
+    return ev;
+  }
+
+  function pintarArreglo() {
+    $("i-linea").innerHTML = ARREGLOS[inf.arreglo];
+    document.querySelectorAll("#paso-infinito [data-arreglo]").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.getAttribute("data-arreglo") === inf.arreglo));
+    });
+  }
+
+  function imprimirInfinito(texto, clase) {
+    var consola = $("i-consola");
+    Codigo.agregar(consola, texto);
+    if (clase) consola.lastChild.classList.add(clase);
+    consola.scrollTop = consola.scrollHeight;
+  }
+
+  function reiniciarInfinito() {
+    pararInfinito();
+    Codigo.consola($("i-consola"), []);
+    Codigo.limpiar($("i-codigo"));
+    Caja.vaciar($("i-caja"));
+    pintarExpresion("i", "n <= 5");
+    $("i-vueltas").textContent = "0";
+    $("i-explicacion").textContent = "Elige qué va en la línea 4 y pulsa «Ejecutar».";
+  }
+
+  function pararInfinito() {
+    if (inf.timer) clearInterval(inf.timer);
+    inf.timer = null;
+    $("i-ejecutar").disabled = false;
+    $("i-detener").hidden = true;
+  }
+
+  function terminarInfinito(cortado) {
+    pararInfinito();
+    $("i-ejecutar").focus();
+    if (cortado) {
+      imprimirInfinito("KeyboardInterrupt", "consola__linea--error");
+      $("i-explicacion").innerHTML = "Lo hemos detenido con <strong>Ctrl+C</strong>. Si no, seguiría para siempre.";
+      Pasos.feedback($("i-fb"), "pista", PISTAS_INFINITO[inf.arreglo]);
+      return;
+    }
+    Pasos.feedback($("i-fb"), "ok", "Ahora n sube en cada vuelta: al llegar a 6, n <= 5 es False y el bucle termina.");
+    leccion.desbloquear();
+  }
+
+  function pasoInfinito() {
+    var e = inf.eventos[inf.i++];
+    if (e.corte) { terminarInfinito(true); return; }
+    Codigo.marcar($("i-codigo"), { activas: [e.linea] });
+    if (e.n !== undefined && e.linea !== 1) Caja.actualizar($("i-caja"), e.n);
+    if (e.linea === 1) {
+      pintarExpresion("i", e.n + " <= 5", e.cond);
+      $("i-explicacion").innerHTML = e.n + " &lt;= 5 es " + chip(e.cond) + (e.cond ? ": otra vuelta." : ": el bucle termina.");
+    }
+    if (e.vuelta) $("i-vueltas").textContent = e.vuelta;
+    if (e.salida !== undefined) imprimirInfinito(e.salida);
+    if (e.fin) {
+      $("i-explicacion").textContent = "Fin del bucle.";
+      terminarInfinito(false);
+    }
+  }
+
+  function ejecutarInfinito() {
+    reiniciarInfinito();
+    Pasos.limpiarFeedback($("i-fb"));
+    inf.eventos = eventosInfinito(inf.arreglo);
+    inf.i = 0;
+    $("i-ejecutar").disabled = true;
+    $("i-detener").hidden = false;
+    pasoInfinito();
+    inf.timer = setInterval(pasoInfinito, 170);
+  }
+
+  /* ---------- 5. Reto ---------- */
+  var pistasReto = {
+    impares: "Ojo con el break: al llegar a 6 el bucle termina, así que el 7 y el 9 nunca llegan.",
+    hasta5: "El break está bien, pero continue se salta los pares: el 2 y el 4 no llegan al print.",
+    pares: "Al revés: continue se salta los pares (n % 2 == 0 es True). Los que se imprimen son los impares."
+  };
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-cinta").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto() {
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      // La cinta de lo que pasó: impares impresos, pares saltados y el corte en el 6
+      var estados = [];
+      for (var n = 1; n <= 9; n++) estados.push(n < 6 ? (n % 2 ? "hecha" : "saltada") : n === 6 ? "corte" : "fuera");
+      pintarCinta($("reto-casillas"), estados);
+      $("reto-cinta").hidden = false;
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! Los pares se saltan con continue, y en el 6 el break corta el bucle: solo llegan 1, 3 y 5.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  document.querySelectorAll("#paso-cinta [data-modo]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      k.modo = btn.getAttribute("data-modo");
+      pintarModo();
+    });
+  });
+  $("k-slider").addEventListener("input", pintarModo);
+
+  var traza = Traza.crear({
+    codigo: $("tz-codigo"),
+    explicacion: $("tz-explicacion"),
+    consola: $("tz-consola"),
+    ejecutar: $("tz-ejecutar"),
+    reproducir: $("tz-reproducir"),
+    reiniciar: $("tz-reiniciar"),
+    generar: trazaContinue,
+    intervalo: 750,
+    alReiniciar: function () {
+      Caja.vaciar($("tz-caja"));
+      $("tz-cinta").querySelectorAll(".casilla").forEach(function (el) {
+        el.className = "casilla";
+      });
+      pintarExpresion("tz", "n % 3 == 0");
+      Pasos.limpiarFeedback($("tz-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      var casillas = $("tz-cinta").children;
+      if (e.n !== undefined && e.salta === undefined && !e.marca) {
+        Caja.poner($("tz-caja"), e.n);
+        casillaActual($("tz-cinta"), e.n);
+        pintarExpresion("tz", e.n + " % 3 == 0");
+      }
+      if (e.salta !== undefined) pintarExpresion("tz", e.n + " % 3 == 0", e.salta);
+      if (e.marca) casillas[e.n - 1].classList.add("casilla--" + e.marca);
+      if (e.fin) casillaActual($("tz-cinta"), -1);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("tz-fb"), "ok", "El 3 y el 6 se saltaron el print, pero el bucle siguió hasta el final. Eso es continue.");
+      leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll("#paso-infinito [data-arreglo]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      inf.arreglo = btn.getAttribute("data-arreglo");
+      pintarArreglo();
+      reiniciarInfinito();
+      Pasos.limpiarFeedback($("i-fb"));
+    });
+  });
+  $("i-ejecutar").addEventListener("click", ejecutarInfinito);
+  $("i-detener").addEventListener("click", function () { terminarInfinito(true); });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso se para cualquier ejecución en marcha
+  function pausar() {
+    traza.detener();
+    if (inf.timer) reiniciarInfinito();
+  }
+
+  pintarModo();
+  Pasos.limpiarFeedback($("k-fb"));
+  k.vistos = { "break": true };
+  pintarArreglo();
+  reiniciarInfinito();
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cinta": pausar,
+      "paso-traza": pausar,
+      "paso-salir": pausar,
+      "paso-infinito": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
