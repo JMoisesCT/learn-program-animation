@@ -11,12 +11,11 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
   - `assets/js/`: utilidades compartidas (motor de pasos, progreso en `localStorage`).
   - `lecciones/<tema>/index.html`: una carpeta por tema (`variables/`, `condicionales/`, `bucles/`, …).
   - `lecciones/<tema>/<sublección>/index.html`: sublecciones que profundizan un tema (p. ej. `variables/formulas/`, `condicionales/logicos/`). Las rutas a `assets/` suben un nivel más (`../../../`).
-- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles (for, range y while) → Contar y acumular → Decidir en cada vuelta → Funciones → (Listas, próximamente).
+- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles (for, range y while) → Contar y acumular → Decidir en cada vuelta → Recorrer un texto → Funciones → (Listas, próximamente).
 - Próximas sublecciones de Bucles, en este orden (al añadir cada una, subir el total de `Bucles x/N` en todas; la última del tema es la que enlaza a «Siguiente: Funciones →»):
-  1. Recorrer un texto (`bucles/texto`, clave `bucles-texto`): `for letra in "hola"`, contar vocales, `len()`. Un cursor recorre las letras mientras sube un contador. Recorrer listas se deja para la lección de Listas.
-  2. Salir antes: break y continue (`bucles/break`, `bucles-break`): `while True` + `break`, `continue` para saltar una vuelta, cómo evitar bucles infinitos. Una cinta de vueltas que `break` corta y en la que `continue` se salta una casilla.
-  3. Bucles anidados (`bucles/anidados`, `bucles-anidados`): un bucle dentro de otro, tablas de multiplicar y patrones de estrellas. Una cuadrícula que se pinta fila a fila con `i` y `j` en dos cajas.
-  4. Proyecto: adivina el número (`bucles/proyecto`, `bucles-proyecto`): `while`, `if`/`elif`, contador de intentos y `break`, construido por partes como «la taquilla». Número secreto fijo o simulado en JS (mostrando `import random` en el código).
+  1. Salir antes: break y continue (`bucles/break`, `bucles-break`): `while True` + `break`, `continue` para saltar una vuelta, cómo evitar bucles infinitos. Una cinta de vueltas que `break` corta y en la que `continue` se salta una casilla.
+  2. Bucles anidados (`bucles/anidados`, `bucles-anidados`): un bucle dentro de otro, tablas de multiplicar y patrones de estrellas. Una cuadrícula que se pinta fila a fila con `i` y `j` en dos cajas.
+  3. Proyecto: adivina el número (`bucles/proyecto`, `bucles-proyecto`): `while`, `if`/`elif`, contador de intentos y `break`, construido por partes como «la taquilla». Número secreto fijo o simulado en JS (mostrando `import random` en el código).
 - La consola que pide un dato en cada vuelta (`crearBucleInput`, en `bucles/condiciones`) sirve para las próximas lecciones con `input()` dentro de un bucle; si se usa en una tercera página, moverla a `assets/js/`.
 - Ejemplos con notas: escala de 0 a 20, se aprueba con 11 o más.
 - Rutas relativas siempre (el sitio vive bajo `/learn-program-animation/` en GitHub Pages).
