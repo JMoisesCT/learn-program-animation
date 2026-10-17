@@ -32,6 +32,18 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - Texto mínimo, frases cortas, vocabulario simple. Analogías cotidianas (cajas, semáforos, repetir una tarea).
 - El lenguaje que se enseña es **Python**: mostrar el código real en Python junto a la visualización, resaltando la línea que se ejecuta. (La lógica de las páginas sigue siendo JavaScript; la ejecución de Python se simula.)
 - Los retos tienen respuesta verificable en el navegador, sin servidor.
+- Usar solo lo que el alumno ya vio en lecciones anteriores. En particular, **nada de listas** (ni `[...]`, ni `for x in lista`, ni `random.choice`, ni `max`/`min`/`sum` sobre una lista, ni `return a, b`) hasta la lección de Listas.
+
+## Plan: sublecciones de Funciones
+Tema de 7 lecciones (`Funciones 1/7` … `7/7`), en `lecciones/funciones/<sublección>/`, sin listas:
+1. **Funciones** (`funciones`, ya publicada): `def`, llamar, saltar y volver, parámetro, `return`.
+2. **Ya las usabas: funciones de Python** (`funciones-python`, carpeta `python/`): `print`, `input`, `len`, `int`, `str`, `round`, `abs`, `max(a, b)`, `random.randint` como funciones con argumentos y valor devuelto. Una «máquina» por función: predecir qué sale antes de ejecutar.
+3. **Varios parámetros** (`funciones-parametros`, carpeta `parametros/`): el orden importa (`restar(10, 3)` vs `restar(3, 10)`), argumentos por nombre y valores por defecto. Flechas de cada argumento a su caja de parámetro.
+4. **Funciones que deciden** (`funciones-return`, carpeta `return/`): `return` dentro de `if`/`elif`, funciones que devuelven `True`/`False` (`aprobado(nota)`), `return` termina la función, sin `return` se devuelve `None`, `print` vs `return`. Slider de nota que ilumina qué `return` se ejecuta.
+5. **Variables locales** (`funciones-ambito`, carpeta `ambito/`): las variables de la función nacen al llamarla y desaparecen al volver; mismo nombre dentro y fuera son cajas distintas. Zona de cajas «programa» y zona «dentro de la función» que aparece y se borra.
+6. **Funciones que usan funciones** (`funciones-componer`, carpeta `componer/`): una función llama a otra (`promedio` usa `suma`), funciones con bucles dentro (contar vocales, factorial con `for`) y la pila de llamadas, con tarjetas que se apilan y se quitan en cada `return`.
+7. **Proyecto: piedra, papel o tijera** (`funciones-proyecto`, carpeta `proyecto/`): `jugada_pc()` con `random.randint(1, 3)` y una función que traduce el número a texto, `quien_gana(a, b)` con `if`/`elif`, `while True` con `break` y marcador (reutilizar `BucleInput`).
+Fuera de alcance por ahora: recursión, `lambda`, `*args`, docstrings.
 
 ## Convenciones de trabajo
 - Reutilizar `base.css` y las utilidades de `assets/js/` antes de crear estilos o scripts nuevos.
