@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Funciones que usan funciones · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: funciones de Python que llaman a otras funciones, funciones con un bucle dentro (contar vocales, factorial) y la pila de llamadas, con tarjetas que se apilan y se quitan en cada return.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+
+    /* ---------- Pila de llamadas: una tarjeta por llamada ----------
+       La del programa queda abajo; cada llamada pone una encima
+       y cada return quita la de arriba. */
+    .pila { margin-top: var(--esp-4); }
+    .pila__titulo { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .pila__marcos { display: flex; flex-direction: column-reverse; gap: var(--esp-2); }
+    .marco { padding: var(--esp-2) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); box-shadow: var(--sombra); transition: border-color var(--dur), opacity var(--dur), background-color var(--dur); }
+    .marco__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); }
+    .marco__titulo { margin: 0; font-weight: 700; color: var(--color-acento); }
+    .marco__titulo code { font-size: var(--texto-sm); }
+    .marco--programa .marco__titulo { font-size: var(--texto-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-azul); }
+    .marco__estado { font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .marco__estado:empty { display: none; }
+    .marco__estado--devuelve { padding: 0.1em 0.6em; border-radius: 999px; background: var(--color-ok-suave); color: var(--color-ok); font-family: var(--fuente-codigo); animation: valor-pulso 300ms ease-out; }
+    .marco__vars { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: var(--esp-2); min-height: 1.9rem; }
+    .marco__vacia { align-self: center; font-size: var(--texto-xs); font-style: italic; color: var(--color-texto-suave); }
+    .marco--activo { border-color: var(--color-acento); }
+    .marco--esperando { opacity: 0.7; border-style: dashed; box-shadow: none; }
+    .marco--programa.marco--activo { border-color: var(--color-azul); }
+    .marco--entra { animation: marco-entra 420ms var(--curva-rebote) both; }
+    .marco--sale { animation: marco-sale 650ms ease-in both; }
+    @keyframes marco-entra { from { transform: translateY(-1.25rem) scale(0.94); opacity: 0; } }
+    @keyframes marco-sale {
+      30% { transform: translateY(-0.25rem); opacity: 1; }
+      to { transform: translateY(-1.5rem); opacity: 0; }
+    }
+
+    /* Una variable de la tarjeta: nombre y valor */
+    .var { display: inline-flex; align-items: stretch; border: 2px solid var(--color-azul); border-radius: 999px; overflow: hidden; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; background: var(--color-superficie); animation: aparecer var(--dur) ease both; transition: box-shadow var(--dur-rapida); }
+    .var__nombre { padding: 0.05em 0.55em; color: var(--color-azul); background: var(--color-azul-suave); }
+    .var__valor { padding: 0.05em 0.6em; color: var(--color-texto); max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .marco:not(.marco--programa) .var { border-color: var(--color-acento); }
+    .marco:not(.marco--programa) .var__nombre { color: var(--color-acento); background: var(--color-acento-suave); }
+    .var--cambio .var__valor { animation: valor-pulso 300ms ease-out; }
+    .var--leida { box-shadow: 0 0 0 4px rgba(31, 95, 214, 0.22); }
+
+    /* ---------- Paso 2: tú decides qué hace Python ---------- */
+    .decidir { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--esp-3); margin-top: var(--esp-4); }
+    .decidir .btn { min-height: 3rem; padding: var(--esp-2) var(--esp-4); font-size: var(--texto-sm); line-height: 1.3; }
+    .decidir .btn code { font-weight: 700; }
+    .btn--fallo { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); animation: sacudir 360ms ease; }
+    .marcador-pasos { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* ---------- Paso 3: las letras que recorre el bucle ---------- */
+    .campo-palabra { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin: 0 0 var(--esp-4); }
+    .campo-palabra label { font-weight: 700; }
+    .campo-palabra input { width: 10rem; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; padding: var(--esp-1) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .campo-palabra input:focus-visible { border-color: var(--color-azul); border-radius: var(--radio-sm); }
+    .campo-palabra input[aria-invalid="true"] { border-color: var(--color-pista); }
+    .letras { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0 0 var(--esp-3); list-style: none; }
+    .letra { position: relative; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); color: var(--color-texto); transition: background-color var(--dur), border-color var(--dur), transform var(--dur) var(--curva-rebote), color var(--dur); }
+    .letra--true { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .letra--false { background: var(--color-superficie-2); color: #4b5563; }
+    .letra--actual { border-color: var(--color-azul); transform: translateY(-4px) scale(1.08); }
+    .letra--actual:not(.letra--true):not(.letra--false) { background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- Paso 4: la cadena de multiplicaciones ---------- */
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+    .libros { margin: var(--esp-2) 0 0; text-align: center; font-size: 1.6rem; letter-spacing: 0.1em; min-height: 2.2rem; }
+    .cadena { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-1) var(--esp-2); margin: var(--esp-4) 0 0; font-family: var(--fuente-codigo); font-weight: 700; }
+    .cadena__factor { display: grid; place-items: center; min-width: 2.2rem; height: 2.2rem; border-radius: var(--radio-sm); border: 2px dashed var(--color-borde); color: var(--color-texto-suave); transition: background-color var(--dur-rapida), border-color var(--dur-rapida), color var(--dur-rapida), transform var(--dur-rapida) var(--curva-rebote); }
+    .cadena__factor--hecho { border-style: solid; border-color: var(--color-acento); color: var(--color-acento); }
+    .cadena__factor--actual { border-style: solid; border-color: var(--color-acento); background: var(--color-acento); color: #fff; transform: scale(1.12); }
+    .cadena__signo { color: var(--color-texto-suave); }
+    .cadena__total { padding: 0 var(--esp-2); color: var(--color-ok); font-size: var(--texto-lg); }
+
+    /* ---------- Reto: opciones de código y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .var { font-size: var(--texto-xs); }
+      .letra { width: 2.1rem; height: 2.1rem; }
+      .letras { gap: var(--esp-1); }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones-componer">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: una función que llama a otra, y la pila de tarjetas -->
+    <section class="paso" id="paso-pila" data-requiere aria-labelledby="t-pila">
+      <span class="paso__etiqueta">Funciones 6/6 · Funciones que usan funciones</span>
+      <h1 class="paso__titulo" id="t-pila">Una función que llama a otra</h1>
+      <p><code>promedio</code> no suma por su cuenta: le pide ayuda a <code>suma</code>. Cada llamada pone una <strong>tarjeta</strong> encima de la anterior. Ejecútalo y mira la pila.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">suma</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">a</span> + <span class="tk-variable">b</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">promedio</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-variable">total</span> = <span class="tk-funcion">suma</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">total</span> / <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">nota</span> = <span class="tk-funcion">promedio</span>(<span class="tk-numero">14</span>, <span class="tk-numero">17</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">nota</span>)</span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p1-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">A esta torre de tarjetas se le llama <strong>pila de llamadas</strong>: solo trabaja la de arriba; las de abajo esperan.</p>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Tú decides: apilar o quitar -->
+    <section class="paso" id="paso-decidir" data-requiere aria-labelledby="t-decidir">
+      <h2 class="paso__titulo" id="t-decidir">Ahora tú eres Python</h2>
+      <p>En cada momento, elige qué pasa: ¿se <strong>apila</strong> una tarjeta nueva o se <strong>quita</strong> la de arriba?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">doble</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">x</span> * <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">cuadruple</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-variable">y</span> = <span class="tk-funcion">doble</span>(<span class="tk-variable">x</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">doble</span>(<span class="tk-variable">y</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">cuadruple</span>(<span class="tk-numero">3</span>))</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="decidir" id="p2-opciones" role="group" aria-label="¿Qué hace Python?"></div>
+          <p class="marcador-pasos" id="p2-marcador"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-otra" hidden>↺ Otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Un bucle dentro de una función -->
+    <section class="paso" id="paso-vocales" data-requiere aria-labelledby="t-vocales">
+      <h2 class="paso__titulo" id="t-vocales">Un bucle dentro de una función</h2>
+      <p>Dentro de una función cabe cualquier cosa que ya sabes, también un <code>for</code>. Escribe una palabra y deja que <code>contar_vocales</code> la recorra.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="campo-palabra">
+            <label for="p3-palabra">Palabra:</label>
+            <input type="text" id="p3-palabra" value="banana" maxlength="10" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="p3-fb">
+          </div>
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">contar_vocales</span>(<span class="tk-variable">texto</span>):</span><span class="linea">    <span class="tk-variable">cuenta</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-variable">texto</span>:</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">            <span class="tk-variable">cuenta</span> += <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">cuenta</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">n</span> = <span class="tk-funcion">contar_vocales</span>(<span class="tk-texto">"<span id="p3-codigo-palabra">banana</span>"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p3-pila"></div>
+          <ol class="letras" id="p3-letras" aria-hidden="true"></ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Factorial: multiplicar en un bucle -->
+    <section class="paso" id="paso-factorial" data-requiere aria-labelledby="t-factorial">
+      <h2 class="paso__titulo" id="t-factorial">¿De cuántas formas?</h2>
+      <p>¿De cuántas formas puedes ordenar unos libros en una repisa? Se multiplica <strong>1&nbsp;×&nbsp;2&nbsp;×&nbsp;3&nbsp;×&nbsp;…</strong> hasta el número de libros. Eso es el <strong>factorial</strong>, y una función con un <code>for</code> lo calcula.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p4-n">Libros <output id="p4-n-valor" for="p4-n">4</output></label>
+            <input type="range" id="p4-n" min="1" max="6" step="1" value="4">
+          </div>
+          <p class="libros" id="p4-libros" aria-hidden="true"></p>
+          <pre class="codigo" id="p4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-variable">resultado</span> = <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-variable">n</span> + <span class="tk-numero">1</span>):</span><span class="linea">        <span class="tk-variable">resultado</span> *= <span class="tk-variable">i</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">resultado</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">formas</span> = <span class="tk-funcion">factorial</span>(<span class="tk-numero" id="p4-codigo-n">4</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"<span class="tk-llave">{</span><span class="tk-variable">formas</span><span class="tk-llave">}</span> formas"</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p4-pila"></div>
+          <div class="cadena" id="p4-cadena" aria-hidden="true"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Cuál cuenta bien?</h2>
+      <p>Solo una versión de <code>contar_vocales</code> funciona. Fíjate en la sangría: ¿dónde empieza <code>cuenta</code> y dónde va el <code>return</code>? La probaremos con tres palabras.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué versión cuenta bien las vocales?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="dentro-for"><span>def contar_vocales(texto):
+    cuenta = 0
+    for letra in texto:
+        if letra in "aeiou":
+            cuenta += 1
+        return cuenta</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="reinicia"><span>def contar_vocales(texto):
+    for letra in texto:
+        cuenta = 0
+        if letra in "aeiou":
+            cuenta += 1
+    return cuenta</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>def contar_vocales(texto):
+    cuenta = 0
+    for letra in texto:
+        if letra in "aeiou":
+            cuenta += 1
+    return cuenta</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="dentro-if"><span>def contar_vocales(texto):
+    cuenta = 0
+    for letra in texto:
+        if letra in "aeiou":
+            cuenta += 1
+            return cuenta</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Una función puede llamar a otra y tener bucles dentro. Cada llamada <strong>apila</strong> una tarjeta y cada <code>return</code> quita la de arriba.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">suma</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">a</span> + <span class="tk-variable">b</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">promedio</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-comentario"># promedio usa suma</span></span><span class="linea">    <span class="tk-variable">total</span> = <span class="tk-funcion">suma</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">total</span> / <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">contar_vocales</span>(<span class="tk-variable">texto</span>):</span><span class="linea">    <span class="tk-variable">cuenta</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-variable">texto</span>:</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">            <span class="tk-variable">cuenta</span> += <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-comentario"># return después del for</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">cuenta</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function texto(s) { return '"' + s + '"'; }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Pila de llamadas ----------
+     Cada paso trae la pila completa, de abajo arriba:
+       { pila: [{ titulo: "Programa", vars: [["nota", 15.5]] },
+                { titulo: "promedio(14, 17)", vars: [["a", 14], …], devuelve: "15.5" }],
+         leer: [nivel, nombre] }
+     La tarjeta de arriba es la que trabaja; si trae devuelve, está terminando.
+     Las que desaparecen de la pila salen volando hacia arriba. */
+  function programa(vars) { return { titulo: "Programa", vars: vars || [] }; }
+  function llamada(titulo, vars, devuelve) { return { titulo: titulo, vars: vars || [], devuelve: devuelve }; }
+
+  function crearPila(el) {
+    var titulo = crear("p", "pila__titulo");
+    var cont = crear("div", "pila__marcos");
+    el.appendChild(titulo);
+    el.appendChild(cont);
+    return { titulo: titulo, cont: cont, marcos: [], saliendo: [] };
+  }
+
+  function crearMarco(datos, nivel) {
+    var raiz = crear("div", "marco marco--entra" + (nivel === 0 ? " marco--programa" : ""));
+    var cab = crear("div", "marco__cabecera");
+    var titulo = crear("p", "marco__titulo");
+    if (nivel === 0) titulo.textContent = datos.titulo;
+    else titulo.appendChild(crear("code", "", datos.titulo));
+    var estado = crear("span", "marco__estado");
+    var vars = crear("div", "marco__vars");
+    var vacia = crear("span", "marco__vacia", "sin variables todavía");
+    vars.appendChild(vacia);
+    cab.appendChild(titulo);
+    cab.appendChild(estado);
+    raiz.appendChild(cab);
+    raiz.appendChild(vars);
+    return { titulo: datos.titulo, raiz: raiz, estado: estado, vars: vars, vacia: vacia, chips: {} };
+  }
+
+  function nombreFuncion(titulo) { return titulo.slice(0, titulo.indexOf("(")) + "()"; }
+
+  function quitarSaliendo(p) {
+    p.saliendo.forEach(function (el) { el.remove(); });
+    p.saliendo = [];
+  }
+
+  function retirar(p, marco) {
+    if (Pasos.reducirMovimiento) { marco.raiz.remove(); return; }
+    marco.raiz.classList.remove("marco--entra");
+    marco.raiz.classList.add("marco--sale");
+    p.saliendo.push(marco.raiz);
+    setTimeout(function () {
+      marco.raiz.remove();
+      p.saliendo = p.saliendo.filter(function (el) { return el !== marco.raiz; });
+    }, 650);
+  }
+
+  function pintarVars(marco, lista, leer) {
+    var quedan = {};
+    lista.forEach(function (par) {
+      var nombre = par[0];
+      var valor = String(par[1]);
+      var c = marco.chips[nombre];
+      if (!c) {
+        c = marco.chips[nombre] = crear("span", "var");
+        c.appendChild(crear("code", "var__nombre", nombre));
+        c.appendChild(crear("code", "var__valor", valor));
+        marco.vars.appendChild(c);
+      } else if (c.lastChild.textContent !== valor) {
+        c.lastChild.textContent = valor;
+        c.classList.remove("var--cambio");
+        void c.offsetWidth;
+        c.classList.add("var--cambio");
+      }
+      c.classList.toggle("var--leida", leer === nombre);
+      quedan[nombre] = true;
+    });
+    Object.keys(marco.chips).forEach(function (n) {
+      if (quedan[n]) return;
+      marco.chips[n].remove();
+      delete marco.chips[n];
+    });
+    marco.vacia.hidden = lista.length > 0;
+  }
+
+  function pintarPila(p, e) {
+    var pila = e.pila;
+    // Hasta dónde coincide con lo que ya se ve; lo de encima se retira
+    var k = 0;
+    while (k < p.marcos.length && k < pila.length && p.marcos[k].titulo === pila[k].titulo) k++;
+    for (var i = p.marcos.length - 1; i >= k; i--) retirar(p, p.marcos[i]);
+    p.marcos.length = k;
+    if (pila.length > k) quitarSaliendo(p);
+    for (i = k; i < pila.length; i++) {
+      var m = crearMarco(pila[i], i);
+      p.cont.appendChild(m.raiz);
+      p.marcos.push(m);
+    }
+    pila.forEach(function (datos, nivel) {
+      var m = p.marcos[nivel];
+      var arriba = nivel === pila.length - 1;
+      m.raiz.classList.toggle("marco--activo", arriba);
+      m.raiz.classList.toggle("marco--esperando", !arriba);
+      var estado = "";
+      if (datos.devuelve !== undefined) estado = "↩ devuelve " + datos.devuelve;
+      else if (!arriba) estado = "esperando a " + nombreFuncion(pila[nivel + 1].titulo);
+      else if (nivel > 0) estado = "trabajando";
+      if (m.estado.textContent !== estado) m.estado.textContent = estado;
+      m.estado.className = "marco__estado" + (datos.devuelve !== undefined ? " marco__estado--devuelve" : "");
+      pintarVars(m, datos.vars, e.leer && e.leer[0] === nivel ? e.leer[1] : null);
+    });
+    p.titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
+  }
+
+  function vaciarPila(p) {
+    quitarSaliendo(p);
+    p.cont.textContent = "";
+    p.marcos = [];
+    pintarPila(p, { pila: [programa()] });
+  }
+
+  /* ---------- 1. Una función que llama a otra ---------- */
+  var pila1 = crearPila($("p1-pila"));
+
+  function trazaPromedio() {
+    var ab = [["a", 14], ["b", 17]];
+    return [
+      { linea: 0, texto: "Python recuerda la receta <strong>suma</strong>. Todavía no la ejecuta.", estado: { pila: [programa()] } },
+      { linea: 3, texto: "Recuerda también la receta <strong>promedio</strong>.", estado: { pila: [programa()] } },
+      { linea: 7, texto: "Llama a <strong>promedio(14, 17)</strong>: su tarjeta se pone encima del programa, que espera.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)")] } },
+      { linea: 3, texto: "En la tarjeta de promedio nacen <strong>a = 14</strong> y <strong>b = 17</strong>.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)", ab)] } },
+      { linea: 4, texto: "promedio necesita <strong>suma(a, b)</strong>: otra tarjeta encima. Ahora promedio también espera.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)", ab), llamada("suma(14, 17)")] } },
+      { linea: 0, texto: "En la tarjeta de suma nacen <strong>su propia a y su propia b</strong>.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)", ab), llamada("suma(14, 17)", ab)] } },
+      { linea: 1, texto: "return a + b → <strong>31</strong>. suma termina: su tarjeta se va a quitar.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)", ab), llamada("suma(14, 17)", ab, "31")] } },
+      { linea: 4, texto: "De vuelta en promedio, que esperaba: el 31 se guarda en <strong>total</strong>.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)", ab.concat([["total", 31]]))] } },
+      { linea: 5, texto: "return total / 2 → <strong>15.5</strong>. promedio termina: su tarjeta se va.",
+        estado: { pila: [programa(), llamada("promedio(14, 17)", ab.concat([["total", 31]]), "15.5")], leer: [1, "total"] } },
+      { linea: 7, texto: "De vuelta en el programa: el 15.5 se guarda en <strong>nota</strong>.",
+        estado: { pila: [programa([["nota", 15.5]])] } },
+      { linea: 8, salida: "15.5", texto: "Imprime <strong>15.5</strong>. Solo queda la tarjeta del programa.",
+        estado: { pila: [programa([["nota", 15.5]])], leer: [0, "nota"] } }
+    ];
+  }
+
+  /* ---------- 2. Tú eres Python ----------
+     Cada momento: la línea, la pila en ese momento, la pregunta y dos opciones.
+     Una opción con devuelve quita la tarjeta de arriba mostrando qué devolvió. */
+  var pila2 = crearPila($("p2-pila"));
+  var C = "cuadruple(3)";
+  var MOMENTOS = [
+    { linea: 7, pila: [programa()],
+      texto: "Python ya recordó las dos recetas. Llega a <code>print(cuadruple(3))</code>, pero para imprimir necesita el valor de cuadruple(3). ¿Qué hace?",
+      opciones: [
+        { html: "📥 Apilar <code>cuadruple(3)</code>", ok: true },
+        { html: "🖨️ Imprimir <code>3</code>", pista: "Todavía no: print necesita lo que devuelve cuadruple(3), y para saberlo hay que llamarla." }
+      ] },
+    { linea: 4, pila: [programa(), llamada(C, [["x", 3]])],
+      texto: "Se apiló cuadruple(3), con <strong>x = 3</strong>. Su primera línea es <code>y = doble(x)</code>. ¿Qué hace?",
+      opciones: [
+        { html: "📥 Apilar <code>doble(3)</code>", ok: true },
+        { html: "📤 Quitar <code>cuadruple(3)</code>", pista: "cuadruple aún no llegó a su return: no puede irse. Antes necesita lo que devuelve doble(x)." }
+      ] },
+    { linea: 1, pila: [programa(), llamada(C, [["x", 3]]), llamada("doble(3)", [["x", 3]])],
+      texto: "Encima va doble(3), con <strong>su propia x = 3</strong>; cuadruple espera. Llega a <code>return x * 2</code>. ¿Qué hace?",
+      opciones: [
+        { html: "📤 Quitar <code>doble(3)</code>: devuelve 6", ok: true, devuelve: "6" },
+        { html: "📥 Apilar <code>doble(6)</code>", pista: "return no llama a nadie: calcula 3 * 2, lo entrega y la función termina." }
+      ] },
+    { linea: 5, pila: [programa(), llamada(C, [["x", 3], ["y", 6]])],
+      texto: "doble devolvió 6 y su tarjeta se fue: el 6 se guardó en <strong>y</strong>. Ahora cuadruple llega a <code>return doble(y)</code>. ¿Qué hace?",
+      opciones: [
+        { html: "📥 Apilar <code>doble(6)</code>", ok: true },
+        { html: "📤 Quitar <code>cuadruple(3)</code>: devuelve 6", pista: "Para devolver doble(y), primero hay que saber cuánto vale: hay que llamar a doble otra vez." }
+      ] },
+    { linea: 1, pila: [programa(), llamada(C, [["x", 3], ["y", 6]]), llamada("doble(6)", [["x", 6]])],
+      texto: "Una tarjeta de doble <strong>nueva</strong>, ahora con x = 6. Llega a <code>return x * 2</code>. ¿Qué hace?",
+      opciones: [
+        { html: "📤 Quitar <code>doble(6)</code>: devuelve 12", ok: true, devuelve: "12" },
+        { html: "📤 Quitar <code>cuadruple(3)</code>", pista: "Solo se puede quitar la tarjeta de arriba, y la de arriba es doble(6)." }
+      ] },
+    { linea: 5, pila: [programa(), llamada(C, [["x", 3], ["y", 6]])],
+      texto: "doble(y) valió <strong>12</strong>. El return de cuadruple ya tiene su valor. ¿Qué hace?",
+      opciones: [
+        { html: "📤 Quitar <code>cuadruple(3)</code>: devuelve 12", ok: true, devuelve: "12" },
+        { html: "📥 Apilar <code>doble(12)</code>", pista: "No hay más llamadas en esa línea: return doble(y) ya sabe que doble(y) vale 12." }
+      ] },
+    { linea: 7, pila: [programa()],
+      texto: "De vuelta en el programa: cuadruple(3) valió 12. ¿Qué imprime?",
+      opciones: [
+        { html: "🖨️ Imprimir <code>12</code>", ok: true },
+        { html: "🖨️ Imprimir <code>6</code>", pista: "6 es lo que devolvió el primer doble. cuadruple devolvió lo del segundo." }
+      ] }
+  ];
+  var momento = 0;
+
+  function mostrarMomento() {
+    var m = MOMENTOS[momento];
+    Codigo.marcar($("p2-codigo"), { activas: [m.linea] });
+    pintarPila(pila2, { pila: m.pila });
+    $("p2-explicacion").innerHTML = m.texto;
+    $("p2-marcador").textContent = "Momento " + (momento + 1) + " de " + MOMENTOS.length;
+    var cont = $("p2-opciones");
+    cont.textContent = "";
+    // El orden de las opciones cambia, para que no siempre sea la primera
+    var orden = m.opciones.slice();
+    if (Math.random() < 0.5) orden.reverse();
+    orden.forEach(function (op) {
+      var b = crear("button", "btn btn-secundario");
+      b.type = "button";
+      b.innerHTML = "<span>" + op.html + "</span>";
+      b.addEventListener("click", function () { elegir(op, b); });
+      cont.appendChild(b);
+    });
+  }
+
+  function elegir(op, boton) {
+    if (!op.ok) {
+      boton.classList.remove("btn--fallo");
+      void boton.offsetWidth;
+      boton.classList.add("btn--fallo");
+      Pasos.feedback($("p2-fb"), "pista", op.pista);
+      return;
+    }
+    Pasos.limpiarFeedback($("p2-fb"));
+    var m = MOMENTOS[momento];
+    if (op.devuelve) {
+      // La tarjeta de arriba enseña lo que devuelve justo antes de irse
+      var pila = m.pila.slice();
+      var arriba = pila[pila.length - 1];
+      pila[pila.length - 1] = llamada(arriba.titulo, arriba.vars, op.devuelve);
+      pintarPila(pila2, { pila: pila });
+    }
+    momento++;
+    if (momento < MOMENTOS.length) {
+      mostrarMomento();
+      var primero = $("p2-opciones").querySelector("button");
+      if (primero) primero.focus();
+      return;
+    }
+    Codigo.agregar($("p2-consola"), "12");
+    $("p2-opciones").textContent = "";
+    $("p2-marcador").textContent = "";
+    $("p2-explicacion").innerHTML = "¡Imprime <strong>12</strong>! La pila vuelve a tener solo la tarjeta del programa.";
+    Pasos.feedback($("p2-fb"), "ok", "¡Así piensa Python! Cada llamada apila una tarjeta y cada return quita la de arriba. doble tuvo dos tarjetas distintas: una por llamada.");
+    $("p2-otra").hidden = false;
+    $("p2-otra").focus();
+    leccion.desbloquear();
+  }
+
+  function empezarDecidir() {
+    momento = 0;
+    $("p2-otra").hidden = true;
+    Codigo.consola($("p2-consola"), []);
+    Pasos.limpiarFeedback($("p2-fb"));
+    vaciarPila(pila2);
+    mostrarMomento();
+  }
+
+  /* ---------- 3. Un bucle dentro de una función ---------- */
+  var pila3 = crearPila($("p3-pila"));
+  var palabra = "banana";
+  var F3 = function () { return "contar_vocales(" + texto(palabra) + ")"; };
+
+  function pintarLetras(actual, marcas) {
+    var ol = $("p3-letras");
+    if (ol.children.length !== palabra.length || ol.getAttribute("data-palabra") !== palabra) {
+      ol.textContent = "";
+      ol.setAttribute("data-palabra", palabra);
+      palabra.split("").forEach(function (c) { ol.appendChild(crear("li", "letra", c)); });
+    }
+    Array.prototype.forEach.call(ol.children, function (li, k) {
+      li.classList.toggle("letra--actual", k === actual);
+      li.classList.toggle("letra--true", marcas[k] === true);
+      li.classList.toggle("letra--false", marcas[k] === false);
+    });
+  }
+
+  function trazaVocales() {
+    var t = F3();
+    var pasos = [
+      { linea: 7, texto: "Llama a <strong>" + t + "</strong>: se apila su tarjeta.", estado: { pila: [programa(), llamada(t)] } },
+      { linea: 0, texto: "Nace <strong>texto</strong> con la palabra.", estado: { pila: [programa(), llamada(t, [["texto", texto(palabra)]])] } },
+      { linea: 1, texto: "<strong>cuenta</strong> empieza en 0, antes del bucle.", estado: { pila: [programa(), llamada(t, [["texto", texto(palabra)], ["cuenta", 0]])] } }
+    ];
+    var cuenta = 0;
+    var marcas = {};
+    palabra.split("").forEach(function (c, k) {
+      var vars = function () { return [["texto", texto(palabra)], ["cuenta", cuenta], ["letra", texto(c)]]; };
+      pasos.push({ linea: 2, texto: "Vuelta " + (k + 1) + ": <strong>letra = " + texto(c) + "</strong>.",
+        estado: { pila: [programa(), llamada(t, vars())], actual: k, marcas: Object.assign({}, marcas) } });
+      var vocal = "aeiou".indexOf(c) !== -1;
+      marcas[k] = vocal;
+      pasos.push({ linea: 3, texto: texto(c) + ' in "aeiou" es ' + chip(vocal) + (vocal ? ": es vocal." : ": no es vocal, no suma."),
+        estado: { pila: [programa(), llamada(t, vars())], actual: k, marcas: Object.assign({}, marcas), leer: [1, "letra"] } });
+      if (vocal) {
+        cuenta++;
+        pasos.push({ linea: 4, texto: "<strong>cuenta</strong> sube a " + cuenta + ".",
+          estado: { pila: [programa(), llamada(t, vars())], actual: k, marcas: Object.assign({}, marcas) } });
+      }
+    });
+    var final = [["texto", texto(palabra)], ["cuenta", cuenta], ["letra", texto(palabra.slice(-1))]];
+    pasos.push(
+      { linea: 5, texto: "Se acabaron las letras y el for termina. return cuenta → <strong>" + cuenta + "</strong>: la tarjeta se va.",
+        estado: { pila: [programa(), llamada(t, final, String(cuenta))], marcas: marcas, leer: [1, "cuenta"] } },
+      { linea: 7, texto: "De vuelta en el programa: el " + cuenta + " se guarda en <strong>n</strong>.",
+        estado: { pila: [programa([["n", cuenta]])], marcas: marcas } },
+      { linea: 8, salida: String(cuenta), texto: "Imprime <strong>" + cuenta + "</strong>.",
+        estado: { pila: [programa([["n", cuenta]])], marcas: marcas, leer: [0, "n"] } }
+    );
+    return pasos;
+  }
+
+  var p3Palabras = {};
+
+  function terminarVocales() {
+    var n = palabra.split("").filter(function (c) { return "aeiou".indexOf(c) !== -1; }).length;
+    p3Palabras[palabra] = true;
+    var otra = Object.keys(p3Palabras).length < 2 ? " Escribe otra palabra y pruébala." : "";
+    Pasos.feedback($("p3-fb"), "ok", texto(palabra) + " tiene " + n + (n === 1 ? " vocal" : " vocales") +
+      ". El for trabaja dentro de la tarjeta de la función, y return va después del for, cuando ya miró todas las letras." + otra);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 4. Factorial ---------- */
+  var pila4 = crearPila($("p4-pila"));
+  var nLibros = 4;
+  var LIBROS = ["📕", "📗", "📘", "📙", "📓", "📔"];
+
+  function factorial(n) {
+    var r = 1;
+    for (var i = 1; i <= n; i++) r *= i;
+    return r;
+  }
+
+  function pintarCadena(hasta, actual, total) {
+    var cont = $("p4-cadena");
+    cont.textContent = "";
+    for (var i = 1; i <= nLibros; i++) {
+      if (i > 1) cont.appendChild(crear("span", "cadena__signo", "×"));
+      var clase = "cadena__factor";
+      if (i === actual) clase += " cadena__factor--actual";
+      else if (i <= hasta) clase += " cadena__factor--hecho";
+      cont.appendChild(crear("span", clase, String(i)));
+    }
+    cont.appendChild(crear("span", "cadena__signo", "="));
+    cont.appendChild(crear("span", "cadena__total", total === undefined ? "?" : String(total)));
+  }
+
+  function trazaFactorial() {
+    var n = nLibros;
+    var t = "factorial(" + n + ")";
+    var pasos = [
+      { linea: 6, texto: "Llama a <strong>" + t + "</strong>: se apila su tarjeta.", estado: { pila: [programa(), llamada(t)], hasta: 0 } },
+      { linea: 0, texto: "Nace <strong>n = " + n + "</strong>.", estado: { pila: [programa(), llamada(t, [["n", n]])], hasta: 0 } },
+      { linea: 1, texto: "<strong>resultado</strong> empieza en 1: si empezara en 0, todo daría 0.", estado: { pila: [programa(), llamada(t, [["n", n], ["resultado", 1]])], hasta: 0 } }
+    ];
+    var r = 1;
+    for (var i = 1; i <= n; i++) {
+      pasos.push({ linea: 2, texto: "Vuelta " + i + ": <strong>i = " + i + "</strong>.",
+        estado: { pila: [programa(), llamada(t, [["n", n], ["resultado", r], ["i", i]])], hasta: i - 1, actual: i } });
+      var antes = r;
+      r *= i;
+      pasos.push({ linea: 3, texto: "resultado = " + antes + " × " + i + " = <strong>" + r + "</strong>.",
+        estado: { pila: [programa(), llamada(t, [["n", n], ["resultado", r], ["i", i]])], hasta: i, actual: i } });
+    }
+    pasos.push(
+      { linea: 4, texto: "El for terminó. return resultado → <strong>" + r + "</strong>: la tarjeta se va.",
+        estado: { pila: [programa(), llamada(t, [["n", n], ["resultado", r], ["i", n]], String(r))], hasta: n, total: r, leer: [1, "resultado"] } },
+      { linea: 6, texto: "El " + r + " se guarda en <strong>formas</strong>.",
+        estado: { pila: [programa([["formas", r]])], hasta: n, total: r } },
+      { linea: 7, salida: r + " formas", texto: "Imprime <strong>" + r + " formas</strong>.",
+        estado: { pila: [programa([["formas", r]])], hasta: n, total: r, leer: [0, "formas"] } }
+    );
+    return pasos;
+  }
+
+  function pintarLibros() {
+    $("p4-n-valor").textContent = String(nLibros);
+    $("p4-codigo-n").textContent = String(nLibros);
+    $("p4-libros").textContent = LIBROS.slice(0, nLibros).join("");
+  }
+
+  /* ---------- 5. Reto ---------- */
+  var VERSIONES = {
+    bien: function (t) { var c = 0; t.split("").forEach(function (l) { if ("aeiou".indexOf(l) !== -1) c++; }); return c; },
+    "dentro-for": function (t) { return "aeiou".indexOf(t[0]) !== -1 ? 1 : 0; },
+    reinicia: function (t) { return "aeiou".indexOf(t[t.length - 1]) !== -1 ? 1 : 0; },
+    "dentro-if": function (t) { return VERSIONES.bien(t) > 0 ? 1 : "None"; }
+  };
+  var PISTAS_RETO = {
+    "dentro-for": "Ese return está dentro del for: la función termina en la primera vuelta, después de mirar una sola letra.",
+    reinicia: "cuenta = 0 está dentro del for: vuelve a 0 en cada letra, así que solo cuenta la última.",
+    "dentro-if": "Ese return está dentro del if: la función termina en la primera vocal, así que nunca pasa de 1."
+  };
+
+  function pintarPruebas(valor) {
+    var lista = $("reto-pruebas");
+    lista.textContent = "";
+    ["sol", "banana", "aire"].forEach(function (t) {
+      var sale = String(VERSIONES[valor](t));
+      var ok = sale === String(VERSIONES.bien(t));
+      var li = crear("li", ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", "contar_vocales(" + texto(t) + ")"));
+      li.appendChild(crear("span", "prueba__salida", sale));
+      li.appendChild(crear("span", "prueba__marca", ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", "contar_vocales de " + t + ": " + sale + (ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    pintarPruebas(marcada.value);
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! cuenta empieza en 0 antes del bucle, sube con cada vocal, y return va después del for, cuando ya miró todas las letras.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  var trazaP1 = Traza.crear({
+    codigo: $("p1-codigo"),
+    explicacion: $("p1-explicacion"),
+    consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"),
+    reproducir: $("p1-reproducir"),
+    reiniciar: $("p1-reiniciar"),
+    generar: trazaPromedio,
+    intervalo: 1500,
+    alReiniciar: function () {
+      vaciarPila(pila1);
+      Pasos.limpiarFeedback($("p1-fb"));
+    },
+    alPaso: function (paso) { pintarPila(pila1, paso.estado); },
+    alTerminar: function () {
+      Pasos.feedback($("p1-fb"), "ok", "promedio llamó a suma y esperó su respuesta. Cada return quitó la tarjeta de arriba y entregó su valor a la de abajo.");
+      leccion.desbloquear();
+    }
+  });
+
+  $("p2-otra").addEventListener("click", function () {
+    empezarDecidir();
+    var primero = $("p2-opciones").querySelector("button");
+    if (primero) primero.focus();
+  });
+  empezarDecidir();
+
+  pintarLetras(-1, {});
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaVocales,
+    intervalo: 750,
+    repetible: true,
+    alReiniciar: function () {
+      vaciarPila(pila3);
+      pintarLetras(-1, {});
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: function (paso) {
+      pintarPila(pila3, paso.estado);
+      pintarLetras(paso.estado.actual === undefined ? -1 : paso.estado.actual, paso.estado.marcas || {});
+    },
+    alTerminar: terminarVocales
+  });
+  $("p3-palabra").addEventListener("input", function () {
+    var valor = this.value.trim();
+    var valida = /^[a-zñ]{1,10}$/.test(valor);
+    this.setAttribute("aria-invalid", String(!valida));
+    $("p3-ejecutar").disabled = !valida;
+    $("p3-reproducir").disabled = !valida;
+    trazaP3.cancelar();
+    if (!valida) {
+      Pasos.feedback($("p3-fb"), "pista", "Escribe una palabra en minúsculas y sin tildes, de hasta 10 letras.");
+      return;
+    }
+    Pasos.limpiarFeedback($("p3-fb"));
+    palabra = valor;
+    $("p3-codigo-palabra").textContent = palabra;
+    vaciarPila(pila3);
+    pintarLetras(-1, {});
+  });
+
+  pintarLibros();
+  pintarCadena(0, 0);
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaFactorial,
+    intervalo: 1000,
+    repetible: true,
+    alReiniciar: function () {
+      vaciarPila(pila4);
+      pintarCadena(0, 0);
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: function (paso) {
+      pintarPila(pila4, paso.estado);
+      pintarCadena(paso.estado.hasta, paso.estado.actual, paso.estado.total);
+    },
+    alTerminar: function () {
+      var r = factorial(nLibros);
+      Pasos.feedback($("p4-fb"), "ok", nLibros + (nLibros === 1 ? " libro se puede" : " libros se pueden") + " ordenar de " + r +
+        (r === 1 ? " forma" : " formas") + ". El for multiplica 1 × 2 × … × " + nLibros + " y return entrega el resultado. Mueve el slider y prueba otro número.");
+      leccion.desbloquear();
+    }
+  });
+  $("p4-n").addEventListener("input", function () {
+    nLibros = Number(this.value);
+    trazaP4.cancelar();
+    pintarLibros();
+    vaciarPila(pila4);
+    pintarCadena(0, 0);
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() { trazaP1.detener(); trazaP3.detener(); trazaP4.detener(); }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-pila": pausar,
+      "paso-decidir": pausar,
+      "paso-vocales": pausar,
+      "paso-factorial": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
