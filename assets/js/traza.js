@@ -10,7 +10,9 @@
      reiniciar: btn,             (opcional) se oculta hasta que termina la primera ejecución
      generar: function () {      devuelve la lista de pasos que ejecuta Python
        return [{ linea: 0, texto: "…", salida: "…", estado: { … } }, …];
-     },
+     },                          (opcional) flecha: true / false en un paso fuerza o evita la
+                                 flecha de salto desde la línea anterior; si no se indica, se
+                                 dibuja cuando la ejecución vuelve arriba (otra vuelta, una llamada)
      alPaso: function (paso, i) { … },   pinta el estado (cajas, chips…)
      alReiniciar: function () { … },
      alTerminar: function () { … },
@@ -30,6 +32,7 @@
   function crear(o) {
     var pasos = [];
     var i = 0;
+    var previa = null;      // línea del paso anterior, para la flecha de salto
     var timer = null;
     var intervalo = o.intervalo || 800;
     var textoReproducir = o.reproducir ? o.reproducir.textContent : "";
@@ -55,6 +58,7 @@
       detener();
       pasos = o.repetible ? [] : o.generar();
       i = 0;
+      previa = null;
       Codigo.limpiar(o.codigo);
       if (o.explicacion) o.explicacion.textContent = inicio;
     }
@@ -73,10 +77,15 @@
         if (!o.repetible) return;
         pasos = o.generar();
         i = 0;
+        previa = null;
       }
       var paso = pasos[i];
       i++;
       Codigo.marcar(o.codigo, { activas: [paso.linea] });
+      var salta = paso.flecha !== undefined ? paso.flecha : previa !== null && paso.linea < previa;
+      if (salta && previa !== null) Codigo.salto(o.codigo, previa, paso.linea);
+      else Codigo.quitarSalto(o.codigo);
+      previa = paso.linea;
       if (o.explicacion) o.explicacion.innerHTML = paso.texto;
       if (o.consola && paso.salida !== undefined) Codigo.agregar(o.consola, String(paso.salida));
       if (o.alPaso) o.alPaso(paso, i - 1);
