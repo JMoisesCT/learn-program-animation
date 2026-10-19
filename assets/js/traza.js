@@ -87,7 +87,12 @@
       else Codigo.quitarSalto(o.codigo);
       previa = paso.linea;
       if (o.explicacion) o.explicacion.innerHTML = paso.texto;
-      if (o.consola && paso.salida !== undefined) Codigo.agregar(o.consola, String(paso.salida));
+      if (o.consola && paso.salida !== undefined) {
+        // Lo que imprime print viaja de la línea a la consola
+        var texto = String(paso.salida);
+        Codigo.agregar(o.consola, texto);
+        Codigo.volarDesdeLinea(o.codigo, o.consola.lastElementChild, texto, "vuelo--salida");
+      }
       if (o.alPaso) o.alPaso(paso, i - 1);
       if (terminado()) {
         detener();

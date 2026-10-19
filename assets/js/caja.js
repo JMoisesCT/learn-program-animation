@@ -5,7 +5,8 @@
        <code class="caja__nombre">edad</code>
      </div>
 
-   Caja.poner(cajaEl, valor)          el valor viejo sale volando y entra el nuevo
+   Caja.poner(cajaEl, valor)          el valor viejo sale volando y entra el nuevo; si en el paso
+                                      hay una línea de código ejecutándose, viaja desde ella
    Caja.actualizar(cajaEl, valor)     cambia el valor con un pequeño pulso (para sliders)
    Caja.vaciar(cajaEl)
 */
@@ -39,9 +40,17 @@
       }
     }
     var nuevo = document.createElement("span");
-    nuevo.className = "caja__valor caja__valor--entrando";
+    nuevo.className = "caja__valor";
     nuevo.textContent = String(valor);
     cuerpo(caja).appendChild(nuevo);
+
+    if (window.Codigo && Codigo.volarDesdeLinea) {
+      Codigo.volarDesdeLinea(caja, nuevo, String(valor), "caja__valor", function () {
+        nuevo.classList.add("caja__valor--pulso");
+      });
+    } else {
+      nuevo.classList.add("caja__valor--entrando");
+    }
   }
 
   function actualizar(caja, valor) {
