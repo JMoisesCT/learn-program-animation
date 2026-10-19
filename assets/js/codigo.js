@@ -14,6 +14,10 @@
        `hasta` (índices desde 0): la ejecución vuelve arriba (bucle) o salta (llamada).
    Codigo.quitarSalto(preEl)
        borra la flecha (Codigo.limpiar también la borra).
+   Codigo.volarDesdeLinea(el, destinoEl, texto, clase, alLlegar)
+       una copia de `texto` sale de la línea que se ejecuta (la línea activa del código
+       del paso de `el`) y vuela hasta destinoEl, que queda oculto hasta que llega.
+       Si la línea tiene una pieza con ese mismo texto (un 12, un "Ana"), sale de ahí.
 */
 (function () {
   "use strict";
@@ -134,8 +138,68 @@
     }
   }
 
+  /* ---------- Vuelo de un valor ---------- */
+  function reducir() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  // Rectángulo que ocupa solo el texto de un elemento (una línea es más ancha que su texto)
+  function rectDeTexto(el) {
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    var caja = r.getBoundingClientRect();
+    return caja.width ? caja : el.getBoundingClientRect();
+  }
+
+  function origenEnLinea(el, texto) {
+    var paso = el.closest(".paso") || document;
+    var linea = paso.querySelector(".codigo .linea--activa");
+    if (!linea) return null;
+    var piezas = linea.querySelectorAll("span");
+    for (var k = piezas.length - 1; k >= 0; k--) {
+      if (!piezas[k].children.length && piezas[k].textContent.trim() === texto) return piezas[k].getBoundingClientRect();
+    }
+    return rectDeTexto(linea);
+  }
+
+  function volarDesdeLinea(el, destino, texto, clase, alLlegar) {
+    function llegar() {
+      destino.classList.remove("vuelo-destino");
+      if (alLlegar) alLlegar();
+    }
+    var a = reducir() || !document.body.animate ? null : origenEnLinea(el, texto);
+    // Una línea de consola ocupa todo el ancho: se mide solo su texto
+    var b = destino.matches(".consola__linea") ? rectDeTexto(destino) : destino.getBoundingClientRect();
+    if (!a || !b.width || (a.bottom < 0 && b.bottom < 0)) { llegar(); return; }
+
+    destino.classList.add("vuelo-destino");
+    var copia = document.createElement("span");
+    copia.className = "vuelo " + (clase || "");
+    copia.setAttribute("aria-hidden", "true");
+    copia.textContent = texto;
+    copia.style.left = b.left + "px";
+    copia.style.top = b.top + "px";
+    copia.style.width = b.width + "px";
+    copia.style.height = b.height + "px";
+    document.body.appendChild(copia);
+
+    // Sale pequeño de la línea, sube en arco y aterriza con su tamaño
+    var dx = a.left + a.width / 2 - (b.left + b.width / 2);
+    var dy = a.top + a.height / 2 - (b.top + b.height / 2);
+    var arco = Math.min(60, 20 + Math.abs(dx) / 6);
+    var vuelo = copia.animate([
+      { transform: "translate(" + dx + "px, " + dy + "px) scale(0.55)", opacity: 0.3 },
+      { transform: "translate(" + dx / 2 + "px, " + (dy / 2 - arco) + "px) scale(0.85)", opacity: 1, offset: 0.5 },
+      { transform: "none", opacity: 1 }
+    ], { duration: 560, easing: "cubic-bezier(0.45, 0, 0.25, 1)" });
+    vuelo.onfinish = vuelo.oncancel = function () {
+      copia.remove();
+      llegar();
+    };
+  }
+
   window.Codigo = {
     marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano,
-    salto: salto, quitarSalto: quitarSalto
+    salto: salto, quitarSalto: quitarSalto, volarDesdeLinea: volarDesdeLinea
   };
 })();
