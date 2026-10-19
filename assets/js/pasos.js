@@ -26,6 +26,10 @@
      leccion.siguiente(), leccion.anterior()
      leccion.reiniciar()                borra el avance y empieza la lección desde cero
 
+   Confeti: al acertar un paso con data-comprobar, al desbloquear por primera vez un
+   reto con data-requiere (etiqueta «Reto», como el juego final de un proyecto) y al
+   llegar al resumen final. Pasos.confeti(el) lanza uno desde cualquier elemento.
+
    Un paso con data-comprobar ya resuelto se puede volver a intentar: si el alumno
    elige otra respuesta (listoParaComprobar(true)), el botón vuelve a decir "Comprobar".
    Cualquier botón con data-accion="reiniciar" reinicia la lección, y abrir la página
@@ -81,10 +85,19 @@
       if (window.Progreso) Progreso.guardar(id, { paso: 0, maximo: 0 });
     }
 
+    function esReto(i) {
+      var etiqueta = pasos[i].querySelector(".paso__etiqueta");
+      return !!etiqueta && etiqueta.textContent.trim() === "Reto";
+    }
+
     var leccion = {
       desbloquear: function () {
+        var primeraVez = !desbloqueados[actual];
         desbloqueados[actual] = true;
         actualizarBotones();
+        if (primeraVez && esReto(actual) && !pasos[actual].hasAttribute("data-comprobar")) {
+          confeti(pasos[actual].querySelector(".feedback--ok") || btnPrincipal);
+        }
       },
       listoParaComprobar: function (valor) {
         listo = !!valor;
@@ -164,6 +177,12 @@
       var fn = alEntrar[paso.id];
       if (fn) fn(paso, leccion, { primeraVez: primeraVez, desbloqueado: !!desbloqueados[actual] });
 
+      // Fin de la lección: lluvia de confeti desde la celebración
+      if (actual === total - 1 && !primeraCarga) {
+        var fiesta = paso.querySelector(".celebracion") || paso.querySelector(".paso__titulo");
+        setTimeout(function () { confeti(fiesta, 70); }, 250);
+      }
+
       if (!primeraCarga) {
         window.scrollTo(0, 0);
         var titulo = paso.querySelector(".paso__titulo");
@@ -183,6 +202,7 @@
           listo = false;
           leccion.desbloquear();
           btnPrincipal.focus();
+          confeti(pasos[actual].querySelector(".feedback--ok") || btnPrincipal);
         } else {
           leccion.listoParaComprobar(false);
         }
@@ -215,6 +235,42 @@
     return leccion;
   }
 
+  /** Lanza confeti desde el centro de un elemento (nada con movimiento reducido). */
+  var COLORES = ["#0b7a3e", "#1f5fd6", "#f2b705", "#e8579a", "#5fb3ff", "#3cc47c"];
+
+  function confeti(origen, cuantos) {
+    if (reducirMovimiento || !origen || !document.body.animate) return;
+    var r = origen.getBoundingClientRect();
+    if (!r.width && !r.height) return;
+    var x = r.left + r.width / 2;
+    var y = r.top + Math.min(r.height / 2, 40);
+    cuantos = cuantos || 32;
+    for (var k = 0; k < cuantos; k++) {
+      var pieza = document.createElement("span");
+      pieza.className = "confeti" + (k % 3 === 0 ? " confeti--redondo" : "");
+      pieza.setAttribute("aria-hidden", "true");
+      pieza.style.left = x + "px";
+      pieza.style.top = y + "px";
+      pieza.style.background = COLORES[k % COLORES.length];
+      document.body.appendChild(pieza);
+
+      // Sale hacia arriba en abanico y cae girando
+      var angulo = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
+      var fuerza = 110 + Math.random() * 170;
+      var dx = Math.cos(angulo) * fuerza;
+      var dy = Math.sin(angulo) * fuerza;
+      var giro = (Math.random() - 0.5) * 900;
+      var vuelo = pieza.animate([
+        { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
+        { transform: "translate(" + dx + "px, " + dy + "px) rotate(" + giro / 2 + "deg)", opacity: 1, offset: 0.4 },
+        { transform: "translate(" + dx * 1.35 + "px, " + (dy + 240) + "px) rotate(" + giro + "deg)", opacity: 0 }
+      ], { duration: 1100 + Math.random() * 500, easing: "cubic-bezier(0.15, 0.7, 0.4, 1)" });
+      vuelo.onfinish = vuelo.oncancel = quitar(pieza);
+    }
+  }
+
+  function quitar(el) { return function () { el.remove(); }; }
+
   /** Muestra un mensaje de feedback amable. tipo: "ok" | "pista". */
   function feedback(el, tipo, texto) {
     el.className = "feedback feedback--" + tipo;
@@ -238,6 +294,7 @@
     iniciar: iniciar,
     feedback: feedback,
     limpiarFeedback: limpiarFeedback,
+    confeti: confeti,
     reducirMovimiento: reducirMovimiento
   };
 })();
