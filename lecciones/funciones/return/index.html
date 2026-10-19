@@ -47,6 +47,13 @@
     .estado-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
     .lugar { display: inline-block; padding: 0.15em 0.75em; border-radius: 999px; font-weight: 700; background: var(--color-superficie); color: var(--color-texto); transition: background-color var(--dur), color var(--dur); }
     .lugar--funcion { background: var(--color-azul-suave); color: var(--color-azul); }
+    .comparar { display: flex; align-items: flex-end; justify-content: center; gap: var(--esp-5); margin-top: var(--esp-2); }
+    .comparar .cajas { padding: var(--esp-4) 0 0; }
+    .comparar__regla { flex: 1; max-width: 16rem; padding-bottom: var(--esp-3); }
+    .comparar__regla .regla { margin: 0 0 var(--esp-5); }
+    .comparar__leyenda { margin: 0; font-size: var(--texto-xs); color: var(--color-texto-suave); text-align: center; }
+    .comparar__leyenda strong { color: var(--color-acento); }
+    .paso-cadena { animation: aparecer var(--dur) ease both; }
 
     /* Paso 3: predecir */
     #p3-opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -59,6 +66,11 @@
     .cadena__vacia { font-family: var(--fuente); font-size: var(--texto-sm); font-weight: 400; color: var(--color-texto-suave); }
 
     /* Paso 4: una caja con None */
+    #p4-calculo { min-height: 2.6rem; }
+    .zona-fn + .rotulo { margin-top: var(--esp-5); }
+    .rotulo code { padding: 0; background: none; text-transform: none; letter-spacing: 0; }
+    .zona-fn { transition: opacity var(--dur); }
+    .zona-fn--fuera { opacity: 0.45; }
     .caja--nada .caja__valor { color: var(--color-texto-suave); font-style: italic; border-style: dashed; }
 
     /* Reto: versiones de la función */
@@ -77,6 +89,8 @@
     @media (max-width: 480px) {
       .expresion { font-size: var(--texto-md); }
       .camino { padding: var(--esp-2); }
+      .comparar { flex-direction: column; align-items: center; gap: var(--esp-3); }
+      .comparar__regla { width: 100%; padding-bottom: 0; }
       .camino--elegido .camino__return::after { content: "  ←"; }
     }
   </style>
@@ -147,6 +161,23 @@
         </div>
         <div class="lab__visual">
           <p class="estado-fila">Ahora en: <span class="lugar" id="p2-lugar">programa principal</span></p>
+          <div class="comparar">
+            <div class="cajas">
+              <div class="caja" id="p2-caja">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">nota</code>
+              </div>
+            </div>
+            <div class="comparar__regla">
+              <div class="regla" aria-hidden="true">
+                <div class="regla__zona regla__zona--fin" style="left:55%"></div>
+                <span class="regla__marca" style="left:55%">11</span>
+                <span class="regla__punto" id="p2-punto" hidden></span>
+              </div>
+              <p class="comparar__leyenda">Notas de 0 a 20. En la <strong>zona verde</strong> (11 o más) la condición es True.</p>
+            </div>
+          </div>
+          <div class="expresion" id="p2-comparacion" aria-live="polite"></div>
           <div class="expresion" aria-live="polite">
             <span id="p2-llamada">aprobado(15)</span>
             <span class="expresion__flecha" aria-hidden="true">→</span>
@@ -202,6 +233,17 @@
           </div>
         </div>
         <div class="lab__visual">
+          <div class="zona-fn zona-fn--fuera" id="p4-zona-fn">
+            <p class="rotulo" id="p4-fn">Dentro de la función</p>
+            <div class="cajas">
+              <div class="caja caja--acento" id="p4-caja-n">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">n</code>
+              </div>
+            </div>
+            <div class="expresion" id="p4-calculo" aria-live="polite"></div>
+          </div>
+          <p class="rotulo">Programa</p>
           <div class="cajas">
             <div class="caja" id="p4-caja-x">
               <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
@@ -321,6 +363,23 @@
     }
   }
 
+  /* Cadena de una expresión que se va calculando: "nota >= 11" → "15 >= 11" → True.
+     partes: textos; si ultimo es true/false, el último término es un chip True / False */
+  function pintarCadena(el, partes, ultimo) {
+    el.textContent = "";
+    partes.forEach(function (texto, i) {
+      if (i > 0) {
+        var flecha = crear("span", "expresion__flecha", "→");
+        flecha.setAttribute("aria-hidden", "true");
+        el.appendChild(flecha);
+      }
+      var t = crear("span", i === partes.length - 1 && i > 0 ? "paso-cadena" : "");
+      if (i === partes.length - 1 && typeof ultimo === "boolean") Codigo.booleano(t, ultimo);
+      else t.textContent = texto;
+      el.appendChild(t);
+    });
+  }
+
   /* ---------- 1. Varias salidas ---------- */
   var CAMINOS_P1 = [
     { palabra: "if", limite: 18, devuelve: '"Excelente"' },
@@ -396,8 +455,12 @@
     var pasa = v >= 11;
     var t = [
       { linea: 6, texto: "Llama a <strong>aprobado(" + v + ")</strong>: salta a la función.", estado: { devuelto: null } },
-      { linea: 0, texto: "El parámetro <strong>nota</strong> recibe " + v + ".", estado: { lugar: "funcion" } },
-      { linea: 1, texto: v + " &gt;= 11 → <strong>" + (pasa ? "True" : "False") + "</strong>: " + (pasa ? "entra en el if." : "se salta lo de dentro del if.") }
+      { linea: 0, texto: "El parámetro <strong>nota</strong> recibe " + v + ".", estado: { lugar: "funcion", nota: v } },
+      { linea: 1, texto: "Para decidir, compara <strong>nota</strong> con 11. Primero cambia nota por su valor: <strong>" + v + " &gt;= 11</strong>.", estado: { comparar: 1 } },
+      { linea: 1, texto: pasa
+          ? "¿" + v + " es mayor o igual que 11? <strong>Sí</strong>, está en la zona verde → <strong>True</strong>: entra en el if."
+          : "¿" + v + " es mayor o igual que 11? <strong>No</strong>, " + v + " es menor que 11 → <strong>False</strong>: se salta lo de dentro del if y sigue en la línea 5.",
+        estado: { comparar: 2 } }
     ];
     if (pasa) {
       t.push({ linea: 2, texto: "<strong>return True</strong>: entrega True y la función <strong>termina aquí</strong>. Lo de abajo ya no se ejecuta.", estado: { devuelto: "True" } });
@@ -414,7 +477,16 @@
     $("p2-lugar").classList.toggle("lugar--funcion", dentro);
   }
 
+  function pintarComparacionP2(etapa) {
+    var partes = ["nota >= 11", p2Nota + " >= 11", "?"].slice(0, etapa + 1);
+    if (etapa < 2) partes.push("?");
+    pintarCadena($("p2-comparacion"), partes, etapa === 2 ? p2Nota >= 11 : undefined);
+  }
+
   function pintarLlamadaP2() {
+    Caja.vaciar($("p2-caja"));
+    $("p2-punto").hidden = true;
+    pintarComparacionP2(0);
     $("p2-codigo-nota").textContent = p2Nota;
     $("p2-llamada").textContent = "aprobado(" + p2Nota + ")";
     pintarDevuelto($("p2-devuelto"), null);
@@ -542,15 +614,27 @@
   /* ---------- 4. print o return ---------- */
   function trazaNone() {
     return [
-      { linea: 6, texto: "Llama a <strong>mostrar_doble(5)</strong>: salta a la función." },
-      { linea: 1, salida: "10", texto: "<strong>print</strong> muestra 10 en la pantalla… pero mostrar no es devolver." },
-      { linea: 6, texto: "La función terminó <strong>sin return</strong>: devuelve <strong>None</strong>, que en Python significa «nada». x guarda None.", estado: { x: "None" } },
-      { linea: 7, texto: "Llama a <strong>doble(5)</strong>: salta a la función." },
-      { linea: 4, texto: "return 5 * 2 → <strong>10</strong>: entrega el 10 a quien llamó." },
-      { linea: 7, texto: "doble(5) vale 10, y se guarda en <strong>y</strong>.", estado: { y: 10 } },
+      { linea: 6, texto: "Llama a <strong>mostrar_doble(5)</strong>: salta a la función llevando el 5." },
+      { linea: 0, texto: "El parámetro <strong>n</strong> recibe 5.", estado: { fn: "mostrar_doble", n: 5 } },
+      { linea: 1, salida: "10", texto: "Calcula n * 2 → 5 * 2 → 10, y <strong>print</strong> lo muestra en la pantalla… pero mostrar no es devolver.", estado: { calculo: ["n * 2", "5 * 2", "10"] } },
+      { linea: 6, texto: "La función terminó <strong>sin return</strong>: devuelve <strong>None</strong>, que en Python significa «nada». x guarda None.", estado: { fn: null, x: "None" } },
+      { linea: 7, texto: "Llama a <strong>doble(5)</strong>: salta a la función llevando el 5." },
+      { linea: 3, texto: "El parámetro <strong>n</strong> recibe 5.", estado: { fn: "doble", n: 5 } },
+      { linea: 4, texto: "Calcula n * 2 → 5 * 2 → <strong>10</strong>, y return entrega el 10 a quien llamó.", estado: { calculo: ["n * 2", "5 * 2", "10"] } },
+      { linea: 7, texto: "doble(5) vale 10, y se guarda en <strong>y</strong>.", estado: { fn: null, y: 10 } },
       { linea: 8, salida: "None", texto: "print(x) muestra None: en x no hay ningún número." },
       { linea: 9, salida: "10", texto: "print(y) muestra 10." }
     ];
+  }
+
+  /* Zona de la función: muestra su n mientras se ejecuta y se vacía al volver */
+  function pintarFuncionP4(fn) {
+    $("p4-fn").innerHTML = fn ? "Dentro de <code>" + fn + "()</code>" : "Dentro de la función";
+    $("p4-zona-fn").classList.toggle("zona-fn--fuera", !fn);
+    if (!fn) {
+      Caja.vaciar($("p4-caja-n"));
+      $("p4-calculo").textContent = "";
+    }
   }
 
   /* ---------- 5. Reto ---------- */
@@ -659,8 +743,15 @@
     },
     alPaso: function (paso) {
       var e = paso.estado || {};
+      if (e.devuelto === null) pintarLlamadaP2();
       if (e.lugar) pintarLugarP2(e.lugar);
-      if (e.devuelto !== undefined) pintarDevuelto($("p2-devuelto"), e.devuelto);
+      if (e.nota !== undefined) {
+        Caja.poner($("p2-caja"), e.nota);
+        $("p2-punto").style.left = (e.nota / 20 * 100) + "%";
+        $("p2-punto").hidden = false;
+      }
+      if (e.comparar) pintarComparacionP2(e.comparar);
+      if (e.devuelto) pintarDevuelto($("p2-devuelto"), e.devuelto);
     },
     alTerminar: terminarP2
   });
@@ -686,6 +777,7 @@
     reiniciar: $("p4-reiniciar"),
     generar: trazaNone,
     alReiniciar: function () {
+      pintarFuncionP4(null);
       Caja.vaciar($("p4-caja-x"));
       Caja.vaciar($("p4-caja-y"));
       $("p4-caja-x").classList.remove("caja--nada");
@@ -693,6 +785,9 @@
     },
     alPaso: function (paso) {
       var e = paso.estado || {};
+      if (e.fn !== undefined) pintarFuncionP4(e.fn);
+      if (e.n !== undefined) Caja.poner($("p4-caja-n"), e.n);
+      if (e.calculo) pintarCadena($("p4-calculo"), e.calculo);
       if (e.x !== undefined) {
         Caja.poner($("p4-caja-x"), e.x);
         $("p4-caja-x").classList.add("caja--nada");
