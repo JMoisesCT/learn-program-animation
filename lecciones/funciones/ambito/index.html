@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Variables locales · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: variables locales en Python: las cajas de una función nacen al llamarla y se borran al volver, y el mismo nombre dentro y fuera son cajas distintas.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .btn-codigo { font-family: var(--fuente-codigo); font-weight: 700; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .elegir { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-bottom: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    .consola__linea--error { color: var(--color-pista); }
+
+    /* Zonas de cajas: la del programa y la de dentro de la función */
+    .zonas { display: grid; gap: var(--esp-3); }
+    .zona { padding: var(--esp-2) var(--esp-3) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur), opacity var(--dur); }
+    .zona__titulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .zona__titulo code { padding: 0; background: none; text-transform: none; letter-spacing: 0; }
+    .zona--programa .zona__titulo { color: var(--color-azul); }
+    .zona__cajas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: var(--esp-4) var(--esp-6); min-height: 6.5rem; padding: var(--esp-3) var(--esp-2) 0; }
+    .zona__vacia { align-self: center; margin: 0; font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); text-align: center; }
+    .zona--funcion { border-style: dashed; background: transparent; }
+    .zona--activa { border-style: solid; border-color: var(--color-acento); background: var(--color-superficie); }
+    .zona--activa .zona__titulo { color: var(--color-acento); }
+    .zona--cerrando { animation: zona-cierra 700ms ease-in both; }
+    .zona--error { border-color: var(--color-pista); background: var(--color-pista-suave); animation: sacudir 360ms ease; }
+    .zona .caja { gap: var(--esp-1); }
+    .zona .caja__cuerpo { width: 5.5rem; height: 4.25rem; padding-bottom: var(--esp-2); }
+    .zona .caja__valor { max-width: 5rem; min-width: 2.5rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+    .caja--nace { animation: caja-nace 420ms var(--curva-rebote) both; }
+    @keyframes caja-nace { from { transform: scale(0.4); opacity: 0; } }
+    @keyframes zona-cierra {
+      0% { opacity: 1; }
+      100% { opacity: 0.25; transform: scale(0.97); }
+    }
+
+    /* Reto */
+    #reto-opciones { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+    #reto-opciones .opcion span { white-space: pre-line; font-size: var(--texto-md); line-height: 1.5; }
+    .opciones legend { padding: 0; margin-bottom: var(--esp-1); font-weight: 600; }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .zona__cajas { gap: var(--esp-3) var(--esp-5); }
+      .zona .caja__cuerpo { width: 4.75rem; height: 3.75rem; }
+      .zona .caja__valor { max-width: 4.25rem; font-size: var(--texto-md); }
+      .zona .caja__nombre { font-size: var(--texto-xs); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones-ambito">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: las cajas de la función nacen y se borran -->
+    <section class="paso" id="paso-nacen" data-requiere aria-labelledby="t-nacen">
+      <span class="paso__etiqueta">Funciones 5/5 · Variables locales</span>
+      <h1 class="paso__titulo" id="t-nacen">Cajas que nacen y desaparecen</h1>
+      <p>Cada llamada abre su propia zona de cajas. Al volver con <code>return</code>, la zona se borra. Ejecútalo y mira las dos zonas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">total</span>(<span class="tk-variable">precio</span>, <span class="tk-variable">cantidad</span>):</span><span class="linea">    <span class="tk-variable">suma</span> = <span class="tk-variable">precio</span> * <span class="tk-variable">cantidad</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">suma</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">pagar</span> = <span class="tk-funcion">total</span>(<span class="tk-numero">5</span>, <span class="tk-numero">3</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">pagar</span>)</span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas" id="p1-zonas" data-funcion="total"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Las variables de dentro de una función se llaman <strong>locales</strong>: solo existen mientras la función se ejecuta.</p>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Fuera de la función no existen -->
+    <section class="paso" id="paso-fuera" data-requiere aria-labelledby="t-fuera">
+      <h2 class="paso__titulo" id="t-fuera">Desde fuera no se ven</h2>
+      <p>¿Y si después de la llamada intentamos imprimir <code>suma</code>? Prueba las dos últimas líneas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" role="group" aria-label="Última línea">
+            <button type="button" class="btn btn-secundario btn-codigo" data-p2="pagar" aria-pressed="true">print(pagar)</button>
+            <button type="button" class="btn btn-secundario btn-codigo" data-p2="suma" aria-pressed="false">print(suma)</button>
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">total</span>(<span class="tk-variable">precio</span>, <span class="tk-variable">cantidad</span>):</span><span class="linea">    <span class="tk-variable">suma</span> = <span class="tk-variable">precio</span> * <span class="tk-variable">cantidad</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">suma</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">pagar</span> = <span class="tk-funcion">total</span>(<span class="tk-numero">5</span>, <span class="tk-numero">3</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable" id="p2-ultima">pagar</span>)</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas" id="p2-zonas" data-funcion="total"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Mismo nombre, cajas distintas -->
+    <section class="paso" id="paso-mismo" data-requiere aria-labelledby="t-mismo">
+      <h2 class="paso__titulo" id="t-mismo">Mismo nombre, cajas distintas</h2>
+      <p>Hay una <code>x</code> fuera y otra <code>x</code> dentro de la función. Si cambias la de dentro, ¿cambia la de fuera? Ejecútalo línea a línea.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">cambiar</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-variable">x</span> = <span class="tk-numero">100</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">f"dentro: {</span><span class="tk-variable">x</span><span class="tk-texto">}"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-variable">x</span> = <span class="tk-numero">5</span></span><span class="linea"><span class="tk-funcion">cambiar</span>(<span class="tk-variable">x</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">f"fuera: {</span><span class="tk-variable">x</span><span class="tk-texto">}"</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas" id="p3-zonas" data-funcion="cambiar"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Para sacar un valor: return -->
+    <section class="paso" id="paso-sacar" data-requiere aria-labelledby="t-sacar">
+      <h2 class="paso__titulo" id="t-sacar">Para sacar un valor, <code>return</code></h2>
+      <p>Queremos sumar un punto. La versión 1 cambia la caja de dentro; la versión 2 devuelve el resultado. Ejecuta las dos.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" role="group" aria-label="Versión">
+            <button type="button" class="btn btn-secundario" data-p4="0" aria-pressed="true">Versión 1</button>
+            <button type="button" class="btn btn-secundario" data-p4="1" aria-pressed="false">Versión 2</button>
+          </div>
+          <pre class="codigo" id="p4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">subir</span>(<span class="tk-variable">puntos</span>):</span><span class="linea" id="p4-cuerpo"></span><span class="linea"></span><span class="linea"><span class="tk-variable">puntos</span> = <span class="tk-numero">10</span></span><span class="linea" id="p4-llamada"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">puntos</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas" id="p4-zonas" data-funcion="subir"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Qué imprime?</h2>
+      <p>Piensa en las dos zonas de cajas: la del programa y la de la función.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">subir</span>(<span class="tk-variable">nota</span>):</span><span class="linea">    <span class="tk-variable">extra</span> = <span class="tk-numero">2</span></span><span class="linea">    <span class="tk-variable">nota</span> = <span class="tk-variable">nota</span> + <span class="tk-variable">extra</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">nota</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">nota</span> = <span class="tk-numero">12</span></span><span class="linea"><span class="tk-variable">nueva</span> = <span class="tk-funcion">subir</span>(<span class="tk-variable">nota</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">nueva</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">nota</span>)</span></code></pre>
+        <fieldset class="opciones" id="reto-opciones">
+          <legend>La salida es…</legend>
+          <label class="opcion"><input type="radio" name="reto" value="14-14"><span>14
+14</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="14-12"><span>14
+12</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="12-12"><span>12
+12</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="error"><span>Error</span></label>
+        </fieldset>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Las variables de una función nacen al llamarla y se borran al volver: lo de dentro <strong>se queda dentro</strong>. Para sacar un valor, usa <code>return</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">total</span>(<span class="tk-variable">precio</span>, <span class="tk-variable">cantidad</span>):</span><span class="linea">    <span class="tk-comentario"># suma vive solo aquí</span></span><span class="linea">    <span class="tk-variable">suma</span> = <span class="tk-variable">precio</span> * <span class="tk-variable">cantidad</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">suma</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">pagar</span> = <span class="tk-funcion">total</span>(<span class="tk-numero">5</span>, <span class="tk-numero">3</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">pagar</span>)  <span class="tk-comentario"># 15</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">suma</span>)   <span class="tk-comentario"># NameError</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function tk(clase, texto) { return '<span class="tk-' + clase + '">' + texto + "</span>"; }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Zonas: cajas del programa y cajas de dentro de la función ----------
+     Cada paso de la traza trae el estado completo:
+       { prog: [["pagar", 15]], fun: [["precio", 5]] | null, leer: ["prog" | "fun", nombre], error: true }
+     fun = null: la función no se está ejecutando (si lo estaba, su zona se borra). */
+  function crearZonas(el) {
+    var fn = el.getAttribute("data-funcion");
+    function zona(clase, titulo, vacia) {
+      var raiz = crear("div", "zona " + clase);
+      var t = crear("p", "zona__titulo");
+      t.innerHTML = titulo;
+      var cajas = crear("div", "zona__cajas");
+      var v = crear("p", "zona__vacia", vacia);
+      cajas.appendChild(v);
+      raiz.appendChild(t);
+      raiz.appendChild(cajas);
+      el.appendChild(raiz);
+      return { raiz: raiz, cont: cajas, vacia: v, cajas: {} };
+    }
+    return {
+      fn: fn,
+      prog: zona("zona--programa", "Programa", "Aún no hay variables."),
+      fun: zona("zona--funcion", "Dentro de <code>" + fn + "()</code>", "Todavía no se ha llamado a " + fn + "()."),
+      abierta: false,
+      timer: null
+    };
+  }
+
+  function crearCaja(nombre, acento) {
+    var caja = crear("div", "caja caja--nace" + (acento ? " caja--acento" : ""));
+    caja.innerHTML = '<div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div><code class="caja__nombre"></code>';
+    caja.querySelector(".caja__nombre").textContent = nombre;
+    return caja;
+  }
+
+  function sincronizar(zona, lista, acento) {
+    var quedan = {};
+    lista.forEach(function (par) {
+      var nombre = par[0];
+      var valor = String(par[1]);
+      var caja = zona.cajas[nombre];
+      if (!caja) {
+        caja = zona.cajas[nombre] = crearCaja(nombre, acento);
+        zona.cont.appendChild(caja);
+      }
+      if (caja.getAttribute("data-valor") !== valor) {
+        Caja.poner(caja, valor);
+        caja.setAttribute("data-valor", valor);
+      }
+      quedan[nombre] = true;
+    });
+    Object.keys(zona.cajas).forEach(function (n) {
+      if (quedan[n]) return;
+      zona.cajas[n].remove();
+      delete zona.cajas[n];
+    });
+    zona.vacia.hidden = lista.length > 0;
+  }
+
+  function terminarCierre(z) {
+    clearTimeout(z.timer);
+    z.timer = null;
+    z.fun.raiz.classList.remove("zona--cerrando", "zona--activa");
+    sincronizar(z.fun, []);
+  }
+
+  function pintarZonas(z, e) {
+    sincronizar(z.prog, e.prog || []);
+    if (e.fun) {
+      if (z.timer) terminarCierre(z);
+      if (!z.abierta) z.fun.vacia.textContent = "Recién abierta: aún no hay cajas.";
+      z.abierta = true;
+      z.fun.raiz.classList.add("zona--activa");
+      sincronizar(z.fun, e.fun, true);
+    } else if (z.abierta) {
+      // La función terminó: su zona se apaga y sus cajas se borran
+      z.abierta = false;
+      z.fun.vacia.textContent = z.fn + "() terminó: sus cajas se borraron.";
+      z.fun.raiz.classList.add("zona--cerrando");
+      z.timer = setTimeout(function () { terminarCierre(z); }, Pasos.reducirMovimiento ? 0 : 700);
+    }
+    [z.prog, z.fun].forEach(function (zona) {
+      Object.keys(zona.cajas).forEach(function (n) {
+        var leida = e.leer && zona === z[e.leer[0]] && n === e.leer[1];
+        zona.cajas[n].classList.toggle("caja--resaltada", !!leida);
+      });
+    });
+    z.prog.raiz.classList.toggle("zona--error", !!e.error);
+  }
+
+  function vaciarZonas(z) {
+    pintarZonas(z, { prog: [], fun: null });
+    terminarCierre(z);
+    z.fun.vacia.textContent = "Todavía no se ha llamado a " + z.fn + "().";
+  }
+
+  /* Los pasos solo dicen lo que cambia; aquí se completa el estado de cada uno */
+  function acumular(pasos) {
+    var prog = [];
+    var fun = null;
+    return pasos.map(function (p) {
+      var e = p.estado || {};
+      if (e.prog) prog = e.prog;
+      if (e.fun !== undefined) fun = e.fun;
+      p.estado = { prog: prog, fun: fun, leer: e.leer, error: e.error };
+      return p;
+    });
+  }
+
+  function marcarError(consola) {
+    var lineas = consola.querySelectorAll(".consola__linea");
+    if (lineas.length) lineas[lineas.length - 1].classList.add("consola__linea--error");
+  }
+
+  function conZonas(z, consola) {
+    return function (paso) {
+      pintarZonas(z, paso.estado);
+      if (paso.estado.error) marcarError(consola);
+    };
+  }
+
+  /* Pasos comunes de total(5, 3) hasta guardar el resultado en pagar */
+  function pasosTotal() {
+    return [
+      { linea: 0, texto: "Python recuerda la receta <strong>total</strong>. Todavía no crea ninguna caja." },
+      { linea: 4, texto: "Llama a <strong>total(5, 3)</strong>: se abre la zona de la función.", estado: { fun: [] } },
+      { linea: 0, texto: "Nacen <strong>precio</strong> y <strong>cantidad</strong>, dentro de la función.", estado: { fun: [["precio", 5], ["cantidad", 3]] } },
+      { linea: 1, texto: "Nace <strong>suma</strong>, también dentro: 5 * 3 = 15.", estado: { fun: [["precio", 5], ["cantidad", 3], ["suma", 15]] } },
+      { linea: 2, texto: "return entrega el 15 y la función termina: <strong>sus cajas se borran</strong>.", estado: { fun: null } },
+      { linea: 4, texto: "De vuelta en el programa, el 15 se guarda en <strong>pagar</strong>.", estado: { prog: [["pagar", 15]] } }
+    ];
+  }
+
+  /* ---------- 1. Nacen y desaparecen ---------- */
+  var z1 = crearZonas($("p1-zonas"));
+
+  function trazaNacen() {
+    return acumular(pasosTotal().concat([
+      { linea: 5, salida: "15", texto: "Imprime <strong>pagar</strong>: 15. Solo queda la caja del programa.", estado: { leer: ["prog", "pagar"] } }
+    ]));
+  }
+
+  /* ---------- 2. Desde fuera no se ven ---------- */
+  var z2 = crearZonas($("p2-zonas"));
+  var p2Ultima = "pagar";
+  var p2Hechos = {};
+
+  function trazaFuera() {
+    var final = p2Ultima === "pagar"
+      ? { linea: 5, salida: "15", texto: "<strong>pagar</strong> está en el programa: imprime 15.", estado: { leer: ["prog", "pagar"] } }
+      : { linea: 5, salida: "NameError: name 'suma' is not defined",
+          texto: "Python busca <strong>suma</strong> en el programa… y no está: solo existía dentro de total(), y esa caja ya se borró.",
+          estado: { error: true } };
+    return acumular(pasosTotal().slice(1).concat([final]));
+  }
+
+  function pintarUltimaP2() {
+    $("p2-ultima").textContent = p2Ultima;
+    document.querySelectorAll("[data-p2]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-p2") === p2Ultima));
+    });
+  }
+
+  function terminarP2() {
+    p2Hechos[p2Ultima] = true;
+    document.querySelector('[data-p2="' + p2Ultima + '"]').classList.add("hecho");
+    if (p2Hechos.pagar && p2Hechos.suma) {
+      Pasos.feedback($("p2-fb"), "ok", "suma es una variable local: fuera de total() no existe. Lo que sale de la función es el valor que devuelve, guardado en pagar.");
+      leccion.desbloquear();
+    } else if (p2Ultima === "suma") {
+      Pasos.feedback($("p2-fb"), "pista", "¡Error! suma ya no existe. Ahora prueba con print(pagar).");
+    } else {
+      Pasos.feedback($("p2-fb"), "pista", "Ahora prueba con print(suma): ¿qué crees que pasará?");
+    }
+  }
+
+  /* ---------- 3. Mismo nombre ---------- */
+  var z3 = crearZonas($("p3-zonas"));
+
+  function trazaMismo() {
+    return acumular([
+      { linea: 0, texto: "Python recuerda la receta <strong>cambiar</strong>." },
+      { linea: 4, texto: "Nace <strong>x</strong> en el programa, con un 5.", estado: { prog: [["x", 5]] } },
+      { linea: 5, texto: "Llama a <strong>cambiar(x)</strong>: le pasa el <strong>valor</strong> de x, un 5.", estado: { fun: [], leer: ["prog", "x"] } },
+      { linea: 0, texto: "Nace <strong>otra x</strong>, dentro de la función, con una copia del 5. Mismo nombre, otra caja.", estado: { fun: [["x", 5]] } },
+      { linea: 1, texto: "x = 100 cambia la x de <strong>dentro</strong>. La de fuera ni se entera.", estado: { fun: [["x", 100]] } },
+      { linea: 2, salida: "dentro: 100", texto: "Dentro de la función, x es la caja verde: imprime 100.", estado: { leer: ["fun", "x"] } },
+      { linea: 5, texto: "La función termina: la x de dentro se borra.", estado: { fun: null } },
+      { linea: 6, salida: "fuera: 5", texto: "Aquí x es la del programa: <strong>sigue valiendo 5</strong>.", estado: { leer: ["prog", "x"] } }
+    ]);
+  }
+
+  /* ---------- 4. Sacar un valor con return ---------- */
+  var z4 = crearZonas($("p4-zonas"));
+  var p4Version = 0;
+  var p4Hechos = {};
+  var VERSIONES_P4 = [
+    { cuerpo: "    " + tk("variable", "puntos") + " = " + tk("variable", "puntos") + " + " + tk("numero", "1"),
+      llamada: tk("funcion", "subir") + "(" + tk("variable", "puntos") + ")" },
+    { cuerpo: "    " + tk("palabra", "return") + " " + tk("variable", "puntos") + " + " + tk("numero", "1"),
+      llamada: tk("variable", "puntos") + " = " + tk("funcion", "subir") + "(" + tk("variable", "puntos") + ")" }
+  ];
+
+  function pintarVersionP4() {
+    $("p4-cuerpo").innerHTML = VERSIONES_P4[p4Version].cuerpo;
+    $("p4-llamada").innerHTML = VERSIONES_P4[p4Version].llamada;
+    document.querySelectorAll("[data-p4]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.getAttribute("data-p4")) === p4Version));
+    });
+  }
+
+  function trazaSacar() {
+    var inicio = [
+      { linea: 3, texto: "Nace <strong>puntos</strong> en el programa, con 10.", estado: { prog: [["puntos", 10]], fun: null } },
+      { linea: 4, texto: "Llama a <strong>subir(puntos)</strong> con el 10.", estado: { fun: [], leer: ["prog", "puntos"] } },
+      { linea: 0, texto: "Nace la <strong>puntos</strong> de dentro, con una copia del 10.", estado: { fun: [["puntos", 10]] } }
+    ];
+    var resto = p4Version === 0 ? [
+      { linea: 1, texto: "Suma 1 a la puntos de <strong>dentro</strong>: 11.", estado: { fun: [["puntos", 11]] } },
+      { linea: 4, texto: "La función termina <strong>sin return</strong>: el 11 se borra con su caja.", estado: { fun: null } },
+      { linea: 5, salida: "10", texto: "La puntos del programa nunca cambió: imprime 10.", estado: { leer: ["prog", "puntos"] } }
+    ] : [
+      { linea: 1, texto: "return 10 + 1 → <strong>11</strong>: entrega el 11 y la función termina.", estado: { fun: null } },
+      { linea: 4, texto: "El 11 que devolvió se guarda en la <strong>puntos del programa</strong>.", estado: { prog: [["puntos", 11]] } },
+      { linea: 5, salida: "11", texto: "Imprime 11.", estado: { leer: ["prog", "puntos"] } }
+    ];
+    return acumular(inicio.concat(resto));
+  }
+
+  function terminarP4() {
+    p4Hechos[p4Version] = true;
+    document.querySelector('[data-p4="' + p4Version + '"]').classList.add("hecho");
+    if (p4Hechos[0] && p4Hechos[1]) {
+      Pasos.feedback($("p4-fb"), "ok", "Cambiar la caja de dentro no sirve: se borra al volver. Para sacar un valor, devuélvelo con return y guárdalo fuera.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p4-fb"), "pista", p4Version === 0
+        ? "Imprimió 10, no 11: el punto se perdió. Ahora ejecuta la versión 2."
+        : "Ahora ejecuta la versión 1 y compara.");
+    }
+  }
+
+  /* ---------- 5. Reto ---------- */
+  var PISTAS_RETO = {
+    "14-14": "La nota de dentro sí llega a 14, pero la nota del programa es otra caja: nadie la cambió.",
+    "12-12": "subir devuelve la nota de dentro, y esa ya vale 12 + 2.",
+    "error": "No hay error: cada variable se usa en la zona donde existe. extra solo se usa dentro de subir."
+  };
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    if (marcada.value === "14-12") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! subir trabaja con su propia nota: la sube a 14 y la devuelve, que se guarda en nueva. La nota del programa sigue en 12.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  var trazaP1 = Traza.crear({
+    codigo: $("p1-codigo"),
+    explicacion: $("p1-explicacion"),
+    consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"),
+    reproducir: $("p1-reproducir"),
+    reiniciar: $("p1-reiniciar"),
+    generar: trazaNacen,
+    intervalo: 1400,
+    alReiniciar: function () {
+      vaciarZonas(z1);
+      Pasos.limpiarFeedback($("p1-fb"));
+    },
+    alPaso: conZonas(z1, $("p1-consola")),
+    alTerminar: function () {
+      Pasos.feedback($("p1-fb"), "ok", "precio, cantidad y suma nacieron al llamar a total() y se borraron al volver. Solo pagar sigue ahí.");
+      leccion.desbloquear();
+    }
+  });
+
+  pintarUltimaP2();
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaFuera,
+    intervalo: 1200,
+    repetible: true,
+    alReiniciar: function () {
+      p2Hechos = {};
+      document.querySelectorAll("[data-p2]").forEach(function (b) { b.classList.remove("hecho"); });
+      vaciarZonas(z2);
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: conZonas(z2, $("p2-consola")),
+    alTerminar: terminarP2
+  });
+  document.querySelectorAll("[data-p2]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      p2Ultima = b.getAttribute("data-p2");
+      trazaP2.cancelar();
+      vaciarZonas(z2);
+      pintarUltimaP2();
+    });
+  });
+
+  Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaMismo,
+    alReiniciar: function () {
+      vaciarZonas(z3);
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: conZonas(z3, $("p3-consola")),
+    alTerminar: function () {
+      Pasos.feedback($("p3-fb"), "ok", "Mismo nombre, dos cajas: la x de la función nace con una copia y se borra al volver. La x del programa no cambia.");
+      leccion.desbloquear();
+    }
+  });
+
+  pintarVersionP4();
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaSacar,
+    intervalo: 1200,
+    repetible: true,
+    alReiniciar: function () {
+      p4Hechos = {};
+      document.querySelectorAll("[data-p4]").forEach(function (b) { b.classList.remove("hecho"); });
+      vaciarZonas(z4);
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: conZonas(z4, $("p4-consola")),
+    alTerminar: terminarP4
+  });
+  document.querySelectorAll("[data-p4]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      p4Version = Number(b.getAttribute("data-p4"));
+      trazaP4.cancelar();
+      vaciarZonas(z4);
+      pintarVersionP4();
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() { trazaP1.detener(); trazaP2.detener(); trazaP4.detener(); }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-nacen": pausar,
+      "paso-fuera": pausar,
+      "paso-mismo": pausar,
+      "paso-sacar": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
