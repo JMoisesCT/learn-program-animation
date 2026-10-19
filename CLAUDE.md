@@ -50,6 +50,7 @@ Tema de 7 lecciones (`Funciones 1/7` … `7/7`), en `lecciones/funciones/<sublec
 Fuera de alcance por ahora: recursión, `lambda`, `*args`, docstrings.
 
 ## Convenciones de trabajo
+- Al empezar una sesión, leer `PENDIENTES.md` (qué quedó por hacer y registro de cambios); al terminar, apuntar ahí lo hecho y lo que convendría continuar.
 - Reutilizar `base.css` y las utilidades de `assets/js/` antes de crear estilos o scripts nuevos.
 - Tarjetas interactivas: `<div class="tarjeta lab">` con hasta tres grupos: `lab__principal` (código y controles), `lab__visual` (cajas, escenas) y `lab__resultado` (salida, notas, feedback). En escritorio (≥1024px) se reparten en dos columnas; en móvil se apilan en el orden del HTML, así que ese orden debe ser el que se quiere ver en el móvil.
 - Una lección nueva = su carpeta + su entrada en `index.html`, en su lugar según el orden de lecciones: una tarjeta si es un tema nuevo, o un `<li data-leccion>` dentro de la lista `sublecciones` de su tema si es una sublección. Si un tema de una sola lección gana su primera sublección, su tarjeta pasa a ser `tarjeta-tema` y la lección original queda como la 1.
