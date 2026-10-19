@@ -14,6 +14,10 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles (for, range y while) → Contar y acumular → Decidir en cada vuelta → Recorrer un texto → Salir antes: break y continue → Bucles anidados → Dibujar patrones → Proyecto: adivina el número → Funciones (def, parámetros y return) → Funciones de Python → Varios parámetros → Funciones que deciden → Variables locales → Funciones que usan funciones → Proyecto: piedra, papel o tijera → (Listas, próximamente).
 - La pantalla en casillas donde `print()` dibuja patrones (cursor, espacios visibles, comparar con un objetivo) está en `assets/js/lienzo.js` (`Lienzo.crear`).
 - La consola que pide un dato en cada vuelta de un bucle (`input()` dentro de un `for` o de un `while True` con `break`) está en `assets/js/bucle-input.js` (`BucleInput.crear`).
+- Al ejecutar línea a línea (`Traza`), la flecha de salto (`Codigo.salto`) se dibuja sola cuando la ejecución vuelve arriba (otra vuelta, una llamada); en un paso de la traza, `flecha: true / false` la fuerza o la evita (p. ej. `true` al volver de una función).
+- `Caja.poner` hace viajar el valor desde la línea activa del paso hasta la caja, y `Traza` hace lo mismo con la salida de `print` hacia la consola (`Codigo.volarDesdeLinea`): basta con marcar la línea antes de poner el valor.
+- Las opciones que son código (`.opciones--codigo`, `.version__codigo`) se colorean y marcan lo que cambia entre ellas con `assets/js/opciones-codigo.js`; incluirlo en la lección.
+- `Pasos` lanza confeti al acertar un «Comprobar», al desbloquear un paso «Reto» y en el resumen final (`Pasos.confeti(el)` para otros casos).
 - Ejemplos con notas: escala de 0 a 20, se aprueba con 11 o más.
 - Rutas relativas siempre (el sitio vive bajo `/learn-program-animation/` en GitHub Pages).
 - Accesible: contraste suficiente, navegable con teclado, `prefers-reduced-motion` respetado, funciona en móvil.
