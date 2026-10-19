@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: piedra, papel o tijera · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Funciones: construir por partes en Python el juego de piedra, papel o tijera con funciones que devuelven valores, random.randint, if / elif, while True, break y un marcador.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+
+    /* ---------- Consola que espera respuestas ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 7rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+    /* Atajos: escriben la jugada en el campo y la envían */
+    .jugadas { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: var(--esp-3); font-family: var(--fuente); }
+    .jugadas .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-size: var(--texto-sm); }
+
+    /* ---------- El duelo: tu jugada contra la del PC ---------- */
+    .duelo { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--esp-3); }
+    .duelo__lado { display: grid; justify-items: center; gap: var(--esp-1); padding: var(--esp-3) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), opacity var(--dur), background-color var(--dur); }
+    .duelo__quien { font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .duelo__mano { font-size: 2.75rem; line-height: 1.1; }
+    .duelo__mano--entra { animation: mano-entra 480ms var(--curva-rebote) both; }
+    .duelo__nombre { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); color: var(--tipo-str); min-height: 1.5em; }
+    .duelo__vs { font-weight: 700; color: var(--color-texto-suave); }
+    .duelo__lado--gana { border-color: var(--color-acento); background: var(--color-acento-suave); }
+    .duelo__lado--pierde { opacity: 0.6; }
+    .duelo__resultado { min-height: 1.6em; margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; }
+    .duelo__resultado--tu { color: var(--color-ok); }
+    .duelo__resultado--pc { color: var(--color-texto-suave); }
+    @keyframes mano-entra { from { transform: scale(0.3) rotate(-25deg); opacity: 0; } }
+    .tablero { display: flex; justify-content: center; align-items: baseline; gap: var(--esp-3); margin: var(--esp-3) 0 0; font-weight: 700; color: var(--color-texto-suave); }
+    .tablero strong { font-family: var(--fuente-codigo); font-size: var(--texto-xl); color: var(--color-texto); }
+    .tablero strong.tablero--cambio { animation: valor-pulso 300ms ease-out; color: var(--color-acento); }
+
+    /* ---------- Variables del programa ---------- */
+    .vars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-1) var(--esp-3); max-width: 15rem; margin: var(--esp-4) auto 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .vars dt { font-weight: 700; color: var(--color-azul); }
+    .vars dd { margin: 0; font-weight: 700; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .vars dd.vars--valor { color: var(--color-azul); }
+    .vars dd.vars--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Opciones y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__etiqueta { font-family: var(--fuente-codigo); overflow-wrap: anywhere; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* ---------- Parte 3: las reglas y la tabla de resultados ---------- */
+    .reglas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: 0 0 var(--esp-4); padding: 0; list-style: none; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .reglas strong { color: var(--color-texto); }
+    .elegir-reglas { display: grid; gap: var(--esp-2); margin: 0 0 var(--esp-4); padding: 0; border: 0; }
+    .elegir-reglas legend { padding: 0; margin-bottom: var(--esp-2); font-weight: 600; }
+    .elegir-reglas label { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2) var(--esp-3); }
+    .elegir-reglas select { font: inherit; font-family: var(--fuente-codigo); font-weight: 700; min-height: 2.5rem; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--tipo-str); }
+    .elegir-reglas select:focus-visible { border-color: var(--color-azul); border-radius: var(--radio-sm); }
+    .tabla-wrap { overflow-x: auto; margin-top: var(--esp-4); }
+    .tabla { margin: 0 auto; border-collapse: separate; border-spacing: 0.2rem; font-size: var(--texto-sm); }
+    .tabla caption { margin-bottom: var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tabla th { padding: var(--esp-1) var(--esp-2); font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .tabla th[scope="row"] { text-align: right; }
+    .tabla td { min-width: 4.5rem; padding: var(--esp-2); text-align: center; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-family: var(--fuente-codigo); font-weight: 700; background: var(--color-superficie); transition: background-color var(--dur), border-color var(--dur), color var(--dur); }
+    .tabla td.res--tu { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .tabla td.res--pc { background: var(--color-superficie-2); color: #4b5563; }
+    .tabla td.res--empate { color: var(--color-texto-suave); }
+    .tabla td.res--mal { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); animation: sacudir 360ms ease; }
+    .tabla td.res--cambio { animation: valor-pulso 300ms ease-out; }
+    .tabla__esquina { font-family: var(--fuente); font-size: var(--texto-xs); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+      .duelo { gap: var(--esp-2); }
+      .duelo__mano { font-size: 2.25rem; }
+      .tabla td { min-width: 0; padding: var(--esp-2) 0.15rem; font-size: 0.8rem; }
+      .tabla th { padding: var(--esp-1) 0.1rem; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Lo que vamos a construir -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="t-demo">
+      <span class="paso__etiqueta">Funciones 7/7 · Proyecto</span>
+      <h1 class="paso__titulo" id="t-demo">Proyecto: piedra, papel o tijera</h1>
+      <p>Vas a programar el juego de siempre contra el ordenador: <strong>la piedra rompe la tijera, la tijera corta el papel y el papel envuelve a la piedra</strong>. Primero, juega unas rondas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="d-registro" aria-live="polite"></div>
+            <div id="d-fila">
+              <div class="entrada">
+                <label for="d-campo">Tu jugada:</label>
+                <input type="text" id="d-campo" maxlength="7" autocomplete="off" spellcheck="false" autocapitalize="none">
+                <button type="button" class="btn btn-secundario" id="d-enviar">Enviar ⏎</button>
+              </div>
+              <div class="jugadas" role="group" aria-label="Escribir una jugada">
+                <button type="button" class="btn btn-secundario" data-jugada="piedra">✊ piedra</button>
+                <button type="button" class="btn btn-secundario" data-jugada="papel">✋ papel</button>
+                <button type="button" class="btn btn-secundario" data-jugada="tijera">✌️ tijera</button>
+                <button type="button" class="btn btn-secundario" data-jugada="salir">salir</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Otra partida</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="d-vuelta" aria-live="polite"></p>
+          <div class="duelo" id="d-duelo"></div>
+          <p class="duelo__resultado" id="d-resultado" aria-live="polite"></p>
+          <p class="tablero" id="d-tablero"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: del número al texto -->
+    <section class="paso" id="paso-texto" data-comprobar aria-labelledby="t-texto">
+      <span class="paso__etiqueta">Parte 1 de 4</span>
+      <h2 class="paso__titulo" id="t-texto">Del número al texto</h2>
+      <p>El ordenador elegirá un número del 1 al 3. Hace falta una función que lo traduzca: 1 es <code>"piedra"</code>, 2 es <code>"papel"</code> y 3 es <code>"tijera"</code>. ¿Cuál <strong>devuelve</strong> bien el texto?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">¿Qué función traduce bien el número?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="print"><span>def numero_a_texto(n):
+    if n == 1:
+        print("piedra")
+    elif n == 2:
+        print("papel")
+    else:
+        print("tijera")</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="comillas"><span>def numero_a_texto(n):
+    if n == 1:
+        return piedra
+    elif n == 2:
+        return papel
+    else:
+        return tijera</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>def numero_a_texto(n):
+    if n == 1:
+        return "piedra"
+    elif n == 2:
+        return "papel"
+    else:
+        return "tijera"</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="sin-tijera"><span>def numero_a_texto(n):
+    if n == 1:
+        return "piedra"
+    elif n == 2:
+        return "papel"</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: la jugada del PC -->
+    <section class="paso" id="paso-pc" data-comprobar aria-labelledby="t-pc">
+      <span class="paso__etiqueta">Parte 2 de 4</span>
+      <h2 class="paso__titulo" id="t-pc">La jugada del PC</h2>
+      <p><code>jugada_pc()</code> no recibe nada: elige un número con <code>random.randint(1, 3)</code> y lo traduce con <code>numero_a_texto</code>, la función de la parte 1. ¿Cuál está bien? La llamaremos tres veces.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">¿Qué versión de jugada_pc está bien?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="numero"><span>def jugada_pc():
+    n = random.randint(1, 3)
+    return n</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>def jugada_pc():
+    n = random.randint(1, 3)
+    return numero_a_texto(n)</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="sin-return"><span>def jugada_pc():
+    n = random.randint(1, 3)
+    numero_a_texto(n)</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="fija"><span>def jugada_pc():
+    n = random.randint(1, 3)
+    return numero_a_texto(1)</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: quién gana -->
+    <section class="paso" id="paso-gana" data-comprobar aria-labelledby="t-gana">
+      <span class="paso__etiqueta">Parte 3 de 4</span>
+      <h2 class="paso__titulo" id="t-gana">¿Quién gana?</h2>
+      <p><code>quien_gana(tu, pc)</code> devuelve <code>"empate"</code>, <code>"tú"</code> o <code>"pc"</code>. Completa las tres reglas y mira la tabla con las 9 partidas posibles.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <ul class="reglas" aria-label="Reglas del juego">
+            <li>✊ <strong>piedra</strong> rompe ✌️ tijera</li>
+            <li>✌️ <strong>tijera</strong> corta ✋ papel</li>
+            <li>✋ <strong>papel</strong> envuelve ✊ piedra</li>
+          </ul>
+          <fieldset class="elegir-reglas">
+            <legend>¿A qué le gana cada jugada?</legend>
+            <label><span>Con <code>"piedra"</code> ganas si pc es</span>
+              <select data-regla="piedra"><option value="">?</option><option value="piedra">"piedra"</option><option value="papel">"papel"</option><option value="tijera">"tijera"</option></select></label>
+            <label><span>Con <code>"papel"</code> ganas si pc es</span>
+              <select data-regla="papel"><option value="">?</option><option value="piedra">"piedra"</option><option value="papel">"papel"</option><option value="tijera">"tijera"</option></select></label>
+            <label><span>Con <code>"tijera"</code> ganas si pc es</span>
+              <select data-regla="tijera"><option value="">?</option><option value="piedra">"piedra"</option><option value="papel">"papel"</option><option value="tijera">"tijera"</option></select></label>
+          </fieldset>
+          <pre class="codigo" aria-label="Función quien_gana"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">quien_gana</span>(<span class="tk-variable">tu</span>, <span class="tk-variable">pc</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">tu</span> == <span class="tk-variable">pc</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"empate"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">tu</span> == <span class="tk-texto">"piedra"</span> <span class="tk-palabra">and</span> <span class="tk-variable">pc</span> == <span class="hueco" data-hueco="piedra">?</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"tú"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">tu</span> == <span class="tk-texto">"papel"</span> <span class="tk-palabra">and</span> <span class="tk-variable">pc</span> == <span class="hueco" data-hueco="papel">?</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"tú"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">tu</span> == <span class="tk-texto">"tijera"</span> <span class="tk-palabra">and</span> <span class="tk-variable">pc</span> == <span class="hueco" data-hueco="tijera">?</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"tú"</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"pc"</span></span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <div class="tabla-wrap">
+            <table class="tabla" id="p3-tabla">
+              <caption>quien_gana(tu, pc)</caption>
+              <thead><tr><th class="tabla__esquina" scope="col">tu \ pc</th><th scope="col">"piedra"</th><th scope="col">"papel"</th><th scope="col">"tijera"</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: el bucle y el marcador -->
+    <section class="paso" id="paso-marcador" data-comprobar aria-labelledby="t-marcador">
+      <span class="paso__etiqueta">Parte 4 de 4</span>
+      <h2 class="paso__titulo" id="t-marcador">El marcador</h2>
+      <p>El programa principal repite rondas hasta que escribes <code>salir</code>. Falta sumar los puntos. Probamos tres rondas: <strong>ganas</strong>, <strong>empatas</strong> y <strong>pierdes</strong>. ¿Qué va en el hueco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">puntos_tu</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-variable">puntos_pc</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="tk-variable">tu</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Tu jugada: "</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">tu</span> == <span class="tk-texto">"salir"</span>:</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea">    <span class="tk-variable">pc</span> = <span class="tk-funcion">jugada_pc</span>()</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"El PC eligió <span class="tk-llave">{</span><span class="tk-variable">pc</span><span class="tk-llave">}</span>"</span>)</span><span class="linea">    <span class="tk-variable">ganador</span> = <span class="tk-funcion">quien_gana</span>(<span class="tk-variable">tu</span>, <span class="tk-variable">pc</span>)</span><span class="linea"><span class="hueco" id="p4-hueco">?</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Tú <span class="tk-llave">{</span><span class="tk-variable">puntos_tu</span><span class="tk-llave">}</span> - <span class="tk-llave">{</span><span class="tk-variable">puntos_pc</span><span class="tk-llave">}</span> PC"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">¿Qué va en el hueco?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="else"><span>    if ganador == "tú":
+        puntos_tu += 1
+    else:
+        puntos_pc += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="funcion"><span>    if quien_gana == "tú":
+        puntos_tu += 1
+    elif quien_gana == "pc":
+        puntos_pc += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>    if ganador == "tú":
+        puntos_tu += 1
+    elif ganador == "pc":
+        puntos_pc += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="sin-if"><span>    puntos_tu += 1
+    puntos_pc += 1</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Salida"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: el juego completo -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="t-jugar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-jugar">¡Tu juego funciona!</h2>
+      <p>Este es tu programa principal; las tres funciones ya están arriba. Juega hasta cumplir las <strong>tres misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="t-codigo" aria-label="Tu programa principal"><code id="t-codigo-lineas"></code></pre>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="t-registro" aria-live="polite"></div>
+            <div id="t-fila">
+              <div class="entrada">
+                <label for="t-campo">Tu jugada:</label>
+                <input type="text" id="t-campo" maxlength="7" autocomplete="off" spellcheck="false" autocapitalize="none">
+                <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+              </div>
+              <div class="jugadas" role="group" aria-label="Escribir una jugada">
+                <button type="button" class="btn btn-secundario" data-jugada="piedra">✊ piedra</button>
+                <button type="button" class="btn btn-secundario" data-jugada="papel">✋ papel</button>
+                <button type="button" class="btn btn-secundario" data-jugada="tijera">✌️ tijera</button>
+                <button type="button" class="btn btn-secundario" data-jugada="salir">salir</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Otra partida</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div class="duelo" id="t-duelo"></div>
+          <p class="duelo__resultado" id="t-resultado" aria-live="polite"></p>
+          <dl class="vars" id="t-vars" aria-label="Variables"></dl>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="gana">Gana una ronda</li>
+            <li data-mision="empate">Empata una ronda</li>
+            <li data-mision="salir">Termina la partida con «salir»</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Tres funciones pequeñas, cada una con una sola tarea, y un bucle que las combina: así se construyen los programas grandes.</p>
+        <ul class="usado" aria-label="Lo que has usado">
+          <li>def</li><li>return</li><li>una función dentro de otra</li><li>random.randint()</li><li>if / elif / else</li><li>and</li><li>while True</li><li>input()</li><li>break</li><li>+= 1</li><li>f-strings</li>
+        </ul>
+        <pre class="codigo resumen-codigo" aria-label="Tu programa completo"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  var JUGADAS = ["piedra", "papel", "tijera"];
+  var MANOS = { piedra: "✊", papel: "✋", tijera: "✌️" };
+  // A qué le gana cada jugada, y con qué verbo
+  var GANA_A = { piedra: "tijera", papel: "piedra", tijera: "papel" };
+  var VERBO = { piedra: "rompe la tijera", papel: "envuelve a la piedra", tijera: "corta el papel" };
+
+  function texto(s) { return '"' + s + '"'; }
+
+  function quienGana(tu, pc) {
+    if (tu === pc) return "empate";
+    return GANA_A[tu] === pc ? "tú" : "pc";
+  }
+
+  function alAzar() { return JUGADAS[Math.floor(Math.random() * 3)]; }
+
+  /* ---------- El programa, línea a línea ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function com(t) { return '<span class="tk-comentario">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+  function fs(t) { return '<span class="tk-prefijo">f</span>' + s(t); }
+
+  var FUNCIONES = [
+    kw("def") + " " + f("numero_a_texto") + "(" + v("n") + "):",
+    "    " + kw("if") + " " + v("n") + " == " + n("1") + ":",
+    "        " + kw("return") + " " + s('"piedra"'),
+    "    " + kw("elif") + " " + v("n") + " == " + n("2") + ":",
+    "        " + kw("return") + " " + s('"papel"'),
+    "    " + kw("else") + ":",
+    "        " + kw("return") + " " + s('"tijera"'),
+    "",
+    kw("def") + " " + f("jugada_pc") + "():",
+    "    " + v("n") + " = " + v("random") + "." + f("randint") + "(" + n("1") + ", " + n("3") + ")",
+    "    " + kw("return") + " " + f("numero_a_texto") + "(" + v("n") + ")",
+    "",
+    kw("def") + " " + f("quien_gana") + "(" + v("tu") + ", " + v("pc") + "):",
+    "    " + kw("if") + " " + v("tu") + " == " + v("pc") + ":",
+    "        " + kw("return") + " " + s('"empate"'),
+    "    " + kw("elif") + " " + v("tu") + " == " + s('"piedra"') + " " + kw("and") + " " + v("pc") + " == " + s('"tijera"') + ":",
+    "        " + kw("return") + " " + s('"tú"'),
+    "    " + kw("elif") + " " + v("tu") + " == " + s('"papel"') + " " + kw("and") + " " + v("pc") + " == " + s('"piedra"') + ":",
+    "        " + kw("return") + " " + s('"tú"'),
+    "    " + kw("elif") + " " + v("tu") + " == " + s('"tijera"') + " " + kw("and") + " " + v("pc") + " == " + s('"papel"') + ":",
+    "        " + kw("return") + " " + s('"tú"'),
+    "    " + kw("else") + ":",
+    "        " + kw("return") + " " + s('"pc"'),
+    ""
+  ];
+
+  var PRINCIPAL = [
+    v("puntos_tu") + " = " + n("0"),
+    v("puntos_pc") + " = " + n("0"),
+    kw("while") + " " + kw("True") + ":",
+    "    " + v("tu") + " = " + f("input") + "(" + s('"Tu jugada: "') + ")",
+    "    " + kw("if") + " " + v("tu") + " == " + s('"salir"') + ":",
+    "        " + kw("break"),
+    "    " + v("pc") + " = " + f("jugada_pc") + "()",
+    "    " + f("print") + "(" + fs('"El PC eligió ' + llave("pc") + '"') + ")",
+    "    " + v("ganador") + " = " + f("quien_gana") + "(" + v("tu") + ", " + v("pc") + ")",
+    "    " + kw("if") + " " + v("ganador") + " == " + s('"tú"') + ":",
+    "        " + v("puntos_tu") + " += " + n("1"),
+    "    " + kw("elif") + " " + v("ganador") + " == " + s('"pc"') + ":",
+    "        " + v("puntos_pc") + " += " + n("1"),
+    "    " + f("print") + "(" + fs('"Tú ' + llave("puntos_tu") + " - " + llave("puntos_pc") + ' PC"') + ")",
+    f("print") + "(" + s('"¡Gracias por jugar!"') + ")"
+  ];
+
+  function pintarLineas(code, lineas, hechas) {
+    code.innerHTML = lineas.map(function (h, i) {
+      return '<span class="linea' + (hechas && hechas.indexOf(i) !== -1 ? " linea--hecha" : "") + '">' + h + "</span>";
+    }).join("");
+  }
+
+  /* Pinta una lista de pruebas: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = crear("li", p.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "prueba__etiqueta", p.etiqueta));
+      li.appendChild(crear("span", "prueba__salida", p.salida));
+      li.appendChild(crear("span", "prueba__marca", p.ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* ---------- Pasos de elegir una opción (partes 1, 2 y 4) ----------
+     cfg: { id, nombre, correcta, hueco (opcional), probar(valor) → filas, ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiarMarcas() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiarMarcas();
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      if (cfg.hueco) $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiarMarcas();
+        lista.hidden = true;
+        Pasos.limpiarFeedback(fb);
+        if (cfg.hueco) $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- El juego en marcha (pasos 1 y 6) ----------
+     o: { prefijo, vars (dl o null), desplazar (líneas que hay en el código antes de PRINCIPAL),
+          alRonda(ganador, partida), alTerminar(partida) } */
+  function crearDuelo(el) {
+    el.innerHTML = "";
+    var lados = {};
+    [["tu", "Tú"], ["pc", "PC"]].forEach(function (par, k) {
+      if (k === 1) el.appendChild(crear("span", "duelo__vs", "vs"));
+      var lado = crear("div", "duelo__lado");
+      lado.appendChild(crear("span", "duelo__quien", par[1]));
+      var mano = crear("span", "duelo__mano", "❔");
+      mano.setAttribute("aria-hidden", "true");
+      lado.appendChild(mano);
+      lado.appendChild(crear("code", "duelo__nombre", ""));
+      el.appendChild(lado);
+      lados[par[0]] = lado;
+    });
+    return lados;
+  }
+
+  function pintarLado(lado, jugada, clase) {
+    var mano = lado.querySelector(".duelo__mano");
+    mano.textContent = jugada ? MANOS[jugada] : "❔";
+    mano.classList.remove("duelo__mano--entra");
+    if (jugada) {
+      void mano.offsetWidth;
+      mano.classList.add("duelo__mano--entra");
+    }
+    lado.querySelector(".duelo__nombre").textContent = jugada ? texto(jugada) : "";
+    lado.classList.toggle("duelo__lado--gana", clase === "gana");
+    lado.classList.toggle("duelo__lado--pierde", clase === "pierde");
+  }
+
+  function crearJuego(o) {
+    var p = o.prefijo;
+    var lados = crearDuelo($(p + "-duelo"));
+    var resultado = $(p + "-resultado");
+    var tablero = $(p + "-tablero");
+    var partida = {};
+    var d = o.desplazar || 0;
+
+    function lineas(lista) { return lista.map(function (i) { return i + d; }); }
+
+    function pintarTablero(cambia) {
+      if (!tablero) return;
+      tablero.innerHTML = "Tú <strong></strong> – <strong></strong> PC";
+      var nums = tablero.querySelectorAll("strong");
+      nums[0].textContent = partida.puntosTu;
+      nums[1].textContent = partida.puntosPc;
+      if (cambia === "tú") nums[0].classList.add("tablero--cambio");
+      if (cambia === "pc") nums[1].classList.add("tablero--cambio");
+    }
+
+    function pintarVars(cambia) {
+      if (!o.vars) return;
+      o.vars.innerHTML = "";
+      [["tu", partida.tu === undefined ? undefined : texto(partida.tu)],
+       ["pc", partida.pc === undefined ? undefined : texto(partida.pc)],
+       ["ganador", partida.ganador === undefined ? undefined : texto(partida.ganador)],
+       ["puntos_tu", partida.puntosTu], ["puntos_pc", partida.puntosPc]].forEach(function (par) {
+        var dt = crear("dt", "", par[0]);
+        var dd = crear("dd", "", par[1] === undefined ? "—" : String(par[1]));
+        if (par[1] !== undefined) dd.className = "vars--valor" + (cambia.indexOf(par[0]) !== -1 ? " vars--cambio" : "");
+        o.vars.appendChild(dt);
+        o.vars.appendChild(dd);
+      });
+    }
+
+    function marcador() { return "Tú " + partida.puntosTu + " - " + partida.puntosPc + " PC"; }
+
+    BucleInput.crear({
+      prefijo: p,
+      vueltas: null,
+      rotulo: "Ronda",
+      pregunta: "Tu jugada:",
+      lineaInput: 3 + d,
+      siguiente: "Elige tu siguiente jugada.",
+      validar: function (t) {
+        return JUGADAS.indexOf(t) !== -1 || t === "salir" ? null : "Escribe piedra, papel, tijera o salir, en minúsculas.";
+      },
+      alEmpezar: function () {
+        partida = { puntosTu: 0, puntosPc: 0, rondas: 0, ganadas: 0, empates: 0 };
+        pintarLado(lados.tu, null);
+        pintarLado(lados.pc, null);
+        resultado.textContent = "";
+        resultado.className = "duelo__resultado";
+        pintarTablero();
+        pintarVars(["puntos_tu", "puntos_pc"]);
+        return "<strong>puntos_tu</strong> y <strong>puntos_pc</strong> empiezan en 0.";
+      },
+      alDato: function (t) {
+        if (t === "salir") {
+          partida.tu = t;
+          partida.salio = true;
+          pintarVars(["tu"]);
+          return {
+            texto: "<code>tu == \"salir\"</code> es True: <code>break</code> termina el bucle.",
+            camino: { activas: lineas([3, 4, 5]), saltadas: lineas([6, 7, 8, 9, 10, 11, 12, 13]) },
+            fin: true
+          };
+        }
+        var pc = alAzar();
+        var g = quienGana(t, pc);
+        partida.tu = t;
+        partida.pc = pc;
+        partida.ganador = g;
+        partida.rondas++;
+        if (g === "tú") { partida.puntosTu++; partida.ganadas++; }
+        else if (g === "pc") partida.puntosPc++;
+        else partida.empates++;
+        pintarLado(lados.tu, t, g === "tú" ? "gana" : g === "pc" ? "pierde" : "");
+        pintarLado(lados.pc, pc, g === "pc" ? "gana" : g === "tú" ? "pierde" : "");
+        resultado.textContent = g === "tú" ? "¡Ganas! " + MANOS[t] + " " + VERBO[t] + "." :
+          g === "pc" ? "Gana el PC: " + MANOS[pc] + " " + VERBO[pc] + "." : "Empate: los dos eligieron " + t + ".";
+        resultado.className = "duelo__resultado" + (g === "tú" ? " duelo__resultado--tu" : g === "pc" ? " duelo__resultado--pc" : "");
+        pintarTablero(g);
+        var cambia = ["tu", "pc", "ganador"];
+        if (g === "tú") cambia.push("puntos_tu");
+        if (g === "pc") cambia.push("puntos_pc");
+        pintarVars(cambia);
+        var caminos = {
+          "tú": { activas: lineas([3, 4, 6, 7, 8, 9, 10, 13]), saltadas: lineas([5, 11, 12]) },
+          "pc": { activas: lineas([3, 4, 6, 7, 8, 9, 11, 12, 13]), saltadas: lineas([5, 10]) },
+          "empate": { activas: lineas([3, 4, 6, 7, 8, 9, 11, 13]), saltadas: lineas([5, 10, 12]) }
+        };
+        var suma = g === "tú" ? "+1 para ti." : g === "pc" ? "+1 para el PC." : "nadie suma.";
+        if (o.alRonda) o.alRonda(g, partida);
+        return {
+          texto: "jugada_pc() devolvió <code>" + texto(pc) + "</code> y quien_gana devolvió <code>" + texto(g) + "</code>: " + suma,
+          camino: caminos[g],
+          salida: ["El PC eligió " + pc, marcador()]
+        };
+      },
+      alFinal: function () {
+        return { linea: 14 + d, texto: "Fin de la partida.", salida: "¡Gracias por jugar!" };
+      },
+      alTerminar: function () { o.alTerminar(partida); }
+    });
+
+    // Los atajos escriben la jugada y la envían, como si se tecleara
+    document.querySelectorAll("#" + p + "-fila [data-jugada]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $(p + "-campo").value = b.getAttribute("data-jugada");
+        $(p + "-enviar").click();
+      });
+    });
+  }
+
+  /* ---------- 1. Demo ---------- */
+  var demoLista = false;
+
+  function desbloquearDemo() {
+    if (demoLista) return;
+    demoLista = true;
+    leccion.desbloquear();
+  }
+
+  crearJuego({
+    prefijo: "d",
+    vars: null,
+    alRonda: function (g, partida) {
+      if (partida.rondas >= 3) {
+        Pasos.feedback($("d-fb"), "ok", "¡Ya sabes cómo funciona! Sigue jugando si quieres, o escribe salir. Luego lo construimos en cuatro partes.");
+        desbloquearDemo();
+      }
+    },
+    alTerminar: function (partida) {
+      if (!partida.rondas) {
+        Pasos.feedback($("d-fb"), "pista", "Saliste sin jugar ninguna ronda. Pulsa «Otra partida» y juega unas cuantas.");
+        return;
+      }
+      Pasos.feedback($("d-fb"), "ok", "Partida terminada: tú " + partida.puntosTu + ", PC " + partida.puntosPc +
+        ". Así funcionará tu juego. Ahora lo construimos en cuatro partes.");
+      desbloquearDemo();
+    }
+  });
+
+  /* ---------- 2. Parte 1: del número al texto ---------- */
+  var parte1 = crearEleccion({
+    id: "paso-texto",
+    nombre: "p1",
+    correcta: "bien",
+    probar: function (valor) {
+      return [1, 2, 3].map(function (k) {
+        var bien = texto(JUGADAS[k - 1]);
+        var sale = valor === "bien" ? bien :
+          valor === "print" ? "None" :
+          valor === "comillas" ? "💥 NameError" :
+          k === 3 ? "None" : bien;
+        return { etiqueta: "numero_a_texto(" + k + ")", salida: sale, ok: sale === bien };
+      });
+    },
+    ok: "¡Bien! Cada camino del if devuelve su texto con return, y el else se encarga del 3.",
+    pistas: {
+      print: "Esta función escribe el texto en pantalla, pero no lo devuelve: devuelve None. El programa necesita guardarlo, así que usa return.",
+      comillas: "Sin comillas, piedra es el nombre de una variable… que no existe: NameError. Los textos van entre comillas.",
+      "sin-tijera": "Con el 3 no entra en ningún camino y llega al final sin return: devuelve None. Falta el else para \"tijera\"."
+    }
+  });
+
+  /* ---------- 3. Parte 2: la jugada del PC ---------- */
+  function tresJugadas() {
+    var r = [alAzar(), alAzar(), alAzar()];
+    // Que no salgan las tres iguales: así se ve que cambia
+    if (r[0] === r[1] && r[1] === r[2]) r[2] = JUGADAS[(JUGADAS.indexOf(r[2]) + 1) % 3];
+    return r;
+  }
+
+  var parte2 = crearEleccion({
+    id: "paso-pc",
+    nombre: "p2",
+    correcta: "bien",
+    probar: function (valor) {
+      return tresJugadas().map(function (j, k) {
+        var fila = { etiqueta: "jugada_pc() · vez " + (k + 1) };
+        if (valor === "bien") { fila.salida = texto(j); fila.ok = true; }
+        else if (valor === "numero") { fila.salida = String(JUGADAS.indexOf(j) + 1); fila.ok = false; }
+        else if (valor === "sin-return") { fila.salida = "None"; fila.ok = false; }
+        else { fila.salida = k === 0 ? texto("piedra") : texto("piedra") + " otra vez"; fila.ok = k === 0; }
+        return fila;
+      });
+    },
+    ok: "¡Exacto! jugada_pc usa otra función: randint elige el número y numero_a_texto lo traduce. Lo que devuelve numero_a_texto, jugada_pc lo devuelve también.",
+    pistas: {
+      numero: "Devuelve el número (1, 2 o 3), no el texto. Falta traducirlo con numero_a_texto(n).",
+      "sin-return": "Llama a numero_a_texto, pero no devuelve lo que sale: sin return, jugada_pc devuelve None.",
+      fija: "Siempre traduce el 1: el PC juega piedra todas las veces. Hay que pasarle n, el número al azar."
+    }
+  });
+
+  /* ---------- 4. Parte 3: quién gana ---------- */
+  var reglas = { piedra: "", papel: "", tijera: "" };
+  var resueltaP3 = false;
+
+  function quienGanaAlumno(tu, pc) {
+    if (tu === pc) return "empate";
+    return reglas[tu] === pc ? "tú" : "pc";
+  }
+
+  function pintarTabla(revisar) {
+    var tbody = document.querySelector("#p3-tabla tbody");
+    var previas = {};
+    tbody.querySelectorAll("td").forEach(function (td) { previas[td.getAttribute("data-par")] = td.textContent; });
+    tbody.innerHTML = "";
+    var malas = [];
+    JUGADAS.forEach(function (tu) {
+      var tr = crear("tr");
+      var th = crear("th", "", texto(tu));
+      th.setAttribute("scope", "row");
+      tr.appendChild(th);
+      JUGADAS.forEach(function (pc) {
+        var par = tu + "-" + pc;
+        var r = quienGanaAlumno(tu, pc);
+        var td = crear("td", "res--" + (r === "tú" ? "tu" : r), texto(r));
+        td.setAttribute("data-par", par);
+        if (previas[par] !== undefined && previas[par] !== td.textContent) td.classList.add("res--cambio");
+        if (revisar && r !== quienGana(tu, pc)) {
+          td.classList.add("res--mal");
+          malas.push([tu, pc]);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    return malas;
+  }
+
+  function pintarHuecosP3() {
+    document.querySelectorAll("[data-hueco]").forEach(function (h) {
+      var valor = reglas[h.getAttribute("data-hueco")];
+      h.textContent = valor ? texto(valor) : "?";
+    });
+  }
+
+  function entrarGana() {
+    Pasos.limpiarFeedback($("p3-fb"));
+    pintarTabla(false);
+    if (resueltaP3) return;
+    leccion.listoParaComprobar(JUGADAS.every(function (j) { return reglas[j]; }));
+  }
+
+  function comprobarGana() {
+    var malas = pintarTabla(true);
+    if (!malas.length) {
+      resueltaP3 = true;
+      Pasos.feedback($("p3-fb"), "ok", "¡Las 9 partidas salen bien! Primero se mira el empate; luego, los tres casos en que ganas tú. Si no es ninguno, gana el PC.");
+      return true;
+    }
+    var tu = malas[0][0];
+    var pc = malas[0][1];
+    var debe = quienGana(tu, pc);
+    var gana = debe === "tú" ? tu : pc;
+    Pasos.feedback($("p3-fb"), "pista", "Con tu = " + texto(tu) + " y pc = " + texto(pc) + " debería ganar " +
+      (debe === "tú" ? "tú" : "el PC") + ": " + MANOS[gana] + " " + gana + " " + VERBO[gana] +
+      ". Revisa la regla de " + texto(tu) + ".");
+    return false;
+  }
+
+  document.querySelectorAll("[data-regla]").forEach(function (sel) {
+    sel.addEventListener("change", function () {
+      reglas[sel.getAttribute("data-regla")] = sel.value;
+      pintarHuecosP3();
+      pintarTabla(false);
+      Pasos.limpiarFeedback($("p3-fb"));
+      leccion.listoParaComprobar(JUGADAS.every(function (j) { return reglas[j]; }));
+    });
+  });
+
+  /* ---------- 5. Parte 4: el marcador ---------- */
+  var RONDAS_PRUEBA = [["piedra", "tijera"], ["papel", "papel"], ["tijera", "piedra"]];
+  var parte4 = crearEleccion({
+    id: "paso-marcador",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      var tu = 0, pc = 0, bTu = 0, bPc = 0;
+      return RONDAS_PRUEBA.map(function (r) {
+        var g = quienGana(r[0], r[1]);
+        if (g === "tú") bTu++;
+        if (g === "pc") bPc++;
+        if (valor === "bien") { tu = bTu; pc = bPc; }
+        else if (valor === "else") { if (g === "tú") tu++; else pc++; }
+        else if (valor === "sin-if") { tu++; pc++; }
+        var sale = "Tú " + tu + " - " + pc + " PC";
+        return { etiqueta: MANOS[r[0]] + " " + r[0] + " vs " + MANOS[r[1]] + " " + r[1], salida: sale, ok: sale === "Tú " + bTu + " - " + bPc + " PC" };
+      });
+    },
+    ok: "¡Eso es! Si ganas tú, sube tu marcador; si gana el PC, el suyo; y en un empate no suma nadie.",
+    pistas: {
+      "else": "Con else, todo lo que no sea «tú» suma al PC… ¡también los empates! Pregunta por \"pc\" con elif.",
+      funcion: "quien_gana sin paréntesis es la receta, no lo que devolvió: nunca es igual a \"tú\". Compara ganador, que guarda el resultado.",
+      "sin-if": "Sin if, los dos suben en todas las rondas, gane quien gane. Hay que preguntar quién ganó."
+    }
+  });
+
+  /* ---------- 6. El juego completo ---------- */
+  var misiones = {};
+  var juegoListo = false;
+  pintarLineas($("t-codigo-lineas"), [
+    kw("import") + " " + v("random"),
+    com("# las tres funciones de las partes 1 a 3 ✓")
+  ].concat(PRINCIPAL), [1]);
+  pintarLineas($("r-codigo-lineas"), [kw("import") + " " + v("random"), ""].concat(FUNCIONES, PRINCIPAL));
+
+  function cumplir(m) {
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  function comprobarMisiones(alFinal) {
+    var faltan = ["gana", "empate", "salir"].filter(function (m) { return !misiones[m]; });
+    if (!faltan.length) {
+      // La consola borra el mensaje en cada jugada: se vuelve a poner
+      Pasos.feedback($("t-fb"), "ok", "¡Misiones cumplidas! Tu juego elige al azar, decide quién gana, lleva el marcador y termina cuando quieres.");
+      if (!juegoListo) {
+        juegoListo = true;
+        leccion.desbloquear();
+      }
+      return;
+    }
+    if (!alFinal) return;
+    var pistas = {
+      gana: "Te falta ganar una ronda: sigue probando, el PC elige al azar.",
+      empate: "Te falta un empate: pasa cuando el PC elige lo mismo que tú. ¡Sigue probando!"
+    };
+    Pasos.feedback($("t-fb"), "pista", pistas[faltan[0]] + " Pulsa «Otra partida».");
+  }
+
+  // Encima del programa principal van dos líneas: import y el comentario
+  crearJuego({
+    prefijo: "t",
+    vars: $("t-vars"),
+    desplazar: 2,
+    alRonda: function (g) {
+      if (g === "tú") cumplir("gana");
+      if (g === "empate") cumplir("empate");
+      comprobarMisiones(false);
+    },
+    alTerminar: function (partida) {
+      if (partida.salio) cumplir("salir");
+      comprobarMisiones(true);
+    }
+  });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-texto": parte1.entrar,
+      "paso-pc": parte2.entrar,
+      "paso-gana": entrarGana,
+      "paso-marcador": parte4.entrar
+    },
+    comprobar: {
+      "paso-texto": parte1.comprobar,
+      "paso-pc": parte2.comprobar,
+      "paso-gana": comprobarGana,
+      "paso-marcador": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
