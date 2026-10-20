@@ -37,9 +37,9 @@
     var intervalo = o.intervalo || 800;
     var textoReproducir = o.reproducir ? o.reproducir.textContent : "";
     var inicio = o.reproducir
-      ? "Pulsa «Ejecutar línea» para ir paso a paso, o «" + textoReproducir.replace(/^[^\p{L}]+/u, "") +
+      ? "Toca «Ejecutar línea» para ir paso a paso, o «" + textoReproducir.replace(/^[^\p{L}]+/u, "") +
         "» para verlo seguido."
-      : "Pulsa «Ejecutar línea» para empezar.";
+      : "Toca «Ejecutar línea» para empezar.";
 
     function terminado() { return i >= pasos.length; }
 

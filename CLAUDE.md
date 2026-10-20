@@ -34,6 +34,7 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
 - Enseñar **haciendo**: manipular antes de leer. Sliders, arrastrar y soltar, botones "paso a paso", código editable con resultado en vivo.
 - Orden de cada lección: intuición visual → interacción guiada → pequeño reto → resumen de una línea.
 - Texto mínimo, frases cortas, vocabulario simple. Analogías cotidianas (cajas, semáforos, repetir una tarea).
+- Español neutro latinoamericano: tú (nunca vosotros), pretérito simple («dijiste», no «has dicho»), «computadora» y «la PC», «toca» para botones (no «pulsa»), «lugar» (no «sitio»), «cuenta regresiva», «espacio en blanco» para lo que el alumno completa en un ejercicio (no «hueco»).
 - El lenguaje que se enseña es **Python**: mostrar el código real en Python junto a la visualización, resaltando la línea que se ejecuta. (La lógica de las páginas sigue siendo JavaScript; la ejecución de Python se simula.)
 - Los retos tienen respuesta verificable en el navegador, sin servidor.
 - Usar solo lo que el alumno ya vio en lecciones anteriores. En particular, **nada de listas** (ni `[...]`, ni `for x in lista`, ni `random.choice`, ni `max`/`min`/`sum` sobre una lista, ni `return a, b`) hasta la lección de Listas.
