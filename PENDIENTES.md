@@ -33,6 +33,16 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-20 · Reanudar el proyecto de Funciones en la Parte 3
+
+Al volver a «Proyecto: piedra, papel o tijera» con el avance guardado en el paso `paso-gana` (Parte 3), la página lanzaba `TypeError: Cannot read properties of undefined (reading 'listoParaComprobar')` y el alumno quedaba atascado: «Comprobar» no se habilitaba nunca, ni siquiera al elegir las tres reglas.
+
+Causa: `entrarGana()` usaba la variable de fuera `var leccion = Pasos.iniciar({…})`, pero al reanudar `Pasos.iniciar` llama al `alEntrar` del paso guardado antes de devolver, así que `leccion` aún era `undefined` (y, como el error cortaba `Pasos.iniciar`, se quedaba así). Ahora `entrarGana(paso, leccion)` usa el argumento que recibe, como el resto de callbacks. El `change` de los `<select data-regla>` sigue usando la variable de fuera: corre después, cuando ya tiene valor.
+
+Se revisaron las demás lecciones: todos los `alEntrar` que llaman a `leccion.desbloquear()` o `leccion.listoParaComprobar()` usan ya el argumento. Un barrido con Playwright que abre las 25 lecciones reanudadas en cada uno de sus pasos (172 en total) no da ningún error.
+
+**Regla para lecciones nuevas:** dentro de una función usada como `alEntrar`, usar siempre el `leccion` que llega como argumento, nunca el que devuelve `Pasos.iniciar`.
+
 ### 2026-10-20 · Español neutro en todas las lecciones
 
 Revisión del texto visible (portada, 25 lecciones y `assets/js/`) para quitar rasgos del español de España:
