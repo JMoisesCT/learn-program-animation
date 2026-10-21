@@ -15,42 +15,6 @@
     .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
     .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
 
-    /* ---------- Pila de llamadas: una tarjeta por llamada ----------
-       La del programa queda abajo; cada llamada pone una encima
-       y cada return quita la de arriba. */
-    .pila { margin-top: var(--esp-4); }
-    .pila__titulo { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
-    .pila__marcos { display: flex; flex-direction: column-reverse; gap: var(--esp-2); }
-    .marco { padding: var(--esp-2) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); box-shadow: var(--sombra); transition: border-color var(--dur), opacity var(--dur), background-color var(--dur); }
-    .marco__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); }
-    .marco__titulo { margin: 0; font-weight: 700; color: var(--color-acento); }
-    .marco__titulo code { font-size: var(--texto-sm); }
-    .marco--programa .marco__titulo { font-size: var(--texto-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-azul); }
-    .marco__estado { font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
-    .marco__estado:empty { display: none; }
-    .marco__estado--devuelve { padding: 0.1em 0.6em; border-radius: 999px; background: var(--color-ok-suave); color: var(--color-ok); font-family: var(--fuente-codigo); animation: valor-pulso 300ms ease-out; }
-    .marco__vars { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: var(--esp-2); min-height: 1.9rem; }
-    .marco__vacia { align-self: center; font-size: var(--texto-xs); font-style: italic; color: var(--color-texto-suave); }
-    .marco--activo { border-color: var(--color-acento); }
-    .marco--esperando { opacity: 0.7; border-style: dashed; box-shadow: none; }
-    .marco--programa.marco--activo { border-color: var(--color-azul); }
-    .marco--entra { animation: marco-entra 420ms var(--curva-rebote) both; }
-    .marco--sale { animation: marco-sale 650ms ease-in both; }
-    @keyframes marco-entra { from { transform: translateY(-1.25rem) scale(0.94); opacity: 0; } }
-    @keyframes marco-sale {
-      30% { transform: translateY(-0.25rem); opacity: 1; }
-      to { transform: translateY(-1.5rem); opacity: 0; }
-    }
-
-    /* Una variable de la tarjeta: nombre y valor */
-    .var { display: inline-flex; align-items: stretch; border: 2px solid var(--color-azul); border-radius: 999px; overflow: hidden; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; background: var(--color-superficie); animation: aparecer var(--dur) ease both; transition: box-shadow var(--dur-rapida); }
-    .var__nombre { padding: 0.05em 0.55em; color: var(--color-azul); background: var(--color-azul-suave); }
-    .var__valor { padding: 0.05em 0.6em; color: var(--color-texto); max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .marco:not(.marco--programa) .var { border-color: var(--color-acento); }
-    .marco:not(.marco--programa) .var__nombre { color: var(--color-acento); background: var(--color-acento-suave); }
-    .var--cambio .var__valor { animation: valor-pulso 300ms ease-out; }
-    .var--leida { box-shadow: 0 0 0 4px rgba(31, 95, 214, 0.22); }
-
     /* ---------- Paso 2: tú decides qué hace Python ---------- */
     .decidir { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--esp-3); margin-top: var(--esp-4); }
     .decidir .btn { min-height: 3rem; padding: var(--esp-2) var(--esp-4); font-size: var(--texto-sm); line-height: 1.3; }
@@ -99,7 +63,6 @@
     .resumen-codigo { margin-top: var(--esp-5); }
 
     @media (max-width: 480px) {
-      .var { font-size: var(--texto-xs); }
       .letra { width: 2.1rem; height: 2.1rem; }
       .letras { gap: var(--esp-1); }
       .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
@@ -302,6 +265,7 @@
 <script src="../../../assets/js/progreso.js"></script>
 <script src="../../../assets/js/codigo.js"></script>
 <script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
 <script src="../../../assets/js/opciones-codigo.js"></script>
 <script src="../../../assets/js/pasos.js"></script>
 <script>
@@ -325,125 +289,12 @@
 
   var leccion; // se asigna al final, con Pasos.iniciar
 
-  /* ---------- Pila de llamadas ----------
-     Cada paso trae la pila completa, de abajo arriba:
-       { pila: [{ titulo: "Programa", vars: [["nota", 15.5]] },
-                { titulo: "promedio(14, 17)", vars: [["a", 14], …], devuelve: "15.5" }],
-         leer: [nivel, nombre] }
-     La tarjeta de arriba es la que trabaja; si trae devuelve, está terminando.
-     Las que desaparecen de la pila salen volando hacia arriba. */
-  function programa(vars) { return { titulo: "Programa", vars: vars || [] }; }
-  function llamada(titulo, vars, devuelve) { return { titulo: titulo, vars: vars || [], devuelve: devuelve }; }
-
-  function crearPila(el) {
-    var titulo = crear("p", "pila__titulo");
-    var cont = crear("div", "pila__marcos");
-    el.appendChild(titulo);
-    el.appendChild(cont);
-    return { titulo: titulo, cont: cont, marcos: [], saliendo: [] };
-  }
-
-  function crearMarco(datos, nivel) {
-    var raiz = crear("div", "marco marco--entra" + (nivel === 0 ? " marco--programa" : ""));
-    var cab = crear("div", "marco__cabecera");
-    var titulo = crear("p", "marco__titulo");
-    if (nivel === 0) titulo.textContent = datos.titulo;
-    else titulo.appendChild(crear("code", "", datos.titulo));
-    var estado = crear("span", "marco__estado");
-    var vars = crear("div", "marco__vars");
-    var vacia = crear("span", "marco__vacia", "sin variables todavía");
-    vars.appendChild(vacia);
-    cab.appendChild(titulo);
-    cab.appendChild(estado);
-    raiz.appendChild(cab);
-    raiz.appendChild(vars);
-    return { titulo: datos.titulo, raiz: raiz, estado: estado, vars: vars, vacia: vacia, chips: {} };
-  }
-
-  function nombreFuncion(titulo) { return titulo.slice(0, titulo.indexOf("(")) + "()"; }
-
-  function quitarSaliendo(p) {
-    p.saliendo.forEach(function (el) { el.remove(); });
-    p.saliendo = [];
-  }
-
-  function retirar(p, marco) {
-    if (Pasos.reducirMovimiento) { marco.raiz.remove(); return; }
-    marco.raiz.classList.remove("marco--entra");
-    marco.raiz.classList.add("marco--sale");
-    p.saliendo.push(marco.raiz);
-    setTimeout(function () {
-      marco.raiz.remove();
-      p.saliendo = p.saliendo.filter(function (el) { return el !== marco.raiz; });
-    }, 650);
-  }
-
-  function pintarVars(marco, lista, leer) {
-    var quedan = {};
-    lista.forEach(function (par) {
-      var nombre = par[0];
-      var valor = String(par[1]);
-      var c = marco.chips[nombre];
-      if (!c) {
-        c = marco.chips[nombre] = crear("span", "var");
-        c.appendChild(crear("code", "var__nombre", nombre));
-        c.appendChild(crear("code", "var__valor", valor));
-        marco.vars.appendChild(c);
-      } else if (c.lastChild.textContent !== valor) {
-        c.lastChild.textContent = valor;
-        c.classList.remove("var--cambio");
-        void c.offsetWidth;
-        c.classList.add("var--cambio");
-      }
-      c.classList.toggle("var--leida", leer === nombre);
-      quedan[nombre] = true;
-    });
-    Object.keys(marco.chips).forEach(function (n) {
-      if (quedan[n]) return;
-      marco.chips[n].remove();
-      delete marco.chips[n];
-    });
-    marco.vacia.hidden = lista.length > 0;
-  }
-
-  function pintarPila(p, e) {
-    var pila = e.pila;
-    // Hasta dónde coincide con lo que ya se ve; lo de encima se retira
-    var k = 0;
-    while (k < p.marcos.length && k < pila.length && p.marcos[k].titulo === pila[k].titulo) k++;
-    for (var i = p.marcos.length - 1; i >= k; i--) retirar(p, p.marcos[i]);
-    p.marcos.length = k;
-    if (pila.length > k) quitarSaliendo(p);
-    for (i = k; i < pila.length; i++) {
-      var m = crearMarco(pila[i], i);
-      p.cont.appendChild(m.raiz);
-      p.marcos.push(m);
-    }
-    pila.forEach(function (datos, nivel) {
-      var m = p.marcos[nivel];
-      var arriba = nivel === pila.length - 1;
-      m.raiz.classList.toggle("marco--activo", arriba);
-      m.raiz.classList.toggle("marco--esperando", !arriba);
-      var estado = "";
-      if (datos.devuelve !== undefined) estado = "↩ devuelve " + datos.devuelve;
-      else if (!arriba) estado = "esperando a " + nombreFuncion(pila[nivel + 1].titulo);
-      else if (nivel > 0) estado = "trabajando";
-      if (m.estado.textContent !== estado) m.estado.textContent = estado;
-      m.estado.className = "marco__estado" + (datos.devuelve !== undefined ? " marco__estado--devuelve" : "");
-      pintarVars(m, datos.vars, e.leer && e.leer[0] === nivel ? e.leer[1] : null);
-    });
-    p.titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
-  }
-
-  function vaciarPila(p) {
-    quitarSaliendo(p);
-    p.cont.textContent = "";
-    p.marcos = [];
-    pintarPila(p, { pila: [programa()] });
-  }
+  /* Pila de llamadas (pila.js): cada paso trae la pila completa, de abajo arriba */
+  var programa = Pila.programa;
+  var llamada = Pila.llamada;
 
   /* ---------- 1. Una función que llama a otra ---------- */
-  var pila1 = crearPila($("p1-pila"));
+  var pila1 = Pila.crear($("p1-pila"));
 
   function trazaPromedio() {
     var ab = [["a", 14], ["b", 17]];
@@ -474,7 +325,7 @@
   /* ---------- 2. Tú eres Python ----------
      Cada momento: la línea, la pila en ese momento, la pregunta y dos opciones.
      Una opción con devuelve quita la tarjeta de arriba mostrando qué devolvió. */
-  var pila2 = crearPila($("p2-pila"));
+  var pila2 = Pila.crear($("p2-pila"));
   var C = "cuadruple(3)";
   var MOMENTOS = [
     { linea: 7, pila: [programa()],
@@ -525,7 +376,7 @@
   function mostrarMomento() {
     var m = MOMENTOS[momento];
     Codigo.marcar($("p2-codigo"), { activas: [m.linea] });
-    pintarPila(pila2, { pila: m.pila });
+    pila2.pintar({ pila: m.pila });
     $("p2-explicacion").innerHTML = m.texto;
     $("p2-marcador").textContent = "Momento " + (momento + 1) + " de " + MOMENTOS.length;
     var cont = $("p2-opciones");
@@ -557,7 +408,7 @@
       var pila = m.pila.slice();
       var arriba = pila[pila.length - 1];
       pila[pila.length - 1] = llamada(arriba.titulo, arriba.vars, op.devuelve);
-      pintarPila(pila2, { pila: pila });
+      pila2.pintar({ pila: pila });
     }
     momento++;
     if (momento < MOMENTOS.length) {
@@ -581,12 +432,12 @@
     $("p2-otra").hidden = true;
     Codigo.consola($("p2-consola"), []);
     Pasos.limpiarFeedback($("p2-fb"));
-    vaciarPila(pila2);
+    pila2.vaciar();
     mostrarMomento();
   }
 
   /* ---------- 3. Un bucle dentro de una función ---------- */
-  var pila3 = crearPila($("p3-pila"));
+  var pila3 = Pila.crear($("p3-pila"));
   var palabra = "banana";
   var F3 = function () { return "contar_vocales(" + texto(palabra) + ")"; };
 
@@ -651,7 +502,7 @@
   }
 
   /* ---------- 4. Factorial ---------- */
-  var pila4 = crearPila($("p4-pila"));
+  var pila4 = Pila.crear($("p4-pila"));
   var nLibros = 4;
   var LIBROS = ["📕", "📗", "📘", "📙", "📓", "📔"];
 
@@ -783,10 +634,10 @@
     generar: trazaPromedio,
     intervalo: 1500,
     alReiniciar: function () {
-      vaciarPila(pila1);
+      pila1.vaciar();
       Pasos.limpiarFeedback($("p1-fb"));
     },
-    alPaso: function (paso) { pintarPila(pila1, paso.estado); },
+    alPaso: function (paso) { pila1.pintar(paso.estado); },
     alTerminar: function () {
       Pasos.feedback($("p1-fb"), "ok", "promedio llamó a suma y esperó su respuesta. Cada return quitó la tarjeta de arriba y entregó su valor a la de abajo.");
       leccion.desbloquear();
@@ -812,12 +663,12 @@
     intervalo: 750,
     repetible: true,
     alReiniciar: function () {
-      vaciarPila(pila3);
+      pila3.vaciar();
       pintarLetras(-1, {});
       Pasos.limpiarFeedback($("p3-fb"));
     },
     alPaso: function (paso) {
-      pintarPila(pila3, paso.estado);
+      pila3.pintar(paso.estado);
       pintarLetras(paso.estado.actual === undefined ? -1 : paso.estado.actual, paso.estado.marcas || {});
     },
     alTerminar: terminarVocales
@@ -836,7 +687,7 @@
     Pasos.limpiarFeedback($("p3-fb"));
     palabra = valor;
     $("p3-codigo-palabra").textContent = palabra;
-    vaciarPila(pila3);
+    pila3.vaciar();
     pintarLetras(-1, {});
   });
 
@@ -853,12 +704,12 @@
     intervalo: 1000,
     repetible: true,
     alReiniciar: function () {
-      vaciarPila(pila4);
+      pila4.vaciar();
       pintarCadena(0, 0);
       Pasos.limpiarFeedback($("p4-fb"));
     },
     alPaso: function (paso) {
-      pintarPila(pila4, paso.estado);
+      pila4.pintar(paso.estado);
       pintarCadena(paso.estado.hasta, paso.estado.actual, paso.estado.total);
     },
     alTerminar: function () {
@@ -872,7 +723,7 @@
     nLibros = Number(this.value);
     trazaP4.cancelar();
     pintarLibros();
-    vaciarPila(pila4);
+    pila4.vaciar();
     pintarCadena(0, 0);
   });
 

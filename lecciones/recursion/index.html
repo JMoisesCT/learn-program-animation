@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recursión · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: una función de Python que se llama a sí misma. Caso base, la pila de llamadas que crece y se vacía, qué pasa sin caso base (RecursionError) y lo que se hace a la ida y a la vuelta.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .consola__linea--error { color: var(--color-error); }
+
+    /* ---------- Cajas dentro de cajas ----------
+       Cada caja tiene una tapa que la cubre entera; al abrirla, la tapa se levanta
+       y deja ver lo que hay dentro: otra caja o, en la más pequeña, el caramelo. */
+    .regalos { display: flex; justify-content: center; padding: var(--esp-3) 0; }
+    .regalo { position: relative; z-index: 0; display: grid; place-items: center; padding: 1.6rem 0.9rem 0.9rem; border: 3px solid var(--r-color); border-radius: 14px; background: var(--r-suave); transition: box-shadow var(--dur); }
+    .regalo--3 { --r-color: #1f5fd6; --r-suave: #e6eeff; }
+    .regalo--2 { --r-color: #0b7a3e; --r-suave: #e2f4e9; }
+    .regalo--1 { --r-color: #9a4a00; --r-suave: #fff3e2; }
+    .regalo__etiqueta { position: absolute; top: 0.2rem; left: 0; right: 0; text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--r-color); }
+    .regalo__tapa { position: absolute; inset: -3px; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; border-radius: 14px; background: var(--r-color); color: #fff; font-weight: 700; font-size: var(--texto-sm); transform-origin: 0 0; transition: transform 480ms var(--curva-rebote), opacity 380ms ease; }
+    .regalo__lazo { font-size: 1.6rem; line-height: 1; }
+    .regalo--abierta > .regalo__tapa { transform: translate(-0.6rem, -1.4rem) rotate(-14deg); opacity: 0; pointer-events: none; }
+    .regalo--siguiente > .regalo__tapa { box-shadow: 0 0 0 5px rgba(31, 95, 214, 0.28); }
+    .dulce { display: grid; place-items: center; width: 3rem; height: 3rem; font-size: 2rem; }
+    .regalo--abierta > .dulce { animation: dulce 600ms 200ms var(--curva-rebote) both; }
+    @keyframes dulce { from { transform: scale(0.3) rotate(-30deg); } }
+
+    /* Las instrucciones para abrir una caja */
+    .receta__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .receta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); counter-reset: receta; }
+    .receta li { position: relative; padding: var(--esp-2) var(--esp-3) var(--esp-2) 2.6rem; border-radius: var(--radio-sm); border: 2px solid transparent; background: var(--color-superficie-2); counter-increment: receta; transition: background-color var(--dur), border-color var(--dur); }
+    .receta li::before { content: counter(receta); position: absolute; left: var(--esp-3); top: var(--esp-2); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta .receta__paso--activo { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .receta .receta__paso--activo::before { background: var(--color-azul); color: #fff; }
+    .receta__mismo { font-weight: 700; color: var(--color-azul); }
+    .veces { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* ---------- Control con número ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Sin caso base: la pila que no para de crecer ---------- */
+    .torre { display: flex; flex-direction: column-reverse; gap: var(--esp-1); }
+    .torre .marco { padding: var(--esp-1) var(--esp-3); }
+    .torre__mas { margin: 0; padding: var(--esp-1) 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .medidor { position: relative; height: 0.75rem; margin: var(--esp-4) 0 var(--esp-1); border-radius: 999px; background: var(--color-superficie); box-shadow: inset 0 0 0 2px var(--color-borde); overflow: hidden; }
+    .medidor__relleno { height: 100%; width: 0; border-radius: 999px; background: var(--color-azul); transition: width 120ms linear, background-color var(--dur); }
+    .medidor--lleno .medidor__relleno { background: var(--color-error); }
+    .medidor__texto { display: flex; justify-content: space-between; gap: var(--esp-3); margin: 0; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .medidor__texto strong { font-family: var(--fuente-codigo); color: var(--color-texto); }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- Reto: opciones de código y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .regalo { padding: 1.5rem 0.6rem 0.6rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="recursion">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: cajas dentro de cajas -->
+    <section class="paso" id="paso-cajas" data-requiere aria-labelledby="t-cajas">
+      <span class="paso__etiqueta">Recursión 1/4</span>
+      <h1 class="paso__titulo" id="t-cajas">Una caja dentro de otra</h1>
+      <p>Te regalaron una caja. Dentro hay otra caja, y dentro otra más… Sigue las instrucciones hasta encontrar el regalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="receta__titulo">📜 Cómo abrir una caja</p>
+          <ol class="receta" id="p1-receta">
+            <li data-r="abrir">Quítale la tapa.</li>
+            <li data-r="base">Si dentro hay un caramelo: <strong>¡listo!</strong></li>
+            <li data-r="otra">Si dentro hay otra caja: <span class="receta__mismo">ábrela con estas mismas instrucciones</span>.</li>
+          </ol>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-otra" hidden>↺ Cerrar las cajas</button>
+            <button type="button" class="btn btn-secundario" id="p1-abrir">Abrir la caja 3</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="regalos" id="p1-regalos" aria-hidden="true"></div>
+          <p class="veces" id="p1-veces"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Una función que se llama a sí misma -->
+    <section class="paso" id="paso-cuenta" data-requiere aria-labelledby="t-cuenta">
+      <h2 class="paso__titulo" id="t-cuenta">Una función que se llama a sí misma</h2>
+      <p>Mira la línea 6: <code>cuenta_regresiva</code> se llama <strong>a sí misma</strong>, con un número más pequeño. A eso se le llama <strong>recursión</strong>. Ejecútala y mira la pila.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p2-n">Empieza en <output id="p2-n-valor" for="p2-n">3</output></label>
+            <input type="range" id="p2-n" min="1" max="5" step="1" value="3">
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Despegue!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea">        <span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-numero" id="p2-codigo-n">3</span>)</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Cada llamada tiene <strong>su propia</strong> <code>n</code>, en su propia tarjeta. El <code>if n == 0</code> es el <strong>caso base</strong>: ahí la función ya no se llama otra vez.</p>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Sin caso base -->
+    <section class="paso" id="paso-sin-base" data-requiere aria-labelledby="t-sin-base">
+      <h2 class="paso__titulo" id="t-sin-base">¿Y si no hay caso base?</h2>
+      <p>Quitamos el <code>if</code>. Ahora la función siempre vuelve a llamarse. ¿Cuándo crees que para?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea">    <span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-numero">3</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite">Toca «Ejecutar» y mira qué pasa con la pila.</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">▶ Ejecutar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="pila__titulo" id="p3-titulo"></p>
+          <div class="torre" id="p3-torre" aria-hidden="true"></div>
+          <div class="medidor" id="p3-medidor" aria-hidden="true"><div class="medidor__relleno"></div></div>
+          <p class="medidor__texto"><span><strong id="p3-cuenta">0</strong> llamadas</span><span>límite de Python: unas 1000</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. A la ida y a la vuelta -->
+    <section class="paso" id="paso-vuelta" data-requiere aria-labelledby="t-vuelta">
+      <h2 class="paso__titulo" id="t-vuelta">A la ida y a la vuelta</h2>
+      <p>Volvamos a las cajas: <code>abrir(n)</code> abre la caja <code>n</code>. Ahora hay un <code>print</code> <strong>antes</strong> de la llamada y otro <strong>después</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p4-pregunta">Antes de ejecutar: ¿qué se imprime justo después de «¡Un caramelo!»?</p>
+          <div class="prediccion" id="p4-prediccion" role="group" aria-labelledby="p4-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">Cierro la caja 1</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">Cierro la caja 3</button>
+            <button type="button" class="btn btn-secundario" data-valor="nada" aria-pressed="false">Nada: termina</button>
+          </div>
+          <pre class="codigo" id="p4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">abrir</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Un caramelo!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Abro la caja <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea">        <span class="tk-funcion">abrir</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Cierro la caja <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">abrir</span>(<span class="tk-numero">3</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="regalos" id="p4-regalos" aria-hidden="true"></div>
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Contar subiendo</h2>
+      <p>Queremos que <code>subir(3)</code> imprima <strong>0, 1, 2, 3</strong>, un número por línea. ¿Qué versión lo hace? La probaremos con tres números.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué versión de subir imprime de 0 a n?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="antes"><span>def subir(n):
+    if n == 0:
+        print(0)
+    else:
+        print(n)
+        subir(n - 1)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="base1"><span>def subir(n):
+    if n == 1:
+        print(1)
+    else:
+        subir(n - 1)
+        print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>def subir(n):
+    if n == 0:
+        print(0)
+    else:
+        subir(n - 1)
+        print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="mas"><span>def subir(n):
+    if n == 0:
+        print(0)
+    else:
+        subir(n + 1)
+        print(n)</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <p class="nota" id="reto-nota" hidden>Cada número sale en su propia línea; aquí van seguidos para que quepan.</p>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Una función <strong>recursiva</strong> se llama a sí misma con un problema más pequeño, hasta llegar al <strong>caso base</strong>, que ya no se llama.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-comentario"># caso base: aquí para</span></span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Despegue!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)  <span class="tk-comentario"># a la ida</span></span><span class="linea">        <span class="tk-comentario"># se llama con un número más pequeño</span></span><span class="linea">        <span class="tk-funcion">cuenta_regresiva</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-comentario"># lo que va aquí se hace a la vuelta</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/traza.js"></script>
+<script src="../../assets/js/pila.js"></script>
+<script src="../../assets/js/opciones-codigo.js"></script>
+<script src="../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Cajas dentro de cajas ----------
+     La caja 3 es la de fuera y la 1 la más pequeña; dentro de la 1 está el caramelo.
+     r.pintar(abiertas, siguiente): abiertas = { 3: true, 2: true }; siguiente, la que toca abrir. */
+  function crearRegalos(el, n) {
+    var cajas = {};
+    var dentro = crear("span", "dulce", "🍬");
+    for (var k = 1; k <= n; k++) {
+      var caja = crear("div", "regalo regalo--" + k);
+      var tapa = crear("div", "regalo__tapa");
+      tapa.appendChild(crear("span", "regalo__lazo", "🎀"));
+      tapa.appendChild(crear("span", "", "caja " + k));
+      caja.appendChild(tapa);
+      caja.appendChild(crear("span", "regalo__etiqueta", "caja " + k));
+      caja.appendChild(dentro);
+      cajas[k] = caja;
+      dentro = caja;
+    }
+    el.appendChild(dentro);
+    return {
+      pintar: function (abiertas, siguiente) {
+        for (var k = 1; k <= n; k++) {
+          cajas[k].classList.toggle("regalo--abierta", !!abiertas[k]);
+          cajas[k].classList.toggle("regalo--siguiente", k === siguiente);
+        }
+      }
+    };
+  }
+
+  /* ---------- 1. Cajas dentro de cajas ---------- */
+  var regalos1 = crearRegalos($("p1-regalos"), 3);
+  var abiertas1 = {};
+  var porAbrir = 3;
+
+  function marcarReceta(cual) {
+    $("p1-receta").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("receta__paso--activo", li.getAttribute("data-r") === cual);
+    });
+  }
+
+  function pintarCajas1() {
+    regalos1.pintar(abiertas1, porAbrir);
+    var veces = 3 - porAbrir;
+    $("p1-veces").textContent = veces ? "Usaste las instrucciones " + (veces === 1 ? "1 vez" : veces + " veces") : "";
+  }
+
+  function cerrarCajas() {
+    abiertas1 = {};
+    porAbrir = 3;
+    marcarReceta(null);
+    pintarCajas1();
+    $("p1-abrir").textContent = "Abrir la caja 3";
+    $("p1-abrir").hidden = false;
+    $("p1-otra").hidden = true;
+    $("p1-explicacion").textContent = "Toca «Abrir la caja 3» para seguir las instrucciones.";
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  function abrirCaja() {
+    var k = porAbrir;
+    abiertas1[k] = true;
+    porAbrir = k - 1;
+    pintarCajas1();
+    if (k > 1) {
+      marcarReceta("otra");
+      $("p1-explicacion").innerHTML = "Dentro de la caja " + k + " hay <strong>otra caja</strong>, más pequeña: la " + (k - 1) +
+        ". Toca usar las <strong>mismas instrucciones</strong> con ella.";
+      $("p1-abrir").textContent = "Abrir la caja " + (k - 1);
+      return;
+    }
+    marcarReceta("base");
+    $("p1-explicacion").innerHTML = "¡Un <strong>caramelo</strong>! Aquí ya no hay otra caja: las instrucciones terminan.";
+    $("p1-abrir").hidden = true;
+    $("p1-otra").hidden = false;
+    $("p1-otra").focus();
+    Pasos.feedback($("p1-fb"), "ok", "Usaste las mismas instrucciones 3 veces, cada vez con una caja más pequeña, hasta que no hubo otra caja. Unas instrucciones que se usan a sí mismas: eso es la recursión.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 2. cuenta_regresiva ---------- */
+  var pila2 = Pila.crear($("p2-pila"));
+  var nInicio = 3;
+
+  function tarjeta(nombre, param, k, conVars, termina) {
+    var t = Pila.llamada(nombre + "(" + k + ")", conVars ? [[param, k]] : []);
+    if (termina) t.termina = true;
+    return t;
+  }
+
+  /* Las tarjetas de cuenta_regresiva(n) … cuenta_regresiva(hasta + 1), que esperan debajo */
+  function debajo(nombre, param, n, hasta) {
+    var lista = [Pila.programa()];
+    for (var j = n; j > hasta; j--) lista.push(tarjeta(nombre, param, j, true));
+    return lista;
+  }
+
+  function trazaCuenta() {
+    var n = nInicio;
+    var C = "cuenta_regresiva";
+    var pasos = [
+      { linea: 0, texto: "Python recuerda la receta <strong>cuenta_regresiva</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
+      { linea: 7, texto: "Llama a <strong>cuenta_regresiva(" + n + ")</strong>: se apila su tarjeta.",
+        estado: { pila: debajo(C, "n", n, n).concat([tarjeta(C, "n", n)]) } }
+    ];
+    for (var k = n; k >= 0; k--) {
+      var abajo = debajo(C, "n", n, k);
+      var nivel = abajo.length;
+      pasos.push({ linea: 0,
+        texto: k === n ? "Nace <strong>n = " + n + "</strong> en su tarjeta."
+          : "Otra tarjeta de la <strong>misma función</strong>, con <strong>su propia n = " + k + "</strong>. La de abajo espera.",
+        estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]) } });
+      pasos.push({ linea: 1,
+        texto: "¿n == 0? " + k + " == 0 es " + chip(k === 0) + (k === 0 ? ": ¡llegó al <strong>caso base</strong>!" : ": todavía no, va por el else."),
+        estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]), leer: [nivel, "n"] } });
+      if (k > 0) {
+        pasos.push({ linea: 4, salida: String(k), texto: "Imprime <strong>" + k + "</strong>.",
+          estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]), leer: [nivel, "n"] } });
+        pasos.push({ linea: 5,
+          texto: "Se llama <strong>a sí misma</strong> con n - 1 = <strong>" + (k - 1) + "</strong>: un número más pequeño. Se apila otra tarjeta.",
+          estado: { pila: abajo.concat([tarjeta(C, "n", k, true), tarjeta(C, "n", k - 1)]) } });
+      } else {
+        pasos.push({ linea: 2, salida: "¡Despegue!",
+          texto: "Imprime <strong>¡Despegue!</strong>. El caso base no vuelve a llamarse: esta tarjeta termina.",
+          estado: { pila: abajo.concat([tarjeta(C, "n", 0, true, true)]) } });
+      }
+    }
+    // La vuelta: cada tarjeta retoma justo después de su llamada y, sin nada más que hacer, termina
+    for (var j = 1; j <= n; j++) {
+      pasos.push({ linea: 5, flecha: true,
+        texto: "cuenta_regresiva(" + (j - 1) + ") terminó y su tarjeta se fue. <strong>De vuelta en cuenta_regresiva(" + j +
+          ")</strong>, justo después de la llamada: no le queda nada por hacer y termina.",
+        estado: { pila: debajo(C, "n", n, j).concat([tarjeta(C, "n", j, true, true)]) } });
+    }
+    pasos.push({ linea: 7, flecha: true, texto: "De vuelta en el programa. Solo queda su tarjeta: fin.", estado: { pila: [Pila.programa()] } });
+    return pasos;
+  }
+
+  function terminarCuenta() {
+    var cuenta = [];
+    for (var k = nInicio; k > 0; k--) cuenta.push(k);
+    Pasos.feedback($("p2-fb"), "ok", "Contó " + cuenta.join(", ") + " y despegó. Cada llamada usó un número más pequeño hasta llegar al caso base (n == 0), " +
+      "que ya no se llama. Luego las tarjetas se quitaron de arriba abajo. Mueve el control y prueba otro número.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. Sin caso base ----------
+     Python 3 corta esta recursión tras 999 llamadas: imprime de 3 a -995 y lanza RecursionError. */
+  var LIMITE = 999;
+  var LENTAS = 4;           // llamadas que se ven paso a paso; luego se acelera
+  var VISIBLES = 4;         // tarjetas de arriba que se dibujan
+  var timer3 = null;
+  var llamadas3 = 0;
+
+  function marco(titulo, clase) {
+    var m = crear("div", "marco " + clase);
+    var t = crear("p", "marco__titulo");
+    if (clase.indexOf("marco--programa") !== -1) t.textContent = titulo;
+    else t.appendChild(crear("code", "", titulo));
+    m.appendChild(t);
+    return m;
+  }
+
+  function pintarTorre(nuevas) {
+    var torre = $("p3-torre");
+    torre.textContent = "";
+    torre.appendChild(marco("Programa", "marco--programa" + (llamadas3 ? " marco--esperando" : " marco--activo")));
+    var ocultas = Math.max(0, llamadas3 - VISIBLES);
+    if (ocultas) torre.appendChild(crear("p", "torre__mas", "… y " + ocultas + (ocultas === 1 ? " tarjeta más" : " tarjetas más") + " aquí abajo"));
+    for (var c = ocultas + 1; c <= llamadas3; c++) {
+      var arriba = c === llamadas3;
+      var m = marco("cuenta_regresiva(" + (4 - c) + ")", arriba ? "marco--activo" : "marco--esperando");
+      if (arriba && nuevas) m.classList.add("marco--entra");
+      torre.appendChild(m);
+    }
+    var total = llamadas3 + 1;
+    $("p3-titulo").textContent = "Pila de llamadas · " + total + (total === 1 ? " tarjeta" : " tarjetas");
+    $("p3-cuenta").textContent = String(llamadas3);
+    $("p3-medidor").querySelector(".medidor__relleno").style.width = (llamadas3 / LIMITE * 100) + "%";
+  }
+
+  // Lo que ya imprimió: de 3 hacia abajo, una línea por llamada; se ven las últimas
+  function pintarSalida3() {
+    var lineas = [];
+    var desde = Math.max(1, llamadas3 - 5);
+    if (desde > 1) lineas.push("…");
+    for (var c = desde; c <= llamadas3; c++) lineas.push(String(4 - c));
+    Codigo.consola($("p3-consola"), lineas);
+  }
+
+  function pararSinBase() {
+    if (timer3) clearTimeout(timer3);
+    timer3 = null;
+  }
+
+  function reiniciarSinBase() {
+    pararSinBase();
+    llamadas3 = 0;
+    Codigo.limpiar($("p3-codigo"));
+    $("p3-medidor").classList.remove("medidor--lleno");
+    pintarTorre(false);
+    Codigo.consola($("p3-consola"), []);
+    $("p3-explicacion").textContent = "Toca «Ejecutar» y mira qué pasa con la pila.";
+    $("p3-ejecutar").textContent = "▶ Ejecutar";
+    $("p3-ejecutar").disabled = false;
+  }
+
+  function ejecutarSinBase() {
+    reiniciarSinBase();
+    $("p3-ejecutar").disabled = true;
+    Pasos.limpiarFeedback($("p3-fb"));
+    var pre = $("p3-codigo");
+    var momentos = [];
+    // Las primeras llamadas, despacio: llamar, nacer n, imprimir
+    for (var c = 1; c <= LENTAS; c++) {
+      momentos.push({ c: c, fase: "llama" }, { c: c, fase: "nace" }, { c: c, fase: "imprime" });
+    }
+    var i = 0;
+    var previa = null;
+
+    function lento() {
+      var m = momentos[i++];
+      var v = 4 - m.c;
+      if (m.fase === "llama") {
+        var linea = m.c === 1 ? 4 : 2;
+        Codigo.marcar(pre, { activas: [linea] });
+        Codigo.quitarSalto(pre);
+        llamadas3 = m.c;
+        pintarTorre(true);
+        $("p3-explicacion").innerHTML = (m.c === 1 ? "Llama a " : "Se llama a sí misma: ") + "<strong>cuenta_regresiva(" + v + ")</strong>. Otra tarjeta.";
+        previa = linea;
+      } else if (m.fase === "nace") {
+        Codigo.marcar(pre, { activas: [0] });
+        if (previa === 2) Codigo.salto(pre, 2, 0);
+        $("p3-explicacion").innerHTML = "Nace <strong>n = " + v + "</strong>." + (v <= 0 ? " Ningún if la detiene…" : "");
+      } else {
+        Codigo.marcar(pre, { activas: [1] });
+        Codigo.quitarSalto(pre);
+        pintarSalida3();
+        $("p3-explicacion").innerHTML = "Imprime <strong>" + v + "</strong>.";
+      }
+      timer3 = setTimeout(i < momentos.length ? lento : rapido, 650);
+    }
+
+    // Después, cada vez más rápido, hasta el límite
+    var salto = 1;
+    function rapido() {
+      Codigo.marcar(pre, { activas: [2] });
+      Codigo.quitarSalto(pre);
+      llamadas3 = Math.min(LIMITE, llamadas3 + salto);
+      salto = Math.ceil(salto * 1.35);
+      pintarTorre(false);
+      pintarSalida3();
+      $("p3-explicacion").innerHTML = "¡No para! 0, -1, -2… <strong>n nunca deja de bajar</strong> y siempre se vuelve a llamar.";
+      if (llamadas3 < LIMITE) { timer3 = setTimeout(rapido, 90); return; }
+      timer3 = setTimeout(desbordar, 500);
+    }
+
+    function desbordar() {
+      timer3 = null;
+      $("p3-medidor").classList.add("medidor--lleno");
+      var consola = $("p3-consola");
+      Codigo.agregar(consola, "RecursionError: maximum recursion depth exceeded");
+      consola.lastElementChild.classList.add("consola__linea--error");
+      $("p3-explicacion").innerHTML = "Python la corta con un <strong>RecursionError</strong> («se pasó la profundidad máxima»): la pila llegó a su límite.";
+      Pasos.feedback($("p3-fb"), "ok", "Sin caso base, la función se llama sin parar: 3, 2, 1, 0, -1, -2… Python no deja que la pila crezca para siempre y corta el programa con un error. El caso base es el freno.");
+      $("p3-ejecutar").textContent = "↺ Otra vez";
+      $("p3-ejecutar").disabled = false;
+      leccion.desbloquear();
+    }
+
+    lento();
+  }
+
+  /* ---------- 4. A la ida y a la vuelta ---------- */
+  var regalos4 = crearRegalos($("p4-regalos"), 3);
+  var pila4 = Pila.crear($("p4-pila"));
+  var prediccion = null;
+
+  function copia(o) { return Object.assign({}, o); }
+
+  function trazaAbrir() {
+    var A = "abrir";
+    var abiertas = {};
+    var pasos = [
+      { linea: 0, texto: "Python recuerda la receta <strong>abrir</strong>.", estado: { pila: [Pila.programa()], abiertas: {} } },
+      { linea: 8, texto: "Llama a <strong>abrir(3)</strong>: se apila su tarjeta.",
+        estado: { pila: [Pila.programa(), tarjeta(A, "n", 3)], abiertas: {} } }
+    ];
+    for (var k = 3; k >= 0; k--) {
+      var abajo = debajo(A, "n", 3, k);
+      var actual = abajo.concat([tarjeta(A, "n", k, true)]);
+      pasos.push({ linea: 0, texto: k === 3 ? "Nace <strong>n = 3</strong>: la caja de fuera." : "Tarjeta nueva con <strong>su propia n = " + k + "</strong>.",
+        estado: { pila: actual, abiertas: copia(abiertas) } });
+      pasos.push({ linea: 1, texto: "¿n == 0? " + k + " == 0 es " + chip(k === 0) + (k === 0 ? ": ¡caso base!" : "."),
+        estado: { pila: actual, abiertas: copia(abiertas), leer: [abajo.length, "n"] } });
+      if (k > 0) {
+        abiertas[k] = true;
+        pasos.push({ linea: 4, salida: "Abro la caja " + k, texto: "<strong>A la ida</strong>: imprime «Abro la caja " + k + "».",
+          estado: { pila: actual, abiertas: copia(abiertas) } });
+        pasos.push({ linea: 5, texto: "Llama a <strong>abrir(" + (k - 1) + ")</strong>. Su última línea, el «Cierro», <strong>queda pendiente</strong> en esta tarjeta.",
+          estado: { pila: actual.concat([tarjeta(A, "n", k - 1)]), abiertas: copia(abiertas) } });
+      } else {
+        pasos.push({ linea: 2, salida: "¡Un caramelo!", texto: "Imprime «¡Un caramelo!». El caso base termina sin llamar a nadie.",
+          estado: { pila: abajo.concat([tarjeta(A, "n", 0, true, true)]), abiertas: copia(abiertas) } });
+      }
+    }
+    for (var j = 1; j <= 3; j++) {
+      var esta = debajo(A, "n", 3, j);
+      pasos.push({ linea: 5, flecha: true,
+        texto: "abrir(" + (j - 1) + ") terminó. <strong>De vuelta en abrir(" + j + ")</strong>, justo después de la llamada: le queda una línea.",
+        estado: { pila: esta.concat([tarjeta(A, "n", j, true)]), abiertas: copia(abiertas) } });
+      delete abiertas[j];
+      pasos.push({ linea: 6, salida: "Cierro la caja " + j, texto: "<strong>A la vuelta</strong>: imprime «Cierro la caja " + j + "». abrir(" + j + ") termina.",
+        estado: { pila: esta.concat([tarjeta(A, "n", j, true, true)]), abiertas: copia(abiertas), leer: [esta.length, "n"] } });
+    }
+    pasos.push({ linea: 8, flecha: true, texto: "De vuelta en el programa: todas las cajas, cerradas.", estado: { pila: [Pila.programa()], abiertas: {} } });
+    return pasos;
+  }
+
+  function habilitarTraza4() {
+    var listo = prediccion !== null;
+    $("p4-ejecutar").disabled = !listo;
+    $("p4-reproducir").disabled = !listo;
+    if (!listo) $("p4-explicacion").textContent = "Elige tu predicción para poder ejecutar.";
+  }
+
+  function terminarAbrir() {
+    var nombres = { "1": "Cierro la caja 1", "3": "Cierro la caja 3", nada: "nada" };
+    if (prediccion === "1") {
+      Pasos.feedback($("p4-fb"), "ok", "¡Bien predicho! Después del caramelo sale «Cierro la caja 1»: la última caja que se abrió es la primera que se cierra. " +
+        "Lo que va antes de la llamada se hace a la ida; lo que va después espera en su tarjeta y se hace a la vuelta.");
+    } else {
+      Pasos.feedback($("p4-fb"), "ok", "Salió «Cierro la caja 1», no «" + nombres[prediccion] + "». Cada tarjeta guardó su «Cierro» para la vuelta, " +
+        "y las tarjetas se quitan de arriba abajo: la última caja que se abrió es la primera que se cierra.");
+    }
+    leccion.desbloquear();
+  }
+
+  /* ---------- 5. Reto ---------- */
+  function simular(version, n, prof) {
+    prof = prof || 0;
+    if (prof > 60) throw new Error("RecursionError");
+    var base = version === "base1" ? 1 : 0;
+    if (n === base) return [base];
+    var siguiente = version === "mas" ? n + 1 : n - 1;
+    if (version === "antes") return [n].concat(simular(version, siguiente, prof + 1));
+    return simular(version, siguiente, prof + 1).concat([n]);
+  }
+
+  function salidaDe(version, n) {
+    try { return simular(version, n).join(" "); } catch (e) { return "RecursionError"; }
+  }
+
+  var PISTAS_RETO = {
+    antes: "Ese print va antes de la llamada: imprime a la ida, bajando (3 2 1 0). Para que salga subiendo, imprime a la vuelta: después de la llamada.",
+    base1: "El caso base es n == 1: nunca imprime el 0. Y subir(0) se pasa de largo (-1, -2…) hasta el RecursionError.",
+    mas: "subir(n + 1) agranda el número: nunca llega a 0, el caso base, y la pila crece hasta el RecursionError."
+  };
+
+  function pintarPruebas(valor) {
+    var lista = $("reto-pruebas");
+    lista.textContent = "";
+    [3, 1, 0].forEach(function (n) {
+      var sale = salidaDe(valor, n);
+      var ok = sale === salidaDe("bien", n);
+      var li = crear("li", ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", "subir(" + n + ")"));
+      li.appendChild(crear("span", "prueba__salida", sale));
+      li.appendChild(crear("span", "prueba__marca", ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", "subir de " + n + ": " + sale + (ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    $("reto-nota").hidden = false;
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    $("reto-nota").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    pintarPruebas(marcada.value);
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! Baja hasta el caso base, que imprime 0, y cada print(n) espera a la vuelta: sale 0, 1, 2, 3, subiendo.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("p1-abrir").addEventListener("click", abrirCaja);
+  $("p1-otra").addEventListener("click", function () {
+    cerrarCajas();
+    $("p1-abrir").focus();
+  });
+  cerrarCajas();
+
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaCuenta,
+    intervalo: 900,
+    alReiniciar: function () {
+      pila2.vaciar();
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) { pila2.pintar(paso.estado); },
+    alTerminar: terminarCuenta
+  });
+  $("p2-n").addEventListener("input", function () {
+    nInicio = Number(this.value);
+    $("p2-n-valor").textContent = String(nInicio);
+    $("p2-codigo-n").textContent = String(nInicio);
+    trazaP2.reiniciar();
+  });
+
+  $("p3-ejecutar").addEventListener("click", ejecutarSinBase);
+  reiniciarSinBase();
+
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaAbrir,
+    intervalo: 1000,
+    alReiniciar: function () {
+      pila4.vaciar();
+      regalos4.pintar({});
+      Pasos.limpiarFeedback($("p4-fb"));
+      habilitarTraza4();
+    },
+    alPaso: function (paso) {
+      pila4.pintar(paso.estado);
+      regalos4.pintar(paso.estado.abiertas);
+    },
+    alTerminar: terminarAbrir
+  });
+  $("p4-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion === null;
+      prediccion = b.getAttribute("data-valor");
+      $("p4-prediccion").querySelectorAll("button").forEach(function (o) {
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      if (nueva) trazaP4.reiniciar();
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() {
+    trazaP2.detener();
+    trazaP4.detener();
+    if (timer3) reiniciarSinBase();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cajas": pausar,
+      "paso-cuenta": pausar,
+      "paso-sin-base": pausar,
+      "paso-vuelta": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

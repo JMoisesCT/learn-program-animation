@@ -11,8 +11,9 @@ Páginas interactivas para que alumnos aprendan conceptos de programación (vari
   - `assets/js/`: utilidades compartidas (motor de pasos, progreso en `localStorage`).
   - `lecciones/<tema>/index.html`: una carpeta por tema (`variables/`, `condicionales/`, `bucles/`, …).
   - `lecciones/<tema>/<sublección>/index.html`: sublecciones que profundizan un tema (p. ej. `variables/formulas/`, `condicionales/logicos/`). Las rutas a `assets/` suben un nivel más (`../../../`).
-- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles (for, range y while) → Contar y acumular → Decidir en cada vuelta → Recorrer un texto → Salir antes: break y continue → Bucles anidados → Dibujar patrones → Proyecto: adivina el número → Funciones (def, parámetros y return) → Funciones de Python → Varios parámetros → Funciones que deciden → Variables locales → Funciones que usan funciones → Proyecto: piedra, papel o tijera → (Listas, próximamente).
+- Orden actual de lecciones: Variables → Fórmulas → Reúso → Texto y números → Mensajes con f-strings → Condicionales (if, else y elif) → Combinar condiciones → Comparar textos → Condiciones anidadas → Proyecto: la taquilla → Bucles (for, range y while) → Contar y acumular → Decidir en cada vuelta → Recorrer un texto → Salir antes: break y continue → Bucles anidados → Dibujar patrones → Proyecto: adivina el número → Funciones (def, parámetros y return) → Funciones de Python → Varios parámetros → Funciones que deciden → Variables locales → Funciones que usan funciones → Proyecto: piedra, papel o tijera → Recursión (una función que se llama a sí misma) → (Recursión 2–4, Texto a fondo, Errores y Listas, próximamente).
 - La pantalla en casillas donde `print()` dibuja patrones (cursor, espacios visibles, comparar con un objetivo) está en `assets/js/lienzo.js` (`Lienzo.crear`).
+- La pila de llamadas (una tarjeta por llamada con sus variables; cada llamada apila una y cada vuelta quita la de arriba) está en `assets/js/pila.js` (`Pila.crear`). La usan Funciones que usan funciones y las lecciones de Recursión.
 - La consola que pide un dato en cada vuelta de un bucle (`input()` dentro de un `for` o de un `while True` con `break`) está en `assets/js/bucle-input.js` (`BucleInput.crear`).
 - Al ejecutar línea a línea (`Traza`), la flecha de salto (`Codigo.salto`) se dibuja sola cuando la ejecución vuelve arriba (otra vuelta, una llamada); en un paso de la traza, `flecha: true / false` la fuerza o la evita (p. ej. `true` al volver de una función).
 - `Caja.poner` hace viajar el valor desde la línea activa del paso hasta la caja, y `Traza` hace lo mismo con la salida de `print` hacia la consola (`Codigo.volarDesdeLinea`): basta con marcar la línea antes de poner el valor.
@@ -48,7 +49,20 @@ Tema de 7 lecciones (`Funciones 1/7` … `7/7`), en `lecciones/funciones/<sublec
 5. **Variables locales** (`funciones-ambito`, carpeta `ambito/`): las variables de la función nacen al llamarla y desaparecen al volver; mismo nombre dentro y fuera son cajas distintas. Zona de cajas «programa» y zona «dentro de la función» que aparece y se borra.
 6. **Funciones que usan funciones** (`funciones-componer`, carpeta `componer/`): una función llama a otra (`promedio` usa `suma`), funciones con bucles dentro (contar vocales, factorial con `for`) y la pila de llamadas, con tarjetas que se apilan y se quitan en cada `return`.
 7. **Proyecto: piedra, papel o tijera** (`funciones-proyecto`, carpeta `proyecto/`): `jugada_pc()` con `random.randint(1, 3)` y una función que traduce el número a texto, `quien_gana(a, b)` con `if`/`elif`, `while True` con `break` y marcador (reutilizar `BucleInput`).
-Fuera de alcance por ahora: recursión, `lambda`, `*args`, docstrings.
+Fuera de alcance por ahora: `lambda`, `*args`, docstrings.
+
+## Plan: Recursión
+Tema de 4 lecciones (`Recursión 1/4` … `4/4`) después de Funciones, en `lecciones/recursion/`, sin listas. La visualización central es la pila de llamadas (`Pila.crear`): cada llamada apila una tarjeta con su propia `n` y cada vuelta la quita. En la traza, marcar `flecha: true` en el paso que vuelve a la línea de la llamada (la vuelta es la mitad de la historia).
+1. **Una función que se llama a sí misma** (`recursion`, carpeta `recursion/`): cajas dentro de cajas, `cuenta_regresiva(n)`, caso base y llamada con un problema más pequeño, qué pasa sin caso base (la pila crece hasta que Python la corta con `RecursionError`), y lo que se hace antes de la llamada (a la ida) frente a lo que se hace después (a la vuelta).
+2. **Recursión que devuelve valores** (`recursion-valores`, carpeta `valores/`): `factorial(n)`, `potencia(b, e)` y `suma_digitos(n)` con `%` y `//`. Lo que devuelve cada tarjeta baja a la de abajo y completa su cuenta (`4 * factorial(3)` → `4 * 6`). Comparar con el `factorial` con `for` de Funciones que usan funciones.
+3. **Árbol de llamadas** (`recursion-arbol`, carpeta `arbol/`): una función que se llama dos veces (`fibonacci(n)`), el árbol de llamadas que crece, las llamadas repetidas resaltadas y cuántas llamadas hace en total.
+4. **Proyecto: Torres de Hanói** (`recursion-proyecto`, carpeta `proyecto/`): mover los discos a mano primero, descubrir la idea (mover `n - 1` discos al auxiliar, el grande al destino y los `n - 1` encima) y `hanoi(n, origen, destino, auxiliar)`, que imprime los movimientos mientras los discos se mueven solos. Los discos los maneja JavaScript; el Python no usa listas.
+Fuera de alcance: memoización, `sys.setrecursionlimit`, recursión sobre listas.
+
+## Después de Recursión, antes de Listas
+- **Texto a fondo**: índices negativos, rebanadas (`texto[1:4]`), métodos de texto (`.upper()`, `.strip()`, `.replace()`, `.count()`, `.find()`, `.isdigit()`), el texto no cambia (los métodos devuelven uno nuevo) y un proyecto: el ahorcado. Todo se traslada a las listas.
+- **Errores**: leer un mensaje de error (`NameError`, `TypeError`, `ValueError`, `ZeroDivisionError`, `IndentationError`) y `try`/`except` para volver a pedir un dato inválido.
+Planear aquí sus sublecciones antes de escribirlas, como las de Funciones y Recursión.
 
 ## Convenciones de trabajo
 - Al empezar una sesión, leer `PENDIENTES.md` (qué quedó por hacer y registro de cambios); al terminar, apuntar ahí lo hecho y lo que convendría continuar.
