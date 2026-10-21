@@ -2,7 +2,7 @@
 
      <div class="pila" id="mi-pila"></div>
 
-   var p = Pila.crear(el);
+   var p = Pila.crear(el, { codigo: preEl });   codigo (opcional): ver «fichas» abajo
    p.pintar({ pila: [Pila.programa([["nota", 15.5]]),
                      Pila.llamada("promedio(14, 17)", [["a", 14], ["b", 17]], "15.5")],
               leer: [nivel, "nombre"] });
@@ -21,6 +21,10 @@
      falta: "…"      lo que le queda por hacer al volver («le falta: print("Cierro…")»);
                      "" muestra «no le falta nada»
      sigue: true     acaba de volver la de arriba y esta retoma: «▶ sigue en la línea 6»
+   Con la opción codigo, cada tarjeta pausada pone además una ficha («n=3») al final de su
+   línea en el código (Codigo.pausas): se ve cuántas llamadas esperan en esa misma línea,
+   y al volver se va la ficha de la que retoma. ficha: "e=2" cambia el texto de la ficha
+   (por defecto, sus variables).
 */
 (function () {
   "use strict";
@@ -108,7 +112,8 @@
     return nombre === nombreFuncion(titulo) ? "esperando a la de arriba" : "esperando a " + nombre + "()";
   }
 
-  function crearPila(el) {
+  function crearPila(el, opciones) {
+    var codigo = opciones && opciones.codigo;
     var titulo = crear("p", "pila__titulo");
     var cont = crear("div", "pila__marcos");
     el.appendChild(titulo);
@@ -173,6 +178,18 @@
         pintarFalta(m, pausada || sigue ? datos.falta : undefined);
       });
       titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
+      if (codigo) Codigo.pausas(codigo, fichas(pila));
+    }
+
+    // Una ficha por tarjeta pausada, de abajo arriba, en la línea donde espera
+    function fichas(pila) {
+      var lista = [];
+      pila.forEach(function (datos, nivel) {
+        if (nivel === pila.length - 1 || datos.linea === undefined) return;
+        var texto = datos.ficha || datos.vars.map(function (par) { return par[0] + "=" + par[1]; }).join(" ");
+        lista.push({ linea: datos.linea, texto: texto, clave: String(nivel) });
+      });
+      return lista;
     }
 
     function vaciar() {

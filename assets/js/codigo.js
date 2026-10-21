@@ -14,6 +14,10 @@
        `hasta` (índices desde 0): la ejecución vuelve arriba (bucle) o salta (llamada).
    Codigo.quitarSalto(preEl)
        borra la flecha (Codigo.limpiar también la borra).
+   Codigo.pausas(preEl, [{ linea: 5, texto: "n=3", clave: "1" }, …])
+       pone fichas debajo de una línea: las llamadas que esperan pausadas en ella
+       (pila.js las pinta solas con la opción codigo). Las fichas que ya no están en la
+       lista se van flotando; las nuevas aparecen. Codigo.limpiar también las quita.
    Codigo.volarDesdeLinea(el, destinoEl, texto, clase, alLlegar)
        una copia de `texto` sale de la línea que se ejecuta (la línea activa del código
        del paso de `el`) y vuela hasta destinoEl, que queda oculto hasta que llega.
@@ -36,6 +40,7 @@
   function limpiar(pre) {
     marcar(pre, {});
     quitarSalto(pre);
+    pre.querySelectorAll(".pausas").forEach(function (el) { el.remove(); });
   }
 
   var SVG = "http://www.w3.org/2000/svg";
@@ -46,13 +51,25 @@
     return el;
   }
 
+  /* El texto de un elemento, sin las fichas de pausa que pueda tener debajo */
+  function rangoDeTexto(el) {
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    var fichas = el.querySelector(":scope > .pausas");
+    if (fichas) r.setEndBefore(fichas);
+    return r;
+  }
+
   /* Dónde acaba el texto de una línea, en px desde el borde izquierdo del contenido del bloque */
   function finDeTexto(pre, linea) {
-    var r = document.createRange();
-    r.selectNodeContents(linea);
-    var caja = r.getBoundingClientRect();
+    var caja = rangoDeTexto(linea).getBoundingClientRect();
     if (!caja.width) return linea.offsetLeft + parseFloat(getComputedStyle(linea).paddingLeft);
     return caja.right - pre.getBoundingClientRect().left - pre.clientLeft + pre.scrollLeft;
+  }
+
+  // Alto de la primera fila de una línea (debajo puede tener fichas de pausa)
+  function altoFila(linea) {
+    return Math.min(linea.offsetHeight, parseFloat(getComputedStyle(linea).lineHeight) || linea.offsetHeight);
   }
 
   function quitarSalto(pre) {
@@ -76,8 +93,8 @@
     var xc = Math.min(derecha + 30, pre.scrollLeft + pre.clientWidth - 6);
     var x1 = Math.min(finDeTexto(pre, a) + 8, xc - 14);
     var x2 = Math.min(finDeTexto(pre, b) + 8, xc - 14);
-    var y1 = a.offsetTop + a.offsetHeight / 2;
-    var y2 = b.offsetTop + b.offsetHeight / 2;
+    var y1 = a.offsetTop + altoFila(a) / 2;
+    var y2 = b.offsetTop + altoFila(b) / 2;
 
     var dibujo = svg("svg", {
       "class": "codigo__salto",
@@ -87,16 +104,63 @@
       focusable: "false"
     });
     dibujo.appendChild(svg("circle", { "class": "codigo__salto-inicio", cx: x1, cy: y1, r: 3.5 }));
+    // Sale a la derecha, baja (o sube) por fuera de las líneas de en medio y entra: esquinas redondeadas
+    var r = Math.min(14, Math.abs(y2 - y1) / 2, xc - Math.max(x1, x2));
+    var dir = y2 > y1 ? 1 : -1;
     dibujo.appendChild(svg("path", {
       "class": "codigo__salto-trazo",
       pathLength: 1,
-      d: "M" + x1 + " " + y1 + " C" + xc + " " + y1 + " " + xc + " " + y2 + " " + x2 + " " + y2
+      d: "M" + x1 + " " + y1 + " L" + (xc - r) + " " + y1 + " Q" + xc + " " + y1 + " " + xc + " " + (y1 + dir * r) +
+        " L" + xc + " " + (y2 - dir * r) + " Q" + xc + " " + y2 + " " + (xc - r) + " " + y2 + " L" + x2 + " " + y2
     }));
     dibujo.appendChild(svg("path", {
       "class": "codigo__salto-punta",
       d: "M" + (x2 + 8) + " " + (y2 - 6) + " L" + x2 + " " + y2 + " L" + (x2 + 8) + " " + (y2 + 6)
     }));
     pre.appendChild(dibujo);
+  }
+
+  /* ---------- Fichas de las llamadas pausadas en una línea ---------- */
+  function pausas(pre, lista) {
+    var ls = lineas(pre);
+    var quedan = {};
+    lista.forEach(function (f) { quedan[f.clave] = f; });
+    // Las que se van salen de la línea (no ocupan lugar) y suben desvaneciéndose
+    pre.querySelectorAll(".pausa").forEach(function (ficha) {
+      var f = quedan[ficha.getAttribute("data-clave")];
+      if (f && ficha.textContent === f.texto && ficha.closest(".linea") === ls[f.linea]) return;
+      var grupo = ficha.parentNode;
+      if (!reducir() && pre.isConnected && ficha.offsetParent) {
+        var a = ficha.getBoundingClientRect();
+        var b = pre.getBoundingClientRect();
+        var fantasma = ficha.cloneNode(true);
+        fantasma.classList.add("pausa--sale");
+        fantasma.style.left = (a.left - b.left - pre.clientLeft + pre.scrollLeft) + "px";
+        fantasma.style.top = (a.top - b.top - pre.clientTop + pre.scrollTop) + "px";
+        pre.appendChild(fantasma);
+        setTimeout(function () { fantasma.remove(); }, 500);
+      }
+      ficha.remove();
+      if (!grupo.children.length) grupo.remove();
+    });
+    lista.forEach(function (f) {
+      var linea = ls[f.linea];
+      if (!linea || pre.querySelector('.linea .pausa[data-clave="' + f.clave + '"]')) return;
+      var grupo = linea.querySelector(".pausas");
+      if (!grupo) {
+        grupo = document.createElement("span");
+        grupo.className = "pausas";
+        grupo.setAttribute("aria-hidden", "true");
+        // Alineada con el código de la línea, no con su sangría
+        grupo.style.setProperty("--sangria", /^ */.exec(linea.textContent)[0].length + "ch");
+        linea.appendChild(grupo);
+      }
+      var ficha = document.createElement("span");
+      ficha.className = "pausa";
+      ficha.setAttribute("data-clave", f.clave);
+      ficha.textContent = f.texto;
+      grupo.appendChild(ficha);
+    });
   }
 
   function consola(el, salida) {
@@ -145,9 +209,7 @@
 
   // Rectángulo que ocupa solo el texto de un elemento (una línea es más ancha que su texto)
   function rectDeTexto(el) {
-    var r = document.createRange();
-    r.selectNodeContents(el);
-    var caja = r.getBoundingClientRect();
+    var caja = rangoDeTexto(el).getBoundingClientRect();
     return caja.width ? caja : el.getBoundingClientRect();
   }
 
@@ -200,6 +262,6 @@
 
   window.Codigo = {
     marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano,
-    salto: salto, quitarSalto: quitarSalto, volarDesdeLinea: volarDesdeLinea
+    salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea
   };
 })();
