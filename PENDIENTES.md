@@ -36,6 +36,14 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-21 · Texto a fondo 1/5: Cada letra en su lugar
+
+- **Plan**: CLAUDE.md recoge el tema Texto a fondo (5 lecciones: índices, rebanadas, métodos que transforman, buscar en un texto y el ahorcado) y deja Errores como lo siguiente por planear.
+- **Cinta compartida** `assets/js/cinta.js` (`Cinta.crear`) y sus estilos en `base.css`: un texto en casillas con el índice encima y, si se pide, el negativo debajo (en morado) o los números en los cortes entre letras (para las rebanadas). `marcar(i)` resalta una casilla (o pone una casilla vacía con el número en rojo si se sale del texto), `rango(a, b)` sube las casillas de una rebanada, `clases(fn)` colorea cada casilla y `letra(i)` sirve de origen para `Codigo.volar`.
+- **Lección** `lecciones/texto/` (`data-leccion="texto"`), 7 pasos: un control mueve el índice por «mango» y la letra vuela a la consola (hay que encontrar la primera y la última) → predecir qué pasa con `palabra[5]` (casilla vacía en rojo e `IndexError`) y luego `palabra[len(palabra) - 1]` resuelto por partes → índices negativos, con otra palabra a elegir → predecir tres índices de «Cusco» con los números ocultos (el último, `ciudad[len(ciudad)]`, da error) → `for i in range(len(palabra))` línea a línea, con la casilla que sigue a `i` → reto: el índice de la pareja en `es_palindromo` (`-1 - i`; las trampas `-i`, `len(palabra) - i` e `i - 1`), con tres pruebas y las parejas de «radar» que se iluminan → resumen.
+- **Portada**: tarjeta de tema Texto a fondo (🔤) con su primera lección; Torres de Hanói enlaza a ella.
+- Probado con Playwright en 1280 y 390 px, reanudando en cada paso y con movimiento reducido: sin errores.
+
 ### 2026-10-21 · Recursión 4/4: Proyecto: Torres de Hanói
 
 **Lección** `lecciones/recursion/proyecto/` (`data-leccion="recursion-proyecto"`), 8 pasos:
