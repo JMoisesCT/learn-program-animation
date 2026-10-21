@@ -9,7 +9,8 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Lección de Listas** (la siguiente del orden, «próximamente» en la portada). Antes de escribirla, planear sus sublecciones en CLAUDE.md, como se hizo con Funciones (`Listas 1/N`…), y decidir qué se levanta de la regla «nada de listas». Usar desde el principio las utilidades nuevas: `Traza` con flecha de salto, `Caja.poner` con vuelo, `opciones-codigo.js` y confeti.
+2. **Recursión 2/4, 3/4 y 4/4** (plan en CLAUDE.md): Recursión que devuelve valores (`valores/`), Árbol de llamadas (`arbol/`) y Proyecto: Torres de Hanói (`proyecto/`). Al publicar cada una: su `<li data-leccion>` en la tarjeta de Recursión de la portada y el botón «Siguiente» en el resumen de la anterior (Recursión 1/4 aún no tiene, porque no hay lección siguiente). Usar `Pila.crear` y `flecha: true` al volver.
+   Después, antes de Listas: **Texto a fondo** y **Errores** (ideas en CLAUDE.md; planear sus sublecciones allí). Y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
 3. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. En Varios parámetros, Funciones que deciden, Variables locales y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
 4. **Origen del vuelo en los parámetros.** Cuando un parámetro recibe su valor, la línea activa es la del `def`, así que el valor sale de ahí y no del argumento de la llamada. Se podría permitir indicar el origen (p. ej. un elemento opcional en `Caja.poner`) para que salga del argumento.
 5. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
@@ -32,6 +33,14 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-21 · Recursión 1/4: una función que se llama a sí misma
+
+- **Plan**: CLAUDE.md recoge el tema Recursión (4 lecciones, después de Funciones) y lo que conviene ver antes de Listas (Texto a fondo, Errores). La recursión sale de «fuera de alcance».
+- **Pila compartida**: la pila de llamadas de Funciones que usan funciones pasó a `assets/js/pila.js` (`Pila.crear`, `Pila.programa`, `Pila.llamada`) y sus estilos a `base.css`. Novedades: `termina: true` para una llamada que acaba sin devolver nada («↩ termina») y, cuando la tarjeta de encima es la misma función, «esperando a la de arriba». Funciones que usan funciones se ve igual que antes.
+- **Lección** `lecciones/recursion/` (`data-leccion="recursion"`), 6 pasos: cajas dentro de cajas (instrucciones que se usan a sí mismas) → `cuenta_regresiva(n)` con la pila y un control de 1 a 5 → sin caso base: la pila crece hasta 999 llamadas e imprime de 3 a -995 antes del `RecursionError` (comprobado con Python 3.13) → `abrir(n)` con «Abro» a la ida y «Cierro» a la vuelta, predicción antes de ejecutar y las cajas que se abren y se cierran → reto: qué versión de `subir(n)` imprime 0 1 2 3 → resumen.
+- **Portada**: tarjeta de tema Recursión (🎁) con su primera lección; «Empezar · 1 lección» en singular. El proyecto de Funciones enlaza a Recursión.
+- Probado con Playwright en 1280 y 390 px, reanudando en cada paso y con movimiento reducido: sin errores.
 
 ### 2026-10-20 · Reanudar el proyecto de Funciones en la Parte 3
 
