@@ -36,6 +36,19 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-21 · Texto a fondo 2/5: Rebanadas
+
+**Lección** `lecciones/texto/rebanadas/` (`data-leccion="texto-rebanadas"`), 7 pasos:
+1. Corta un pedazo: unas tijeras (dos cortes, inicio y fin) se arrastran por los cortes de «girasol», o se tocan y se mueven con las flechas; tocar la cinta lleva el corte más cercano. Hay que sacar «sol» y «gira».
+2. El final no entra: predecir `palabra[2:6]` («raso», mide 6 - 2), `palabra[3:3]` (texto vacío) y `palabra[5:50]` («ol», sin error, a diferencia de un índice).
+3. Quitar el inicio o el fin: el corte queda fijo en el borde, en gris, y el código pasa a `palabra[:4]` o `palabra[4:]`.
+4. Las últimas letras: qué rebanada da la extensión de «foto.png», «tarea.pdf» y «cancion.mp3» (`[5:]`, `[-4:]` o `[-3:]`); la cinta muestra el número negativo de cada corte.
+5. Partir `"21/10/2026"`: el alumno corta el mes y luego el año, que caen en sus cajas, y se imprime la frase.
+6. Reto: qué imprime `palabra[3:] + palabra[:3]` con «programa» (las trampas: contar desde 1 y que el fin entre).
+7. Resumen.
+
+Las tijeras son de la lección (`crearTijeras`), sobre la cinta en modo cortes. `cinta.js` gana `marcarCortes` y el número negativo de cada corte (con `cortes` y `negativos`). Portada y botón «Siguiente» en Texto a fondo 1/5. Probado con Playwright en 1280 y 390 px (con teclado, arrastrando y tocando), reanudando en cada paso y con movimiento reducido: sin errores.
+
 ### 2026-10-21 · Texto a fondo 1/5: Cada letra en su lugar
 
 - **Plan**: CLAUDE.md recoge el tema Texto a fondo (5 lecciones: índices, rebanadas, métodos que transforman, buscar en un texto y el ahorcado) y deja Errores como lo siguiente por planear.

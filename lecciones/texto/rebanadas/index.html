@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rebanadas · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: rebanadas de texto en Python. texto[1:4] con unas tijeras que cortan entre las letras, el final que no entra, [:3] y [3:], negativos y partir una fecha.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__visual .expresion { margin-top: var(--esp-2); }
+    .expresion { overflow-wrap: anywhere; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-acento-suave); color: var(--color-acento); white-space: pre; }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .btn code { font-weight: 700; }
+
+    /* ---------- Tijeras: dos cortes que se arrastran por la cinta ---------- */
+    .tijeras { position: relative; padding-bottom: 4.25rem; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+    .tijeras__marca {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 2.75rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      transform: translateX(-50%);
+      cursor: grab;
+      transition: left var(--dur-rapida) ease;
+    }
+    .tijeras__marca:focus-visible { box-shadow: none; }
+    .tijeras__marca:focus-visible .tijeras__asa { box-shadow: var(--foco); }
+    .tijeras--arrastrando .tijeras__marca { transition: none; cursor: grabbing; }
+    .tijeras__raya { width: 0; height: var(--raya, 3rem); border-left: 3px dashed var(--color-azul); }
+    .tijeras__asa { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; margin-top: 0.15rem; border-radius: 50%; background: var(--color-azul); color: #fff; font-size: 1.15rem; line-height: 1; box-shadow: var(--sombra); transition: transform var(--dur-rapida) var(--curva-rebote); }
+    .tijeras__marca:hover .tijeras__asa, .tijeras--arrastrando .tijeras__asa { transform: scale(1.08); }
+    .tijeras__nombre { font-size: 0.75rem; font-weight: 700; color: var(--color-azul); }
+    .tijeras__marca--fin .tijeras__asa { background: var(--color-acento); }
+    .tijeras__marca--fin .tijeras__raya { border-color: var(--color-acento); }
+    .tijeras__marca--fin .tijeras__nombre { color: var(--color-acento); }
+    /* Los dos cortes en el mismo lugar: las asas se separan un poco */
+    .tijeras--juntas .tijeras__marca--inicio .tijeras__asa, .tijeras--juntas .tijeras__marca--inicio .tijeras__nombre { transform: translateX(-0.75rem); }
+    .tijeras--juntas .tijeras__marca--fin .tijeras__asa, .tijeras--juntas .tijeras__marca--fin .tijeras__nombre { transform: translateX(0.75rem); }
+    /* Un corte que se omite ([:4] o [4:]) queda fijo en el borde, en gris */
+    .tijeras__marca--omitida { cursor: default; }
+    .tijeras__marca--omitida .tijeras__asa { background: #9aa4b2; }
+    .tijeras__marca--omitida .tijeras__raya { border-color: #9aa4b2; }
+    .tijeras__marca--omitida .tijeras__nombre { color: var(--color-texto-suave); }
+
+    /* ---------- Objetivos ---------- */
+    .objetivos { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-3) 0 0; padding: 0; list-style: none; font-size: var(--texto-sm); }
+    .objetivo { padding: var(--esp-1) var(--esp-3); border: 2px dashed var(--color-borde); border-radius: 999px; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .objetivo--hecho { border-style: solid; border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+    .objetivo--hecho::before { content: "✓ "; }
+
+    /* ---------- Predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); white-space: pre; }
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- Extensión de archivos ---------- */
+    .archivos { list-style: none; margin: var(--esp-3) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .archivos button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-sm); color: var(--color-texto); cursor: pointer; text-align: left; }
+    .archivos button[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .archivo__res { font-weight: 700; white-space: pre; }
+    .archivo__res--bien { color: var(--color-ok); }
+    .archivo__res--mal { color: var(--color-pista); }
+
+    /* ---------- Fecha ---------- */
+    .cajas--tres { gap: var(--esp-4) var(--esp-5); padding-top: var(--esp-3); }
+    .tarea { margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; }
+
+    /* ---------- Reto ---------- */
+    .opciones--texto .opcion span { font-size: var(--texto-md); }
+    .cinta-resultado[hidden] { display: none; }
+
+    @media (max-width: 480px) {
+      .tijeras { padding-bottom: 3.9rem; }
+      .tijeras__marca { width: 2.5rem; }
+      .tijeras__asa { width: 2.1rem; height: 2.1rem; font-size: 1rem; }
+      .opciones--texto { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cajas--tres { gap: var(--esp-3); }
+      .cajas--tres .caja__cuerpo { width: 5.6rem; height: 4.6rem; }
+      .cajas--tres .caja__valor { font-size: var(--texto-md); padding: 0 var(--esp-2); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="texto-rebanadas">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: unas tijeras que cortan entre las letras -->
+    <section class="paso" id="paso-tijeras" data-requiere aria-labelledby="t-tijeras">
+      <span class="paso__etiqueta">Texto a fondo 2/5 · Rebanadas</span>
+      <h1 class="paso__titulo" id="t-tijeras">Corta un pedazo</h1>
+      <p>Una <strong>rebanada</strong> se lleva un pedazo del texto. Arrastra las tijeras (o tócalas y usa las flechas) y saca <strong>«sol»</strong> y <strong>«gira»</strong> de «girasol».</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"girasol"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero" id="s1-a">1</span>:<span class="tk-numero" id="s1-b">4</span>])</span></code></pre>
+          <ul class="objetivos" aria-label="Pedazos que hay que sacar">
+            <li class="objetivo" id="s1-obj-sol">"sol"</li>
+            <li class="objetivo" id="s1-obj-gira">"gira"</li>
+          </ul>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-tijeras"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s1-expr">palabra[1:4]</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s1-valor">"ira"</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. El fin no entra: predecir -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">El final no entra</h2>
+      <p>Los números van en los <strong>cortes</strong>, no en las letras. ¿Qué sale en cada caso?</p>
+
+      <div class="tarjeta">
+        <p class="rotulo-cinta">palabra = "girasol"</p>
+        <div id="s2-cinta"></div>
+        <ol class="predicciones" id="s2-lista">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">palabra[2:6]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para palabra[2:6]">
+                <button type="button" class="btn btn-secundario" data-valor="ras" aria-pressed="false">"ras"</button>
+                <button type="button" class="btn btn-secundario" data-valor="raso" aria-pressed="false">"raso"</button>
+                <button type="button" class="btn btn-secundario" data-valor="rasol" aria-pressed="false">"rasol"</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">palabra[3:3]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para palabra[3:3]">
+                <button type="button" class="btn btn-secundario" data-valor="a" aria-pressed="false">"a"</button>
+                <button type="button" class="btn btn-secundario" data-valor="" aria-pressed="false" aria-label="Texto vacío">""</button>
+                <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">palabra[5:50]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para palabra[5:50]">
+                <button type="button" class="btn btn-secundario" data-valor="sol" aria-pressed="false">"sol"</button>
+                <button type="button" class="btn btn-secundario" data-valor="ol" aria-pressed="false">"ol"</button>
+                <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 3. Omitir el inicio o el fin -->
+    <section class="paso" id="paso-omitir" data-requiere aria-labelledby="t-omitir">
+      <h2 class="paso__titulo" id="t-omitir">Desde el principio, hasta el final</h2>
+      <p>Si no pones el inicio, la rebanada empieza en el principio; si no pones el fin, llega hasta el final. Quita <strong>cada uno</strong>, por turnos.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"girasol"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero" id="s3-a">0</span>:<span class="tk-numero" id="s3-b">4</span>])</span></code></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-sin-inicio" aria-pressed="false">Quitar el inicio</button>
+            <button type="button" class="btn btn-secundario" id="s3-sin-fin" aria-pressed="false">Quitar el fin</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-tijeras"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s3-expr">palabra[0:4]</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s3-valor">"gira"</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Negativos: la extensión de un archivo -->
+    <section class="paso" id="paso-extension" data-requiere aria-labelledby="t-extension">
+      <h2 class="paso__titulo" id="t-extension">Las últimas letras</h2>
+      <p>Queremos la extensión de un archivo: <code>png</code>, <code>pdf</code>… Los nombres miden distinto. ¿Qué rebanada sirve para <strong>los tres</strong>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">archivo</span> = <span class="tk-texto" id="s4-codigo-archivo">"tarea.pdf"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">archivo</span>[<span class="hueco" id="s4-hueco">?</span>])</span></code></pre>
+          <div class="elegir fila-botones" id="s4-opciones" role="group" aria-label="Rebanada">
+            <button type="button" class="btn btn-secundario" data-valor="5:" aria-pressed="false">archivo[5:]</button>
+            <button type="button" class="btn btn-secundario" data-valor="-4:" aria-pressed="false">archivo[-4:]</button>
+            <button type="button" class="btn btn-secundario" data-valor="-3:" aria-pressed="false">archivo[-3:]</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s4-cinta"></div>
+          <ul class="archivos" id="s4-archivos" aria-label="Archivos"></ul>
+        </div>
+        <div class="lab__resultado">
+          <p class="nota">Abajo, en morado, el número negativo de cada corte: <code>-3</code> es el corte antes de las 3 últimas letras.</p>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Partir una fecha -->
+    <section class="paso" id="paso-fecha" data-requiere aria-labelledby="t-fecha">
+      <h2 class="paso__titulo" id="t-fecha">Partir una fecha</h2>
+      <p>De <code>"21/10/2026"</code> ya sacamos el día. Ahora usa las tijeras para sacar el <strong>mes</strong> y después el <strong>año</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">fecha</span> = <span class="tk-texto">"21/10/2026"</span></span><span class="linea"><span class="tk-variable">dia</span> = <span class="tk-variable">fecha</span>[<span class="tk-numero">0</span>:<span class="tk-numero">2</span>]</span><span class="linea"><span class="tk-variable">mes</span> = <span class="tk-variable">fecha</span>[<span class="hueco" id="s5-mes">?</span>]</span><span class="linea"><span class="tk-variable">año</span> = <span class="tk-variable">fecha</span>[<span class="hueco" id="s5-anio">?</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">f"Mes {</span><span class="tk-variable">mes</span><span class="tk-texto">} del año {</span><span class="tk-variable">año</span><span class="tk-texto">}"</span>)</span></code></pre>
+          <p class="tarea" id="s5-tarea" aria-live="polite">Corta el mes.</p>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-tijeras"></div>
+          <div class="cajas cajas--tres">
+            <div class="caja" id="s5-caja-dia">
+              <div class="caja__cuerpo"><span class="caja__valor">"21"</span></div>
+              <code class="caja__nombre">dia</code>
+            </div>
+            <div class="caja" id="s5-caja-mes">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mes</code>
+            </div>
+            <div class="caja" id="s5-caja-anio">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">año</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="s5-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="s5-otra-btn">↺ Otra vez</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: rotar un texto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Qué imprime?</h2>
+      <p>Dos rebanadas de la misma palabra, pegadas con <code>+</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"programa"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero">3</span>:] + <span class="tk-variable">palabra</span>[:<span class="tk-numero">3</span>])</span></code></pre>
+          <fieldset class="opciones opciones--texto" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué imprime?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="ogramapro"><span>ogramapro</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="gramapro"><span>gramapro</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="gramaprog"><span>gramaprog</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="programa"><span>programa</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div id="reto-cinta"></div>
+          <div class="cinta-resultado" id="reto-resultado-caja" hidden>
+            <p class="rotulo-cinta">↓ palabra[3:] + palabra[:3]</p>
+            <div id="reto-resultado"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite" hidden><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">✂️</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>texto[inicio:fin]</code> se lleva lo que hay entre dos cortes: el fin no entra, y si falta un número, llega hasta el borde.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"girasol"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">4</span>:<span class="tk-numero">7</span>]    <span class="tk-comentario"># "sol"</span></span><span class="linea"><span class="tk-variable">palabra</span>[:<span class="tk-numero">4</span>]     <span class="tk-comentario"># "gira"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">4</span>:]     <span class="tk-comentario"># "sol"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">-3</span>:]    <span class="tk-comentario"># "sol"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">5</span>:<span class="tk-numero">50</span>]   <span class="tk-comentario"># "ol", sin error</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/cinta.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  // Un texto tal como lo escribe Python, con sus comillas
+  function comillas(s) { return '"' + s + '"'; }
+
+  /* Recuerda qué casos ha visto el alumno en cada paso */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* Una rebanada como la escribe Python: [1:4], [:4], [4:] */
+  function corchetes(a, b, sinInicio, sinFin) {
+    return "[" + (sinInicio ? "" : a) + ":" + (sinFin ? "" : b) + "]";
+  }
+
+  /* ---------- Tijeras: dos cortes que se arrastran por la cinta ----------
+     crearTijeras(el, texto, { inicio, fin, alCambiar(a, b) })
+       .poner(a, b)            mueve los dos cortes
+       .omitir(cual, bool)     fija el corte "inicio" o "fin" en el borde ([:4], [4:])
+       .colocar()              recoloca las tijeras (al entrar al paso o cambiar el tamaño)
+       .cinta                  la cinta de debajo */
+  var todasLasTijeras = [];
+
+  function crearTijeras(el, texto, op) {
+    el.classList.add("tijeras");
+    var zona = document.createElement("div");
+    el.appendChild(zona);
+    var cinta = Cinta.crear(zona, texto, { cortes: true });
+    var a = op.inicio;
+    var b = op.fin;
+    var omitida = { inicio: false, fin: false };
+    var arrastrando = null;
+    var activa = true;
+
+    function crearMarca(cual) {
+      var m = document.createElement("button");
+      m.type = "button";
+      m.className = "tijeras__marca tijeras__marca--" + cual;
+      m.setAttribute("role", "slider");
+      m.setAttribute("aria-label", cual === "inicio" ? "Corte de inicio" : "Corte de fin");
+      m.setAttribute("aria-valuemin", "0");
+      m.innerHTML = '<span class="tijeras__raya"></span><span class="tijeras__asa" aria-hidden="true">✂</span>' +
+        '<span class="tijeras__nombre" aria-hidden="true">' + cual + "</span>";
+      m.addEventListener("keydown", function (e) {
+        var k = cual === "inicio" ? a : b;
+        var mover = { ArrowLeft: k - 1, ArrowDown: k - 1, ArrowRight: k + 1, ArrowUp: k + 1, Home: 0, End: cinta.largo }[e.key];
+        if (mover === undefined) return;
+        e.preventDefault();
+        poner(cual, mover);
+      });
+      el.appendChild(m);
+      return m;
+    }
+    var marcas = { inicio: crearMarca("inicio"), fin: crearMarca("fin") };
+
+    function poner(cual, k) {
+      if (!activa || omitida[cual]) return;
+      k = Math.max(0, Math.min(cinta.largo, k));
+      var antes = a + ":" + b;
+      if (cual === "inicio") a = Math.min(k, b);
+      else b = Math.max(k, a);
+      if (antes !== a + ":" + b) actualizar(true);
+    }
+
+    // Desplazamiento de la cinta dentro de las tijeras
+    function origen() { return zona.getBoundingClientRect().left - el.getBoundingClientRect().left; }
+
+    function colocar() {
+      var r = el.getBoundingClientRect();
+      var letra = cinta.letra(0);
+      if (!r.width || !letra) return;
+      var lr = letra.getBoundingClientRect();
+      var cr = cinta.casilla(0).getBoundingClientRect();
+      var arriba = lr.top - r.top - 6;
+      var raya = cr.bottom - lr.top + 10;
+      var x0 = origen();
+      ["inicio", "fin"].forEach(function (cual) {
+        var m = marcas[cual];
+        m.style.left = (x0 + cinta.corte(cual === "inicio" ? a : b)) + "px";
+        m.style.top = arriba + "px";
+        m.style.setProperty("--raya", raya + "px");
+      });
+    }
+
+    function actualizar(avisar) {
+      colocar();
+      el.classList.toggle("tijeras--juntas", a === b);
+      cinta.rango(a, b);
+      cinta.marcarCortes([omitida.inicio ? -1 : a, omitida.fin ? -1 : b]);
+      ["inicio", "fin"].forEach(function (cual) {
+        var m = marcas[cual];
+        var k = cual === "inicio" ? a : b;
+        m.setAttribute("aria-valuemax", String(cinta.largo));
+        m.setAttribute("aria-valuenow", String(k));
+        m.setAttribute("aria-valuetext", omitida[cual] ? "sin " + cual : String(k));
+        m.classList.toggle("tijeras__marca--omitida", omitida[cual]);
+        m.disabled = !activa || omitida[cual];
+      });
+      if (avisar && op.alCambiar) op.alCambiar(a, b);
+    }
+
+    // El corte más cercano a una posición x (px desde el borde de las tijeras)
+    function cercano(x) {
+      var x0 = origen();
+      var mejor = 0;
+      for (var k = 1; k <= cinta.largo; k++) {
+        if (Math.abs(x0 + cinta.corte(k) - x) < Math.abs(x0 + cinta.corte(mejor) - x)) mejor = k;
+      }
+      return mejor;
+    }
+
+    function cualMover(x, k, objetivo) {
+      if (objetivo) return objetivo === marcas.inicio ? "inicio" : "fin";
+      if (omitida.inicio) return "fin";
+      if (omitida.fin) return "inicio";
+      if (a === b) return k < a ? "inicio" : "fin";
+      var x0 = origen();
+      return Math.abs(x0 + cinta.corte(a) - x) <= Math.abs(x0 + cinta.corte(b) - x) ? "inicio" : "fin";
+    }
+
+    el.addEventListener("pointerdown", function (e) {
+      if (!activa || (e.button !== undefined && e.button > 0)) return;
+      var x = e.clientX - el.getBoundingClientRect().left;
+      var k = cercano(x);
+      var cual = cualMover(x, k, e.target.closest(".tijeras__marca"));
+      if (omitida[cual]) return;
+      e.preventDefault();
+      arrastrando = cual;
+      el.classList.add("tijeras--arrastrando");
+      marcas[cual].focus({ preventScroll: true });
+      if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+      poner(cual, k);
+    });
+    el.addEventListener("pointermove", function (e) {
+      if (!arrastrando) return;
+      poner(arrastrando, cercano(e.clientX - el.getBoundingClientRect().left));
+    });
+    function soltar() {
+      arrastrando = null;
+      el.classList.remove("tijeras--arrastrando");
+    }
+    el.addEventListener("pointerup", soltar);
+    el.addEventListener("pointercancel", soltar);
+
+    var t = {
+      cinta: cinta,
+      colocar: colocar,
+      poner: function (na, nb) {
+        a = na;
+        b = nb;
+        actualizar(false);
+      },
+      omitir: function (cual, valor) {
+        omitida[cual] = valor;
+        if (valor && cual === "inicio") a = 0;
+        if (valor && cual === "fin") b = cinta.largo;
+        actualizar(true);
+      },
+      activar: function (valor) {
+        activa = valor;
+        actualizar(false);
+      },
+      get inicio() { return a; },
+      get fin() { return b; }
+    };
+    todasLasTijeras.push(t);
+    actualizar(false);
+    return t;
+  }
+
+  window.addEventListener("resize", function () {
+    todasLasTijeras.forEach(function (t) { t.colocar(); });
+  });
+
+  /* ---------- 1. Corta un pedazo ---------- */
+  var GIRASOL = "girasol";
+  var s1 = vistos();
+  var tijeras1 = crearTijeras($("s1-tijeras"), GIRASOL, {
+    inicio: 1, fin: 4,
+    alCambiar: function (a, b) { cortar1(a, b, leccion); }
+  });
+
+  function cortar1(a, b, leccion) {
+    var parte = GIRASOL.slice(a, b);
+    $("s1-a").textContent = String(a);
+    $("s1-b").textContent = String(b);
+    $("s1-expr").textContent = "palabra[" + a + ":" + b + "]";
+    $("s1-valor").textContent = comillas(parte);
+    Codigo.marcar($("s1-codigo"), { activas: [1] });
+    Codigo.consola($("s1-consola"), [parte]);
+    if (!leccion) return;
+
+    var fb = $("s1-fb");
+    if (parte === "sol" || parte === "gira") {
+      s1.marcar(parte);
+      $("s1-obj-" + parte).classList.add("objetivo--hecho");
+    }
+    if (s1.todos(["sol", "gira"])) {
+      Pasos.feedback(fb, "ok", "Los números van en los cortes entre letras: palabra[0:4] se lleva lo que hay entre el corte 0 y el 4, o sea g, i, r, a. La letra de después del 4 no entra.");
+      leccion.desbloquear();
+    } else if (parte === "sol") {
+      Pasos.feedback(fb, "pista", "¡«sol»! Es palabra[4:7]: corta en el 4 y en el 7. Ahora saca «gira».");
+    } else if (parte === "gira") {
+      Pasos.feedback(fb, "pista", "¡«gira»! Es palabra[0:4]. Ahora saca «sol».");
+    } else if (parte === "") {
+      Pasos.feedback(fb, "pista", "Con los dos cortes en el mismo lugar no queda nada entre ellos: un texto vacío.");
+    } else {
+      Pasos.feedback(fb, "pista", "Salió " + comillas(parte) + ". Busca «sol» y «gira».");
+    }
+  }
+
+  /* ---------- 2. Predecir ---------- */
+  var cinta2 = Cinta.crear($("s2-cinta"), GIRASOL, { cortes: true });
+  var predicciones = [
+    {
+      correcta: "raso", rango: [2, 6], cortes: [2, 6],
+      ok: "Del corte 2 al corte 6 hay 6 - 2 = 4 letras: «raso».",
+      pistas: {
+        ras: "El 6 es un corte, no una letra: entre el corte 2 y el 6 quedan 4 letras.",
+        rasol: "La rebanada se para en el corte 6: la «l» queda fuera."
+      }
+    },
+    {
+      correcta: "", rango: null, cortes: [3],
+      ok: "Los dos cortes en el mismo lugar no dejan nada entre ellos: un texto vacío, sin error.",
+      pistas: {
+        a: "La «a» está entre el corte 3 y el 4. Entre el 3 y el 3 no hay ninguna letra.",
+        error: "No hay error: cortar dos veces en el mismo lugar es posible. ¿Qué queda entre los dos cortes?"
+      }
+    },
+    {
+      correcta: "ol", rango: [5, 7], cortes: [5, 7],
+      ok: "Una rebanada que se pasa no da error: llega hasta donde haya texto. (Con un índice sí: palabra[50] da IndexError.)",
+      pistas: {
+        sol: "El corte 5 está entre la «s» y la «o». Mira la cinta: ¿qué letras quedan a su derecha?",
+        error: "Con un índice daría IndexError, pero una rebanada se corta donde termina el texto, sin error."
+      }
+    }
+  ];
+  var aciertos2 = [false, false, false];
+
+  /* ---------- 3. Omitir el inicio o el fin ---------- */
+  var s3 = vistos();
+  var sinInicio = false;
+  var sinFin = false;
+  var tijeras3 = crearTijeras($("s3-tijeras"), GIRASOL, {
+    inicio: 0, fin: 4,
+    alCambiar: function (a, b) { cortar3(a, b, leccion); }
+  });
+
+  function cortar3(a, b, leccion) {
+    var parte = GIRASOL.slice(a, b);
+    var py = corchetes(a, b, sinInicio, sinFin);
+    $("s3-a").textContent = sinInicio ? "" : String(a);
+    $("s3-b").textContent = sinFin ? "" : String(b);
+    $("s3-expr").textContent = "palabra" + py;
+    $("s3-valor").textContent = comillas(parte);
+    Codigo.marcar($("s3-codigo"), { activas: [1] });
+    Codigo.consola($("s3-consola"), [parte]);
+    if (!leccion) return;
+
+    if (sinInicio) s3.marcar("inicio");
+    if (sinFin) s3.marcar("fin");
+    var fb = $("s3-fb");
+    if (sinInicio && sinFin) {
+      Pasos.feedback(fb, "pista", "Sin inicio ni fin, palabra[:] es el texto entero.");
+    } else if (sinInicio) {
+      Pasos.feedback(fb, "pista", "palabra" + py + " empieza en el principio: es lo mismo que palabra[0:" + b + "]." +
+        (s3.tiene("fin") ? "" : " Ahora quita el fin (y vuelve a poner el inicio)."));
+    } else if (sinFin) {
+      Pasos.feedback(fb, "pista", "palabra" + py + " llega hasta el final, sin contar cuántas letras hay: es palabra[" + a + ":7]." +
+        (s3.tiene("inicio") ? "" : " Ahora quita el inicio (y vuelve a poner el fin)."));
+    } else {
+      Pasos.limpiarFeedback(fb);
+    }
+    if (s3.todos(["inicio", "fin"])) {
+      Pasos.feedback(fb, "ok", "palabra[:4] empieza en el principio y palabra[4:] llega hasta el final. Juntas dan la palabra entera: palabra[:4] + palabra[4:] es «girasol».");
+      leccion.desbloquear();
+    }
+  }
+
+  function alternarOmitir(cual, boton) {
+    if (cual === "inicio") sinInicio = !sinInicio;
+    else sinFin = !sinFin;
+    var valor = cual === "inicio" ? sinInicio : sinFin;
+    boton.setAttribute("aria-pressed", String(valor));
+    boton.textContent = (valor ? "Poner el " : "Quitar el ") + cual;
+    tijeras3.omitir(cual, valor);
+  }
+
+  /* ---------- 4. La extensión de un archivo ---------- */
+  var ARCHIVOS = [["foto.png", "png"], ["tarea.pdf", "pdf"], ["cancion.mp3", "mp3"]];
+  var archivoActual = "tarea.pdf";
+  var rebanada4 = null;
+  var cinta4 = Cinta.crear($("s4-cinta"), archivoActual, { cortes: true, negativos: true });
+
+  /* Aplica una rebanada escrita como "5:" o "-3:" */
+  function rebanar(texto, r) {
+    var inicio = Number(r.split(":")[0]);
+    return texto.slice(inicio);
+  }
+
+  function pintarArchivos() {
+    var lista = $("s4-archivos");
+    lista.textContent = "";
+    ARCHIVOS.forEach(function (par) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(par[0] === archivoActual));
+      var res = rebanada4 ? rebanar(par[0], rebanada4) : null;
+      b.innerHTML = "<span>" + comillas(par[0]) + "</span>" +
+        (res === null ? '<span class="archivo__res">?</span>'
+          : '<span class="archivo__res archivo__res--' + (res === par[1] ? "bien" : "mal") + '">' +
+            comillas(res) + (res === par[1] ? " ✓" : " ✗") + "</span>");
+      b.addEventListener("click", function () {
+        archivoActual = par[0];
+        pintarExtension();
+      });
+      li.appendChild(b);
+      lista.appendChild(li);
+    });
+  }
+
+  function pintarExtension() {
+    var n = archivoActual.length;
+    $("s4-codigo-archivo").textContent = comillas(archivoActual);
+    $("s4-hueco").textContent = rebanada4 || "?";
+    cinta4.texto(archivoActual);
+    if (rebanada4) {
+      var inicio = Number(rebanada4.split(":")[0]);
+      var a = inicio < 0 ? n + inicio : inicio;
+      cinta4.rango(a, n);
+      cinta4.marcarCortes([a]);
+      Codigo.marcar($("s4-codigo"), { activas: [1] });
+    }
+    pintarArchivos();
+  }
+
+  function elegirRebanada(valor, leccion) {
+    rebanada4 = valor;
+    $("s4-opciones").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+    pintarExtension();
+    var fb = $("s4-fb");
+    if (valor === "-3:") {
+      Pasos.feedback(fb, "ok", "archivo[-3:] corta antes de las 3 últimas letras, mida lo que mida el nombre. Los negativos cuentan desde el final también en las rebanadas.");
+      leccion.desbloquear();
+    } else if (valor === "5:") {
+      Pasos.feedback(fb, "pista", "archivo[5:] solo sirve si el nombre tiene 4 letras y un punto, como «foto.png». Con los otros se cuela parte del nombre.");
+    } else {
+      Pasos.feedback(fb, "pista", "Casi: archivo[-4:] también se lleva el punto. Corta una letra más a la derecha.");
+    }
+  }
+
+  /* ---------- 5. Partir una fecha ---------- */
+  var FECHA = "21/10/2026";
+  var etapa5 = "mes";
+  var tijeras5 = crearTijeras($("s5-tijeras"), FECHA, {
+    inicio: 0, fin: 2,
+    alCambiar: function (a, b) { cortar5(a, b, leccion); }
+  });
+
+  function lineaFecha() { return etapa5 === "mes" ? 2 : 3; }
+
+  function cortar5(a, b, leccion) {
+    if (etapa5 === "fin") return;
+    var parte = FECHA.slice(a, b);
+    var hueco = $(etapa5 === "mes" ? "s5-mes" : "s5-anio");
+    hueco.textContent = a + ":" + b;
+    Codigo.marcar($("s5-codigo"), { activas: [lineaFecha()] });
+    var fb = $("s5-fb");
+    var buscado = etapa5 === "mes" ? "10" : "2026";
+    if (parte === buscado) {
+      Caja.poner($(etapa5 === "mes" ? "s5-caja-mes" : "s5-caja-anio"), comillas(parte));
+      if (etapa5 === "mes") {
+        etapa5 = "año";
+        $("s5-tarea").textContent = "Ahora corta el año.";
+        Pasos.feedback(fb, "pista", "¡El mes es fecha[3:5]! Ahora corta el año.");
+        tijeras5.poner(5, 6);
+      } else {
+        etapa5 = "fin";
+        tijeras5.activar(false);
+        $("s5-tarea").textContent = "¡Listo!";
+        Codigo.marcar($("s5-codigo"), { activas: [4] });
+        Codigo.consola($("s5-consola"), []);
+        Codigo.agregar($("s5-consola"), "Mes 10 del año 2026");
+        Codigo.volarDesdeLinea($("s5-codigo"), $("s5-consola").lastElementChild, "Mes 10 del año 2026", "vuelo--salida");
+        Pasos.feedback(fb, "ok", "fecha[3:5] es el mes y fecha[6:10] el año. Como el año llega hasta el final, también vale fecha[6:].");
+        $("s5-otra").hidden = false;
+        leccion.desbloquear();
+      }
+      return;
+    }
+    if (parte.indexOf("/") !== -1) {
+      Pasos.feedback(fb, "pista", "Salió " + comillas(parte) + ": te llevaste una barra «/». Corre un corte.");
+    } else if (parte && buscado.indexOf(parte) !== -1) {
+      Pasos.feedback(fb, "pista", "Salió " + comillas(parte) + ": te faltan números. Abre más las tijeras.");
+    } else {
+      Pasos.feedback(fb, "pista", "Salió " + comillas(parte) + ". " +
+        (etapa5 === "mes" ? "El mes son los dos números del medio." : "El año son los cuatro números del final."));
+    }
+  }
+
+  function reiniciarFecha() {
+    etapa5 = "mes";
+    $("s5-mes").textContent = "?";
+    $("s5-anio").textContent = "?";
+    $("s5-tarea").textContent = "Corta el mes.";
+    Caja.vaciar($("s5-caja-mes"));
+    Caja.vaciar($("s5-caja-anio"));
+    Codigo.marcar($("s5-codigo"), { activas: [2] });
+    Codigo.consola($("s5-consola"), []);
+    Pasos.limpiarFeedback($("s5-fb"));
+    $("s5-otra").hidden = true;
+    tijeras5.activar(true);
+    tijeras5.poner(0, 2);
+  }
+
+  /* ---------- 6. Reto ---------- */
+  var PROGRAMA = "programa";
+  var cintaReto = Cinta.crear($("reto-cinta"), PROGRAMA, { cortes: true });
+  var cintaResultado = Cinta.crear($("reto-resultado"), "gramapro", { indices: false });
+  var pistasReto = {
+    ogramapro: "palabra[3:] empieza en el corte 3, después de «pro»: la primera letra que se lleva es la «g».",
+    gramaprog: "palabra[:3] se para en el corte 3: se lleva p, r, o, y la «g» no entra.",
+    programa: "Fíjate en el orden: primero va palabra[3:] y después palabra[:3]."
+  };
+
+  function colorearReto(mostrar) {
+    cintaReto.clases(mostrar ? function (i) { return i < 3 ? "cinta__casilla--cambio" : "cinta__casilla--igual"; } : null);
+    cintaReto.marcarCortes(mostrar ? [3] : null);
+    cintaResultado.clases(mostrar ? function (i) { return i < 5 ? "cinta__casilla--igual" : "cinta__casilla--cambio"; } : null);
+    $("reto-resultado-caja").hidden = !mostrar;
+    $("reto-consola").hidden = !mostrar;
+  }
+
+  function cambiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    colorearReto(false);
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    if (marcada.value === "gramapro") {
+      opcion.classList.add("opcion--correcta");
+      colorearReto(true);
+      Codigo.consola($("reto-consola"), ["gramapro"]);
+      Pasos.feedback($("reto-fb"), "ok", "palabra[3:] es \"grama\" y palabra[:3] es \"pro\": pegadas, \"gramapro\". Las tres primeras letras pasaron al final.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  document.querySelectorAll("#s2-lista .prediccion").forEach(function (fila, k) {
+    var botones = fila.querySelectorAll("button[data-valor]");
+    botones.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = predicciones[k];
+        var valor = btn.getAttribute("data-valor");
+        var acierta = valor === p.correcta;
+        botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+        Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+        if (!acierta) return;
+        cinta2.rango(p.rango ? p.rango[0] : null, p.rango ? p.rango[1] : null);
+        cinta2.marcarCortes(p.cortes);
+        fila.classList.add("prediccion--ok");
+        botones.forEach(function (b) { b.disabled = true; });
+        aciertos2[k] = true;
+        if (aciertos2.every(Boolean)) {
+          Pasos.feedback($("s2-fb"), "ok", "¡Las tres bien! texto[inicio:fin] mide fin - inicio letras, y si el fin se pasa, llega hasta donde haya.");
+          leccion.desbloquear();
+        }
+      });
+    });
+  });
+
+  $("s3-sin-inicio").addEventListener("click", function () { alternarOmitir("inicio", this); });
+  $("s3-sin-fin").addEventListener("click", function () { alternarOmitir("fin", this); });
+
+  $("s4-opciones").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegirRebanada(b.getAttribute("data-valor"), leccion); });
+  });
+
+  $("s5-otra-btn").addEventListener("click", function () {
+    reiniciarFecha();
+    $("s5-tijeras").querySelector(".tijeras__marca").focus();
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial de cada paso
+  cortar1(1, 4, null);
+  cortar3(0, 4, null);
+  pintarExtension();
+  reiniciarFecha();
+
+  // Las tijeras se colocan cuando su paso ya se ve (antes no se puede medir la cinta)
+  function colocarTijeras() {
+    todasLasTijeras.forEach(function (t) { t.colocar(); });
+  }
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-tijeras": colocarTijeras,
+      "paso-omitir": colocarTijeras,
+      "paso-fecha": colocarTijeras,
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

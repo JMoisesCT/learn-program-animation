@@ -4,7 +4,8 @@
        indices: true,      número de cada casilla encima (palabra[0], palabra[1]…)
        negativos: false,   número negativo debajo (palabra[-1] es la última)
        cortes: false       números en los cortes entre letras, en vez de en las casillas
-                           (rebanadas: palabra[1:4] corta en el 1 y en el 4)
+                           (rebanadas: palabra[1:4] corta en el 1 y en el 4); con negativos,
+                           el número negativo de cada corte va debajo (palabra[-3:])
      });
 
    c.texto("otro")           repinta con otro texto
@@ -14,6 +15,7 @@
                              como error, y devuelve null. c.marcar(null) quita la marca.
    c.rango(a, b)             resalta de la casilla a hasta la b, sin incluirla (texto[a:b]);
                              c.rango(null) lo quita
+   c.marcarCortes([a, b])    resalta los números de esos cortes (los de una rebanada)
    c.clases(fn)              fn(i, caracter) devuelve una clase extra para cada casilla
                              (p. ej. "cinta__casilla--cambio"), o "" para ninguna
    c.casilla(i)              la casilla i (admite negativos), o null
@@ -63,6 +65,7 @@
       casilla.appendChild(letra);
       casilla.appendChild(span("cinta__indice cinta__indice--neg", String(i - n)));
       casilla.appendChild(span("cinta__corte", String(i)));
+      casilla.appendChild(span("cinta__corte cinta__corte--neg", String(i - n)));
       if (i === n - 1) casilla.appendChild(span("cinta__corte cinta__corte--fin", String(n)));
       return casilla;
     }
@@ -142,6 +145,14 @@
       }
     }
 
+    function marcarCortes(lista) {
+      Array.prototype.forEach.call(fila.querySelectorAll(".cinta__corte"), function (c) {
+        var casilla = c.parentNode;
+        var k = Array.prototype.indexOf.call(fila.children, casilla) + (c.classList.contains("cinta__corte--fin") ? 1 : 0);
+        c.classList.toggle("cinta__corte--marcado", !!lista && lista.indexOf(k) !== -1);
+      });
+    }
+
     function clases(fn) {
       Array.prototype.forEach.call(fila.querySelectorAll(".cinta__casilla:not(.cinta__casilla--fuera)"), function (c, i) {
         var previa = c.getAttribute("data-clase");
@@ -181,6 +192,7 @@
       },
       marcar: marcar,
       rango: rango,
+      marcarCortes: marcarCortes,
       clases: clases,
       casilla: casilla,
       letra: function (i) {
