@@ -13,6 +13,14 @@
    («↩ devuelve 15.5»); con termina: true, termina sin devolver nada («↩ termina»).
    Las tarjetas que desaparecen de la pila salen volando hacia arriba.
    leer resalta la variable que se está leyendo en la tarjeta de ese nivel.
+
+   Para que se vea dónde se quedó cada llamada (sobre todo en la recursión, donde todas
+   son la misma función), una tarjeta puede traer:
+     linea: 5        índice desde 0 de la línea de la llamada en la que está esperando:
+                     «‖ pausada en la línea 6» (sin linea: «esperando a suma()»)
+     falta: "…"      lo que le queda por hacer al volver («le falta: print("Cierro…")»);
+                     "" muestra «no le falta nada»
+     sigue: true     acaba de volver la de arriba y esta retoma: «▶ sigue en la línea 6»
 */
 (function () {
   "use strict";
@@ -42,12 +50,27 @@
     var estado = crear("span", "marco__estado");
     var vars = crear("div", "marco__vars");
     var vacia = crear("span", "marco__vacia", "sin variables todavía");
+    var falta = crear("p", "marco__falta");
+    falta.hidden = true;
     vars.appendChild(vacia);
     cab.appendChild(titulo);
     cab.appendChild(estado);
     raiz.appendChild(cab);
     raiz.appendChild(vars);
-    return { titulo: datos.titulo, raiz: raiz, estado: estado, vars: vars, vacia: vacia, chips: {} };
+    raiz.appendChild(falta);
+    return { titulo: datos.titulo, raiz: raiz, estado: estado, vars: vars, vacia: vacia, falta: falta, chips: {} };
+  }
+
+  // «le falta: …»: lo que la llamada hará cuando vuelva la de arriba
+  function pintarFalta(marco, falta) {
+    var el = marco.falta;
+    el.hidden = falta === undefined;
+    if (falta === undefined || el.getAttribute("data-falta") === falta) return;
+    el.setAttribute("data-falta", falta);
+    el.textContent = "";
+    if (falta === "") { el.textContent = "no le falta nada"; return; }
+    el.appendChild(document.createTextNode("le falta: "));
+    el.appendChild(crear("code", "", falta));
   }
 
   function pintarVars(marco, lista, leer) {
@@ -100,7 +123,7 @@
 
     function retirar(marco) {
       if (reducir()) { marco.raiz.remove(); return; }
-      marco.raiz.classList.remove("marco--entra");
+      marco.raiz.classList.remove("marco--entra", "marco--sigue");
       marco.raiz.classList.add("marco--sale");
       saliendo.push(marco.raiz);
       setTimeout(function () {
@@ -128,14 +151,26 @@
         var termina = datos.devuelve !== undefined || datos.termina;
         m.raiz.classList.toggle("marco--activo", arriba);
         m.raiz.classList.toggle("marco--esperando", !arriba);
+        var linea = datos.linea !== undefined ? " en la línea " + (datos.linea + 1) : "";
+        var pausada = !arriba && datos.linea !== undefined;
+        var sigue = arriba && datos.sigue && !termina;
         var estado = "";
         if (datos.devuelve !== undefined) estado = "↩ devuelve " + datos.devuelve;
         else if (datos.termina) estado = "↩ termina";
+        else if (pausada) estado = "‖ pausada" + linea;
         else if (!arriba) estado = esperando(datos.titulo, pila[nivel + 1].titulo);
+        else if (sigue) estado = "▶ sigue" + linea;
         else if (nivel > 0) estado = "trabajando";
         if (m.estado.textContent !== estado) m.estado.textContent = estado;
-        m.estado.className = "marco__estado" + (termina ? " marco__estado--devuelve" : "");
+        m.estado.className = "marco__estado" + (termina ? " marco__estado--devuelve" : pausada ? " marco__estado--pausada" :
+          sigue ? " marco__estado--sigue" : "");
+        // Al retomar, la tarjeta se ilumina una vez
+        if (sigue && !m.raiz.classList.contains("marco--sigue")) {
+          void m.raiz.offsetWidth;
+          m.raiz.classList.add("marco--sigue");
+        } else if (!sigue) m.raiz.classList.remove("marco--sigue");
         pintarVars(m, datos.vars, e.leer && e.leer[0] === nivel ? e.leer[1] : null);
+        pintarFalta(m, pausada || sigue ? datos.falta : undefined);
       });
       titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
     }

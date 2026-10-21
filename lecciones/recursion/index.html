@@ -397,12 +397,28 @@
     return t;
   }
 
-  /* Las tarjetas de cuenta_regresiva(n) … cuenta_regresiva(hasta + 1), que esperan debajo */
-  function debajo(nombre, param, n, hasta) {
+  /* Una tarjeta que espera en la línea 6, la de la llamada, con lo que le falta al volver */
+  function pausada(t, falta) {
+    t.linea = 5;
+    t.falta = falta;
+    return t;
+  }
+
+  /* La tarjeta que retoma en la línea 6 cuando vuelve la de arriba */
+  function retoma(t, falta) {
+    t.sigue = true;
+    return pausada(t, falta);
+  }
+
+  /* Las tarjetas de cuenta_regresiva(n) … cuenta_regresiva(hasta + 1), que esperan debajo;
+     falta(j) dice lo que le queda a cada una */
+  function debajo(nombre, param, n, hasta, falta) {
     var lista = [Pila.programa()];
-    for (var j = n; j > hasta; j--) lista.push(tarjeta(nombre, param, j, true));
+    for (var j = n; j > hasta; j--) lista.push(pausada(tarjeta(nombre, param, j, true), falta(j)));
     return lista;
   }
+
+  function nada() { return ""; }
 
   function trazaCuenta() {
     var n = nInicio;
@@ -410,10 +426,10 @@
     var pasos = [
       { linea: 0, texto: "Python recuerda la receta <strong>cuenta_regresiva</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
       { linea: 7, texto: "Llama a <strong>cuenta_regresiva(" + n + ")</strong>: se apila su tarjeta.",
-        estado: { pila: debajo(C, "n", n, n).concat([tarjeta(C, "n", n)]) } }
+        estado: { pila: debajo(C, "n", n, n, nada).concat([tarjeta(C, "n", n)]) } }
     ];
     for (var k = n; k >= 0; k--) {
-      var abajo = debajo(C, "n", n, k);
+      var abajo = debajo(C, "n", n, k, nada);
       var nivel = abajo.length;
       pasos.push({ linea: 0,
         texto: k === n ? "Nace <strong>n = " + n + "</strong> en su tarjeta."
@@ -427,19 +443,19 @@
           estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]), leer: [nivel, "n"] } });
         pasos.push({ linea: 5,
           texto: "Se llama <strong>a sí misma</strong> con n - 1 = <strong>" + (k - 1) + "</strong>: un número más pequeño. Se apila otra tarjeta.",
-          estado: { pila: abajo.concat([tarjeta(C, "n", k, true), tarjeta(C, "n", k - 1)]) } });
+          estado: { pila: abajo.concat([pausada(tarjeta(C, "n", k, true), ""), tarjeta(C, "n", k - 1)]) } });
       } else {
         pasos.push({ linea: 2, salida: "¡Despegue!",
           texto: "Imprime <strong>¡Despegue!</strong>. El caso base no vuelve a llamarse: esta tarjeta termina.",
           estado: { pila: abajo.concat([tarjeta(C, "n", 0, true, true)]) } });
       }
     }
-    // La vuelta: cada tarjeta retoma justo después de su llamada y, sin nada más que hacer, termina
+    // La vuelta: cada tarjeta retoma en la línea de su llamada y, sin nada más que hacer, termina
     for (var j = 1; j <= n; j++) {
       pasos.push({ linea: 5, flecha: true,
-        texto: "cuenta_regresiva(" + (j - 1) + ") terminó y su tarjeta se fue. <strong>De vuelta en cuenta_regresiva(" + j +
-          ")</strong>, justo después de la llamada: no le queda nada por hacer y termina.",
-        estado: { pila: debajo(C, "n", n, j).concat([tarjeta(C, "n", j, true, true)]) } });
+        texto: "cuenta_regresiva(" + (j - 1) + ") terminó y su tarjeta se fue. <strong>cuenta_regresiva(" + j +
+          ") sigue donde se quedó</strong>: en la línea 6, con su n = " + j + ". No le falta nada, así que termina.",
+        estado: { pila: debajo(C, "n", n, j, nada).concat([retoma(tarjeta(C, "n", j, true), "")]) } });
     }
     pasos.push({ linea: 7, flecha: true, texto: "De vuelta en el programa. Solo queda su tarjeta: fin.", estado: { pila: [Pila.programa()] } });
     return pasos;
@@ -588,6 +604,8 @@
 
   function copia(o) { return Object.assign({}, o); }
 
+  function cierro(k) { return 'print("Cierro la caja ' + k + '")'; }
+
   function trazaAbrir() {
     var A = "abrir";
     var abiertas = {};
@@ -597,7 +615,7 @@
         estado: { pila: [Pila.programa(), tarjeta(A, "n", 3)], abiertas: {} } }
     ];
     for (var k = 3; k >= 0; k--) {
-      var abajo = debajo(A, "n", 3, k);
+      var abajo = debajo(A, "n", 3, k, cierro);
       var actual = abajo.concat([tarjeta(A, "n", k, true)]);
       pasos.push({ linea: 0, texto: k === 3 ? "Nace <strong>n = 3</strong>: la caja de fuera." : "Tarjeta nueva con <strong>su propia n = " + k + "</strong>.",
         estado: { pila: actual, abiertas: copia(abiertas) } });
@@ -608,17 +626,17 @@
         pasos.push({ linea: 4, salida: "Abro la caja " + k, texto: "<strong>A la ida</strong>: imprime «Abro la caja " + k + "».",
           estado: { pila: actual, abiertas: copia(abiertas) } });
         pasos.push({ linea: 5, texto: "Llama a <strong>abrir(" + (k - 1) + ")</strong>. Su última línea, el «Cierro», <strong>queda pendiente</strong> en esta tarjeta.",
-          estado: { pila: actual.concat([tarjeta(A, "n", k - 1)]), abiertas: copia(abiertas) } });
+          estado: { pila: abajo.concat([pausada(tarjeta(A, "n", k, true), cierro(k)), tarjeta(A, "n", k - 1)]), abiertas: copia(abiertas) } });
       } else {
         pasos.push({ linea: 2, salida: "¡Un caramelo!", texto: "Imprime «¡Un caramelo!». El caso base termina sin llamar a nadie.",
           estado: { pila: abajo.concat([tarjeta(A, "n", 0, true, true)]), abiertas: copia(abiertas) } });
       }
     }
     for (var j = 1; j <= 3; j++) {
-      var esta = debajo(A, "n", 3, j);
+      var esta = debajo(A, "n", 3, j, cierro);
       pasos.push({ linea: 5, flecha: true,
-        texto: "abrir(" + (j - 1) + ") terminó. <strong>De vuelta en abrir(" + j + ")</strong>, justo después de la llamada: le queda una línea.",
-        estado: { pila: esta.concat([tarjeta(A, "n", j, true)]), abiertas: copia(abiertas) } });
+        texto: "abrir(" + (j - 1) + ") terminó y su tarjeta se fue. <strong>abrir(" + j + ") sigue donde se quedó</strong>: en la línea 6, con su n = " + j + ". Le falta una línea.",
+        estado: { pila: esta.concat([retoma(tarjeta(A, "n", j, true), cierro(j))]), abiertas: copia(abiertas) } });
       delete abiertas[j];
       pasos.push({ linea: 6, salida: "Cierro la caja " + j, texto: "<strong>A la vuelta</strong>: imprime «Cierro la caja " + j + "». abrir(" + j + ") termina.",
         estado: { pila: esta.concat([tarjeta(A, "n", j, true, true)]), abiertas: copia(abiertas), leer: [esta.length, "n"] } });
