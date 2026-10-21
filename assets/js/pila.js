@@ -22,7 +22,9 @@
                      "" muestra «no le falta nada»
      sigue: true     acaba de volver la de arriba y esta retoma: «▶ sigue en la línea 6»
      recibe: "6"     (con sigue) el valor que le devolvió la de arriba, dentro de falta
-                     («return 4 * 6»): sale volando del «↩ devuelve 6» de la tarjeta que se va
+                     («return 4 * 6»): sale volando del «↩ devuelve 6» de la tarjeta que se va.
+                     Si falta tiene un ▢, el valor cae ahí («return ▢ + fibonacci(1)» con
+                     recibe: "1", se ve «return 1 + fibonacci(1)»); si no, en su última aparición
    Con la opción codigo, cada tarjeta pausada pone además una ficha («n=3») al final de su
    línea en el código (Codigo.pausas): se ve cuántas llamadas esperan en esa misma línea,
    y al volver se va la ficha de la que retoma. ficha: "e=2" cambia el texto de la ficha
@@ -80,12 +82,13 @@
     if (falta === "") { el.textContent = "no le falta nada"; return; }
     el.appendChild(document.createTextNode("le falta: "));
     var code = el.appendChild(crear("code"));
-    var k = recibe === undefined ? -1 : falta.lastIndexOf(recibe);
+    var hueco = recibe === undefined ? -1 : falta.indexOf("▢");
+    var k = hueco !== -1 ? hueco : recibe === undefined ? -1 : falta.lastIndexOf(recibe);
     if (k === -1) { code.textContent = falta; return; }
     // El valor recibido va aparte: es donde aterriza al volar
     code.appendChild(document.createTextNode(falta.slice(0, k)));
     code.appendChild(crear("span", "marco__recibido", recibe));
-    code.appendChild(document.createTextNode(falta.slice(k + recibe.length)));
+    code.appendChild(document.createTextNode(falta.slice(k + (hueco !== -1 ? 1 : recibe.length))));
   }
 
   function pintarVars(marco, lista, leer) {

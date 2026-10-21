@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Árbol de llamadas · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: una función de Python que se llama dos veces. fibonacci(n), el árbol de llamadas que crece rama por rama, las llamadas que se repiten y cuántas llamadas hace en total.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+
+    /* ---------- La receta ---------- */
+    .receta__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .receta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); counter-reset: receta; }
+    .receta li { position: relative; padding: var(--esp-2) var(--esp-3) var(--esp-2) 2.6rem; border-radius: var(--radio-sm); border: 2px solid transparent; background: var(--color-superficie-2); counter-increment: receta; transition: background-color var(--dur), border-color var(--dur); }
+    .receta li::before { content: counter(receta); position: absolute; left: var(--esp-3); top: var(--esp-2); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta .receta__paso--activo { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .receta .receta__paso--activo::before { background: var(--color-azul); color: #fff; }
+    .receta__mismo { font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- La serie: cada número suma los dos anteriores ---------- */
+    .serie { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--esp-2); }
+    .serie__celda { display: grid; justify-items: center; gap: var(--esp-1); padding: var(--esp-2) 0; border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur); }
+    .serie__valor { font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; line-height: 1.2; }
+    .serie__n { font-family: var(--fuente-codigo); font-size: 0.75rem; color: var(--color-texto-suave); }
+    .serie__celda--oculta { border-style: dashed; background: transparent; }
+    .serie__celda--oculta .serie__valor { color: var(--color-texto-suave); opacity: 0.5; }
+    .serie__celda--base { border-color: var(--color-ok); }
+    .serie__celda--suma { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .serie__celda--nueva { border-color: var(--color-acento); background: var(--color-acento-suave); animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .serie__leyenda { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+
+    /* ---------- Control con número ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    #p1-prediccion { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- El árbol de llamadas ----------
+       Cada círculo es una llamada (dentro, su n); debajo, al volver, lo que devolvió.
+       Los que esperan van punteados, como sus tarjetas en la pila. Las aristas salen del
+     borde del círculo; la píldora queda encima. */
+    .arbol { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; font-family: var(--fuente-codigo); }
+    .arbol__arista { fill: none; stroke: #b8c0ca; stroke-width: 2; stroke-linecap: round; transition: stroke var(--dur); }
+    .arbol__arista--camino { stroke: var(--color-pista); stroke-width: 2.5; }
+    .arbol__arista--marcada { stroke: #d99a00; stroke-width: 3; }
+    .arbol__arista--nueva { stroke-dasharray: 1; animation: arista-dibuja 320ms ease-out both; }
+    @keyframes arista-dibuja { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+    .nodo { outline: none; }
+    .nodo--oculto { visibility: hidden; }
+    .nodo__cuerpo { transform-box: fill-box; transform-origin: center; }
+    .nodo--nuevo .nodo__cuerpo { animation: nodo-entra 380ms var(--curva-rebote) both; }
+    @keyframes nodo-entra { from { transform: scale(0.2); opacity: 0; } }
+    .nodo__circulo { fill: var(--color-superficie); stroke: #9aa4b2; stroke-width: 2; transition: fill var(--dur), stroke var(--dur); }
+    .nodo__n { font-size: 14px; font-weight: 700; text-anchor: middle; dominant-baseline: central; fill: var(--color-texto); pointer-events: none; }
+    .nodo--activo .nodo__circulo { fill: var(--color-acento-suave); stroke: var(--color-acento); stroke-width: 3.5; }
+    .nodo--activo .nodo__n { fill: var(--color-acento); }
+    .nodo--espera .nodo__circulo { fill: var(--color-pista-suave); stroke: var(--color-pista); stroke-dasharray: 4 3; }
+    .nodo--listo .nodo__circulo { stroke: var(--color-ok); }
+    .nodo--devuelve .nodo__circulo { fill: var(--color-ok-suave); stroke-width: 3.5; }
+    .nodo__pildora { visibility: hidden; }
+    .nodo__pildora rect { fill: var(--color-ok-suave); stroke: var(--color-ok); stroke-width: 1.5; }
+    .nodo__pildora text { font-size: 11.5px; font-weight: 700; text-anchor: middle; dominant-baseline: central; fill: var(--color-ok); }
+    .nodo--con-pildora .nodo__pildora { visibility: visible; }
+    .nodo--pildora-nueva .nodo__pildora { transform-box: fill-box; transform-origin: center top; animation: pildora-entra 360ms var(--curva-rebote) both; }
+    @keyframes pildora-entra { from { transform: scale(0.3); opacity: 0; } }
+    .nodo--marcado .nodo__circulo { fill: #fff2c2; stroke: #d99a00; stroke-width: 3.5; stroke-dasharray: none; }
+    .nodo--sombra .nodo__circulo { fill: #fff8de; stroke: #d99a00; }
+    .nodo--tocable { cursor: pointer; }
+    .nodo--tocable:hover .nodo__circulo { stroke: var(--color-azul); }
+    .nodo:focus-visible .nodo__circulo { stroke: var(--color-azul); stroke-width: 4; }
+    .nodo--error .nodo__cuerpo { animation: sacudir 360ms ease; }
+    .arbol__pie { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border: 2px solid; border-radius: 50%; }
+    .leyenda .leyenda__corre::before { border-color: var(--color-acento); background: var(--color-acento-suave); }
+    .leyenda .leyenda__espera::before { border-style: dashed; border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .leyenda .leyenda__listo::before { border-color: var(--color-ok); }
+    .contador { display: inline-block; padding: 0.15em 0.8em; border-radius: 999px; background: var(--color-superficie); border: 2px solid var(--color-borde); font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto); }
+    .contador strong { font-family: var(--fuente-codigo); }
+    .contador--cambio strong { display: inline-block; animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Resaltar las repetidas ---------- */
+    .encontradas { margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .chips .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-xs); }
+    .chips .btn[aria-pressed="true"] { border-color: #d99a00; background: #fff2c2; color: #6b4700; }
+
+    /* ---------- Cuántas llamadas ---------- */
+    .cifras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-3); }
+    .cifra { padding: var(--esp-3); border-radius: var(--radio); background: var(--color-superficie); border: 2px solid var(--color-borde); text-align: center; }
+    .cifra__titulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .cifra__valor { margin: var(--esp-1) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+    .cifra--llamadas { border-color: var(--color-azul); }
+    .cifra--llamadas .cifra__valor { color: var(--color-azul); }
+    .cifra--cambio .cifra__valor { animation: valor-pulso 300ms ease-out; }
+    .reloj { margin: var(--esp-3) 0 0; padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); background: var(--color-pista-suave); color: var(--color-pista); font-weight: 600; text-align: center; }
+    .reloj strong { font-family: var(--fuente-codigo); }
+
+    /* ---------- Reto ---------- */
+    .opciones--salida { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+    .opciones--salida .opcion span { font-size: var(--texto-md); letter-spacing: 0.08em; }
+    .reto__arbol { margin-top: var(--esp-4); padding: var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .serie { gap: var(--esp-1); }
+      .serie__valor { font-size: var(--texto-md); }
+      .serie__n { font-size: 0.7rem; }
+      .cifra__valor { font-size: var(--texto-lg); }
+      /* La línea 5 es larga: un poco más chica, para que la flecha no la tape */
+      #p2-codigo, #p3-codigo { font-size: 0.8rem; }
+      #p2-codigo .linea, #p3-codigo .linea { padding-right: var(--esp-2); }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual { margin-top: var(--esp-5); }
+    }
+    @media (min-width: 1024px) {
+      .lab #p2-codigo, .lab #p3-codigo { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="recursion-arbol">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: cada número suma los dos anteriores -->
+    <section class="paso" id="paso-serie" data-requiere aria-labelledby="t-serie">
+      <span class="paso__etiqueta">Recursión 3/4 · Árbol de llamadas</span>
+      <h1 class="paso__titulo" id="t-serie">Sumar los dos anteriores</h1>
+      <p>En esta fila de números, los dos primeros son <strong>0</strong> y <strong>1</strong>. Cada uno de los demás es la <strong>suma de los dos que tiene antes</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="receta__titulo">📜 El número de la posición n</p>
+          <ol class="receta" id="p1-receta">
+            <li data-r="base">Si n es 0 o 1: el número es <strong>n</strong>.</li>
+            <li data-r="suma">Si no: suma el número de la posición <span class="receta__mismo">n − 1</span> y el de la posición <span class="receta__mismo">n − 2</span>.</li>
+          </ol>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="prediccion" id="p1-prediccion" role="group" aria-label="¿Qué número va en la posición 7?" hidden>
+            <button type="button" class="btn btn-secundario" data-valor="11">11</button>
+            <button type="button" class="btn btn-secundario" data-valor="13">13</button>
+            <button type="button" class="btn btn-secundario" data-valor="21">21</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-otra" hidden>↺ Otra vez</button>
+            <button type="button" class="btn btn-secundario" id="p1-siguiente">Siguiente número ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="serie" id="p1-serie" aria-hidden="true"></div>
+          <p class="serie__leyenda">Arriba, el número; abajo, su posición <strong>n</strong>.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. fibonacci(n) con la pila: dos llamadas en la misma línea -->
+    <section class="paso" id="paso-pila" data-requiere aria-labelledby="t-pila">
+      <h2 class="paso__titulo" id="t-pila">Una función que se llama dos veces</h2>
+      <p>Esa fila se llama <strong>serie de Fibonacci</strong>. La receta, en Python: <code>fibonacci(n)</code> se llama a sí misma <strong>dos veces</strong> en la misma línea. Mira cómo espera cada tarjeta.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p2-n">Calcular fibonacci de <output id="p2-n-valor" for="p2-n">3</output></label>
+            <input type="range" id="p2-n" min="1" max="4" step="1" value="3">
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt;= <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>) + <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span> - <span class="tk-numero">2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">fibonacci</span>(<span class="tk-numero" id="p2-codigo-n">3</span>))</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">La tarjeta espera <strong>dos veces</strong> en la línea 5: primero con <code>▢ + fibonacci(…)</code> y luego, con la primera parte ya puesta, con <code>… + ▢</code>.</p>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. El árbol de llamadas -->
+    <section class="paso" id="paso-arbol" data-requiere aria-labelledby="t-arbol">
+      <h2 class="paso__titulo" id="t-arbol">El árbol de llamadas</h2>
+      <p>Con dos llamadas, la pila sube y baja muchas veces. Para ver <strong>todas</strong> las llamadas a la vez, se dibujan como un árbol: cada llamada es un círculo, y sus dos llamadas cuelgan de él.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p3-n">Calcular fibonacci de <output id="p3-n-valor" for="p3-n">4</output></label>
+            <input type="range" id="p3-n" min="1" max="5" step="1" value="4">
+          </div>
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt;= <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>) + <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span> - <span class="tk-numero">2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">fibonacci</span>(<span class="tk-numero" id="p3-codigo-n">4</span>))</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Siguiente llamada ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p3-arbol"></div>
+          <div class="arbol__pie">
+            <span class="contador" id="p3-contador">Llamadas: <strong>0</strong></span>
+            <span class="leyenda"><span class="leyenda__corre">corre</span> <span class="leyenda__espera">espera</span> <span class="leyenda__listo">devolvió</span></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Los círculos punteados son las tarjetas que esperan en la pila: el camino desde arriba hasta la llamada que corre.</p>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Las llamadas repetidas -->
+    <section class="paso" id="paso-repetidas" data-requiere aria-labelledby="t-repetidas">
+      <h2 class="paso__titulo" id="t-repetidas">Lo mismo, otra vez</h2>
+      <p>Este es el árbol completo de <code>fibonacci(5)</code>. Fíjate en los números de los círculos: algunas llamadas se hacen <strong>más de una vez</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta">Toca todos los círculos de <code>fibonacci(2)</code>.</p>
+          <div id="p4-arbol"></div>
+          <p class="encontradas" id="p4-encontradas" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+          <div id="p4-explorar" hidden>
+            <p class="nota">Toca otra llamada para resaltar todas sus copias:</p>
+            <div class="chips" id="p4-chips" role="group" aria-label="Resaltar las copias de una llamada"></div>
+            <p class="nota" id="p4-veces" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. ¿Cuántas llamadas? -->
+    <section class="paso" id="paso-cuantas" data-requiere aria-labelledby="t-cuantas">
+      <h2 class="paso__titulo" id="t-cuantas">¿Cuántas llamadas en total?</h2>
+      <p><code>fibonacci(4)</code> hizo 9 llamadas y <code>fibonacci(5)</code>, 15. Cada número más agrega un árbol entero de llamadas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">¿Cuántas llamadas hace <code>fibonacci(20)</code>?</p>
+          <div class="prediccion" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="20" aria-pressed="false">Unas 20</button>
+            <button type="button" class="btn btn-secundario" data-valor="400" aria-pressed="false">Unas 400</button>
+            <button type="button" class="btn btn-secundario" data-valor="20000" aria-pressed="false">Más de 20 000</button>
+          </div>
+          <div class="control-slider" id="p5-control" hidden>
+            <label for="p5-n">fibonacci de <output id="p5-n-valor" for="p5-n">20</output></label>
+            <input type="range" id="p5-n" min="1" max="30" step="1" value="20">
+          </div>
+        </div>
+        <div class="lab__visual" id="p5-visual" hidden>
+          <div class="cifras">
+            <div class="cifra" id="p5-cifra-valor">
+              <p class="cifra__titulo">fibonacci(<span id="p5-titulo-n">20</span>) devuelve</p>
+              <p class="cifra__valor" id="p5-valor"></p>
+            </div>
+            <div class="cifra cifra--llamadas" id="p5-cifra-llamadas">
+              <p class="cifra__titulo">llamadas en total</p>
+              <p class="cifra__valor" id="p5-llamadas"></p>
+            </div>
+          </div>
+          <p class="reloj" id="p5-reloj" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: en qué orden recorre el árbol -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿En qué orden?</h2>
+      <p>Esta función también se llama dos veces, y <strong>imprime su n al empezar</strong>. ¿Qué imprime <code>ramas(3)</code>?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">ramas</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &gt;= <span class="tk-numero">2</span>:</span><span class="linea">        <span class="tk-funcion">ramas</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-funcion">ramas</span>(<span class="tk-variable">n</span> - <span class="tk-numero">2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">ramas</span>(<span class="tk-numero">3</span>)</span></code></pre>
+        <fieldset class="opciones opciones--salida" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué imprime ramas(3)?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="pisos"><span>3 2 1 1 0</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>3 2 1 0 1</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="vuelta"><span>1 0 2 1 3</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="corto"><span>3 2 1 0</span></label>
+        </fieldset>
+        <p class="nota">Cada número sale en su propia línea; aquí van seguidos para que quepan.</p>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="reto__arbol" id="reto-arbol-caja" hidden>
+          <div id="reto-arbol"></div>
+          <p class="arbol__pie">Debajo de cada llamada, en qué orden imprimió.</p>
+        </div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Si una función se llama <strong>dos veces</strong>, sus llamadas forman un <strong>árbol</strong>. Python lo recorre rama por rama, y muchas llamadas se repiten.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt;= <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span>  <span class="tk-comentario"># caso base: una hoja</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-comentario"># dos ramas: primero toda la de la izquierda,</span></span><span class="linea">        <span class="tk-comentario"># luego la de la derecha</span></span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>) + <span class="tk-funcion">fibonacci</span>(<span class="tk-variable">n</span> - <span class="tk-numero">2</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function fib(n) {
+    var a = 0, b = 1;
+    for (var i = 0; i < n; i++) { var c = a + b; a = b; b = c; }
+    return a;
+  }
+  // Llamadas que hace fibonacci(n) en total: 1 la suya, más las de sus dos ramas
+  function llamadasFib(n) { return 2 * fib(n + 1) - 1; }
+
+  // 21891 → "21 891"
+  function miles(x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+
+  function pulso(el, clase) {
+    el.classList.remove(clase);
+    void el.offsetWidth;
+    el.classList.add(clase);
+  }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- El árbol de llamadas (SVG) ----------
+     Árbol de una función que, con n >= 2, se llama con n - 1 y con n - 2 (fibonacci y ramas).
+     Cada nodo sabe su orden de llamada (pre: en ese orden se llama) y de vuelta (post: en
+     ese orden devuelve). Las hojas se reparten de izquierda a derecha y cada padre queda
+     sobre el centro de sus dos hijos. */
+  var SVG = "http://www.w3.org/2000/svg";
+  var HOJA = 38, PISO = 78, R = 15, MARGEN = 6, PILDORA = 16;
+
+  function svg(tag, atributos, clase) {
+    var el = document.createElementNS(SVG, tag);
+    for (var k in atributos) el.setAttribute(k, atributos[k]);
+    if (clase) el.setAttribute("class", clase);
+    return el;
+  }
+
+  function construirArbol(n) {
+    var nodos = [];
+    var pre = 0, post = 0, hojas = 0, pisos = 0;
+    function visitar(k, padre, prof) {
+      var nodo = { id: nodos.length, n: k, padre: padre, prof: prof, hijos: [], pre: pre++ };
+      nodos.push(nodo);
+      pisos = Math.max(pisos, prof + 1);
+      if (k >= 2) {
+        nodo.hijos.push(visitar(k - 1, nodo, prof + 1));
+        nodo.hijos.push(visitar(k - 2, nodo, prof + 1));
+        nodo.x = (nodo.hijos[0].x + nodo.hijos[1].x) / 2;
+        nodo.valor = nodo.hijos[0].valor + nodo.hijos[1].valor;
+      } else {
+        nodo.x = hojas++;
+        nodo.valor = k;
+      }
+      nodo.post = post++;
+      return nodo;
+    }
+    visitar(n, null, 0);
+    return { nodos: nodos, hojas: hojas, pisos: pisos };
+  }
+
+  function crearArbol(cont, n, opciones) {
+    opciones = opciones || {};
+    var datos = construirArbol(n);
+    var nodos = datos.nodos;
+    var ancho = 2 * (MARGEN + R) + (datos.hojas - 1) * HOJA;
+    var alto = 2 * MARGEN + 2 * R + PILDORA + 4 + (datos.pisos - 1) * PISO;
+    var dibujo = svg("svg", { viewBox: "0 0 " + ancho + " " + alto, role: "img", "aria-label": opciones.etiqueta || "Árbol de llamadas" }, "arbol");
+    dibujo.style.maxWidth = Math.round(ancho * 1.3) + "px";
+    var aristas = dibujo.appendChild(svg("g"));
+    var capa = dibujo.appendChild(svg("g"));
+    function px(nodo) { return MARGEN + R + nodo.x * HOJA; }
+    function py(nodo) { return MARGEN + R + nodo.prof * PISO; }
+
+    nodos.forEach(function (nodo) {
+      var x = px(nodo), y = py(nodo);
+      if (nodo.padre) {
+        var p = nodo.padre;
+        nodo.arista = aristas.appendChild(svg("path", {
+          d: "M" + px(p) + " " + (py(p) + R) + " L" + x + " " + (y - R), pathLength: 1
+        }, "arbol__arista"));
+      }
+      var g = svg("g", { transform: "translate(" + x + " " + y + ")" }, "nodo");
+      var cuerpo = g.appendChild(svg("g", {}, "nodo__cuerpo"));
+      cuerpo.appendChild(svg("circle", { r: R }, "nodo__circulo"));
+      cuerpo.appendChild(svg("text", {}, "nodo__n")).textContent = String(nodo.n);
+      var pildora = cuerpo.appendChild(svg("g", {}, "nodo__pildora"));
+      pildora.appendChild(svg("rect", { x: -16, y: R + 3, width: 32, height: PILDORA, rx: 8 }));
+      nodo.textoPildora = pildora.appendChild(svg("text", { x: 0, y: R + 3 + PILDORA / 2 }));
+      if (opciones.tocar) {
+        g.setAttribute("tabindex", "0");
+        g.setAttribute("role", "button");
+        g.setAttribute("aria-label", opciones.nombre + "(" + nodo.n + ")");
+        g.classList.add("nodo--tocable");
+        g.addEventListener("click", function () { opciones.tocar(nodo); });
+        g.addEventListener("keydown", function (e) {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          opciones.tocar(nodo);
+        });
+      }
+      nodo.g = g;
+      capa.appendChild(g);
+    });
+    cont.textContent = "";
+    cont.appendChild(dibujo);
+
+    /* estado: { llamadas, devueltos, actual } — se ven los nodos ya llamados; los que ya
+       devolvieron llevan su píldora. pildora(nodo, visible, listo) decide su texto. */
+    var pildora = opciones.pildora || function (nodo, visible, listo) { return listo ? String(nodo.valor) : null; };
+    function pintar(e) {
+      var llamadas = e.llamadas === undefined ? nodos.length : e.llamadas;
+      var devueltos = e.devueltos === undefined ? nodos.length : e.devueltos;
+      nodos.forEach(function (nodo) {
+        var visible = nodo.pre < llamadas;
+        var listo = nodo.post < devueltos;
+        var actual = nodo.id === e.actual;
+        var g = nodo.g;
+        var antes = !g.classList.contains("nodo--oculto");
+        g.classList.toggle("nodo--oculto", !visible);
+        g.classList.toggle("nodo--activo", visible && actual && !listo);
+        g.classList.toggle("nodo--devuelve", visible && actual && listo);
+        g.classList.toggle("nodo--espera", visible && !actual && !listo && e.actual !== undefined);
+        g.classList.toggle("nodo--listo", visible && listo);
+        g.classList.toggle("nodo--nuevo", visible && !antes && !e.quieto);
+        var texto = visible ? pildora(nodo, visible, listo) : null;
+        var tenia = g.classList.contains("nodo--con-pildora");
+        g.classList.toggle("nodo--con-pildora", texto !== null);
+        g.classList.toggle("nodo--pildora-nueva", texto !== null && !tenia && !e.quieto);
+        if (texto !== null) nodo.textoPildora.textContent = texto;
+        if (nodo.arista) {
+          var a = nodo.arista;
+          var veia = a.style.visibility !== "hidden";
+          a.style.visibility = visible ? "" : "hidden";
+          a.classList.toggle("arbol__arista--camino", visible && !listo && e.actual !== undefined);
+          a.classList.toggle("arbol__arista--nueva", visible && !veia && !e.quieto);
+        }
+      });
+    }
+
+    // Resalta unos nodos (y, si se pide, todo lo que cuelga de ellos)
+    function marcar(lista, conRamas) {
+      var marcados = {}, sombra = {};
+      lista.forEach(function (nodo) {
+        marcados[nodo.id] = true;
+        if (!conRamas) return;
+        (function bajar(m) {
+          m.hijos.forEach(function (h) { sombra[h.id] = true; bajar(h); });
+        })(nodo);
+      });
+      nodos.forEach(function (nodo) {
+        nodo.g.classList.toggle("nodo--marcado", !!marcados[nodo.id]);
+        nodo.g.classList.toggle("nodo--sombra", !!sombra[nodo.id] && !marcados[nodo.id]);
+        if (nodo.arista) nodo.arista.classList.toggle("arbol__arista--marcada", !!sombra[nodo.id]);
+      });
+    }
+
+    function sacudir(nodo) {
+      nodo.g.classList.remove("nodo--error");
+      void nodo.g.getBoundingClientRect();
+      nodo.g.classList.add("nodo--error");
+    }
+
+    return { nodos: nodos, pintar: pintar, marcar: marcar, sacudir: sacudir };
+  }
+
+  /* ---------- 1. La serie ---------- */
+  var SERIE = 8;
+  var celdas = [];
+  var serie = { hasta: 1, prediccion: null };
+
+  (function () {
+    for (var k = 0; k < SERIE; k++) {
+      var c = crear("div", "serie__celda");
+      var v = c.appendChild(crear("span", "serie__valor"));
+      c.appendChild(crear("span", "serie__n", "n=" + k));
+      $("p1-serie").appendChild(c);
+      celdas.push({ celda: c, valor: v });
+    }
+  })();
+
+  function marcarReceta(cual) {
+    $("p1-receta").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("receta__paso--activo", li.getAttribute("data-r") === cual);
+    });
+  }
+
+  function pintarSerie(nueva) {
+    celdas.forEach(function (c, k) {
+      var visto = k <= serie.hasta;
+      c.valor.textContent = visto ? String(fib(k)) : "?";
+      c.celda.className = "serie__celda" + (!visto ? " serie__celda--oculta" : k <= 1 ? " serie__celda--base" : "") +
+        (nueva !== undefined && (k === nueva - 1 || k === nueva - 2) ? " serie__celda--suma" : "") +
+        (k === nueva ? " serie__celda--nueva" : "");
+    });
+  }
+
+  function empezarSerie() {
+    serie = { hasta: 1, prediccion: null };
+    pintarSerie();
+    marcarReceta("base");
+    $("p1-explicacion").innerHTML = "Las posiciones 0 y 1 ya están: son <strong>0</strong> y <strong>1</strong>, el caso base. Toca «Siguiente número».";
+    $("p1-siguiente").hidden = false;
+    $("p1-prediccion").hidden = true;
+    $("p1-otra").hidden = true;
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  // Los dos de antes vuelan a la casilla nueva
+  function revelar(k) {
+    serie.hasta = k;
+    pintarSerie(k);
+    marcarReceta("suma");
+    var destino = celdas[k].valor;
+    Codigo.volar(celdas[k - 1].valor, destino, String(fib(k - 1)), "vuelo--salida");
+    Codigo.volar(celdas[k - 2].valor, destino, String(fib(k - 2)), "vuelo--salida");
+  }
+
+  function siguienteSerie() {
+    var k = serie.hasta + 1;
+    revelar(k);
+    $("p1-explicacion").innerHTML = "Posición " + k + ": el de la " + (k - 1) + " más el de la " + (k - 2) + ". <code>" +
+      fib(k - 1) + " + " + fib(k - 2) + "</code> = <strong>" + fib(k) + "</strong>.";
+    if (k === SERIE - 2) {
+      // El último lo adivina el alumno
+      $("p1-siguiente").hidden = true;
+      $("p1-prediccion").hidden = false;
+      $("p1-explicacion").innerHTML += " ¿Y el de la posición " + (SERIE - 1) + "?";
+      $("p1-prediccion").querySelector("button").focus();
+    }
+  }
+
+  function predecirSerie(valor) {
+    var k = SERIE - 1;
+    revelar(k);
+    $("p1-prediccion").hidden = true;
+    $("p1-otra").hidden = false;
+    $("p1-otra").focus();
+    var cuenta = fib(k - 1) + " + " + fib(k - 2) + " = " + fib(k);
+    $("p1-explicacion").innerHTML = (valor === fib(k) ? "¡Sí! " : "Es " + fib(k) + ": ") + "<code>" + cuenta + "</code>.";
+    Pasos.feedback($("p1-fb"), "ok", "Para saber el número de la posición 7 hay que saber el de la 6 y el de la 5. " +
+      "Y para el de la 6, el de la 5 y el de la 4… La receta se usa a sí misma, y esta vez dos veces.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 2. fibonacci con la pila ---------- */
+  var pila2 = Pila.crear($("p2-pila"), { codigo: $("p2-codigo"), rotulo: true });
+  var n2 = 3;
+
+  function titulo(k) { return "fibonacci(" + k + ")"; }
+
+  function programa(recibe) {
+    var p = Pila.programa();
+    p.linea = 6;
+    p.ficha = "programa";
+    p.falta = "print(▢)";
+    if (recibe !== undefined) {
+      p.sigue = true;
+      p.recibe = recibe;
+    }
+    return p;
+  }
+
+  function trazaPila() {
+    var pasos = [
+      { linea: 0, texto: "Python recuerda la receta <strong>fibonacci</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
+      { linea: 6, texto: "El <code>print</code> necesita <strong>" + titulo(n2) + "</strong>: Python la llama y el programa espera.",
+        estado: { pila: [programa(), Pila.llamada(titulo(n2), [])] } }
+    ];
+    var llamadas = 0;
+
+    function tarjeta(k, extra) {
+      var t = Pila.llamada(titulo(k), [["n", k]]);
+      for (var c in extra) t[c] = extra[c];
+      return t;
+    }
+
+    // abajo: las tarjetas que esperan debajo; devuelve lo que devuelve fibonacci(k)
+    function visitar(k, abajo) {
+      llamadas++;
+      var nivel = abajo.length;
+      pasos.push({ linea: 0,
+        texto: nivel === 1 ? "Nace <strong>n = " + k + "</strong> en su tarjeta." : "Otra tarjeta de <strong>fibonacci</strong>, con su propia <strong>n = " + k + "</strong>.",
+        estado: { pila: abajo.concat([tarjeta(k)]) } });
+      var base = k <= 1;
+      pasos.push({ linea: 1,
+        texto: "¿n &lt;= 1? " + k + " &lt;= 1 es " + chip(base) + (base ? ": ¡caso base!" : ": todavía no, va por el else."),
+        estado: { pila: abajo.concat([tarjeta(k)]), leer: [nivel, "n"] } });
+      if (base) {
+        pasos.push({ linea: 2, texto: "<strong>return n</strong>: devuelve " + k + " sin llamar a nadie.",
+          estado: { pila: abajo.concat([tarjeta(k, { devuelve: String(k) })]) } });
+        return k;
+      }
+      var falta1 = "return ▢ + fibonacci(" + (k - 2) + ")";
+      var espera1 = tarjeta(k, { linea: 4, falta: falta1 });
+      pasos.push({ linea: 4,
+        texto: "Para sumar <code>fibonacci(" + (k - 1) + ") + fibonacci(" + (k - 2) + ")</code> necesita primero <strong>" + titulo(k - 1) + "</strong>. " +
+          "La tarjeta espera con <code>▢ + fibonacci(" + (k - 2) + ")</code>.",
+        estado: { pila: abajo.concat([espera1, Pila.llamada(titulo(k - 1), [])]), leer: [nivel, "n"] } });
+      var a = visitar(k - 1, abajo.concat([espera1]));
+      pasos.push({ linea: 4, flecha: true,
+        texto: titulo(k - 1) + " devolvió <strong>" + a + "</strong>: cae en el primer espacio en blanco. " + titulo(k) +
+          " ya tiene <code>" + a + " + fibonacci(" + (k - 2) + ")</code>, pero le falta la segunda llamada.",
+        estado: { pila: abajo.concat([tarjeta(k, { linea: 4, sigue: true, falta: falta1, recibe: String(a) })]) } });
+      var falta2 = "return " + a + " + ▢";
+      var espera2 = tarjeta(k, { linea: 4, falta: falta2 });
+      pasos.push({ linea: 4,
+        texto: "Ahora llama a <strong>" + titulo(k - 2) + "</strong>, la segunda. Espera otra vez, ahora con <code>" + a + " + ▢</code>.",
+        estado: { pila: abajo.concat([espera2, Pila.llamada(titulo(k - 2), [])]), leer: [nivel, "n"] } });
+      var b = visitar(k - 2, abajo.concat([espera2]));
+      pasos.push({ linea: 4, flecha: true,
+        texto: titulo(k - 2) + " devolvió <strong>" + b + "</strong>: cae en el segundo espacio en blanco. Ya tiene <code>" + a + " + " + b + "</code>.",
+        estado: { pila: abajo.concat([tarjeta(k, { linea: 4, sigue: true, falta: falta2, recibe: String(b) })]) } });
+      pasos.push({ linea: 4,
+        texto: "<code>" + a + " + " + b + "</code> es <strong>" + (a + b) + "</strong>: " + titulo(k) + " devuelve " + (a + b) + ".",
+        estado: { pila: abajo.concat([tarjeta(k, { devuelve: String(a + b) })]) } });
+      return a + b;
+    }
+
+    var total = String(visitar(n2, [programa()]));
+    pasos.push({ linea: 6, flecha: true, salida: total,
+      texto: titulo(n2) + " devolvió <strong>" + total + "</strong> al programa, que sigue en la línea 7: <code>print(" + total + ")</code> lo muestra. " +
+        "En total, <strong>" + llamadas + (llamadas === 1 ? " llamada" : " llamadas") + "</strong>.",
+      estado: { pila: [programa(total)] } });
+    return pasos;
+  }
+
+  function terminarPila() {
+    var texto;
+    if (n2 <= 1) {
+      texto = "fibonacci(" + n2 + ") es un caso base: devuelve " + n2 + " sin llamarse. Mueve el control a 3 o 4 y mira las dos llamadas.";
+    } else {
+      texto = "fibonacci(" + n2 + ") llamó dos veces: a fibonacci(" + (n2 - 1) + ") y a fibonacci(" + (n2 - 2) + "). Cada tarjeta que no era caso base " +
+        "esperó dos veces en la misma línea: primero con ▢ + …, luego con … + ▢. En total, " + llamadasFib(n2) + " llamadas." + (n2 < 4 ? " Prueba con 4." : "");
+    }
+    Pasos.feedback($("p2-fb"), "ok", texto);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. El árbol que crece ---------- */
+  var n3 = 4;
+  var arbol3 = null;
+
+  function contar(el, k) {
+    var fuerte = el.querySelector("strong");
+    if (fuerte.textContent === String(k)) return;
+    fuerte.textContent = String(k);
+    if (k) pulso(el, "contador--cambio");
+  }
+
+  function trazaArbol() {
+    arbol3 = crearArbol($("p3-arbol"), n3, { etiqueta: "Árbol de llamadas de fibonacci(" + n3 + ")" });
+    arbol3.pintar({ llamadas: 0, devueltos: 0 });
+    var nodos = arbol3.nodos;
+    var pasos = [];
+    var llamadas = 0, devueltos = 0;
+
+    function paso(linea, nodo, texto, extra) {
+      var p = { linea: linea, texto: texto, estado: { llamadas: llamadas, devueltos: devueltos, actual: nodo.id } };
+      for (var c in extra) p[c] = extra[c];
+      pasos.push(p);
+    }
+
+    function visitar(nodo) {
+      llamadas++;
+      if (!nodo.padre) {
+        paso(6, nodo, "El <code>print</code> llama a <strong>" + titulo(nodo.n) + "</strong>: la primera llamada, arriba del todo.");
+      } else {
+        var primera = nodo === nodo.padre.hijos[0];
+        paso(0, nodo, primera
+          ? titulo(nodo.padre.n) + " llama primero a <strong>" + titulo(nodo.n) + "</strong>: le sale una rama a la izquierda."
+          : titulo(nodo.padre.n) + " ya tiene su primera parte (" + nodo.padre.hijos[0].valor + "). Ahora llama a <strong>" + titulo(nodo.n) + "</strong>: la rama de la derecha.");
+      }
+      if (!nodo.hijos.length) {
+        devueltos++;
+        paso(2, nodo, "<code>" + nodo.n + " &lt;= 1</code>: " + titulo(nodo.n) + " devuelve <strong>" + nodo.n + "</strong> sin llamar a nadie. No le salen ramas.",
+          { flecha: false });
+        return;
+      }
+      visitar(nodo.hijos[0]);
+      visitar(nodo.hijos[1]);
+      devueltos++;
+      var a = nodo.hijos[0].valor, b = nodo.hijos[1].valor;
+      paso(4, nodo, titulo(nodo.n) + " ya tiene sus dos partes: <code>" + a + " + " + b + "</code> = <strong>" + nodo.valor + "</strong>. Lo devuelve.",
+        { flecha: true });
+    }
+
+    visitar(nodos[0]);
+    pasos.push({ linea: 6, flecha: true, salida: String(nodos[0].valor),
+      texto: titulo(n3) + " devolvió <strong>" + nodos[0].valor + "</strong> y el <code>print</code> lo muestra. En total: <strong>" +
+        nodos.length + (nodos.length === 1 ? " llamada" : " llamadas") + "</strong>.",
+      estado: { llamadas: llamadas, devueltos: devueltos } });
+    return pasos;
+  }
+
+  function terminarArbol() {
+    var total = llamadasFib(n3);
+    var texto = n3 <= 1
+      ? "fibonacci(" + n3 + ") es un caso base: un solo círculo, sin ramas. Mueve el control a 4 o 5."
+      : "fibonacci(" + n3 + ") hizo " + total + " llamadas para calcular " + fib(n3) + ". Python recorrió el árbol rama por rama: " +
+        "terminó toda la rama de la izquierda antes de empezar la de la derecha." + (n3 < 5 ? " Prueba con 5." : "");
+    Pasos.feedback($("p3-fb"), "ok", texto);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 4. Las repetidas ---------- */
+  var BUSCADA = 2;
+  var arbol4 = null;
+  var halladas = {};
+
+  function tocarRepetida(nodo) {
+    if (!$("p4-explorar").hidden) return;
+    if (nodo.n !== BUSCADA) {
+      arbol4.sacudir(nodo);
+      Pasos.feedback($("p4-fb"), "pista", "Ese es " + titulo(nodo.n) + ": busca los círculos con un " + BUSCADA + " adentro.");
+      return;
+    }
+    if (halladas[nodo.id]) return;
+    halladas[nodo.id] = true;
+    var lista = arbol4.nodos.filter(function (m) { return halladas[m.id]; });
+    arbol4.marcar(lista, true);
+    var total = arbol4.nodos.filter(function (m) { return m.n === BUSCADA; }).length;
+    $("p4-encontradas").textContent = "Encontraste " + lista.length + (lista.length === 1 ? " vez" : " veces") + " fibonacci(" + BUSCADA + ").";
+    if (lista.length < total) {
+      Pasos.limpiarFeedback($("p4-fb"));
+      return;
+    }
+    Pasos.feedback($("p4-fb"), "ok", "¡Las " + total + "! fibonacci(5) calcula fibonacci(2) " + total + " veces, y cada vez rehace todo lo que cuelga de ella: " +
+      "sus llamadas a fibonacci(1) y fibonacci(0). La computadora no recuerda que ya lo había calculado.");
+    $("p4-explorar").hidden = false;
+    leccion.desbloquear();
+  }
+
+  function empezarRepetidas() {
+    halladas = {};
+    arbol4 = crearArbol($("p4-arbol"), 5, {
+      etiqueta: "Árbol de llamadas de fibonacci(5). Cada círculo se puede tocar.",
+      nombre: "fibonacci",
+      tocar: tocarRepetida
+    });
+    arbol4.pintar({ quieto: true });
+    $("p4-encontradas").textContent = "";
+    $("p4-explorar").hidden = true;
+    $("p4-veces").textContent = "";
+    Pasos.limpiarFeedback($("p4-fb"));
+    pintarChips(null);
+  }
+
+  function pintarChips(elegida) {
+    var cont = $("p4-chips");
+    if (!cont.children.length) {
+      [4, 3, 2, 1, 0].forEach(function (k) {
+        var b = crear("button", "btn btn-secundario", titulo(k));
+        b.type = "button";
+        b.setAttribute("data-n", String(k));
+        b.addEventListener("click", function () { elegirChip(k); });
+        cont.appendChild(b);
+      });
+    }
+    cont.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.getAttribute("data-n")) === elegida));
+    });
+  }
+
+  function elegirChip(k) {
+    var lista = arbol4.nodos.filter(function (m) { return m.n === k; });
+    arbol4.marcar(lista, true);
+    pintarChips(k);
+    $("p4-veces").textContent = titulo(k) + " se calcula " + (lista.length === 1 ? "1 vez." : lista.length + " veces.") +
+      (k === 1 ? " ¡Es la que más se repite!" : "");
+  }
+
+  /* ---------- 5. Cuántas llamadas ---------- */
+  var prediccion5 = null;
+
+  function duracion(seg) {
+    if (seg < 120) return seg + (seg === 1 ? " segundo" : " segundos");
+    var min = seg / 60;
+    if (min < 120) return "unos " + Math.round(min) + " minutos";
+    var horas = min / 60;
+    if (horas < 48) return "unas " + Math.round(horas) + " horas";
+    return "unos " + miles(Math.round(horas / 24)) + " días";
+  }
+
+  function pintarCuantas(animar) {
+    var n = Number($("p5-n").value);
+    $("p5-n-valor").textContent = String(n);
+    $("p5-titulo-n").textContent = String(n);
+    $("p5-valor").textContent = miles(fib(n));
+    $("p5-llamadas").textContent = miles(llamadasFib(n));
+    $("p5-reloj").innerHTML = "Si tú hicieras una llamada por segundo, tardarías <strong>" + duracion(llamadasFib(n)) + "</strong>.";
+    if (animar) {
+      pulso($("p5-cifra-valor"), "cifra--cambio");
+      pulso($("p5-cifra-llamadas"), "cifra--cambio");
+    }
+  }
+
+  function predecirCuantas(valor) {
+    var primera = prediccion5 === null;
+    prediccion5 = valor;
+    $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+    if (!primera) return;
+    $("p5-n").value = "20";
+    $("p5-control").hidden = false;
+    $("p5-visual").hidden = false;
+    pintarCuantas(true);
+    Pasos.feedback($("p5-fb"), "ok", (valor === "20000" ? "¡Bien predicho! " : "Son muchas más: ") +
+      "fibonacci(20) hace 21 891 llamadas para devolver 6765. Mueve el control: con 30 pasan de dos millones y medio. " +
+      "Por eso esta receta, tan corta, es muy lenta con números grandes.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 6. Reto: ramas(3) ---------- */
+  var PISTAS_RETO = {
+    pisos: "Así sería si imprimiera piso por piso del árbol. Pero ramas(2) termina toda su rama (imprime 2, 1 y 0) antes de que empiece ramas(1).",
+    vuelta: "El print está antes de las llamadas: cada llamada imprime al empezar, a la ida, no al volver.",
+    corto: "Falta uno: ramas(3) se llama dos veces. Cuando termina ramas(2), todavía viene ramas(1), que también imprime."
+  };
+  var timerReto = null;
+
+  function limpiarReto() {
+    if (timerReto) clearTimeout(timerReto);
+    timerReto = null;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-arbol-caja").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  // El árbol de ramas(3) se dibuja llamada a llamada, con el orden en que imprime
+  function mostrarOrden() {
+    $("reto-arbol-caja").hidden = false;
+    var a = crearArbol($("reto-arbol"), 3, {
+      etiqueta: "Árbol de llamadas de ramas(3): imprime 3, 2, 1, 0 y 1, en ese orden.",
+      pildora: function (nodo) { return (nodo.pre + 1) + ".º"; }
+    });
+    var k = 0;
+    function tic() {
+      k++;
+      a.pintar({ llamadas: k, devueltos: 0, quieto: Pasos.reducirMovimiento });
+      if (k < a.nodos.length) timerReto = setTimeout(tic, Pasos.reducirMovimiento ? 0 : 450);
+      else timerReto = null;
+    }
+    tic();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! Imprime 3, baja por la rama de la izquierda (2, 1 y 0) y solo al terminarla sigue con la de la derecha: 1.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      mostrarOrden();
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("p1-siguiente").addEventListener("click", siguienteSerie);
+  $("p1-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { predecirSerie(Number(b.getAttribute("data-valor"))); });
+  });
+  $("p1-otra").addEventListener("click", function () {
+    empezarSerie();
+    $("p1-siguiente").focus();
+  });
+  empezarSerie();
+
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaPila,
+    intervalo: 900,
+    alReiniciar: function () {
+      pila2.vaciar();
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) { pila2.pintar(paso.estado); },
+    alTerminar: terminarPila
+  });
+  $("p2-n").addEventListener("input", function () {
+    n2 = Number(this.value);
+    $("p2-n-valor").textContent = String(n2);
+    $("p2-codigo-n").textContent = String(n2);
+    trazaP2.reiniciar();
+  });
+
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaArbol,
+    intervalo: 750,
+    alReiniciar: function () {
+      $("p3-explicacion").textContent = "Toca «Siguiente llamada» para ir paso a paso, o «Ejecutar todo» para verlo seguido.";
+      contar($("p3-contador"), 0);
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: function (paso) {
+      arbol3.pintar(paso.estado);
+      contar($("p3-contador"), paso.estado.llamadas);
+    },
+    alTerminar: terminarArbol
+  });
+  $("p3-n").addEventListener("input", function () {
+    n3 = Number(this.value);
+    $("p3-n-valor").textContent = String(n3);
+    $("p3-codigo-n").textContent = String(n3);
+    trazaP3.reiniciar();
+  });
+
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { predecirCuantas(b.getAttribute("data-valor")); });
+  });
+  $("p5-n").addEventListener("input", function () { pintarCuantas(true); });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() {
+    trazaP2.detener();
+    trazaP3.detener();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-serie": pausar,
+      "paso-pila": pausar,
+      "paso-arbol": pausar,
+      "paso-repetidas": function (paso, l, info) {
+        pausar();
+        if (info.primeraVez) empezarRepetidas();
+      },
+      "paso-cuantas": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
