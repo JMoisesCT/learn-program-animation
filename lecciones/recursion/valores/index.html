@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recursión que devuelve valores · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: funciones recursivas de Python que devuelven un valor. factorial, potencia y suma_digitos: lo que devuelve cada llamada baja a la de abajo y completa su cuenta.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+
+    /* ---------- Las instrucciones (la receta) ---------- */
+    .receta__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .receta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); counter-reset: receta; }
+    .receta li { position: relative; padding: var(--esp-2) var(--esp-3) var(--esp-2) 2.6rem; border-radius: var(--radio-sm); border: 2px solid transparent; background: var(--color-superficie-2); counter-increment: receta; transition: background-color var(--dur), border-color var(--dur); }
+    .receta li::before { content: counter(receta); position: absolute; left: var(--esp-3); top: var(--esp-2); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta .receta__paso--activo { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .receta .receta__paso--activo::before { background: var(--color-azul); color: #fff; }
+    .receta__mismo { font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- La fila del cine ----------
+       Arriba la pantalla; debajo las filas, de la 1 (adelante) a la 5 (tú). */
+    .cine { display: grid; gap: var(--esp-2); }
+    .cine__pantalla { margin: 0 12% var(--esp-2); padding: var(--esp-1); border-radius: 0 0 50% 50% / 0 0 100% 100%; background: linear-gradient(#cfd8e6, #e9eef5); text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.12em; color: var(--color-texto-suave); }
+    .cine__fila { display: grid; grid-template-columns: 5.4rem 2.4rem minmax(0, 1fr); align-items: center; gap: var(--esp-2); padding: var(--esp-1) var(--esp-3); border: 2px solid transparent; border-radius: var(--radio-sm); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur); }
+    .cine__num { font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .cine__fila--sabe .cine__num { color: var(--color-ok); }
+    .cine__persona { font-size: 1.6rem; line-height: 1; text-align: center; }
+    .cine__globo { justify-self: start; min-height: 1.9rem; padding: 0.15em 0.7em; border-radius: 999px; font-size: var(--texto-xs); font-weight: 600; line-height: 1.6; }
+    .cine__globo:empty { visibility: hidden; }
+    .cine__globo--pregunta { background: var(--color-pista-suave); color: var(--color-pista); }
+    .cine__globo--respuesta { background: var(--color-ok-suave); color: var(--color-ok); }
+    .cine__globo--nuevo { animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .cine__recibido { font-family: var(--fuente-codigo); font-weight: 700; }
+    .cine__fila--actual { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .cine__fila--tu .cine__num::after { content: " · tú"; color: var(--color-azul); }
+
+    /* ---------- Control con número ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- for contra recursión: dos cintas que avanzan a la vez ---------- */
+    .codigo--chico { font-size: var(--texto-xs); }
+    .lab .codigo--chico { font-size: var(--texto-sm); }
+    .codigo__titulo { margin: var(--esp-4) 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .lab__principal > .codigo__titulo:first-of-type { margin-top: 0; }
+    .cintas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-3); }
+    .cinta__titulo { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .cinta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-1); min-height: 2rem; }
+    .cinta li { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--esp-2); padding: var(--esp-1) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-xs); animation: aparecer var(--dur) ease both; }
+    .cinta li code { padding: 0; background: none; font-size: inherit; color: inherit; }
+    .cinta__flecha { color: var(--color-texto-suave); }
+    .cinta li .cinta__valor { font-weight: 700; }
+    .cinta .cinta__ida { border-style: dashed; border-color: var(--color-pista); color: var(--color-pista); }
+    .cinta .cinta__base { border-color: var(--color-azul); }
+    .cinta .cinta__mult { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .cinta .cinta__fin { border-color: var(--color-texto); font-weight: 700; }
+    .leyenda { display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border: 2px solid; border-radius: 4px; }
+    .leyenda .leyenda__ida::before { border-style: dashed; border-color: var(--color-pista); }
+    .leyenda .leyenda__mult::before { border-color: var(--color-acento); background: var(--color-acento-suave); }
+
+    /* ---------- Espacios en blanco dentro del código ---------- */
+    .codigo__elegir { font: inherit; font-weight: 700; max-width: 100%; padding: 0 0.3em; border: 2px dashed var(--tk-numero); border-radius: 6px; background: #232a33; color: var(--tk-numero); cursor: pointer; }
+    .codigo__elegir:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: 2px; }
+    .codigo__elegir--lleno { border-style: solid; }
+
+    /* ---------- Pruebas ---------- */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* ---------- Reto: opciones de código ---------- */
+    .opciones--codigo { grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .cine__fila { grid-template-columns: 4.6rem 2rem minmax(0, 1fr); padding: var(--esp-1) var(--esp-2); }
+      .cine__persona { font-size: 1.35rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      /* El valor va debajo del código, para que las dos cintas quepan lado a lado */
+      .cintas { gap: var(--esp-2); }
+      .cinta li { flex-direction: column; align-items: flex-start; padding: var(--esp-1) var(--esp-2); font-size: 0.8rem; }
+      .cinta__flecha { display: none; }
+      /* Que el espacio en blanco largo quepa casi entero */
+      #p4-codigo { font-size: 0.8rem; }
+      #p4-codigo .linea { padding-right: var(--esp-2); }
+      .cinta li .cinta__valor::before { content: "→ "; font-weight: 400; }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual > .prediccion__pregunta:first-child, .lab__visual > .cine { margin-top: var(--esp-5); }
+    }
+    /* La línea 5 de suma_digitos es larga: un poco más chico, para que la flecha no la tape */
+    @media (min-width: 1024px) {
+      .lab #p5-codigo { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="recursion-valores">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: la fila del cine -->
+    <section class="paso" id="paso-fila" data-requiere aria-labelledby="t-fila">
+      <span class="paso__etiqueta">Recursión 2/4 · Recursión que devuelve valores</span>
+      <h1 class="paso__titulo" id="t-fila">¿En qué fila estás?</h1>
+      <p>Estás en el cine y está oscuro: no ves el número de tu fila. No puedes contar las filas, pero sí puedes <strong>preguntarle a la persona de adelante</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="receta__titulo">📜 Cómo saber en qué fila estás</p>
+          <ol class="receta" id="p1-receta">
+            <li data-r="base">Si no hay nadie adelante: estás en la <strong>fila 1</strong>.</li>
+            <li data-r="pregunta">Si no: pregúntale a la persona de adelante <span class="receta__mismo">en qué fila está</span>…</li>
+            <li data-r="suma">…y súmale 1 a lo que te diga.</li>
+          </ol>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-otra" hidden>↺ Otra vez</button>
+            <button type="button" class="btn btn-secundario" id="p1-accion">Preguntar a la de adelante</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cine" id="p1-cine" aria-hidden="true">
+            <div class="cine__pantalla">PANTALLA</div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. factorial(n) -->
+    <section class="paso" id="paso-factorial" data-requiere aria-labelledby="t-factorial">
+      <h2 class="paso__titulo" id="t-factorial">Cada llamada devuelve su parte</h2>
+      <p>El factorial de 4 es <strong>4&nbsp;×&nbsp;3&nbsp;×&nbsp;2&nbsp;×&nbsp;1</strong>. Fíjate: es <strong>4&nbsp;×</strong> el factorial de 3. Como en el cine, <code>factorial(4)</code> le pregunta a <code>factorial(3)</code> y usa lo que le responde.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p2-n">Calcular el factorial de <output id="p2-n-valor" for="p2-n">4</output></label>
+            <input type="range" id="p2-n" min="1" max="5" step="1" value="4">
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span> * <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">factorial</span>(<span class="tk-numero" id="p2-codigo-n">4</span>))</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Cada tarjeta que espera guarda su cuenta a medias: <code>4 * ▢</code>. El espacio en blanco se llena con lo que <strong>devuelve</strong> la tarjeta de arriba.</p>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. for contra recursión -->
+    <section class="paso" id="paso-comparar" data-requiere aria-labelledby="t-comparar">
+      <h2 class="paso__titulo" id="t-comparar">Con for o con recursión</h2>
+      <p>En «Funciones que usan funciones» calculaste el factorial con un <code>for</code>. Las dos versiones devuelven 24 para el 4, pero no multiplican en el mismo momento.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="codigo__titulo">Con for</p>
+          <pre class="codigo codigo--chico" aria-label="Factorial con for"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-variable">resultado</span> = <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-variable">n</span> + <span class="tk-numero">1</span>):</span><span class="linea">        <span class="tk-variable">resultado</span> *= <span class="tk-variable">i</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">resultado</span></span></code></pre>
+          <p class="codigo__titulo">Con recursión</p>
+          <pre class="codigo codigo--chico" aria-label="Factorial con recursión"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span> * <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <p class="prediccion__pregunta" id="p3-pregunta">Con <code>factorial(4)</code>: ¿cuál multiplica primero?</p>
+          <div class="prediccion" id="p3-prediccion" role="group" aria-labelledby="p3-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="for" aria-pressed="false">El for</button>
+            <button type="button" class="btn btn-secundario" data-valor="rec" aria-pressed="false">La recursión</button>
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">Las dos a la vez</button>
+          </div>
+          <div class="cintas">
+            <div>
+              <p class="cinta__titulo">Con for</p>
+              <ol class="cinta" id="p3-for" aria-label="Pasos del for"></ol>
+            </div>
+            <div>
+              <p class="cinta__titulo">Con recursión</p>
+              <ol class="cinta" id="p3-rec" aria-label="Pasos de la recursión"></ol>
+            </div>
+          </div>
+          <p class="leyenda"><span class="leyenda__ida">a la ida: espera</span><span class="leyenda__mult">multiplica</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar" disabled>▶ Ejecutar las dos</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. potencia(b, e) -->
+    <section class="paso" id="paso-potencia" data-comprobar aria-labelledby="t-potencia">
+      <h2 class="paso__titulo" id="t-potencia">Completa: potencia</h2>
+      <p><code>potencia(2, 3)</code> es 2 multiplicado por sí mismo 3 veces: <strong>2&nbsp;×&nbsp;2&nbsp;×&nbsp;2&nbsp;=&nbsp;8</strong>. Es lo mismo que <strong>2&nbsp;×</strong> <code>potencia(2, 2)</code>. Y cualquier número elevado a 0 da <strong>1</strong>.</p>
+
+      <div class="tarjeta">
+        <p class="prediccion__pregunta">Elige qué va en cada espacio en blanco.</p>
+        <pre class="codigo" id="p4-codigo" aria-label="Código con dos espacios en blanco"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">potencia</span>(<span class="tk-variable">b</span>, <span class="tk-variable">e</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">e</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <select class="codigo__elegir" id="p4-base" aria-label="Espacio en blanco 1: qué devuelve el caso base"><option value="">?</option><option value="0">0</option><option value="1">1</option><option value="b">b</option></select></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <select class="codigo__elegir" id="p4-rec" aria-label="Espacio en blanco 2: qué devuelve el else"><option value="">?</option><option value="bien">b * potencia(b, e - 1)</option><option value="e">e * potencia(b, e - 1)</option><option value="igual">b * potencia(b, e)</option></select></span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">potencia</span>(<span class="tk-numero">2</span>, <span class="tk-numero">3</span>))</span></code></pre>
+        <ul class="pruebas" id="p4-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. suma_digitos(n) -->
+    <section class="paso" id="paso-digitos" data-requiere aria-labelledby="t-digitos">
+      <h2 class="paso__titulo" id="t-digitos">Sumar los dígitos</h2>
+      <p>Recuerda: <code>472 % 10</code> da <strong>2</strong>, el último dígito, y <code>472 // 10</code> da <strong>47</strong>, el número sin ese dígito. Con eso, una función suma los dígitos de un número.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">Antes de ejecutar: ¿qué imprime?</p>
+          <div class="prediccion" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="13" aria-pressed="false">13</button>
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+            <button type="button" class="btn btn-secundario" data-valor="472" aria-pressed="false">472</button>
+          </div>
+          <pre class="codigo" id="p5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">suma_digitos</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt; <span class="tk-numero">10</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span> % <span class="tk-numero">10</span> + <span class="tk-funcion">suma_digitos</span>(<span class="tk-variable">n</span> // <span class="tk-numero">10</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">suma_digitos</span>(<span class="tk-numero">472</span>))</span></code></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p5-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Cuál calcula bien?</h2>
+      <p>Cuatro versiones de <code>factorial</code>. Solo una calcula bien. La probaremos con tres números.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">¿Qué versión de factorial calcula bien?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="sinreturn"><span>def factorial(n):
+    if n == 1:
+        return 1
+    else:
+        n * factorial(n - 1)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="igual"><span>def factorial(n):
+    if n == 1:
+        return 1
+    else:
+        return n * factorial(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>def factorial(n):
+    if n == 1:
+        return 1
+    else:
+        return n * factorial(n - 1)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="cero"><span>def factorial(n):
+    if n == 1:
+        return 0
+    else:
+        return n * factorial(n - 1)</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Cada llamada <strong>espera</strong> lo que devuelve la de arriba, lo usa para terminar su cuenta y <strong>devuelve</strong> el suyo a la de abajo.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-numero">1</span>  <span class="tk-comentario"># caso base</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-comentario"># espera el valor de arriba</span></span><span class="linea">        <span class="tk-comentario"># y lo usa en su cuenta</span></span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-variable">n</span> * <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- 1. La fila del cine ----------
+     Las preguntas van hacia adelante (de la fila 5 a la 1) y las respuestas vuelven
+     hacia atrás, sumando 1 en cada fila. */
+  var FILAS = 5;
+  var cine = {};
+
+  function marcarReceta(cual) {
+    $("p1-receta").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("receta__paso--activo", li.getAttribute("data-r") === cual);
+    });
+  }
+
+  var filas = {};
+  (function () {
+    for (var r = 1; r <= FILAS; r++) {
+      var fila = crear("div", "cine__fila" + (r === FILAS ? " cine__fila--tu" : ""));
+      var num = crear("span", "cine__num");
+      var globo = crear("span", "cine__globo");
+      fila.appendChild(num);
+      fila.appendChild(crear("span", "cine__persona", r === FILAS ? "🙋" : "🧑"));
+      fila.appendChild(globo);
+      $("p1-cine").appendChild(fila);
+      filas[r] = { fila: fila, num: num, globo: globo };
+    }
+  })();
+
+  function pintarCine() {
+    for (var r = 1; r <= FILAS; r++) {
+      var f = filas[r];
+      f.fila.classList.toggle("cine__fila--actual", r === cine.actual);
+      f.fila.classList.toggle("cine__fila--sabe", !!cine.sabe[r]);
+      f.num.textContent = cine.sabe[r] ? "fila " + r : "fila ?";
+    }
+  }
+
+  function globo(r, tipo, html) {
+    var g = filas[r].globo;
+    g.className = "cine__globo" + (tipo ? " cine__globo--" + tipo + " cine__globo--nuevo" : "");
+    g.innerHTML = html;
+  }
+
+  function empezarCine() {
+    cine = { fase: "ida", actual: FILAS, sabe: {} };
+    for (var r = 1; r <= FILAS; r++) globo(r, null, "");
+    pintarCine();
+    marcarReceta(null);
+    $("p1-explicacion").innerHTML = "Hay alguien adelante, así que sigue la receta: <strong>pregúntale</strong>.";
+    $("p1-accion").textContent = "Preguntar a la de adelante";
+    $("p1-accion").hidden = false;
+    $("p1-otra").hidden = true;
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  function avanzarCine() {
+    if (cine.fase === "ida") {
+      globo(cine.actual, "pregunta", "¿En qué fila estás?");
+      cine.actual--;
+      if (cine.actual === 1) {
+        cine.sabe[1] = true;
+        globo(1, "respuesta", "Nadie adelante: ¡fila 1!");
+        cine.fase = "vuelta";
+        marcarReceta("base");
+        $("p1-explicacion").innerHTML = "La persona de la fila 1 no tiene a nadie adelante: <strong>lo sabe sin preguntar</strong>. Es el <strong>caso base</strong>.";
+        $("p1-accion").textContent = "Pasar la respuesta hacia atrás";
+      } else {
+        marcarReceta("pregunta");
+        $("p1-explicacion").innerHTML = cine.actual === FILAS - 1
+          ? "La persona de adelante tampoco lo sabe. Usa la <strong>misma receta</strong>: le pregunta a la suya. Tú esperas la respuesta."
+          : "Otra vez: pregunta y <strong>espera</strong>. Las preguntas van hacia adelante.";
+      }
+      pintarCine();
+      return;
+    }
+    // A la vuelta: la fila de atrás recibe la respuesta y le suma 1
+    var r = cine.actual + 1;
+    cine.sabe[r] = true;
+    globo(r, "respuesta", '<span class="cine__recibido">' + (r - 1) + "</span> + 1 = " + r + (r === FILAS ? ": ¡fila " + r + "!" : ""));
+    Codigo.volar(filas[r - 1].num, filas[r].globo.querySelector(".cine__recibido"), String(r - 1), "vuelo--salida");
+    cine.actual = r;
+    marcarReceta("suma");
+    pintarCine();
+    if (r < FILAS) {
+      $("p1-explicacion").innerHTML = "Le responden «fila " + (r - 1) + "»: le suma 1 y ya sabe que está en la <strong>fila " + r + "</strong>. Se lo dice a la de atrás.";
+      return;
+    }
+    $("p1-explicacion").innerHTML = "Te responden «fila " + (r - 1) + "», le sumas 1: ¡estás en la <strong>fila " + FILAS + "</strong>!";
+    $("p1-accion").hidden = true;
+    $("p1-otra").hidden = false;
+    $("p1-otra").focus();
+    Pasos.feedback($("p1-fb"), "ok", "Las preguntas fueron hacia adelante y las respuestas volvieron hacia atrás. Cada persona esperó una respuesta, " +
+      "la usó para calcular la suya y se la pasó a la de atrás. Así devuelve valores una función recursiva.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- La traza de una función recursiva que devuelve un valor ----------
+     Las dos funciones de la lección tienen la misma forma:
+       línea 1  if <caso base>:
+       línea 2      return <valor>
+       línea 4      return <parte> <op> f(<más pequeño>)
+       línea 6  print(f(n))
+     f trae: nombre, n, esBase(k), siguiente(k), base(k), parte(k), op, junta(k, v),
+     condicion(k), textoBase(k, v) y textoLlamada(k, sig). */
+  function programa(recibe) {
+    var p = Pila.programa();
+    p.linea = 6;
+    p.ficha = "programa";
+    p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+    if (recibe !== undefined) {
+      p.sigue = true;
+      p.recibe = recibe;
+    }
+    return p;
+  }
+
+  function trazaRecursiva(f) {
+    var cadena = []; // la n de cada llamada, de la primera al caso base
+    for (var k = f.n; ; k = f.siguiente(k)) {
+      cadena.push(k);
+      if (f.esBase(k)) break;
+    }
+    var valores = []; // lo que devuelve cada llamada
+    for (var i = cadena.length - 1; i >= 0; i--) {
+      valores[i] = f.esBase(cadena[i]) ? f.base(cadena[i]) : f.junta(cadena[i], valores[i + 1]);
+    }
+
+    function titulo(k) { return f.nombre + "(" + k + ")"; }
+    function tarjeta(i, extra) {
+      var t = Pila.llamada(titulo(cadena[i]), [["n", cadena[i]]]);
+      for (var c in extra) t[c] = extra[c];
+      return t;
+    }
+    function cuenta(k, v) { return f.parte(k) + " " + f.op + " " + v; }
+    function espera(i) { return tarjeta(i, { linea: 4, falta: "return " + cuenta(cadena[i], "▢") }); }
+    // El programa y las llamadas 0 … i - 1, esperando debajo
+    function debajo(i) {
+      var lista = [programa()];
+      for (var j = 0; j < i; j++) lista.push(espera(j));
+      return lista;
+    }
+
+    var pasos = [
+      { linea: 0, texto: "Python recuerda la receta <strong>" + f.nombre + "</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
+      { linea: 6, texto: "El <code>print</code> necesita <strong>" + titulo(f.n) + "</strong>: Python la llama y el programa espera su resultado.",
+        estado: { pila: [programa(), Pila.llamada(titulo(f.n), [])] } }
+    ];
+    cadena.forEach(function (k, i) {
+      var abajo = debajo(i);
+      var base = f.esBase(k);
+      pasos.push({ linea: 0,
+        texto: i === 0 ? "Nace <strong>n = " + k + "</strong> en su tarjeta."
+          : "Otra tarjeta de <strong>" + f.nombre + "</strong>, con <strong>su propia n = " + k + "</strong>.",
+        estado: { pila: abajo.concat([tarjeta(i)]) } });
+      pasos.push({ linea: 1,
+        texto: f.condicion(k) + " es " + chip(base) + (base ? ": ¡llegó al <strong>caso base</strong>!" : ": todavía no, va por el else."),
+        estado: { pila: abajo.concat([tarjeta(i)]), leer: [abajo.length, "n"] } });
+      if (base) {
+        pasos.push({ linea: 2, texto: f.textoBase(k, valores[i]),
+          estado: { pila: abajo.concat([tarjeta(i, { devuelve: String(valores[i]) })]) } });
+      } else {
+        pasos.push({ linea: 4, texto: f.textoLlamada(k, cadena[i + 1]),
+          estado: { pila: abajo.concat([espera(i), Pila.llamada(titulo(cadena[i + 1]), [])]), leer: [abajo.length, "n"] } });
+      }
+    });
+    // La vuelta: cada valor baja a la tarjeta de abajo, que completa su cuenta y devuelve el suyo
+    for (i = cadena.length - 2; i >= 0; i--) {
+      var v = String(valores[i + 1]);
+      var c = cuenta(cadena[i], v);
+      pasos.push({ linea: 4, flecha: true,
+        texto: titulo(cadena[i + 1]) + " devolvió <strong>" + v + "</strong> y su tarjeta se fue. El valor baja a <strong>" + titulo(cadena[i]) +
+          "</strong>, que sigue donde se quedó: ahora tiene <code>" + c + "</code>.",
+        estado: { pila: debajo(i).concat([tarjeta(i, { linea: 4, sigue: true, falta: "return " + c, recibe: v })]) } });
+      pasos.push({ linea: 4,
+        texto: "<code>" + c + "</code> es <strong>" + valores[i] + "</strong>: " + titulo(cadena[i]) + " devuelve " + valores[i] + ".",
+        estado: { pila: debajo(i).concat([tarjeta(i, { devuelve: String(valores[i]) })]) } });
+    }
+    var total = String(valores[0]);
+    pasos.push({ linea: 6, flecha: true, salida: total,
+      texto: titulo(f.n) + " devolvió <strong>" + total + "</strong> al programa, que sigue en la línea 7: <code>print(" + total + ")</code> lo muestra.",
+      estado: { pila: [programa(total)] } });
+    return { pasos: pasos, cadena: cadena, valores: valores };
+  }
+
+  /* ---------- 2. factorial ---------- */
+  var pila2 = Pila.crear($("p2-pila"), { codigo: $("p2-codigo"), rotulo: true });
+  var nFactorial = 4;
+
+  var FACTORIAL = {
+    nombre: "factorial",
+    esBase: function (k) { return k === 1; },
+    siguiente: function (k) { return k - 1; },
+    base: function () { return 1; },
+    parte: function (k) { return String(k); },
+    op: "*",
+    junta: function (k, v) { return k * v; },
+    condicion: function (k) { return "¿n == 1? " + k + " == 1"; },
+    textoBase: function () { return "<strong>return 1</strong>: devuelve 1 sin llamar a nadie. Como la persona de la fila 1, lo sabe sin preguntar."; },
+    textoLlamada: function (k, sig) {
+      return "Para calcular <code>" + k + " * factorial(" + sig + ")</code> necesita primero <strong>factorial(" + sig + ")</strong>. " +
+        "Esta tarjeta queda esperando con <code>" + k + " * ▢</code>.";
+    }
+  };
+
+  function trazaFactorial() {
+    FACTORIAL.n = nFactorial;
+    return trazaRecursiva(FACTORIAL).pasos;
+  }
+
+  function terminarFactorial() {
+    var t = trazaRecursiva(FACTORIAL);
+    var n = t.cadena.length;
+    var texto;
+    if (n === 1) {
+      texto = "factorial(1) es el caso base: devuelve 1 sin llamarse. Mueve el control a un número más grande y mira cómo baja cada valor.";
+    } else {
+      var cuentas = [];
+      for (var i = n - 2; i >= 0; i--) cuentas.push(t.cadena[i] + " * " + t.valores[i + 1]);
+      texto = "factorial(" + t.cadena[0] + ") = " + t.cadena.join(" × ") + " = " + t.valores[0] + ". Las multiplicaciones se hicieron " +
+        "a la vuelta: " + cuentas.join(", ") + ". Cada tarjeta esperó el valor de la de arriba, terminó su cuenta y devolvió el suyo. " +
+        "Mueve el control y prueba otro número.";
+    }
+    Pasos.feedback($("p2-fb"), "ok", texto);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. for contra recursión ---------- */
+  var CINTA_FOR = [
+    { c: "resultado = 1", v: "1" },
+    { c: "resultado *= 1", v: "1", tipo: "mult" },
+    { c: "resultado *= 2", v: "2", tipo: "mult" },
+    { c: "resultado *= 3", v: "6", tipo: "mult" },
+    { c: "resultado *= 4", v: "24", tipo: "mult" },
+    { c: "return", v: "24", tipo: "fin" }
+  ];
+  var CINTA_REC = [
+    { c: "factorial(4)", v: "4 * ▢", tipo: "ida" },
+    { c: "factorial(3)", v: "3 * ▢", tipo: "ida" },
+    { c: "factorial(2)", v: "2 * ▢", tipo: "ida" },
+    { c: "factorial(1)", v: "1", tipo: "base" },
+    { c: "2 * 1", v: "2", tipo: "mult" },
+    { c: "3 * 2", v: "6", tipo: "mult" },
+    { c: "4 * 6", v: "24", tipo: "mult" },
+    { c: "return", v: "24", tipo: "fin" }
+  ];
+  var prediccion3 = null;
+  var timer3 = null;
+
+  function pieza(item) {
+    var li = crear("li", item.tipo ? "cinta__" + item.tipo : "");
+    li.appendChild(crear("code", "", item.c));
+    li.appendChild(crear("span", "cinta__flecha", "→"));
+    li.appendChild(crear("code", "cinta__valor", item.v));
+    return li;
+  }
+
+  function pararComparar() {
+    if (timer3) clearTimeout(timer3);
+    timer3 = null;
+  }
+
+  function limpiarComparar() {
+    pararComparar();
+    $("p3-for").textContent = "";
+    $("p3-rec").textContent = "";
+    $("p3-ejecutar").disabled = prediccion3 === null;
+    $("p3-ejecutar").textContent = "▶ Ejecutar las dos";
+  }
+
+  function ejecutarComparar() {
+    limpiarComparar();
+    $("p3-ejecutar").disabled = true;
+    Pasos.limpiarFeedback($("p3-fb"));
+    var t = 0;
+    function tic() {
+      if (CINTA_FOR[t]) $("p3-for").appendChild(pieza(CINTA_FOR[t]));
+      if (CINTA_REC[t]) $("p3-rec").appendChild(pieza(CINTA_REC[t]));
+      t++;
+      if (t < CINTA_REC.length) { timer3 = setTimeout(tic, 750); return; }
+      timer3 = null;
+      terminarComparar();
+    }
+    tic();
+  }
+
+  function terminarComparar() {
+    var explica = "El for multiplica desde la primera vuelta, mientras avanza. La recursión primero baja hasta factorial(1) " +
+      "sin multiplicar nada (cada tarjeta deja su cuenta a medias) y multiplica a la vuelta: 2 * 1, 3 * 2, 4 * 6. Las dos llegan a 24.";
+    Pasos.feedback($("p3-fb"), "ok", (prediccion3 === "for" ? "¡Bien predicho! " : "Multiplica primero el for. ") + explica);
+    $("p3-ejecutar").textContent = "↺ Otra vez";
+    $("p3-ejecutar").disabled = false;
+    leccion.desbloquear();
+  }
+
+  /* ---------- 4. potencia ---------- */
+  function potenciaCon(base, rec, b, e, prof) {
+    if (prof > 60) throw new Error("RecursionError");
+    if (e === 0) return base === "1" ? 1 : base === "0" ? 0 : b;
+    if (rec === "bien") return b * potenciaCon(base, rec, b, e - 1, prof + 1);
+    if (rec === "e") return e * potenciaCon(base, rec, b, e - 1, prof + 1);
+    return b * potenciaCon(base, rec, b, e, prof + 1);
+  }
+
+  function salidaPotencia(base, rec, b, e) {
+    try { return String(potenciaCon(base, rec, b, e, 0)); } catch (err) { return "RecursionError"; }
+  }
+
+  var PRUEBAS_POTENCIA = [[2, 3], [5, 0], [3, 2]];
+
+  function pintarPruebas(lista, filas) {
+    lista.textContent = "";
+    filas.forEach(function (f) {
+      var li = crear("li", f.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", f.llamada));
+      li.appendChild(crear("span", "prueba__salida", f.sale));
+      li.appendChild(crear("span", "prueba__marca", f.ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", f.llamada + ": " + f.sale + (f.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function elegidosPotencia() { return { base: $("p4-base").value, rec: $("p4-rec").value }; }
+
+  function limpiarPotencia() {
+    $("p4-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("p4-fb"));
+  }
+
+  function cambioPotencia() {
+    var e = elegidosPotencia();
+    $("p4-base").classList.toggle("codigo__elegir--lleno", !!e.base);
+    $("p4-rec").classList.toggle("codigo__elegir--lleno", !!e.rec);
+    limpiarPotencia();
+    leccion.listoParaComprobar(!!(e.base && e.rec));
+  }
+
+  function comprobarPotencia() {
+    var e = elegidosPotencia();
+    if (!e.base || !e.rec) return false;
+    var filas = PRUEBAS_POTENCIA.map(function (p) {
+      var sale = salidaPotencia(e.base, e.rec, p[0], p[1]);
+      return { llamada: "potencia(" + p[0] + ", " + p[1] + ")", sale: sale, ok: sale === salidaPotencia("1", "bien", p[0], p[1]) };
+    });
+    pintarPruebas($("p4-pruebas"), filas);
+    if (e.base === "1" && e.rec === "bien") {
+      Pasos.feedback($("p4-fb"), "ok", "¡Funciona! potencia(2, 3) = 2 * potencia(2, 2) = 2 * 2 * potencia(2, 1) = 2 * 2 * 2 * potencia(2, 0) = 2 * 2 * 2 * 1 = 8. " +
+        "Cada llamada multiplica por b lo que le devuelve la de arriba.");
+      return true;
+    }
+    var pista;
+    if (e.rec === "igual") pista = "potencia(b, e) se vuelve a llamar con el mismo e: nunca llega a e == 0 y la pila crece hasta el RecursionError. El problema tiene que hacerse más pequeño.";
+    else if (e.base === "0") pista = "El caso base devuelve 0, y todo lo que se multiplica por 0 da 0. Un número elevado a 0 da 1.";
+    else if (e.base === "b") pista = "Con e == 0 devuelve b: potencia(5, 0) da 5, pero un número elevado a 0 da 1. Y las demás salen con una b de más.";
+    else pista = "e * … multiplica por 3, por 2, por 1: por el exponente. Hay que multiplicar por la base, b, en cada llamada.";
+    Pasos.feedback($("p4-fb"), "pista", pista);
+    return false;
+  }
+
+  /* ---------- 5. suma_digitos ---------- */
+  var pila5 = Pila.crear($("p5-pila"), { codigo: $("p5-codigo"), rotulo: true });
+  var prediccion5 = null;
+
+  var DIGITOS = {
+    nombre: "suma_digitos",
+    n: 472,
+    esBase: function (k) { return k < 10; },
+    siguiente: function (k) { return Math.floor(k / 10); },
+    base: function (k) { return k; },
+    parte: function (k) { return String(k % 10); },
+    op: "+",
+    junta: function (k, v) { return k % 10 + v; },
+    condicion: function (k) { return "¿n < 10? " + k + " < 10"; },
+    textoBase: function (k) { return "Un solo dígito: <strong>return n</strong> devuelve " + k + " sin llamar a nadie."; },
+    textoLlamada: function (k, sig) {
+      return "<code>" + k + " % 10</code> es <strong>" + (k % 10) + "</strong> y <code>" + k + " // 10</code> es <strong>" + sig + "</strong>. " +
+        "Para calcular <code>" + (k % 10) + " + suma_digitos(" + sig + ")</code> necesita primero <strong>suma_digitos(" + sig + ")</strong>.";
+    }
+  };
+
+  function habilitarTraza5() {
+    var listo = prediccion5 !== null;
+    $("p5-ejecutar").disabled = !listo;
+    $("p5-reproducir").disabled = !listo;
+    if (!listo) $("p5-explicacion").textContent = "Elige tu predicción para poder ejecutar.";
+  }
+
+  function terminarDigitos() {
+    var explica = "suma_digitos(472) se queda con el 2 y le pide el resto a suma_digitos(47), que se queda con el 7 y se lo pide a suma_digitos(4). " +
+      "A la vuelta: 4, luego 7 + 4 = 11, luego 2 + 11 = 13.";
+    if (prediccion5 === "13") Pasos.feedback($("p5-fb"), "ok", "¡Bien predicho! Imprime 13: 4 + 7 + 2. " + explica);
+    else Pasos.feedback($("p5-fb"), "ok", "Imprime 13, no " + prediccion5 + ": 4 + 7 + 2. " + explica);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 6. Reto ---------- */
+  // Lo que devuelve cada versión; null es None. Lanza TypeError o RecursionError como Python.
+  function factorialCon(version, n, prof) {
+    if (prof > 60) throw new Error("RecursionError");
+    if (n === 1) return version === "cero" ? 0 : 1;
+    var sig = version === "igual" ? n : n - 1;
+    var v = factorialCon(version, sig, prof + 1);
+    if (v === null) throw new Error("TypeError");
+    return version === "sinreturn" ? null : n * v;
+  }
+
+  function salidaFactorial(version, n) {
+    try {
+      var v = factorialCon(version, n, 0);
+      return v === null ? "None" : String(v);
+    } catch (err) { return err.message; }
+  }
+
+  var PISTAS_RETO = {
+    sinreturn: "Al else le falta el return: factorial(2) calcula 2 * 1, pero no lo devuelve, así que devuelve None. " +
+      "Luego factorial(3) intenta 3 * None y Python da un error (TypeError). Cada tarjeta tiene que devolver su resultado.",
+    igual: "factorial(n) se llama con el mismo n: el problema nunca se hace más pequeño y la pila crece hasta el RecursionError.",
+    cero: "El caso base devuelve 0, y todo lo que se multiplica por 0 da 0. factorial(1) es 1."
+  };
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    pintarPruebas($("reto-pruebas"), [1, 3, 5].map(function (n) {
+      var sale = salidaFactorial(marcada.value, n);
+      return { llamada: "factorial(" + n + ")", sale: sale, ok: sale === salidaFactorial("bien", n) };
+    }));
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! El caso base devuelve 1, cada llamada se hace con un n más pequeño y el else devuelve su cuenta con return.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("p1-accion").addEventListener("click", avanzarCine);
+  $("p1-otra").addEventListener("click", function () {
+    empezarCine();
+    $("p1-accion").focus();
+  });
+  empezarCine();
+
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaFactorial,
+    intervalo: 1000,
+    alReiniciar: function () {
+      pila2.vaciar();
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) { pila2.pintar(paso.estado); },
+    alTerminar: terminarFactorial
+  });
+  $("p2-n").addEventListener("input", function () {
+    nFactorial = Number(this.value);
+    $("p2-n-valor").textContent = String(nFactorial);
+    $("p2-codigo-n").textContent = String(nFactorial);
+    trazaP2.reiniciar();
+  });
+
+  $("p3-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion3 = b.getAttribute("data-valor");
+      $("p3-prediccion").querySelectorAll("button").forEach(function (o) {
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      if (!timer3) $("p3-ejecutar").disabled = false;
+    });
+  });
+  $("p3-ejecutar").addEventListener("click", ejecutarComparar);
+  limpiarComparar();
+
+  $("p4-base").addEventListener("change", cambioPotencia);
+  $("p4-rec").addEventListener("change", cambioPotencia);
+
+  var trazaP5 = Traza.crear({
+    codigo: $("p5-codigo"),
+    explicacion: $("p5-explicacion"),
+    consola: $("p5-consola"),
+    ejecutar: $("p5-ejecutar"),
+    reproducir: $("p5-reproducir"),
+    reiniciar: $("p5-reiniciar"),
+    generar: function () { return trazaRecursiva(DIGITOS).pasos; },
+    intervalo: 1000,
+    alReiniciar: function () {
+      pila5.vaciar();
+      Pasos.limpiarFeedback($("p5-fb"));
+      habilitarTraza5();
+    },
+    alPaso: function (paso) { pila5.pintar(paso.estado); },
+    alTerminar: terminarDigitos
+  });
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion5 === null;
+      prediccion5 = b.getAttribute("data-valor");
+      $("p5-prediccion").querySelectorAll("button").forEach(function (o) {
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      if (nueva) trazaP5.reiniciar();
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() {
+    trazaP2.detener();
+    trazaP5.detener();
+    if (timer3) limpiarComparar();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-fila": pausar,
+      "paso-factorial": pausar,
+      "paso-comparar": pausar,
+      "paso-potencia": function (paso, l, info) {
+        pausar();
+        var e = elegidosPotencia();
+        if (!info.desbloqueado) l.listoParaComprobar(!!(e.base && e.rec));
+      },
+      "paso-digitos": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-potencia": comprobarPotencia, "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

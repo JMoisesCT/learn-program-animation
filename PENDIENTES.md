@@ -9,19 +9,21 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Recursión 2/4, 3/4 y 4/4** (plan en CLAUDE.md): Recursión que devuelve valores (`valores/`), Árbol de llamadas (`arbol/`) y Proyecto: Torres de Hanói (`proyecto/`). Al publicar cada una: su `<li data-leccion>` en la tarjeta de Recursión de la portada y el botón «Siguiente» en el resumen de la anterior (Recursión 1/4 aún no tiene, porque no hay lección siguiente). Usar `Pila.crear` y `flecha: true` al volver.
+2. **Recursión 3/4 y 4/4** (plan en CLAUDE.md): Árbol de llamadas (`arbol/`) y Proyecto: Torres de Hanói (`proyecto/`). Al publicar cada una: su `<li data-leccion>` en la tarjeta de Recursión de la portada y el botón «Siguiente» en el resumen de la anterior (Recursión 2/4 aún no tiene). Usar `Pila.crear(el, { codigo, rotulo: true })`, tarjetas con `linea`/`falta`/`sigue`/`recibe` y `flecha: true` al volver. En el árbol de fibonacci, una llamada hace **dos** llamadas en la misma línea: la tarjeta que espera tendrá que decir cuál de las dos espera (p. ej. `falta: "return 3 + ▢"` tras la primera).
+   **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    Después, antes de Listas: **Texto a fondo** y **Errores** (ideas en CLAUDE.md; planear sus sublecciones allí). Y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
-3. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. En Varios parámetros, Funciones que deciden, Variables locales y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
-4. **Origen del vuelo en los parámetros.** Cuando un parámetro recibe su valor, la línea activa es la del `def`, así que el valor sale de ahí y no del argumento de la llamada. Se podría permitir indicar el origen (p. ej. un elemento opcional en `Caja.poner`) para que salga del argumento.
-5. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
+3. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
+4. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. En Varios parámetros, Funciones que deciden, Variables locales y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
+5. **Origen del vuelo en los parámetros.** Cuando un parámetro recibe su valor, la línea activa es la del `def`, así que el valor sale de ahí y no del argumento de la llamada. Se podría permitir indicar el origen (p. ej. un elemento opcional en `Caja.poner`) para que salga del argumento.
+6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
    - arrastrar y soltar líneas para ordenarlas (CLAUDE.md lo pide en Pedagogía; hoy solo «Texto y números» usa arrastrar);
    - un panel «Tu programa» que crece con cada parte resuelta y que al final se ejecuta.
-6. **Detalles menores vistos al probar:**
+7. **Detalles menores vistos al probar:**
    - en móvil, si una línea es más ancha que la pantalla, la flecha de salto pasa por encima del texto de esa línea;
    - la copia que vuela a la consola es pequeña (tamaño de código, escalada); podría salir algo más grande;
    - la portada no tiene animación (p. ej. el camino de sublecciones se podría ir rellenando).
 
-7. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
+8. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
    - «bombilla» en Combinar condiciones (circuitos de `and`/`or`) → ¿«foco»? (es lo habitual en Perú y México, pero «foco» también significa otra cosa);
    - «Entradas del zoo» en Condiciones anidadas → ¿«zoológico»?;
    - «Ojo:» (6 veces, en Bucles, Salir antes, Recorrer un texto y Condicionales) → ¿«Cuidado:»?;
@@ -33,6 +35,21 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-21 · La vuelta en la pila y Recursión 2/4 (PRs #55–#58)
+
+La pregunta de partida: al volver de una llamada recursiva, ¿cómo ve el alumno que sigue **en la misma función**, en la llamada que estaba esperando? Tres mejoras, cada una en su PR, y la lección nueva:
+
+| PR | Cambio | Dónde |
+|---|---|---|
+| #55 | Tarjeta que espera: «‖ pausada en la línea 6» y «le falta: `print("Cierro la caja 3")`» (o «no le falta nada»); la que retoma, «▶ sigue en la línea 6», y se ilumina. Campos `linea`, `falta`, `sigue`. | `pila.js`, `base.css`, Recursión 1/4 |
+| #56 | Fichas en el código: debajo de la línea donde esperan, una ficha por llamada (`‖ n=3 n=2 n=1`); al volver se va la de la que retoma. `Codigo.pausas`, `Pila.crear(el, { codigo })`. La flecha de salto se dibuja después de pintar el paso, mide solo el texto de la línea y rodea las líneas de en medio con esquinas (antes las cortaba en curva). | `codigo.js`, `pila.js`, `traza.js`, `base.css` |
+| #57 | Rótulo «Ahora corre: `abrir(2)` n 2» encima del código; entra desde arriba al llamar y desde abajo al volver. `rotulo: true`. | `pila.js`, `base.css` |
+| #58 | **Recursión 2/4: Recursión que devuelve valores** (`lecciones/recursion/valores/`, `data-leccion="recursion-valores"`). Campo `recibe`: el valor devuelto sale volando del «↩ devuelve 6» de la tarjeta que se va y cae en la cuenta de la de abajo (`return 4 * 6`). `Codigo.volar` (vuelo desde cualquier elemento). | lección nueva, `pila.js`, `codigo.js`, portada, Recursión 1/4 |
+
+La lección, en 7 pasos: la fila del cine (preguntas hacia adelante, respuestas hacia atrás sumando 1) → `factorial(n)` con la pila y un control de 1 a 5 → for contra recursión (predecir cuál multiplica primero; dos cintas que avanzan a la vez) → completar `potencia(b, e)` con dos espacios en blanco y tres pruebas → `suma_digitos(472)` con `%` y `//`, predicción antes de ejecutar → reto: cuál de cuatro `factorial` calcula bien (sin `return` da `None` y luego `TypeError`; con `factorial(n)`, `RecursionError`; con caso base 0, siempre 0) → resumen. Recursión 1/4 enlaza a ella.
+
+Probado con Playwright en 1280 y 390 px, reanudando en cada paso y con movimiento reducido; también Funciones que usan funciones (usa la misma pila) y la flecha en Funciones 1/7. Sin errores.
 
 ### 2026-10-21 · Recursión 1/4: una función que se llama a sí misma
 
