@@ -9,7 +9,10 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Recursión, completa (4/4).** Siguiente: **Texto a fondo** y **Errores** (ideas en CLAUDE.md; planear sus sublecciones allí antes de escribirlas). Y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
+2. **Texto a fondo: van 3 de 5.** Siguen **Buscar en un texto** (`texto-buscar`: `.count()`, `.find()` y su `-1`, `.startswith()` / `.endswith()`, `.isdigit()` antes de `int()`) y el **Proyecto: el ahorcado** (`texto-proyecto`), según el plan de CLAUDE.md, con la cinta (`Cinta.crear`). Al publicar Buscar, añadir «Siguiente» en Métodos que transforman. Después, planear **Errores** en CLAUDE.md y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
+   **Probar con alumnos** las tijeras de Rebanadas en un móvil de verdad (arrastrar y tocar la cinta; usan `touch-action: none`, así que sobre la cinta la página no se desplaza) y si «los números van en los cortes» se entiende.
+   **Detalle visto**: en móvil, las líneas largas se desplazan en vez de caber (la de `print(▢)` en el reto de Métodos, con la cadena elegida dentro; las opciones sí se parten en dos líneas).
+   **Recursión, completa (4/4).**
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
 3. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
@@ -35,6 +38,19 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-21 · Texto a fondo 3/5: Métodos que transforman
+
+**Lección** `lecciones/texto/metodos/` (`data-leccion="texto-metodos"`), 7 pasos:
+1. Máquinas de texto: `.upper()`, `.lower()` y `.title()` sobre un texto que el alumno puede cambiar; la cinta de antes, la máquina y la de después, con las letras que cambian en azul y en cascada.
+2. `.strip()` con `input()`: nombres con espacios en los bordes (en naranja, los que se van) y con un espacio en el medio, que se queda. `print(f"[{limpio}]")` deja ver los bordes.
+3. `.replace(viejo, nuevo)` con dos campos: algo que aparece varias veces (la «e», y la «é» no cuenta) y algo que no está (sale igual, sin error).
+4. El texto no cambia: predecir qué imprime `nombre.upper()` sin guardar; línea a línea, «"ANA"» cae en una caja «sin nombre» y sale volando, y se imprime «ana». Con «Guardar el texto nuevo» la línea pasa a `nombre = nombre.upper()`.
+5. En cadena: `texto.strip().lower()` con una respuesta que el alumno escribe; tres cintas muestran cada paso.
+6. Reto: el orden importa. Qué cadena convierte `"  hola mundo  "` en `"HOLA_MUNDO"` (las trampas: `replace` antes de `strip`, cambiar el espacio por nada y terminar en `.lower()`); la cinta de lo que sale se compara con la de lo que queremos.
+7. Resumen.
+
+La cinta pasa a otra fila si un texto largo no cabe ni con casillas pequeñas (mínimo 1.7rem). Portada y botón «Siguiente» en Rebanadas. Probado con Playwright en 1280 y 390 px, reanudando en cada paso y con movimiento reducido; también las lecciones 1/5 y 2/5 con el cambio de la cinta. Sin errores.
 
 ### 2026-10-21 · Texto a fondo 2/5: Rebanadas
 

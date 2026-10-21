@@ -25,7 +25,8 @@
                              izquierdo de la cinta
    c.el                      el contenedor .cinta
 
-   El tamaño de las casillas se adapta al ancho disponible, como el lienzo.
+   El tamaño de las casillas se adapta al ancho disponible, como el lienzo; si un texto
+   largo no cabe ni con casillas pequeñas, sigue en otra fila.
 */
 (function () {
   "use strict";
