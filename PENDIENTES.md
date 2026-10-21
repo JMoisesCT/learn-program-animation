@@ -9,7 +9,7 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Recursión 3/4 y 4/4** (plan en CLAUDE.md): Árbol de llamadas (`arbol/`) y Proyecto: Torres de Hanói (`proyecto/`). Al publicar cada una: su `<li data-leccion>` en la tarjeta de Recursión de la portada y el botón «Siguiente» en el resumen de la anterior (Recursión 2/4 aún no tiene). Usar `Pila.crear(el, { codigo, rotulo: true })`, tarjetas con `linea`/`falta`/`sigue`/`recibe` y `flecha: true` al volver. En el árbol de fibonacci, una llamada hace **dos** llamadas en la misma línea: la tarjeta que espera tendrá que decir cuál de las dos espera (p. ej. `falta: "return 3 + ▢"` tras la primera).
+2. **Recursión 4/4: Proyecto: Torres de Hanói** (plan en CLAUDE.md, carpeta `proyecto/`). Al publicarla: su `<li data-leccion>` en la tarjeta de Recursión de la portada y el botón «Siguiente» en el resumen de Árbol de llamadas (aún no tiene). Usar `Pila.crear(el, { codigo, rotulo: true })`, tarjetas con `linea`/`falta`/`sigue`/`recibe` y `flecha: true` al volver.
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    Después, antes de Listas: **Texto a fondo** y **Errores** (ideas en CLAUDE.md; planear sus sublecciones allí). Y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
 3. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
@@ -35,6 +35,21 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-21 · Recursión 3/4: Árbol de llamadas
+
+**Lección** `lecciones/recursion/arbol/` (`data-leccion="recursion-arbol"`), 7 pasos:
+1. La serie: cada número suma los dos anteriores; los dos de antes vuelan a la casilla nueva y el último (13) lo predice el alumno.
+2. `fibonacci(n)` con la pila (control de 1 a 4): la tarjeta espera **dos veces en la misma línea**, primero con `return ▢ + fibonacci(1)` y luego con `return 1 + ▢`; cada valor que vuelve cae en su espacio en blanco.
+3. El árbol de llamadas que crece (control de 1 a 5): un círculo por llamada, los que esperan punteados (son la pila: el camino desde la raíz), la píldora con lo que devolvió y un contador de llamadas. El árbol es un SVG que dibuja la propia lección (`crearArbol`).
+4. Lo mismo, otra vez: en el árbol de `fibonacci(5)` el alumno toca las 3 copias de `fibonacci(2)`; se resaltan con todo lo que cuelga de ellas. Luego puede resaltar las copias de cualquier otra llamada.
+5. ¿Cuántas llamadas? Predicción para `fibonacci(20)` (21 891) y un control de 1 a 30: valor, llamadas en total y cuánto tardarías haciendo una por segundo (con 30, unos 31 días).
+6. Reto: qué imprime `ramas(3)`, que imprime al empezar y se llama dos veces (3 2 1 0 1). Las trampas: por pisos (3 2 1 1 0), a la vuelta (1 0 2 1 3) y olvidar la segunda rama. Al acertar, el árbol se dibuja con el orden en que imprime cada llamada.
+7. Resumen.
+
+`pila.js`: si `falta` tiene un `▢`, el valor que llega con `recibe` cae ahí (antes, siempre en la última aparición del valor, que en `return 1 + fibonacci(1)` era el 1 de `fibonacci(1)`). Las lecciones que ya lo usaban se ven igual.
+
+Portada y botón «Siguiente» en Recursión 2/4. Probado con Playwright en 1280 y 390 px, reanudando en cada paso y con movimiento reducido; también Recursión 2/4 y Funciones que usan funciones (usan la misma pila). Sin errores. Queda lo ya sabido: en móvil la línea 5 de `fibonacci` es más ancha que la pantalla y la flecha de salto pasa por encima de su final.
 
 ### 2026-10-21 · La vuelta en la pila y Recursión 2/4 (PRs #55–#58)
 
