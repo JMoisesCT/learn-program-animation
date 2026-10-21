@@ -82,9 +82,7 @@
       var paso = pasos[i];
       i++;
       Codigo.marcar(o.codigo, { activas: [paso.linea] });
-      var salta = paso.flecha !== undefined ? paso.flecha : previa !== null && paso.linea < previa;
-      if (salta && previa !== null) Codigo.salto(o.codigo, previa, paso.linea);
-      else Codigo.quitarSalto(o.codigo);
+      var desde = previa;
       previa = paso.linea;
       if (o.explicacion) o.explicacion.innerHTML = paso.texto;
       if (o.consola && paso.salida !== undefined) {
@@ -94,6 +92,11 @@
         Codigo.volarDesdeLinea(o.codigo, o.consola.lastElementChild, texto, "vuelo--salida");
       }
       if (o.alPaso) o.alPaso(paso, i - 1);
+      // La flecha, después de pintar el paso: así mide las líneas como quedan (p. ej. sin la
+      // ficha de la llamada que retoma)
+      var salta = paso.flecha !== undefined ? paso.flecha : desde !== null && paso.linea < desde;
+      if (salta && desde !== null) Codigo.salto(o.codigo, desde, paso.linea);
+      else Codigo.quitarSalto(o.codigo);
       if (terminado()) {
         detener();
         if (o.reiniciar) o.reiniciar.hidden = false;
