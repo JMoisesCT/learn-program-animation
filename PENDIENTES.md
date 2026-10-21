@@ -9,14 +9,14 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Recursión 4/4: Proyecto: Torres de Hanói** (plan en CLAUDE.md, carpeta `proyecto/`). Al publicarla: su `<li data-leccion>` en la tarjeta de Recursión de la portada y el botón «Siguiente» en el resumen de Árbol de llamadas (aún no tiene). Usar `Pila.crear(el, { codigo, rotulo: true })`, tarjetas con `linea`/`falta`/`sigue`/`recibe` y `flecha: true` al volver.
+2. **Recursión, completa (4/4).** Siguiente: **Texto a fondo** y **Errores** (ideas en CLAUDE.md; planear sus sublecciones allí antes de escribirlas). Y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
-   Después, antes de Listas: **Texto a fondo** y **Errores** (ideas en CLAUDE.md; planear sus sublecciones allí). Y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
+   **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
 3. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
 4. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. En Varios parámetros, Funciones que deciden, Variables locales y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
 5. **Origen del vuelo en los parámetros.** Cuando un parámetro recibe su valor, la línea activa es la del `def`, así que el valor sale de ahí y no del argumento de la llamada. Se podría permitir indicar el origen (p. ej. un elemento opcional en `Caja.poner`) para que salga del argumento.
 6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
-   - arrastrar y soltar líneas para ordenarlas (CLAUDE.md lo pide en Pedagogía; hoy solo «Texto y números» usa arrastrar);
+   - arrastrar y soltar líneas para ordenarlas (CLAUDE.md lo pide en Pedagogía; hoy solo arrastran «Texto y números» y los discos de las Torres de Hanói);
    - un panel «Tu programa» que crece con cada parte resuelta y que al final se ejecuta.
 7. **Detalles menores vistos al probar:**
    - en móvil, si una línea es más ancha que la pantalla, la flecha de salto pasa por encima del texto de esa línea;
@@ -35,6 +35,22 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-21 · Recursión 4/4: Proyecto: Torres de Hanói
+
+**Lección** `lecciones/recursion/proyecto/` (`data-leccion="recursion-proyecto"`), 8 pasos:
+1. El juego a mano con 3 discos: tocar una torre y luego otra, o arrastrar el disco. Un movimiento que rompe las reglas sacude el disco y explica por qué. Se desbloquea al llevar la torre a C (con el mínimo, 7, o con más).
+2. Parte 1 · El disco grande: ¿dónde tienen que estar el 1 y el 2 antes de mover el 3? (En B, la auxiliar). Al acertar, la solución se mueve sola en tres fases.
+3. Parte 2 · Tres pasos grandes con 4 discos: tres botones (los 3 de arriba a B, el 4 a C, los 3 a C) que el alumno ordena; cada uno mueve sus discos y resalta su línea en la receta.
+4. Parte 3 · La función `hanoi`: elegir las torres de las dos llamadas recursivas (selects debajo del código; lo elegido se ve en su espacio en blanco). Al comprobar, cada `print` mueve un disco; si una llamada está mal, se para en el primer movimiento imposible (en rojo en la salida) con una pista.
+5. El programa completo con la pila (control de 1 a 4 discos): cada `print` mueve un disco, las tarjetas dicen en qué línea esperan (5 o 7) y qué les falta.
+6. ¿Cuántos movimientos? Tabla 1, 3, 7, 15 y el alumno escribe el de 5 discos (31). Al acertar, la leyenda de los 64 discos.
+7. Reto: 4 discos a mano en 15 movimientos, con 💡 Pista (el siguiente movimiento de una solución mínima desde donde esté) y aviso cuando ya no alcanza para 15.
+8. Resumen.
+
+Las torres las dibuja la propia lección (`crearTorres`): los discos son elementos con posición en %, y cada movimiento sube, cruza y baja (Web Animations). Mientras un disco vuela no recibe toques, para que un toque rápido sobre otra torre vaya a esa torre; si se vuelve a mover antes de aterrizar, el vuelo nuevo sale de donde iba.
+
+Portada y botón «Siguiente» en Árbol de llamadas. Probado con Playwright en 1280 y 390 px (tocando, arrastrando y con toques rápidos), reanudando en cada paso y con movimiento reducido: sin errores. En móvil, las líneas largas de `hanoi` (5 y 7) son más anchas que la pantalla y se desplazan.
 
 ### 2026-10-21 · Recursión 3/4: Árbol de llamadas
 
