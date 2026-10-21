@@ -22,6 +22,8 @@
        una copia de `texto` sale de la línea que se ejecuta (la línea activa del código
        del paso de `el`) y vuela hasta destinoEl, que queda oculto hasta que llega.
        Si la línea tiene una pieza con ese mismo texto (un 12, un "Ana"), sale de ahí.
+   Codigo.volar(origen, destinoEl, texto, clase, alLlegar)
+       lo mismo, pero sale de `origen` (un elemento o un rectángulo de getBoundingClientRect).
 */
 (function () {
   "use strict";
@@ -225,11 +227,16 @@
   }
 
   function volarDesdeLinea(el, destino, texto, clase, alLlegar) {
+    volar(reducir() || !document.body.animate ? null : origenEnLinea(el, texto), destino, texto, clase, alLlegar);
+  }
+
+  function volar(origen, destino, texto, clase, alLlegar) {
     function llegar() {
       destino.classList.remove("vuelo-destino");
       if (alLlegar) alLlegar();
     }
-    var a = reducir() || !document.body.animate ? null : origenEnLinea(el, texto);
+    var a = reducir() || !document.body.animate || !origen ? null :
+      origen.getBoundingClientRect ? origen.getBoundingClientRect() : origen;
     // Una línea de consola ocupa todo el ancho: se mide solo su texto
     var b = destino.matches(".consola__linea") ? rectDeTexto(destino) : destino.getBoundingClientRect();
     if (!a || !b.width || (a.bottom < 0 && b.bottom < 0)) { llegar(); return; }
@@ -262,6 +269,6 @@
 
   window.Codigo = {
     marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano,
-    salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea
+    salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea, volar: volar
   };
 })();
