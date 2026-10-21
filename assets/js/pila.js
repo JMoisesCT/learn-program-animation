@@ -2,7 +2,7 @@
 
      <div class="pila" id="mi-pila"></div>
 
-   var p = Pila.crear(el, { codigo: preEl });   codigo (opcional): ver «fichas» abajo
+   var p = Pila.crear(el, { codigo: preEl, rotulo: true });   ver «fichas» y «rótulo» abajo
    p.pintar({ pila: [Pila.programa([["nota", 15.5]]),
                      Pila.llamada("promedio(14, 17)", [["a", 14], ["b", 17]], "15.5")],
               leer: [nivel, "nombre"] });
@@ -25,6 +25,8 @@
    línea en el código (Codigo.pausas): se ve cuántas llamadas esperan en esa misma línea,
    y al volver se va la ficha de la que retoma. ficha: "e=2" cambia el texto de la ficha
    (por defecto, sus variables).
+   Con rotulo: true (y codigo), encima del código se lee qué llamada lo está ejecutando:
+   «Ahora corre: abrir(2) n 2», la tarjeta de arriba. Cambia al llamar y al volver.
 */
 (function () {
   "use strict";
@@ -112,8 +114,46 @@
     return nombre === nombreFuncion(titulo) ? "esperando a la de arriba" : "esperando a " + nombre + "()";
   }
 
+  /* ---------- Rótulo: qué llamada ejecuta el código ahora ---------- */
+  function crearRotulo(pre) {
+    var raiz = crear("p", "rotulo");
+    raiz.appendChild(crear("span", "rotulo__etiqueta", "Ahora corre:"));
+    var cuerpo = crear("span", "rotulo__cuerpo");
+    raiz.appendChild(cuerpo);
+    pre.parentNode.insertBefore(raiz, pre);
+    return { raiz: raiz, cuerpo: cuerpo, nivel: -1, clave: null };
+  }
+
+  function pintarRotulo(r, pila) {
+    var nivel = pila.length - 1;
+    var datos = pila[nivel];
+    var clave = nivel + "|" + datos.titulo + "|" + JSON.stringify(datos.vars);
+    if (clave === r.clave) return;
+    var otra = nivel !== r.nivel || r.clave === null || r.clave.split("|")[1] !== datos.titulo;
+    r.clave = clave;
+    r.cuerpo.textContent = "";
+    if (nivel === 0) r.cuerpo.appendChild(crear("span", "rotulo__programa", "el programa"));
+    else r.cuerpo.appendChild(crear("code", "rotulo__llamada", datos.titulo));
+    datos.vars.forEach(function (par) {
+      var c = crear("span", "var");
+      c.appendChild(crear("code", "var__nombre", par[0]));
+      c.appendChild(crear("code", "var__valor", String(par[1])));
+      r.cuerpo.appendChild(c);
+    });
+    // Al llamar entra desde arriba, como la tarjeta nueva; al volver, desde abajo
+    if (otra) {
+      r.raiz.classList.remove("rotulo--sube", "rotulo--baja");
+      if (r.nivel !== -1) {
+        void r.raiz.offsetWidth;
+        r.raiz.classList.add(nivel >= r.nivel ? "rotulo--sube" : "rotulo--baja");
+      }
+    }
+    r.nivel = nivel;
+  }
+
   function crearPila(el, opciones) {
     var codigo = opciones && opciones.codigo;
+    var rotulo = codigo && opciones.rotulo ? crearRotulo(codigo) : null;
     var titulo = crear("p", "pila__titulo");
     var cont = crear("div", "pila__marcos");
     el.appendChild(titulo);
@@ -179,6 +219,7 @@
       });
       titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
       if (codigo) Codigo.pausas(codigo, fichas(pila));
+      if (rotulo) pintarRotulo(rotulo, pila);
     }
 
     // Una ficha por tarjeta pausada, de abajo arriba, en la línea donde espera
