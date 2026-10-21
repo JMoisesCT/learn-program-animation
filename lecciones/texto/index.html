@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cada letra en su lugar · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: los índices de un texto en Python. palabra[0], la última letra, el IndexError, los índices negativos y recorrer un texto con range(len(palabra)).">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .expresion { overflow-wrap: anywhere; }
+    .expresion--pasos { flex-direction: column; gap: 0; }
+    .expresion__paso { animation: aparecer var(--dur) ease both; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .expresion__error { color: var(--color-error); }
+    .consola__linea--error { color: var(--color-error); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* ---------- Control del índice ---------- */
+    .control-slider { margin: var(--esp-4) 0 0; }
+    .control-slider label { display: flex; justify-content: space-between; gap: var(--esp-3); font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+    .campo--arriba { margin: 0 0 var(--esp-2); }
+    .campo--arriba + .sugerencias { margin: 0 0 var(--esp-4); }
+    .sugerencias { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .sugerencias .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+
+    /* ---------- Predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- Recorrer ---------- */
+    .cajas--uno { padding-top: var(--esp-3); }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .prueba__error { color: var(--color-error); font-weight: 700; }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .pruebas li { font-size: var(--texto-sm); padding: var(--esp-2) var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="texto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: cada casilla tiene su número -->
+    <section class="paso" id="paso-indice" data-requiere aria-labelledby="t-indice">
+      <span class="paso__etiqueta">Texto a fondo 1/5</span>
+      <h1 class="paso__titulo" id="t-indice">Cada letra tiene su número</h1>
+      <p>Un texto es una fila de casillas, y cada casilla tiene un número: su <strong>índice</strong>. Mueve el control y busca la <strong>primera</strong> letra y la <strong>última</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"mango"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero" id="s1-codigo-i">2</span>])</span></code></pre>
+          <div class="control-slider">
+            <label for="s1-i">Índice <output id="s1-i-valor" for="s1-i">2</output></label>
+            <input type="range" id="s1-i" min="0" max="4" step="1" value="2">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-cinta"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s1-expr">palabra[2]</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s1-valor">"n"</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Pasarse del final y la última letra con len -->
+    <section class="paso" id="paso-pasarse" data-requiere aria-labelledby="t-pasarse">
+      <h2 class="paso__titulo" id="t-pasarse">¿Y la casilla 5?</h2>
+      <p><code>"mango"</code> tiene 5 letras. ¿Qué crees que pasa con <code>palabra[5]</code>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"mango"</span></span><span class="linea" id="s2-linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero">5</span>])</span></code></pre>
+          <div class="elegir" id="s2-elegir" role="group" aria-label="¿Qué pasa con palabra[5]?">
+            <button type="button" class="btn btn-secundario" data-valor="o" aria-pressed="false">Sale la "o"</button>
+            <button type="button" class="btn btn-secundario" data-valor="nada" aria-pressed="false">No sale nada</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+          </div>
+          <div class="fila-botones" id="s2-ultima" hidden>
+            <button type="button" class="btn btn-secundario" id="s2-ultima-btn">▶ Ejecutar <code>palabra[len(palabra) - 1]</code></button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-cinta"></div>
+          <div class="expresion expresion--pasos" id="s2-expr" aria-live="polite"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Índices negativos -->
+    <section class="paso" id="paso-negativos" data-requiere aria-labelledby="t-negativos">
+      <h2 class="paso__titulo" id="t-negativos">Contar desde el final</h2>
+      <p>Cada casilla tiene <strong>otro</strong> número, negativo, que cuenta desde el final. Busca la última letra y la primera usando números negativos.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="campo campo--arriba">
+            <label for="s3-palabra">Otra palabra</label>
+            <input type="text" id="s3-palabra" value="mango" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="sugerencias" role="group" aria-label="Palabras para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="Lima">Lima</button>
+            <button type="button" class="btn btn-secundario" data-valor="programa">programa</button>
+          </div>
+          <pre class="codigo" id="s3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"<span id="s3-codigo-palabra">mango</span>"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero" id="s3-codigo-i">-1</span>])</span></code></pre>
+          <div class="control-slider">
+            <label for="s3-i">Índice <output id="s3-i-valor" for="s3-i">-1</output></label>
+            <input type="range" id="s3-i" min="-5" max="4" step="1" value="-1">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-cinta"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s3-expr">palabra[-1]</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s3-valor">"o"</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <p class="nota">Arriba, el índice que cuenta desde el principio; abajo, en morado, el que cuenta desde el final.</p>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Predecir sin números a la vista -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">¿Qué letra es?</h2>
+      <p>Ahora los números no se ven. Cuenta tú las casillas de <code>ciudad = "Cusco"</code>.</p>
+
+      <div class="tarjeta">
+        <div id="s4-cinta"></div>
+        <ol class="predicciones" id="s4-lista">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">ciudad[1]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para ciudad[1]">
+                <button type="button" class="btn btn-secundario" data-valor="C" aria-pressed="false">"C"</button>
+                <button type="button" class="btn btn-secundario" data-valor="u" aria-pressed="false">"u"</button>
+                <button type="button" class="btn btn-secundario" data-valor="s" aria-pressed="false">"s"</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">ciudad[-2]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para ciudad[-2]">
+                <button type="button" class="btn btn-secundario" data-valor="s" aria-pressed="false">"s"</button>
+                <button type="button" class="btn btn-secundario" data-valor="c" aria-pressed="false">"c"</button>
+                <button type="button" class="btn btn-secundario" data-valor="o" aria-pressed="false">"o"</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">ciudad[len(ciudad)]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para ciudad[len(ciudad)]">
+                <button type="button" class="btn btn-secundario" data-valor="o" aria-pressed="false">"o"</button>
+                <button type="button" class="btn btn-secundario" data-valor="C" aria-pressed="false">"C"</button>
+                <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. Recorrer con la posición: range(len(palabra)) -->
+    <section class="paso" id="paso-recorrer" data-requiere aria-labelledby="t-recorrer">
+      <h2 class="paso__titulo" id="t-recorrer">La posición y la letra</h2>
+      <p>Con <code>for letra in palabra</code> tienes cada letra, pero no sabes en qué casilla está. <code>range(len(palabra))</code> da justo los índices. Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"luna"</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>)):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">i</span>, <span class="tk-variable">palabra</span>[<span class="tk-variable">i</span>])</span></code></pre>
+          <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-cinta"></div>
+          <div class="cajas cajas--uno">
+            <div class="caja" id="s5-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: ¿es palíndromo? -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Se lee igual al revés?</h2>
+      <p>«radar» y «oso» se leen igual de izquierda a derecha que al revés: son <strong>palíndromos</strong>. La función compara cada letra con su pareja del otro extremo. ¿Qué índice va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">es_palindromo</span>(<span class="tk-variable">palabra</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>)):</span><span class="linea">        <span class="tk-variable">pareja</span> = <span class="tk-variable">palabra</span>[<span class="hueco" id="reto-hueco">?</span>]</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">palabra</span>[<span class="tk-variable">i</span>] != <span class="tk-variable">pareja</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-palabra">False</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-palabra">True</span></span></code></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué índice va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="menos-i"><span>-i</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="menos-1-i"><span>-1 - i</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="len-i"><span>len(palabra) - i</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="i-1"><span>i - 1</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">"radar"</p>
+          <div id="reto-cinta"></div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Cada carácter tiene su índice: el primero es el <code>0</code>, el último es <code>len - 1</code> o <code>-1</code>, y pasarse da <code>IndexError</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-texto">"mango"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">0</span>]                  <span class="tk-comentario"># "m"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>) - <span class="tk-numero">1</span>]  <span class="tk-comentario"># "o"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">-1</span>]                 <span class="tk-comentario"># "o"</span></span><span class="linea"><span class="tk-variable">palabra</span>[<span class="tk-numero">5</span>]                  <span class="tk-comentario"># IndexError</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>)):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">i</span>, <span class="tk-variable">palabra</span>[<span class="tk-variable">i</span>])</span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/caja.js"></script>
+<script src="../../assets/js/traza.js"></script>
+<script src="../../assets/js/cinta.js"></script>
+<script src="../../assets/js/opciones-codigo.js"></script>
+<script src="../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  // Un texto tal como lo escribe Python, con sus comillas
+  function comillas(s) { return '"' + s + '"'; }
+
+  /* Lo que imprime print: la línea sale volando desde la casilla de la cinta */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  /* Recuerda qué casos ha visto el alumno en cada paso */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* Muestra una expresión que se resuelve por partes, una debajo de otra (sin movimiento, de golpe) */
+  function resolver(el, partes, alTerminar) {
+    el.textContent = "";
+    var k = 0;
+    function siguiente() {
+      if (k > 0) {
+        var flecha = document.createElement("span");
+        flecha.className = "expresion__flecha expresion__paso";
+        flecha.setAttribute("aria-hidden", "true");
+        flecha.textContent = "↓";
+        el.appendChild(flecha);
+      }
+      var p = partes[k];
+      var s = document.createElement("span");
+      s.className = "expresion__paso" + (p.clase ? " " + p.clase : "");
+      s.textContent = p.texto;
+      el.appendChild(s);
+      k++;
+      if (k < partes.length) {
+        if (Pasos.reducirMovimiento) siguiente();
+        else setTimeout(siguiente, 650);
+      } else if (alTerminar) {
+        alTerminar();
+      }
+    }
+    siguiente();
+  }
+
+  /* ---------- 1. El índice de cada casilla ---------- */
+  var PALABRA = "mango";
+  var cinta1 = Cinta.crear($("s1-cinta"), PALABRA);
+  var s1 = vistos();
+
+  function mostrarIndice(i, leccion, conVuelo) {
+    var letra = PALABRA[i];
+    $("s1-i-valor").textContent = String(i);
+    $("s1-codigo-i").textContent = String(i);
+    $("s1-expr").textContent = "palabra[" + i + "]";
+    $("s1-valor").textContent = comillas(letra);
+    cinta1.marcar(i);
+    Codigo.marcar($("s1-codigo"), { activas: [1] });
+    Codigo.consola($("s1-consola"), []);
+    imprimir($("s1-consola"), letra, conVuelo ? cinta1.letra(i) : null);
+    if (!leccion) return;
+
+    if (i === 0) s1.marcar("primera");
+    if (i === PALABRA.length - 1) s1.marcar("ultima");
+    var fb = $("s1-fb");
+    if (s1.todos(["primera", "ultima"])) {
+      Pasos.feedback(fb, "ok", "Se cuenta desde 0: la primera letra es palabra[0] y la última, palabra[4]. «mango» tiene 5 letras, pero el último índice es 4.");
+      leccion.desbloquear();
+    } else if (i === 0) {
+      Pasos.feedback(fb, "pista", "¡La primera letra es la casilla 0, no la 1! Ahora busca la última.");
+    } else if (i === PALABRA.length - 1) {
+      Pasos.feedback(fb, "pista", "La «o» es la última, y su índice es 4. Ahora busca la primera.");
+    } else if (i === 1) {
+      Pasos.feedback(fb, "pista", "palabra[1] es la «a», la segunda letra. ¿Cuál será la primera?");
+    } else {
+      Pasos.feedback(fb, "pista", "palabra[" + i + "] es la «" + letra + "». Busca la primera letra y la última.");
+    }
+  }
+
+  /* ---------- 2. Pasarse del final ---------- */
+  var cinta2 = Cinta.crear($("s2-cinta"), PALABRA);
+  var prediccion2 = null;
+  var LINEA_5 = '<span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-numero">5</span>])';
+  var LINEA_LEN = '<span class="tk-funcion">print</span>(<span class="tk-variable">palabra</span>[<span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>) - <span class="tk-numero">1</span>])';
+
+  function prepararPasarse() {
+    $("s2-linea").innerHTML = LINEA_5;
+    Codigo.marcar($("s2-codigo"), {});
+    cinta2.marcar(null);
+    $("s2-expr").textContent = "";
+    Codigo.consola($("s2-consola"), []);
+  }
+
+  function pasarse(valor) {
+    prediccion2 = valor;
+    prepararPasarse();
+    $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+    Codigo.marcar($("s2-codigo"), { activas: [1] });
+    cinta2.marcar(5);
+    resolver($("s2-expr"), [
+      { texto: "palabra[5]" },
+      { texto: "💥 no hay casilla 5", clase: "expresion__error" }
+    ]);
+    imprimir($("s2-consola"), "IndexError: string index out of range", null, true);
+    var texto = "No hay casilla 5: los índices de «mango» van de 0 a 4. Python se detiene con IndexError: «índice fuera de rango».";
+    if (valor === "error") texto = "¡Bien pensado! " + texto;
+    else if (valor === "o") texto = "No da la «o»: esa es palabra[4]. " + texto;
+    else texto = "No sale «nada»: Python no inventa una casilla vacía. " + texto;
+    Pasos.feedback($("s2-fb"), valor === "error" ? "ok" : "pista", texto + " ¿Cómo pedir la última sin contar? Toca el botón.");
+    $("s2-ultima").hidden = false;
+  }
+
+  function ultima(leccion) {
+    $("s2-linea").innerHTML = LINEA_LEN;
+    Codigo.marcar($("s2-codigo"), { activas: [1] });
+    Codigo.consola($("s2-consola"), []);
+    cinta2.marcar(null);
+    $("s2-ultima-btn").disabled = true;
+    resolver($("s2-expr"), [
+      { texto: "palabra[len(palabra) - 1]" },
+      { texto: "palabra[5 - 1]" },
+      { texto: "palabra[4]" },
+      { texto: '"o"', clase: "expresion__final" }
+    ], function () {
+      cinta2.marcar(4);
+      imprimir($("s2-consola"), "o", cinta2.letra(4));
+      $("s2-ultima-btn").disabled = false;
+      Pasos.feedback($("s2-fb"), "ok", "len(palabra) es 5, así que la última casilla es la 5 - 1 = 4. Esto funciona con cualquier palabra, sin contar sus letras.");
+      leccion.desbloquear();
+    });
+  }
+
+  /* ---------- 3. Índices negativos ---------- */
+  var palabra3 = PALABRA;
+  var cinta3 = Cinta.crear($("s3-cinta"), PALABRA, { negativos: true });
+  var s3 = vistos();
+
+  function mostrarNegativo(i, leccion) {
+    var n = palabra3.length;
+    var letra = palabra3[i < 0 ? i + n : i];
+    $("s3-i-valor").textContent = String(i);
+    $("s3-codigo-i").textContent = String(i);
+    $("s3-expr").textContent = "palabra[" + i + "]";
+    $("s3-valor").textContent = comillas(letra);
+    cinta3.marcar(i);
+    Codigo.marcar($("s3-codigo"), { activas: [1] });
+    if (!leccion) return;
+
+    if (i === -1) s3.marcar("ultima");
+    if (i === -n && n > 1) s3.marcar("primera");
+    var fb = $("s3-fb");
+    if (s3.todos(["ultima", "primera"])) {
+      Pasos.feedback(fb, "ok", "Los negativos cuentan desde el final: -1 es siempre la última, -2 la penúltima… y -" + n + " es la primera, la misma casilla que la 0.");
+      leccion.desbloquear();
+    } else if (i === -1) {
+      Pasos.feedback(fb, "pista", "-1 es la última letra, sea cual sea la palabra. Ahora busca la primera con un número negativo.");
+    } else if (i === -n) {
+      Pasos.feedback(fb, "pista", "-" + n + " es la primera: la misma casilla que la 0. Ahora busca la última con un negativo.");
+    } else if (i >= 0) {
+      Pasos.feedback(fb, "pista", "Ese es un índice positivo. Lleva el control a los negativos, a la izquierda.");
+    } else {
+      Pasos.feedback(fb, "pista", "palabra[" + i + "] es la «" + letra + "», contando " + (-i) + " desde el final.");
+    }
+  }
+
+  function cambiarPalabra3(valor, leccion) {
+    var texto = valor.replace(/\s+/g, "");
+    if (!texto) {
+      Pasos.feedback($("s3-fb"), "pista", "Escribe al menos una letra.");
+      return;
+    }
+    palabra3 = texto;
+    var n = texto.length;
+    $("s3-codigo-palabra").textContent = texto;
+    cinta3.texto(texto);
+    var control = $("s3-i");
+    control.min = String(-n);
+    control.max = String(n - 1);
+    control.value = "-1";
+    mostrarNegativo(-1, leccion);
+  }
+
+  /* ---------- 4. Predecir sin números ---------- */
+  var CIUDAD = "Cusco";
+  var cinta4 = Cinta.crear($("s4-cinta"), CIUDAD, { indices: false });
+  var predicciones = [
+    {
+      correcta: "u", marca: 1,
+      ok: "ciudad[1] es la segunda casilla: la «u».",
+      pistas: {
+        C: "La «C» es ciudad[0]. El 1 es la casilla de al lado.",
+        s: "Cuenta desde 0: «C» es la 0, «u» la 1, «s» la 2."
+      }
+    },
+    {
+      correcta: "c", marca: -2,
+      ok: "Desde el final: «o» es -1 y «c» es -2.",
+      pistas: {
+        o: "La «o» es ciudad[-1], la última. -2 es la de antes.",
+        s: "Cuenta desde el final empezando en -1: «o» es -1, «c» es -2, «s» es -3."
+      }
+    },
+    {
+      correcta: "error", marca: 5,
+      ok: "len(ciudad) es 5, y los índices llegan hasta el 4: IndexError. Por eso la última es len(ciudad) - 1.",
+      pistas: {
+        o: "len(ciudad) es 5. ¿Hay casilla 5? La «o» es la 4.",
+        C: "Python no da la vuelta al principio. len(ciudad) es 5: ¿hay casilla 5?"
+      }
+    }
+  ];
+  var aciertos4 = [false, false, false];
+
+  /* ---------- 5. Recorrer con la posición ---------- */
+  var LUNA = "luna";
+  var cinta5 = Cinta.crear($("s5-cinta"), LUNA);
+
+  function trazaRecorrer() {
+    var pasos = [{ linea: 0, texto: "<code>palabra</code> guarda <code>\"luna\"</code>: 4 letras, índices de 0 a 3." }];
+    for (var i = 0; i < LUNA.length; i++) {
+      pasos.push({
+        linea: 1, i: i,
+        texto: i === 0
+          ? "<code>range(len(palabra))</code> es <code>range(4)</code>: <code>i</code> empieza en <strong>0</strong>."
+          : "Otra vuelta: <code>i</code> vale <strong>" + i + "</strong>."
+      });
+      pasos.push({
+        linea: 2, i: i, salida: i + " " + LUNA[i],
+        texto: "<code>palabra[" + i + "]</code> es la «" + LUNA[i] + "»: imprime <code>" + i + " " + LUNA[i] + "</code>."
+      });
+    }
+    pasos.push({ linea: 1, fin: true, texto: "<code>range(4)</code> llegó hasta el 3: el bucle termina. Recorrió todas las casillas." });
+    return pasos;
+  }
+
+  /* ---------- 6. Reto: ¿es palíndromo? ---------- */
+  var cintaReto = Cinta.crear($("reto-cinta"), "radar", { negativos: true });
+  var INDICES = {
+    "menos-i": function (i) { return -i; },
+    "menos-1-i": function (i) { return -1 - i; },
+    "len-i": function (i, n) { return n - i; },
+    "i-1": function (i) { return i - 1; }
+  };
+  var pistasReto = {
+    "menos-i": "Con i = 0, -i es 0: compara la primera letra consigo misma. Y con i = 1 da -1, la última, cuando la pareja de la segunda es la penúltima: va una casilla atrasada.",
+    "len-i": "Con i = 0 da palabra[5], y «radar» llega solo hasta el 4: IndexError.",
+    "i-1": "i - 1 es la casilla de la izquierda de i, no su pareja del otro extremo."
+  };
+  var animacionReto = null;
+
+  /* Ejecuta es_palindromo con el índice elegido: true, false o "IndexError" */
+  function esPalindromo(palabra, indice) {
+    var n = palabra.length;
+    for (var i = 0; i < n; i++) {
+      var j = indice(i, n);
+      if (j < -n || j >= n) return "IndexError";
+      if (palabra[i] !== palabra[j < 0 ? j + n : j]) return false;
+    }
+    return true;
+  }
+
+  function nombrePy(v) { return v === true ? "True" : v === false ? "False" : v; }
+
+  function detenerAnimacionReto() {
+    if (animacionReto) clearTimeout(animacionReto);
+    animacionReto = null;
+    cintaReto.clases(null);
+    cintaReto.marcar(null);
+  }
+
+  /* Las parejas de «radar» se iluminan de dos en dos: la casilla i y la -1 - i */
+  function animarParejas() {
+    var n = 5;
+    var k = 0;
+    function paso() {
+      // Las parejas ya comparadas quedan en verde; la de ahora, además, marcada
+      var i = k;
+      cintaReto.clases(function (c) { return Math.min(c, n - 1 - c) <= i ? "cinta__casilla--igual" : ""; });
+      cintaReto.marcar(i);
+      k++;
+      if (k > Math.floor(n / 2)) {
+        animacionReto = setTimeout(function () { cintaReto.marcar(null); animacionReto = null; }, 700);
+        return;
+      }
+      animacionReto = setTimeout(paso, Pasos.reducirMovimiento ? 0 : 700);
+    }
+    paso();
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    detenerAnimacionReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Cada vez que se entra al reto empieza limpio, aunque ya se haya resuelto */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    $("reto-pruebas").hidden = true;
+    detenerAnimacionReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    var indice = INDICES[marcada.value];
+
+    // Tres pruebas: lo que devuelve y lo que debería devolver
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var todas = true;
+    [["radar", true], ["oso", true], ["sol", false]].forEach(function (p) {
+      var r = esPalindromo(p[0], indice);
+      var bien = r === p[1];
+      if (!bien) todas = false;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      li.innerHTML = "<span>es_palindromo(" + comillas(p[0]) + ")</span>" +
+        '<span class="' + (r === "IndexError" ? "prueba__error" : "prueba__res") + '">' + nombrePy(r) +
+        (bien ? " ✓" : " ✗ (debería ser " + nombrePy(p[1]) + ")") + "</span>";
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+
+    if (todas) {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! Con i = 0, -1 - i es -1 (la última); con i = 1, es -2 (la penúltima)… Cada letra se compara con su pareja del otro extremo.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      animarParejas();
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("s1-i").addEventListener("input", function () { mostrarIndice(Number(this.value), leccion, true); });
+
+  $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { pasarse(b.getAttribute("data-valor")); });
+  });
+  $("s2-ultima-btn").addEventListener("click", function () { ultima(leccion); });
+
+  $("s3-i").addEventListener("input", function () { mostrarNegativo(Number(this.value), leccion); });
+  var campo3 = $("s3-palabra");
+  campo3.addEventListener("input", function () { cambiarPalabra3(campo3.value, leccion); });
+  campo3.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") e.preventDefault();   // aquí Enter no avanza de paso
+  });
+  document.querySelectorAll("#paso-negativos .sugerencias [data-valor]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      campo3.value = b.getAttribute("data-valor");
+      cambiarPalabra3(campo3.value, leccion);
+    });
+  });
+
+  document.querySelectorAll("#s4-lista .prediccion").forEach(function (fila, k) {
+    var botones = fila.querySelectorAll("button[data-valor]");
+    botones.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = predicciones[k];
+        var valor = btn.getAttribute("data-valor");
+        var acierta = valor === p.correcta;
+        botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+        Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+        if (!acierta) return;
+        cinta4.marcar(p.marca);
+        fila.classList.add("prediccion--ok");
+        botones.forEach(function (b) { b.disabled = true; });
+        aciertos4[k] = true;
+        if (aciertos4.every(Boolean)) {
+          cinta4.mostrar({ indices: true, negativos: true });
+          Pasos.feedback($("s4-fb"), "ok", "¡Las tres bien! Aquí están los números: arriba desde el 0, abajo desde el -1.");
+          leccion.desbloquear();
+        }
+      });
+    });
+  });
+
+  var trazaRec = Traza.crear({
+    codigo: $("s5-codigo"),
+    explicacion: $("s5-explicacion"),
+    ejecutar: $("s5-ejecutar"),
+    reproducir: $("s5-reproducir"),
+    reiniciar: $("s5-reiniciar"),
+    generar: trazaRecorrer,
+    intervalo: 900,
+    alReiniciar: function () {
+      Caja.vaciar($("s5-caja"));
+      cinta5.marcar(null);
+      Codigo.consola($("s5-consola"), []);
+      Pasos.limpiarFeedback($("s5-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) { cinta5.marcar(null); return; }
+      if (paso.i === undefined) return;
+      cinta5.marcar(paso.i);
+      if (paso.linea === 1) Caja.poner($("s5-caja"), paso.i);
+      if (paso.salida) imprimir($("s5-consola"), paso.salida, cinta5.letra(paso.i));
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s5-fb"), "ok", "range(len(palabra)) da 0, 1, 2, 3: justo los índices. Con i sabes en qué casilla estás, y con palabra[i], qué letra hay.");
+      leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial de cada paso
+  mostrarIndice(2, null, false);
+  prepararPasarse();
+  mostrarNegativo(-1, null);
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-recorrer": function () { trazaRec.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
