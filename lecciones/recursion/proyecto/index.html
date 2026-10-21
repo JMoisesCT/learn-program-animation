@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: Torres de Hanói · Aprende a programar</title>
+  <meta name="description" content="Proyecto de recursión en Python: las Torres de Hanói. Mueve los discos a mano, descubre la idea (n − 1 discos al auxiliar, el grande al destino y los n − 1 encima) y escribe hanoi(n, origen, destino, auxiliar), que mueve los discos sola.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .consola__linea--error { color: var(--color-error); font-weight: 700; }
+
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); padding: 0; font-weight: 700; }
+
+    /* ---------- Reglas ---------- */
+    .reglas { margin: 0; padding-left: 1.3rem; display: grid; gap: var(--esp-1); }
+    .reglas li::marker { color: var(--color-acento); font-weight: 700; }
+
+    /* ---------- Las torres ----------
+       Tres torres (botones) con su palo y su base; los discos van encima, posicionados
+       por JavaScript, para poder animarlos de una torre a otra. */
+    .torres { --disco: 1.75rem; --suelo: 2.1rem; position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: calc(var(--suelo) + 5.6 * var(--disco)); margin-top: var(--esp-2); user-select: none; -webkit-user-select: none; }
+    .torre { position: relative; margin: 0 2px; padding: 0; border: 2px solid transparent; border-radius: var(--radio-sm); background: none; font: inherit; color: var(--color-texto); cursor: pointer; transition: background-color var(--dur-rapida), border-color var(--dur-rapida); }
+    .torre::before { content: ""; position: absolute; left: 50%; bottom: calc(var(--suelo) - 2px); width: 8px; height: calc(4.9 * var(--disco)); margin-left: -4px; border-radius: 4px 4px 0 0; background: #c9cfd8; }
+    .torre::after { content: ""; position: absolute; left: 7%; right: 7%; bottom: calc(var(--suelo) - 8px); height: 6px; border-radius: 3px; background: #9aa4b2; }
+    .torre__nombre { position: absolute; left: 0; right: 0; bottom: 0.15rem; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .torre:hover:not(:disabled) { background: rgba(31, 95, 214, 0.05); }
+    .torre:focus-visible { border-color: var(--color-azul); box-shadow: none; }
+    .torre:disabled { cursor: default; }
+    .torre--elegida { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .torre--meta .torre__nombre { color: var(--color-acento); }
+    .torre--meta .torre__nombre::after { content: " ★"; }
+    .torre--pista { border-color: #d99a00; border-style: dashed; background: #fff8de; }
+    .disco { position: absolute; z-index: 1; display: grid; place-items: center; height: calc(var(--disco) - 4px); border-radius: 999px; background: var(--d-color); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18); color: #fff; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; cursor: grab; touch-action: none; transition: transform var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .disco--1 { --d-color: #1f5fd6; }
+    .disco--2 { --d-color: #0b7a3e; }
+    .disco--3 { --d-color: #b5470b; }
+    .disco--4 { --d-color: #9b1c9f; }
+    .disco--elegido { transform: translateY(-0.9rem); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 6px 14px rgba(16, 24, 40, 0.25); }
+    .disco--arrastra { z-index: 3; cursor: grabbing; transition: none; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 8px 18px rgba(16, 24, 40, 0.3); }
+    .disco--vuela { pointer-events: none; }
+    .disco--foco { outline: 3px solid #d99a00; outline-offset: 2px; }
+    .disco--pista { animation: disco-pista 900ms ease-in-out infinite; }
+    @keyframes disco-pista { 50% { transform: translateY(-0.5rem); } }
+    .disco--error { animation: sacudir 360ms ease; }
+    .torres--quieta .disco { cursor: default; }
+    .marcador { margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .marcador strong { font-family: var(--fuente-codigo); color: var(--color-texto); }
+    .marcador--cambio strong { display: inline-block; animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- La receta ---------- */
+    .receta__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .receta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); counter-reset: receta; }
+    .receta li { position: relative; padding: var(--esp-2) var(--esp-3) var(--esp-2) 2.6rem; border-radius: var(--radio-sm); border: 2px solid transparent; background: var(--color-superficie-2); counter-increment: receta; transition: background-color var(--dur), border-color var(--dur); }
+    .receta li::before { content: counter(receta); position: absolute; left: var(--esp-3); top: var(--esp-2); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta .receta__paso--activo { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .receta .receta__paso--activo::before { background: var(--color-azul); color: #fff; }
+    .receta__mismo { font-weight: 700; color: var(--color-azul); }
+    .lab__visual .receta__titulo { margin-top: var(--esp-5); }
+
+    /* ---------- Pasos grandes ---------- */
+    .grandes { display: grid; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .grandes .btn { justify-content: flex-start; min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-size: var(--texto-sm); text-align: left; }
+    .grandes .btn[data-hecho="true"] { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .grandes .btn[data-hecho="true"]::before { content: "✓ "; }
+
+    /* ---------- Control con número ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Espacios en blanco: se eligen debajo del código y se ven en la línea ---------- */
+    .codigo .hueco--lleno { border-bottom-style: solid; color: var(--tk-variable); }
+    .elegir { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-2) var(--esp-3); margin-top: var(--esp-4); }
+    .elegir label { font-weight: 700; }
+    .elegir label span { font-weight: 400; color: var(--color-texto-suave); }
+    .elegir select { min-width: 0; min-height: 2.75rem; padding: var(--esp-1) var(--esp-2); border: 2px dashed var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto); }
+    .elegir select.elegir--lleno { border-style: solid; background: var(--color-superficie); }
+
+    /* ---------- Cuántos movimientos ---------- */
+    .tabla-mov { width: 100%; border-collapse: collapse; font-family: var(--fuente-codigo); text-align: center; }
+    .tabla-mov th, .tabla-mov td { padding: var(--esp-2); border-bottom: 2px solid var(--color-borde); }
+    .tabla-mov th { font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .tabla-mov td { font-size: var(--texto-md); font-weight: 700; }
+    .tabla-mov .tabla-mov__cuenta { font-size: var(--texto-xs); font-weight: 400; color: var(--color-texto-suave); }
+    .tabla-mov tr:last-child td { border-bottom: 0; }
+    .tabla-mov input { width: 5.5rem; font: inherit; font-weight: 700; text-align: center; padding: var(--esp-1) var(--esp-2); border: 2px dashed var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-texto); }
+    .tabla-mov input:focus-visible { border-style: solid; }
+    .leyenda-64 { margin: var(--esp-4) 0 0; padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); background: var(--color-pista-suave); color: var(--color-pista); font-weight: 600; }
+    .leyenda-64 strong { font-family: var(--fuente-codigo); overflow-wrap: anywhere; }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .torres { --disco: 1.55rem; }
+      #p4-codigo, #p5-codigo, .resumen-codigo { font-size: 0.78rem; }
+      #p4-codigo .linea, #p5-codigo .linea { padding-right: var(--esp-2); }
+      .elegir { grid-template-columns: minmax(0, 1fr); gap: var(--esp-1); }
+      .elegir select { margin-bottom: var(--esp-2); }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual { margin-top: var(--esp-5); }
+    }
+    @media (min-width: 1024px) {
+      .lab #p4-codigo, .lab #p5-codigo { font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="recursion-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. El juego, a mano -->
+    <section class="paso" id="paso-juego" data-requiere aria-labelledby="t-juego">
+      <span class="paso__etiqueta">Recursión 4/4 · Proyecto</span>
+      <h1 class="paso__titulo" id="t-juego">Proyecto: Torres de Hanói</h1>
+      <p>Lleva la torre de discos de <strong>A</strong> a <strong>C</strong>. Parece fácil, pero hay reglas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <ol class="reglas">
+            <li>Mueve un disco a la vez.</li>
+            <li>Solo se mueve el disco de <strong>arriba</strong> de una torre.</li>
+            <li>Nunca pongas un disco sobre otro <strong>más chico</strong>.</li>
+          </ol>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite">Toca una torre para levantar su disco de arriba y otra para dejarlo. También puedes arrastrarlo.</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar">↺ Empezar de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="torres" id="p1-torres"></div>
+          <p class="marcador" id="p1-marcador">Movimientos: <strong>0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. El disco grande -->
+    <section class="paso" id="paso-grande" data-comprobar aria-labelledby="t-grande">
+      <span class="paso__etiqueta">Parte 1 de 3</span>
+      <h2 class="paso__titulo" id="t-grande">El disco grande</h2>
+      <p>Piensa solo en el disco más grande, el <strong>3</strong>. Para ponerlo en C, tiene que estar solo en A y C tiene que estar vacía.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones" id="p2-opciones">
+            <legend class="prediccion__pregunta">¿Dónde tienen que estar el 1 y el 2 justo antes de mover el 3?</legend>
+            <label class="opcion"><input type="radio" name="p2" value="A"><span>En A</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="B"><span>En B</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="C"><span>En C</span></label>
+          </fieldset>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones" id="p2-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p2-otra-btn">↺ Ver otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="torres torres--quieta" id="p2-torres"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Tres pasos grandes -->
+    <section class="paso" id="paso-idea" data-requiere aria-labelledby="t-idea">
+      <span class="paso__etiqueta">Parte 2 de 3</span>
+      <h2 class="paso__titulo" id="t-idea">Tres pasos grandes</h2>
+      <p>Ahora son <strong>4 discos</strong>. Usa la misma idea: cada botón hace un paso grande. Elige el orden.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="grandes" id="p3-grandes" role="group" aria-label="Pasos grandes">
+            <button type="button" class="btn btn-secundario" data-m="grande">Mover el disco 4: A → C</button>
+            <button type="button" class="btn btn-secundario" data-m="encima">Mover los 3 de B a C</button>
+            <button type="button" class="btn btn-secundario" data-m="arriba">Mover los 3 de arriba de A a B</button>
+          </div>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Empezar de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="torres torres--quieta" id="p3-torres"></div>
+          <p class="marcador" id="p3-marcador">Movimientos: <strong>0</strong></p>
+          <p class="receta__titulo">📜 Para mover n discos de origen a destino</p>
+          <ol class="receta" id="p3-receta">
+            <li data-r="base">Si n es 1: mueve ese disco y listo.</li>
+            <li data-r="arriba">Si no: mueve <span class="receta__mismo">n − 1 discos</span> de origen al auxiliar…</li>
+            <li data-r="grande">…mueve el disco n de origen a destino…</li>
+            <li data-r="encima">…y mueve los <span class="receta__mismo">n − 1 discos</span> del auxiliar al destino.</li>
+          </ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Completar hanoi -->
+    <section class="paso" id="paso-codigo" data-comprobar aria-labelledby="t-codigo">
+      <span class="paso__etiqueta">Parte 3 de 3</span>
+      <h2 class="paso__titulo" id="t-codigo">La función hanoi</h2>
+      <p>La receta, en Python. Mover <code>n - 1</code> discos es llamar a <code>hanoi</code> otra vez, con las torres en otros papeles. Elige qué va en cada espacio en blanco.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p4-codigo" aria-label="Código con dos espacios en blanco"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span>, <span class="tk-variable">origen</span>, <span class="tk-variable">destino</span>, <span class="tk-variable">auxiliar</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">f"Disco 1: {</span><span class="tk-variable">origen</span><span class="tk-texto">} → {</span><span class="tk-variable">destino</span><span class="tk-texto">}"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="hueco" id="p4-hueco-uno">▢ 1</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">f"Disco {</span><span class="tk-variable">n</span><span class="tk-texto">}: {</span><span class="tk-variable">origen</span><span class="tk-texto">} → {</span><span class="tk-variable">destino</span><span class="tk-texto">}"</span>)</span><span class="linea">        <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="hueco" id="p4-hueco-dos">▢ 2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">hanoi</span>(<span class="tk-numero">3</span>, <span class="tk-texto">"A"</span>, <span class="tk-texto">"C"</span>, <span class="tk-texto">"B"</span>)</span></code></pre>
+          <div class="elegir">
+            <label for="p4-uno">Espacio en blanco 1 <span>(línea 5)</span></label>
+            <select id="p4-uno"><option value="">Elige…</option><option value="oda">origen, destino, auxiliar</option><option value="oad">origen, auxiliar, destino</option><option value="ado">auxiliar, destino, origen</option></select>
+            <label for="p4-dos">Espacio en blanco 2 <span>(línea 7)</span></label>
+            <select id="p4-dos"><option value="">Elige…</option><option value="oad">origen, auxiliar, destino</option><option value="ado">auxiliar, destino, origen</option><option value="oda">origen, destino, auxiliar</option></select>
+          </div>
+          <p class="nota">Recuerda el orden de los parámetros: <code>hanoi(n, origen, destino, auxiliar)</code>.</p>
+        </div>
+        <div class="lab__visual">
+          <div class="torres torres--quieta" id="p4-torres"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. El programa completo, con la pila -->
+    <section class="paso" id="paso-programa" data-requiere aria-labelledby="t-programa">
+      <h2 class="paso__titulo" id="t-programa">¡Tu programa funciona!</h2>
+      <p>Ejecútalo línea a línea: cada <code>print</code> mueve un disco. Mira en la pila qué llamada mueve cada uno.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p5-n">Número de discos <output id="p5-n-valor" for="p5-n">3</output></label>
+            <input type="range" id="p5-n" min="1" max="4" step="1" value="3">
+          </div>
+          <pre class="codigo" id="p5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span>, <span class="tk-variable">origen</span>, <span class="tk-variable">destino</span>, <span class="tk-variable">auxiliar</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">f"Disco 1: {</span><span class="tk-variable">origen</span><span class="tk-texto">} → {</span><span class="tk-variable">destino</span><span class="tk-texto">}"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">origen</span>, <span class="tk-variable">auxiliar</span>, <span class="tk-variable">destino</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">f"Disco {</span><span class="tk-variable">n</span><span class="tk-texto">}: {</span><span class="tk-variable">origen</span><span class="tk-texto">} → {</span><span class="tk-variable">destino</span><span class="tk-texto">}"</span>)</span><span class="linea">        <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">auxiliar</span>, <span class="tk-variable">destino</span>, <span class="tk-variable">origen</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">hanoi</span>(<span class="tk-numero" id="p5-codigo-n">3</span>, <span class="tk-texto">"A"</span>, <span class="tk-texto">"C"</span>, <span class="tk-texto">"B"</span>)</span></code></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="torres torres--quieta" id="p5-torres"></div>
+          <div class="pila" id="p5-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. ¿Cuántos movimientos? -->
+    <section class="paso" id="paso-cuantos" data-comprobar aria-labelledby="t-cuantos">
+      <h2 class="paso__titulo" id="t-cuantos">¿Cuántos movimientos?</h2>
+      <p>Mover n discos es mover <strong>n − 1</strong>, mover <strong>1</strong> (el grande) y mover <strong>n − 1</strong> otra vez. Completa la tabla.</p>
+
+      <div class="tarjeta">
+        <table class="tabla-mov">
+          <thead><tr><th scope="col">Discos</th><th scope="col">Movimientos</th><th scope="col">Cuenta</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>1</td><td class="tabla-mov__cuenta">el caso base</td></tr>
+            <tr><td>2</td><td>3</td><td class="tabla-mov__cuenta">1 + 1 + 1</td></tr>
+            <tr><td>3</td><td>7</td><td class="tabla-mov__cuenta">3 + 1 + 3</td></tr>
+            <tr><td>4</td><td>15</td><td class="tabla-mov__cuenta">7 + 1 + 7</td></tr>
+            <tr><td>5</td><td><input type="number" id="p6-respuesta" inputmode="numeric" min="0" aria-label="Movimientos para 5 discos"></td><td class="tabla-mov__cuenta" id="p6-cuenta">?</td></tr>
+          </tbody>
+        </table>
+        <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        <p class="leyenda-64" id="p6-leyenda" hidden>Cuenta una leyenda que en un templo hay una torre de <strong>64</strong> discos, y que cuando terminen de moverla se acabará el mundo. Necesitan <strong>18&nbsp;446&nbsp;744&nbsp;073&nbsp;709&nbsp;551&nbsp;615</strong> movimientos: a uno por segundo, unos <strong>585&nbsp;000 millones de años</strong>. Podemos estar tranquilos.</p>
+      </div>
+    </section>
+
+    <!-- 7. Reto: 4 discos a mano -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">4 discos en 15 movimientos</h2>
+      <p>Ahora tú eres la función <code>hanoi(4, "A", "C", "B")</code>. Lleva los 4 discos a C con el mínimo: <strong>15 movimientos</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="explicacion" id="p7-explicacion" aria-live="polite">Piensa en la receta: primero, los 3 de arriba al auxiliar.</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-reiniciar">↺ Empezar de nuevo</button>
+            <button type="button" class="btn btn-secundario" id="p7-pista">💡 Pista</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="torres" id="p7-torres"></div>
+          <p class="marcador" id="p7-marcador">Movimientos: <strong>0</strong> de 15</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Un problema grande se resuelve con el <strong>mismo problema más pequeño</strong>: para mover n discos, mueve n − 1, el grande y otra vez n − 1.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span>, <span class="tk-variable">origen</span>, <span class="tk-variable">destino</span>, <span class="tk-variable">auxiliar</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">1</span>:  <span class="tk-comentario"># caso base</span></span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">f"Disco 1: {</span><span class="tk-variable">origen</span><span class="tk-texto">} → {</span><span class="tk-variable">destino</span><span class="tk-texto">}"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-comentario"># los de arriba, al auxiliar</span></span><span class="linea">        <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">origen</span>, <span class="tk-variable">auxiliar</span>, <span class="tk-variable">destino</span>)</span><span class="linea">        <span class="tk-comentario"># el grande, a su lugar</span></span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">f"Disco {</span><span class="tk-variable">n</span><span class="tk-texto">}: {</span><span class="tk-variable">origen</span><span class="tk-texto">} → {</span><span class="tk-variable">destino</span><span class="tk-texto">}"</span>)</span><span class="linea">        <span class="tk-comentario"># y los de arriba, encima</span></span><span class="linea">        <span class="tk-funcion">hanoi</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">auxiliar</span>, <span class="tk-variable">destino</span>, <span class="tk-variable">origen</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir el proyecto</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function pulso(el, clase) {
+    el.classList.remove(clase);
+    void el.offsetWidth;
+    el.classList.add(clase);
+  }
+
+  var NOMBRES = ["A", "B", "C"];
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Hanói: reglas y soluciones ----------
+     Un estado es [[4, 3, 2, 1], [], []]: los discos de cada torre, de abajo arriba. */
+  function arriba(torre) { return torre.length ? torre[torre.length - 1] : 0; }
+
+  // Por qué no se puede mover de o a d (null si se puede)
+  function motivo(estado, o, d) {
+    if (o === d) return null;
+    var k = arriba(estado[o]);
+    if (!k) return "En " + NOMBRES[o] + " no hay discos.";
+    var abajo = arriba(estado[d]);
+    if (abajo && abajo < k) return "El disco " + k + " no puede ir sobre el " + abajo + ", que es más chico.";
+    return null;
+  }
+
+  // Los movimientos de la solución: [origen, destino, disco]
+  function resolver(n, o, d, a, lista) {
+    lista = lista || [];
+    if (n === 0) return lista;
+    resolver(n - 1, o, a, d, lista);
+    lista.push([o, d, n]);
+    resolver(n - 1, a, d, o, lista);
+    return lista;
+  }
+
+  function donde(estado, k) {
+    for (var t = 0; t < 3; t++) if (estado[t].indexOf(k) !== -1) return t;
+    return -1;
+  }
+
+  // Cuántos movimientos faltan, como mínimo, para llevar los discos 1…k a la torre meta
+  function faltan(estado, k, meta) {
+    if (k === 0) return 0;
+    var t = donde(estado, k);
+    if (t === meta) return faltan(estado, k - 1, meta);
+    return faltan(estado, k - 1, 3 - t - meta) + 1 + Math.pow(2, k - 1) - 1;
+  }
+
+  // El siguiente movimiento de una solución mínima desde cualquier estado: [o, d]
+  function siguiente(estado, k, meta) {
+    if (k === 0) return null;
+    var t = donde(estado, k);
+    if (t === meta) return siguiente(estado, k - 1, meta);
+    return siguiente(estado, k - 1, 3 - t - meta) || [t, meta];
+  }
+
+  /* ---------- Las torres en pantalla ----------
+     crearTorres(cont, { manual, alMover(o, d), alError(texto) })
+     manual: el alumno mueve tocando dos torres o arrastrando un disco. */
+  function reducir() { return Pasos.reducirMovimiento; }
+
+  function crearTorres(cont, opciones) {
+    opciones = opciones || {};
+    var torres = [];
+    var discos = {};
+    var estado = [[], [], []];
+    var elegida = -1;
+    var activa = !!opciones.manual;
+    var arrastre = null;
+    var sinClic = false;
+
+    NOMBRES.forEach(function (nombre, t) {
+      var b = crear("button", "torre");
+      b.type = "button";
+      b.appendChild(crear("span", "torre__nombre", nombre));
+      if (t === 2) b.classList.add("torre--meta");
+      b.addEventListener("click", function () {
+        if (sinClic) return;
+        tocar(t);
+      });
+      cont.appendChild(b);
+      torres.push(b);
+    });
+
+    function anchoDisco(k) { return 9 + 4.6 * k; }
+
+    function colocar(k) {
+      var t = donde(estado, k);
+      var nivel = estado[t].indexOf(k);
+      var el = discos[k];
+      var w = anchoDisco(k);
+      el.style.width = w + "%";
+      el.style.left = (100 * (t + 0.5) / 3 - w / 2) + "%";
+      el.style.bottom = "calc(var(--suelo) + " + nivel + " * var(--disco))";
+    }
+
+    function etiquetas() {
+      torres.forEach(function (b, t) {
+        var lista = estado[t].slice().reverse();
+        b.setAttribute("aria-label", "Torre " + NOMBRES[t] + (lista.length ? ": discos " + lista.join(", ") + " (arriba el " + lista[0] + ")" : ": vacía") +
+          (t === elegida ? ". Disco levantado" : ""));
+        b.disabled = !activa;
+        b.classList.toggle("torre--elegida", t === elegida);
+      });
+      cont.classList.toggle("torres--quieta", !activa);
+    }
+
+    function poner(n) {
+      Object.keys(discos).forEach(function (k) { discos[k].remove(); });
+      discos = {};
+      estado = [[], [], []];
+      for (var k = n; k >= 1; k--) {
+        estado[0].push(k);
+        var el = crear("span", "disco disco--" + k, String(k));
+        el.setAttribute("aria-hidden", "true");
+        el.addEventListener("pointerdown", empezarArrastre);
+        el.addEventListener("click", function (e) {
+          if (sinClic) return;
+          var t = donde(estado, Number(e.currentTarget.textContent));
+          if (t !== -1) tocar(t);
+        });
+        cont.appendChild(el);
+        discos[k] = el;
+      }
+      Object.keys(discos).forEach(function (k) { colocar(Number(k)); });
+      elegida = -1;
+      quitarPista();
+      etiquetas();
+    }
+
+    function soltar() {
+      if (elegida !== -1 && discos[arriba(estado[elegida])]) discos[arriba(estado[elegida])].classList.remove("disco--elegido");
+      elegida = -1;
+    }
+
+    function tocar(t) {
+      if (!activa) return;
+      if (elegida === -1) {
+        if (!estado[t].length) {
+          if (opciones.alError) opciones.alError("La torre " + NOMBRES[t] + " está vacía: elige una torre con discos.");
+          return;
+        }
+        elegida = t;
+        discos[arriba(estado[t])].classList.add("disco--elegido");
+        etiquetas();
+        return;
+      }
+      var o = elegida;
+      soltar();
+      if (o !== t) intentar(o, t);
+      etiquetas();
+    }
+
+    function intentar(o, d) {
+      var error = motivo(estado, o, d);
+      if (error) {
+        sacudir(arriba(estado[o]));
+        if (opciones.alError) opciones.alError(error);
+        return false;
+      }
+      mover(o, d);
+      if (opciones.alMover) opciones.alMover(o, d);
+      return true;
+    }
+
+    function sacudir(k) {
+      var el = discos[k];
+      if (!el) return;
+      el.classList.remove("disco--error");
+      void el.offsetWidth;
+      el.classList.add("disco--error");
+    }
+
+    /* Mueve el disco de arriba de o a d: sube, cruza y baja. Devuelve los ms que tarda. */
+    function mover(o, d, dur) {
+      var k = estado[o].pop();
+      estado[d].push(k);
+      var el = discos[k];
+      quitarPista();
+      var antes = el.getBoundingClientRect();
+      // Si ya volaba (toques rápidos), este vuelo sale de donde va y sustituye al anterior
+      if (el.vuelo) {
+        var previo = el.vuelo;
+        el.vuelo = null;
+        previo.cancel();
+      }
+      el.classList.remove("disco--elegido");
+      el.style.transform = "";
+      colocar(k);
+      etiquetas();
+      if (reducir() || !el.animate) return 0;
+      var despues = el.getBoundingClientRect();
+      var caja = cont.getBoundingClientRect();
+      var dx = antes.left - despues.left;
+      var dy = antes.top - despues.top;
+      var alto = caja.top + 2 - despues.top; // arriba del todo
+      dur = dur || 520;
+      // Mientras vuela no recibe toques: un toque sobre otra torre es para esa torre
+      el.classList.add("disco--vuela");
+      var vuelo = el.vuelo = el.animate([
+        { transform: "translate(" + dx + "px, " + dy + "px)" },
+        { transform: "translate(" + dx + "px, " + Math.min(dy, alto) + "px)", offset: 0.3 },
+        { transform: "translate(0, " + alto + "px)", offset: 0.7 },
+        { transform: "none" }
+      ], { duration: dur, easing: "ease-in-out" });
+      vuelo.onfinish = vuelo.oncancel = function () {
+        if (el.vuelo !== vuelo) return;
+        el.vuelo = null;
+        el.classList.remove("disco--vuela");
+      };
+      return dur;
+    }
+
+    /* ---------- Arrastrar un disco ---------- */
+    function empezarArrastre(e) {
+      if (!activa || e.button > 0) return;
+      var k = Number(e.currentTarget.textContent);
+      var t = donde(estado, k);
+      if (arriba(estado[t]) !== k) return;
+      arrastre = { k: k, t: t, x: e.clientX, y: e.clientY, mueve: false, id: e.pointerId, el: e.currentTarget };
+      e.currentTarget.addEventListener("pointermove", moverArrastre);
+      e.currentTarget.addEventListener("pointerup", terminarArrastre);
+      e.currentTarget.addEventListener("pointercancel", terminarArrastre);
+    }
+
+    function moverArrastre(e) {
+      if (!arrastre || e.pointerId !== arrastre.id) return;
+      var dx = e.clientX - arrastre.x, dy = e.clientY - arrastre.y;
+      if (!arrastre.mueve) {
+        if (Math.abs(dx) + Math.abs(dy) < 8) return;
+        arrastre.mueve = true;
+        arrastre.el.setPointerCapture(e.pointerId);
+        soltar();
+        etiquetas();
+        arrastre.el.classList.add("disco--arrastra");
+      }
+      arrastre.el.style.transform = "translate(" + dx + "px, " + dy + "px)";
+    }
+
+    function terminarArrastre(e) {
+      var a = arrastre;
+      if (!a || e.pointerId !== a.id) return;
+      arrastre = null;
+      a.el.removeEventListener("pointermove", moverArrastre);
+      a.el.removeEventListener("pointerup", terminarArrastre);
+      a.el.removeEventListener("pointercancel", terminarArrastre);
+      if (!a.mueve) return; // fue un toque: lo atiende el click
+      a.el.classList.remove("disco--arrastra");
+      sinClic = true;
+      setTimeout(function () { sinClic = false; }, 0);
+      // La torre que queda debajo del dedo
+      var d = -1;
+      torres.forEach(function (b, t) {
+        var r = b.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right) d = t;
+      });
+      if (d === -1 || d === a.t || e.type === "pointercancel" || !intentar(a.t, d)) {
+        // Vuelve a su lugar
+        var r0 = a.el.getBoundingClientRect();
+        a.el.style.transform = "";
+        var r1 = a.el.getBoundingClientRect();
+        if (!reducir() && a.el.animate) {
+          a.el.animate([{ transform: "translate(" + (r0.left - r1.left) + "px, " + (r0.top - r1.top) + "px)" }, { transform: "none" }],
+            { duration: 260, easing: "ease-out" });
+        }
+      }
+      etiquetas();
+    }
+
+    /* ---------- Pistas y resaltes ---------- */
+    function quitarPista() {
+      cont.querySelectorAll(".disco--pista").forEach(function (el) { el.classList.remove("disco--pista"); });
+      torres.forEach(function (b) { b.classList.remove("torre--pista"); });
+    }
+
+    function pista(o, d) {
+      quitarPista();
+      soltar();
+      etiquetas();
+      discos[arriba(estado[o])].classList.add("disco--pista");
+      torres[d].classList.add("torre--pista");
+    }
+
+    function foco(k) {
+      Object.keys(discos).forEach(function (j) { discos[j].classList.toggle("disco--foco", Number(j) === k); });
+    }
+
+    function activar(si) {
+      activa = si;
+      if (!si) soltar();
+      etiquetas();
+    }
+
+    return {
+      poner: poner, mover: mover, sacudir: sacudir, pista: pista, quitarPista: quitarPista, foco: foco, activar: activar,
+      estado: function () { return estado; },
+      completa: function (n) { return estado[2].length === n; }
+    };
+  }
+
+  /* Reproduce movimientos [o, d] uno tras otro; devuelve una función para cortarlo */
+  function reproducir(t, movs, intervalo, alMover, alTerminar) {
+    var i = 0, timer = null;
+    function tic() {
+      if (i >= movs.length) { timer = null; if (alTerminar) alTerminar(); return; }
+      var m = movs[i++];
+      t.mover(m[0], m[1], Math.min(520, intervalo - 40));
+      if (alMover) alMover(m, i);
+      timer = setTimeout(tic, reducir() ? Math.min(intervalo, 250) : intervalo);
+    }
+    tic();
+    return function () { if (timer) clearTimeout(timer); timer = null; };
+  }
+
+  function contarEn(el, k) {
+    var s = el.querySelector("strong");
+    if (s.textContent === String(k)) return;
+    s.textContent = String(k);
+    if (k) pulso(el, "marcador--cambio");
+  }
+
+  /* ---------- 1. El juego a mano ---------- */
+  var juego = { movs: 0, listo: false };
+  var torres1 = crearTorres($("p1-torres"), {
+    manual: true,
+    alMover: function () {
+      juego.movs++;
+      contarEn($("p1-marcador"), juego.movs);
+      Pasos.limpiarFeedback($("p1-fb"));
+      if (!torres1.completa(3)) {
+        $("p1-explicacion").textContent = "Disco movido. Sigue: la meta es C.";
+        return;
+      }
+      torres1.activar(false);
+      $("p1-explicacion").textContent = "¡Torre completa en C!";
+      Pasos.feedback($("p1-fb"), "ok", juego.movs === 7
+        ? "¡Lo lograste en 7 movimientos, el mínimo! Ahora vamos a descubrir la idea que hay detrás, para que la computadora lo haga sola."
+        : "¡Lo lograste en " + juego.movs + " movimientos! Se puede en 7. Vamos a descubrir la idea que lo consigue siempre, para que la computadora lo haga sola.");
+      leccion.desbloquear();
+    },
+    alError: function (texto) { Pasos.feedback($("p1-fb"), "pista", texto); }
+  });
+
+  function empezarJuego() {
+    juego.movs = 0;
+    torres1.poner(3);
+    torres1.activar(true);
+    contarEn($("p1-marcador"), 0);
+    Pasos.limpiarFeedback($("p1-fb"));
+    $("p1-explicacion").textContent = "Toca una torre para levantar su disco de arriba y otra para dejarlo. También puedes arrastrarlo.";
+  }
+
+  /* ---------- 2. El disco grande ---------- */
+  var torres2 = crearTorres($("p2-torres"));
+  var cortar2 = null;
+
+  function prepararGrande() {
+    if (cortar2) cortar2();
+    cortar2 = null;
+    torres2.poner(3);
+    torres2.foco(3);
+    $("p2-explicacion").textContent = "";
+    $("p2-otra").hidden = true;
+  }
+
+  function verGrande() {
+    prepararGrande();
+    var fases = [
+      "Primero, el 1 y el 2 se van a <strong>B</strong>: así el 3 queda solo y C, vacía.",
+      "Primero, el 1 y el 2 se van a <strong>B</strong>: así el 3 queda solo y C, vacía.",
+      "Primero, el 1 y el 2 se van a <strong>B</strong>: así el 3 queda solo y C, vacía.",
+      "Ahora el <strong>3</strong> puede ir a C.",
+      "Y el 1 y el 2 vuelven encima, de <strong>B</strong> a <strong>C</strong>.",
+      "Y el 1 y el 2 vuelven encima, de <strong>B</strong> a <strong>C</strong>.",
+      "Y el 1 y el 2 vuelven encima, de <strong>B</strong> a <strong>C</strong>."
+    ];
+    cortar2 = reproducir(torres2, resolver(3, 0, 2, 1), 850, function (m, i) {
+      $("p2-explicacion").innerHTML = fases[i - 1];
+    }, function () {
+      cortar2 = null;
+      $("p2-explicacion").innerHTML = "Mover el 1 y el 2 juntos es el <strong>mismo problema</strong>, con una torre más chica.";
+      $("p2-otra").hidden = false;
+    });
+  }
+
+  var PISTAS_GRANDE = {
+    A: "Si están en A, están encima del 3, y solo se mueve el disco de arriba. Tienen que salir de A.",
+    C: "Si están en C, el 3 tendría que ir encima de ellos, y un disco grande no va sobre uno más chico."
+  };
+
+  function comprobarGrande(paso) {
+    var marcada = paso.querySelector('input[name="p2"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    if (marcada.value === "B") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("p2-fb"), "ok", "¡Eso es! En B, la torre que sobra: la auxiliar. Mira cómo queda todo.");
+      verGrande();
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("p2-fb"), "pista", PISTAS_GRANDE[marcada.value]);
+    return false;
+  }
+
+  /* ---------- 3. Tres pasos grandes ---------- */
+  var torres3 = crearTorres($("p3-torres"));
+  var idea = { hechos: {}, movs: 0, cortar: null };
+  var GRANDES = {
+    arriba: { antes: [], movs: function () { return resolver(3, 0, 1, 2); }, receta: "arriba",
+      texto: "Los 3 de arriba se van de A a B, ayudándose con C: es el mismo problema con 3 discos." },
+    grande: { antes: ["arriba"], movs: function () { return [[0, 2, 4]]; }, receta: "grande",
+      texto: "El disco 4 está solo en A y C está vacía: ¡un movimiento!",
+      pista: "El disco 4 tiene encima a los otros tres, y solo se mueve el de arriba. Primero hay que quitarlos." },
+    encima: { antes: ["arriba", "grande"], movs: function () { return resolver(3, 1, 2, 0); }, receta: "encima",
+      texto: "Los 3 vuelven de B a C, encima del 4, ayudándose con A: otra vez el problema de 3 discos.",
+      pista: "En B todavía no hay nada que mover." }
+  };
+
+  function marcarReceta(cual) {
+    $("p3-receta").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("receta__paso--activo", li.getAttribute("data-r") === cual);
+    });
+  }
+
+  function empezarIdea() {
+    if (idea.cortar) idea.cortar();
+    idea = { hechos: {}, movs: 0, cortar: null };
+    torres3.poner(4);
+    contarEn($("p3-marcador"), 0);
+    marcarReceta(null);
+    $("p3-grandes").querySelectorAll("button").forEach(function (b) {
+      b.removeAttribute("data-hecho");
+      b.disabled = false;
+    });
+    $("p3-explicacion").textContent = "¿Cuál va primero?";
+    Pasos.limpiarFeedback($("p3-fb"));
+  }
+
+  function hacerGrande(m) {
+    var g = GRANDES[m];
+    if (idea.cortar || idea.hechos[m]) return;
+    var falta = g.antes.filter(function (x) { return !idea.hechos[x]; });
+    if (falta.length) {
+      Pasos.feedback($("p3-fb"), "pista", g.pista || "Ese paso va después.");
+      return;
+    }
+    Pasos.limpiarFeedback($("p3-fb"));
+    marcarReceta(g.receta);
+    $("p3-explicacion").textContent = g.texto;
+    var boton = $("p3-grandes").querySelector('[data-m="' + m + '"]');
+    $("p3-grandes").querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    idea.cortar = reproducir(torres3, g.movs(), 330, function () {
+      idea.movs++;
+      contarEn($("p3-marcador"), idea.movs);
+    }, function () {
+      idea.cortar = null;
+      idea.hechos[m] = true;
+      boton.setAttribute("data-hecho", "true");
+      $("p3-grandes").querySelectorAll("button").forEach(function (b) { b.disabled = !!idea.hechos[b.getAttribute("data-m")]; });
+      if (Object.keys(idea.hechos).length < 3) return;
+      marcarReceta(null);
+      $("p3-explicacion").textContent = "¡Los 4 discos están en C, en 15 movimientos!";
+      Pasos.feedback($("p3-fb"), "ok", "Tres pasos grandes: 3 discos al auxiliar, el 4 al destino y los 3 encima. Y mover 3 discos es igual: 2 al auxiliar, " +
+        "el 3 y los 2 encima… hasta llegar a 1 disco, el caso base. Es una receta que se usa a sí misma.");
+      leccion.desbloquear();
+    });
+  }
+
+  /* ---------- 4. Completar hanoi ---------- */
+  var torres4 = crearTorres($("p4-torres"));
+  var cortar4 = null;
+  var PAPELES = { o: 0, d: 1, a: 2 }; // posición de cada torre en (origen, destino, auxiliar)
+
+  // Los print que hace hanoi(n, o, d, a) con las llamadas elegidas: [o, d, disco]
+  function salidaCon(uno, dos, n, o, d, a, lista) {
+    if (n === 1) { lista.push([o, d, 1]); return lista; }
+    var t = [o, d, a];
+    function args(v) { return [t[PAPELES[v[0]]], t[PAPELES[v[1]]], t[PAPELES[v[2]]]]; }
+    var x = args(uno);
+    salidaCon(uno, dos, n - 1, x[0], x[1], x[2], lista);
+    lista.push([o, d, n]);
+    var y = args(dos);
+    salidaCon(uno, dos, n - 1, y[0], y[1], y[2], lista);
+    return lista;
+  }
+
+  function texto(m) { return "Disco " + m[2] + ": " + NOMBRES[m[0]] + " → " + NOMBRES[m[1]]; }
+
+  function elegidos4() { return { uno: $("p4-uno").value, dos: $("p4-dos").value }; }
+
+  function limpiarCodigo() {
+    if (cortar4) cortar4();
+    cortar4 = null;
+    torres4.poner(3);
+    Codigo.consola($("p4-consola"), []);
+    Pasos.limpiarFeedback($("p4-fb"));
+  }
+
+  // Lo elegido en cada select se ve en su espacio en blanco del código
+  function pintarHuecos() {
+    [["uno", "▢ 1"], ["dos", "▢ 2"]].forEach(function (par) {
+      var sel = $("p4-" + par[0]);
+      var hueco = $("p4-hueco-" + par[0]);
+      sel.classList.toggle("elegir--lleno", !!sel.value);
+      hueco.classList.toggle("hueco--lleno", !!sel.value);
+      hueco.textContent = sel.value ? sel.options[sel.selectedIndex].textContent : par[1];
+    });
+  }
+
+  function cambioCodigo() {
+    var e = elegidos4();
+    pintarHuecos();
+    limpiarCodigo();
+    leccion.listoParaComprobar(!!(e.uno && e.dos));
+  }
+
+  function comprobarCodigo() {
+    var e = elegidos4();
+    if (!e.uno || !e.dos) return false;
+    limpiarCodigo();
+    var movs = salidaCon(e.uno, e.dos, 3, 0, 2, 1, []);
+    // Hasta dónde se pueden hacer los movimientos con los discos de verdad
+    var prueba = [[3, 2, 1], [], []];
+    var falla = -1, porque = "";
+    movs.forEach(function (m, i) {
+      if (falla !== -1) return;
+      var error = motivo(prueba, m[0], m[1]);
+      if (!error && arriba(prueba[m[0]]) !== m[2]) error = "Arriba de " + NOMBRES[m[0]] + " no está el disco " + m[2] + ".";
+      if (error) { falla = i; porque = error; return; }
+      prueba[m[1]].push(prueba[m[0]].pop());
+    });
+    var bien = falla === -1 && prueba[2].length === 3;
+    var hasta = falla === -1 ? movs : movs.slice(0, falla);
+
+    var pista = "";
+    if (e.uno !== "oad") pista = "En la primera llamada, los n - 1 discos de arriba van de origen al auxiliar: para ella, el auxiliar es su destino.";
+    else pista = "En la segunda llamada, los n - 1 discos van del auxiliar al destino: para ella, el auxiliar es su origen.";
+
+    cortar4 = reproducir(torres4, hasta, 700, function (m) {
+      Codigo.agregar($("p4-consola"), texto(m));
+    }, function () {
+      cortar4 = null;
+      if (bien) return;
+      if (falla !== -1) {
+        Codigo.agregar($("p4-consola"), texto(movs[falla]));
+        $("p4-consola").lastElementChild.classList.add("consola__linea--error");
+        torres4.sacudir(arriba(torres4.estado()[movs[falla][0]]));
+        Pasos.feedback($("p4-fb"), "pista", "El movimiento " + (falla + 1) + " no se puede. " + porque + " " + pista);
+      } else {
+        Pasos.feedback($("p4-fb"), "pista", "Todos los movimientos se pudieron hacer, pero los discos no terminaron en C. " + pista);
+      }
+    });
+    if (bien) {
+      Pasos.feedback($("p4-fb"), "ok", "¡Funciona! La primera llamada lleva los de arriba al auxiliar y la segunda los trae encima, al destino. " +
+        "Cada print mueve un disco: 7 movimientos.");
+      return true;
+    }
+    return false;
+  }
+
+  /* ---------- 5. El programa completo ---------- */
+  var torres5 = crearTorres($("p5-torres"));
+  var pila5 = Pila.crear($("p5-pila"), { codigo: $("p5-codigo"), rotulo: true });
+  var n5 = 3;
+
+  function q(t) { return '"' + NOMBRES[t] + '"'; }
+  // «los 2 de arriba» o, si es uno solo, «el disco 1»
+  function grupo(m) { return m === 1 ? "el disco 1" : "los " + m + " de arriba"; }
+  function llamada(k, o, d, a) { return "hanoi(" + k + ", " + q(o) + ", " + q(d) + ", " + q(a) + ")"; }
+
+  function programa5(extra) {
+    var p = Pila.programa();
+    p.linea = 8;
+    p.ficha = "programa";
+    p.falta = "";
+    for (var c in extra) p[c] = extra[c];
+    return p;
+  }
+
+  function trazaHanoi() {
+    var pasos = [
+      { linea: 0, texto: "Python recuerda la receta <strong>hanoi</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
+      { linea: 8, texto: "El programa llama a <strong>" + llamada(n5, 0, 2, 1) + "</strong>: mover " + n5 + (n5 === 1 ? " disco" : " discos") + " de A a C.",
+        estado: { pila: [programa5(), Pila.llamada(llamada(n5, 0, 2, 1), [])] } }
+    ];
+
+    function tarjeta(k, o, d, a, extra) {
+      var t = Pila.llamada(llamada(k, o, d, a), [["n", k], ["origen", q(o)], ["destino", q(d)], ["auxiliar", q(a)]]);
+      t.ficha = "n=" + k;
+      for (var c in extra) t[c] = extra[c];
+      return t;
+    }
+
+    function visitar(k, o, d, a, abajo) {
+      var nivel = abajo.length;
+      var t = function (extra) { return tarjeta(k, o, d, a, extra); };
+      pasos.push({ linea: 0,
+        texto: nivel === 1 ? "Nace su tarjeta: mover <strong>" + k + "</strong> de " + NOMBRES[o] + " a " + NOMBRES[d] + ", con " + NOMBRES[a] + " de auxiliar."
+          : "Otra tarjeta de hanoi: ahora mover <strong>" + k + (k === 1 ? " disco" : " discos") + "</strong> de " + NOMBRES[o] + " a " + NOMBRES[d] + ".",
+        estado: { pila: abajo.concat([t()]) } });
+      pasos.push({ linea: 1, texto: "¿n == 1? " + k + " == 1 es " + chip(k === 1) + (k === 1 ? ": un solo disco, el caso base." : ": hay que mover varios."),
+        estado: { pila: abajo.concat([t()]), leer: [nivel, "n"] } });
+      if (k === 1) {
+        pasos.push({ linea: 2, salida: texto([o, d, 1]), mover: [o, d],
+          texto: "Mueve el disco 1 de " + NOMBRES[o] + " a " + NOMBRES[d] + ". Y termina.",
+          estado: { pila: abajo.concat([t({ termina: true })]) } });
+        return;
+      }
+      var segunda = llamada(k - 1, a, d, o);
+      var espera1 = t({ linea: 4, falta: "print(…) y " + segunda });
+      pasos.push({ linea: 4,
+        texto: "Paso grande 1: " + grupo(k - 1) + ", de " + NOMBRES[o] + " al auxiliar " + NOMBRES[a] + ". Llama a <strong>" + llamada(k - 1, o, a, d) + "</strong> y espera.",
+        estado: { pila: abajo.concat([espera1, Pila.llamada(llamada(k - 1, o, a, d), [])]) } });
+      visitar(k - 1, o, a, d, abajo.concat([espera1]));
+      pasos.push({ linea: 4, flecha: true,
+        texto: llamada(k - 1, o, a, d) + " terminó: " + grupo(k - 1) + (k === 2 ? " ya está en " : " ya están en ") + NOMBRES[a] + ". Esta tarjeta sigue donde se quedó.",
+        estado: { pila: abajo.concat([t({ linea: 4, sigue: true, falta: "print(…) y " + segunda })]) } });
+      pasos.push({ linea: 5, salida: texto([o, d, k]), mover: [o, d],
+        texto: "Paso grande 2: el disco <strong>" + k + "</strong>, de " + NOMBRES[o] + " a " + NOMBRES[d] + ".",
+        estado: { pila: abajo.concat([t()]) } });
+      var espera2 = t({ linea: 6, falta: "" });
+      pasos.push({ linea: 6,
+        texto: "Paso grande 3: " + (k === 2 ? "el disco 1" : "los " + (k - 1)) + ", de " + NOMBRES[a] + " a " + NOMBRES[d] + ", encima del " + k + ". Llama a <strong>" + segunda + "</strong>.",
+        estado: { pila: abajo.concat([espera2, Pila.llamada(segunda, [])]) } });
+      visitar(k - 1, a, d, o, abajo.concat([espera2]));
+      pasos.push({ linea: 6, flecha: true,
+        texto: segunda + " terminó. A " + llamada(k, o, d, a) + " ya no le falta nada: termina.",
+        estado: { pila: abajo.concat([t({ termina: true })]) } });
+    }
+
+    visitar(n5, 0, 2, 1, [programa5()]);
+    var total = Math.pow(2, n5) - 1;
+    pasos.push({ linea: 8, flecha: true,
+      texto: llamada(n5, 0, 2, 1) + " terminó: " + (n5 === 1 ? "el disco está" : "los " + n5 + " discos están") + " en C, con " + total +
+        (total === 1 ? " movimiento." : " movimientos."),
+      estado: { pila: [programa5({ sigue: true })] } });
+    return pasos;
+  }
+
+  function terminarHanoi() {
+    var total = Math.pow(2, n5) - 1;
+    var texto = n5 === 1
+      ? "Con 1 disco, hanoi es solo el caso base: un movimiento. Mueve el control a 3 o 4."
+      : "hanoi(" + n5 + ", …) hizo " + total + " movimientos sin equivocarse. Cada llamada hizo sus tres pasos grandes, y las de 1 disco, el caso base. " +
+        "Las tarjetas cambian de papel: la torre auxiliar de una es el destino de otra." + (n5 < 4 ? " Prueba con 4 discos." : "");
+    Pasos.feedback($("p5-fb"), "ok", texto);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 6. Cuántos movimientos ---------- */
+  function cambioCuantos() {
+    $("p6-respuesta").removeAttribute("aria-invalid");
+    Pasos.limpiarFeedback($("p6-fb"));
+    leccion.listoParaComprobar($("p6-respuesta").value.trim() !== "");
+  }
+
+  function comprobarCuantos() {
+    var v = Number($("p6-respuesta").value);
+    if (v === 31) {
+      $("p6-respuesta").removeAttribute("aria-invalid");
+      $("p6-cuenta").textContent = "15 + 1 + 15";
+      Pasos.feedback($("p6-fb"), "ok", "¡31! 15 para llevar los 4 de arriba al auxiliar, 1 para el grande y 15 para traerlos encima. Cada disco más, el doble y uno más.");
+      $("p6-leyenda").hidden = false;
+      return true;
+    }
+    $("p6-respuesta").setAttribute("aria-invalid", "true");
+    Pasos.feedback($("p6-fb"), "pista", v === 30 || v === 16
+      ? "Casi. Son dos veces los 15 de mover 4 discos, más 1 por el grande."
+      : "Mira la columna de la cuenta: para 5 discos, los de 4 discos (15), más 1, más otra vez los de 4 discos.");
+    return false;
+  }
+
+  /* ---------- 7. Reto: 4 discos en 15 ---------- */
+  var reto = { movs: 0 };
+  var torres7 = crearTorres($("p7-torres"), {
+    manual: true,
+    alMover: function () {
+      reto.movs++;
+      contarEn($("p7-marcador"), reto.movs);
+      Pasos.limpiarFeedback($("p7-fb"));
+      var estado = torres7.estado();
+      if (torres7.completa(4)) {
+        torres7.activar(false);
+        $("p7-pista").disabled = true;
+        if (reto.movs === 15) {
+          $("p7-explicacion").textContent = "¡Torre completa en 15 movimientos!";
+          Pasos.feedback($("p7-fb"), "ok", "¡Perfecto! 15 movimientos, como hanoi(4, \"A\", \"C\", \"B\"). Hiciste a mano lo que hace la receta: n − 1 al auxiliar, el grande y n − 1 encima.");
+          leccion.desbloquear();
+        } else {
+          $("p7-explicacion").textContent = "¡Torre completa!";
+          Pasos.feedback($("p7-fb"), "pista", "Lo lograste en " + reto.movs + " movimientos. ¿Puedes en 15? Empieza de nuevo y sigue la receta.");
+        }
+        return;
+      }
+      var quedan = faltan(estado, 4, 2);
+      if (reto.movs + quedan > 15) {
+        $("p7-explicacion").textContent = "Puedes terminar, pero ya no en 15: te faltan al menos " + quedan + " movimientos. Empieza de nuevo para lograrlo.";
+      } else {
+        $("p7-explicacion").textContent = "Vas bien: te faltan " + quedan + (quedan === 1 ? " movimiento." : " movimientos.");
+      }
+    },
+    alError: function (texto) { Pasos.feedback($("p7-fb"), "pista", texto); }
+  });
+
+  function empezarReto() {
+    reto.movs = 0;
+    torres7.poner(4);
+    torres7.activar(true);
+    $("p7-pista").disabled = false;
+    contarEn($("p7-marcador"), 0);
+    $("p7-explicacion").textContent = "Piensa en la receta: primero, los 3 de arriba al auxiliar.";
+    Pasos.limpiarFeedback($("p7-fb"));
+  }
+
+  function pistaReto() {
+    var estado = torres7.estado();
+    var m = siguiente(estado, 4, 2);
+    if (!m) return;
+    torres7.pista(m[0], m[1]);
+    $("p7-explicacion").textContent = "Lleva el disco " + arriba(estado[m[0]]) + " de " + NOMBRES[m[0]] + " a " + NOMBRES[m[1]] + "." +
+      (reto.movs + faltan(estado, 4, 2) > 15 ? " (Así terminas, aunque ya no en 15.)" : "");
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("p1-reiniciar").addEventListener("click", empezarJuego);
+  empezarJuego();
+
+  prepararGrande();
+  $("p2-otra-btn").addEventListener("click", verGrande);
+  document.querySelectorAll('#p2-opciones input[name="p2"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      document.querySelectorAll("#p2-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback($("p2-fb"));
+      prepararGrande();
+      leccion.listoParaComprobar(true);
+    });
+  });
+
+  $("p3-grandes").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { hacerGrande(b.getAttribute("data-m")); });
+  });
+  $("p3-reiniciar").addEventListener("click", empezarIdea);
+  empezarIdea();
+
+  $("p4-uno").addEventListener("change", cambioCodigo);
+  $("p4-dos").addEventListener("change", cambioCodigo);
+  limpiarCodigo();
+
+  var trazaP5 = Traza.crear({
+    codigo: $("p5-codigo"),
+    explicacion: $("p5-explicacion"),
+    consola: $("p5-consola"),
+    ejecutar: $("p5-ejecutar"),
+    reproducir: $("p5-reproducir"),
+    reiniciar: $("p5-reiniciar"),
+    generar: trazaHanoi,
+    intervalo: 750,
+    alReiniciar: function () {
+      torres5.poner(n5);
+      pila5.vaciar();
+      Pasos.limpiarFeedback($("p5-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.mover) torres5.mover(paso.mover[0], paso.mover[1], 600);
+      pila5.pintar(paso.estado);
+    },
+    alTerminar: terminarHanoi
+  });
+  $("p5-n").addEventListener("input", function () {
+    n5 = Number(this.value);
+    $("p5-n-valor").textContent = String(n5);
+    $("p5-codigo-n").textContent = String(n5);
+    trazaP5.reiniciar();
+  });
+
+  $("p6-respuesta").addEventListener("input", cambioCuantos);
+
+  $("p7-reiniciar").addEventListener("click", empezarReto);
+  $("p7-pista").addEventListener("click", pistaReto);
+  empezarReto();
+
+  // Al cambiar de paso, se para cualquier animación en marcha
+  function pausar() {
+    trazaP5.detener();
+    if (cortar2) { cortar2(); cortar2 = null; }
+    if (idea.cortar) empezarIdea();
+    if (cortar4) { cortar4(); cortar4 = null; }
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-juego": pausar,
+      "paso-grande": function (paso, l, info) {
+        pausar();
+        prepararGrande();
+        if (info.desbloqueado) {
+          $("p2-otra").hidden = false;
+          return;
+        }
+        l.listoParaComprobar(!!paso.querySelector('input[name="p2"]:checked'));
+      },
+      "paso-idea": pausar,
+      "paso-codigo": function (paso, l, info) {
+        pausar();
+        limpiarCodigo();
+        pintarHuecos();
+        var e = elegidos4();
+        if (!info.desbloqueado) l.listoParaComprobar(!!(e.uno && e.dos));
+      },
+      "paso-programa": pausar,
+      "paso-cuantos": function (paso, l, info) {
+        pausar();
+        if (!info.desbloqueado) l.listoParaComprobar($("p6-respuesta").value.trim() !== "");
+      },
+      "paso-reto": pausar,
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-grande": comprobarGrande, "paso-codigo": comprobarCodigo, "paso-cuantos": comprobarCuantos }
+  });
+})();
+</script>
+</body>
+</html>
