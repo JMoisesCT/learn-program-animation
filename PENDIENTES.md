@@ -9,7 +9,8 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Texto a fondo: van 4 de 5.** Sigue el **Proyecto: el ahorcado** (`texto-proyecto`), según el plan de CLAUDE.md. Al publicarlo, añadir «Siguiente» en Buscar en un texto. Después, planear **Errores** en CLAUDE.md y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
+2. **Texto a fondo, completo (5/5).** Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones, como las de Funciones, Recursión y Texto a fondo) y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas». Al publicar Errores, añadir «Siguiente» en el Proyecto: el ahorcado.
+   **Probar con alumnos** el ahorcado en un móvil de verdad (en el reto, el tablero y las misiones van antes que el programa, que tiene 31 líneas) y si se entiende que repetir una letra que no está quita otra vida (el programa no lo revisa; podría ser una mejora con `if nueva in dichas:` y `continue`).
    **Probar con alumnos** si se entiende el `-1` de `.find()` (paso «Antes y después de la @»: sin @, `correo[:-1]` corta la última letra sin dar error).
    **Probar con alumnos** las tijeras de Rebanadas en un móvil de verdad (arrastrar y tocar la cinta; usan `touch-action: none`, así que sobre la cinta la página no se desplaza) y si «los números van en los cortes» se entiende.
    **Detalle visto**: en móvil, las líneas largas se desplazan en vez de caber (la de `print(▢)` en el reto de Métodos, con la cadena elegida dentro; las opciones sí se parten en dos líneas).
@@ -39,6 +40,19 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-22 · Texto a fondo 5/5: Proyecto: el ahorcado
+
+**Lección** `lecciones/texto/proyecto/` (`data-leccion="texto-proyecto"`), 7 pasos:
+1. Jugar una partida (sin código): la consola pide letras (`BucleInput`); el tablero muestra 6 corazones que se apagan, la palabra con las letras ya descubiertas y la cinta de `dichas`, adonde vuela cada letra nueva (verde si está en la palabra, naranja si no). Solo acepta una letra.
+2. Parte 1 · La palabra oculta: qué código arma `p a p a _ a` con `dichas = "ap"` (trampas: `oculta = ""` dentro del `for`, `letra in secreta` y `dichas in letra`), probado con `dichas` = `""`, `"a"` y `"ap"`. Al acertar, el `for` se anima letra a letra sobre las cintas de `secreta` y `dichas`.
+3. Parte 2 · Leer una letra: `input().strip().lower()` frente a sin nada, solo `.lower()` y `.strip().upper()`, con «a», «␣A» y «P␣».
+4. Parte 3 · ¿Está o no está?: `nueva in secreta` frente a `find(nueva) > 0` (falla con la «p», que está en la casilla 0), `count(nueva) == 1` y `nueva == secreta`, con a, p, y, x y las vidas que van quedando.
+5. Parte 4 · ¿Ganaste?: `"_" not in oculta` frente a `"_" in oculta` (gana al empezar), `oculta == secreta` (los espacios) y `len(dichas) == len(secreta)` (las letras repetidas).
+6. Reto: el programa completo (31 líneas, con `elegir_palabra()` y `random.randint(1, 3)` para elegir entre papaya, cereza y mango, sin listas), con las líneas de cada vuelta resaltadas y tres misiones: recibir un «¡Bien!», perder una vida y ganar una partida. En el móvil, el tablero y las misiones van antes que el programa.
+7. Resumen con lo que se usó y el programa completo.
+
+Portada y botón «Siguiente» en Buscar en un texto. Probado con Playwright en 1280 y 390 px (ganando y perdiendo partidas), reanudando en cada paso y con movimiento reducido: sin errores.
 
 ### 2026-10-22 · Texto a fondo 4/5: Buscar en un texto
 

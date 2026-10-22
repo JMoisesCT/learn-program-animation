@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: el ahorcado · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Texto a fondo: construir por partes en Python el juego del ahorcado, con la palabra oculta armada con for e in, las letras dichas en un texto, .strip().lower(), vidas y ganar cuando no queda ningún guion.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; --color-vida: #c92a5c; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+    .lab .codigo { margin-top: var(--esp-4); }
+
+    /* ---------- Consola que espera respuestas ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 4.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .consola .consola__linea { white-space: pre; }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- El tablero: vidas, la palabra y las letras dichas ---------- */
+    .vidas { display: flex; justify-content: center; gap: var(--esp-1); margin: 0 0 var(--esp-3); font-size: 1.9rem; line-height: 1; }
+    .vida { color: var(--color-vida); transition: color var(--dur), transform var(--dur) var(--curva-rebote), opacity var(--dur); }
+    .vida--perdida { color: var(--color-borde); transform: scale(0.8); }
+    .vida--cae { animation: vida-cae 600ms ease both; }
+    @keyframes vida-cae {
+      0% { color: var(--color-vida); transform: scale(1.3); }
+      40% { color: var(--color-vida); transform: scale(1.3) rotate(-12deg); }
+      100% { color: var(--color-borde); transform: scale(0.8); }
+    }
+    .rotulo-cinta { margin: var(--esp-3) 0 var(--esp-1); text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .tablero .cinta__casilla--cambio .cinta__letra { animation: valor-pulso 360ms ease-out; }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Opciones y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas li:nth-child(4) { animation-delay: 600ms; }
+    .prueba__etiqueta { font-family: var(--fuente-codigo); white-space: pre-wrap; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* Cómo se arma la palabra oculta (al acertar la parte 1) */
+    .armado { margin-top: var(--esp-5); padding: var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); animation: aparecer var(--dur) ease both; }
+    .armado__titulo { margin: 0; text-align: center; font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+    .armado .expresion { margin-top: var(--esp-4); font-size: var(--texto-md); white-space: pre; }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+      .armado .expresion { font-size: var(--texto-sm); }
+    }
+    /* En el móvil, el tablero y las misiones van antes que el programa, que es largo:
+       así se ven las vidas mientras se juega */
+    @media (max-width: 1023.98px) {
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { display: contents; }
+      #paso-jugar .lab__visual { order: 1; margin-top: var(--esp-4); }
+      #paso-jugar .lab__resultado { order: 2; margin-top: var(--esp-4); }
+      #paso-jugar .reto-codigo { order: 3; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .vida--cae { animation: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="texto-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Lo que vamos a construir -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="t-demo">
+      <span class="paso__etiqueta">Texto a fondo 5/5 · Proyecto</span>
+      <h1 class="paso__titulo" id="t-demo">Proyecto: el ahorcado</h1>
+      <p>Vas a programar un juego: la computadora piensa una <strong>fruta</strong> y tú la adivinas letra por letra. Cada letra que no está te quita una de tus <strong>6 vidas</strong>. Primero, juega una partida.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="d-registro" aria-live="polite"></div>
+            <div class="entrada" id="d-fila">
+              <label for="d-campo">Letra:</label>
+              <input type="text" id="d-campo" maxlength="3" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="d-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Otra partida</button>
+          </div>
+        </div>
+        <div class="lab__visual tablero">
+          <p class="vuelta-actual" id="d-vuelta" aria-live="polite"></p>
+          <div class="vidas" id="d-vidas" role="img"></div>
+          <p class="rotulo-cinta">la palabra</p>
+          <div id="d-palabra"></div>
+          <p class="rotulo-cinta">dichas</p>
+          <div id="d-dichas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: la palabra oculta -->
+    <section class="paso" id="paso-oculta" data-comprobar aria-labelledby="t-oculta">
+      <span class="paso__etiqueta">Parte 1 de 4</span>
+      <h2 class="paso__titulo" id="t-oculta">La palabra oculta</h2>
+      <p>Sin listas: las letras que ya dijiste se guardan juntas en un texto, <code>dichas</code>. Con <code>dichas = "ap"</code>, la palabra debe verse <code>p a p a _ a</code>. ¿Qué código la arma?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">secreta</span> = <span class="tk-texto">"papaya"</span></span><span class="linea"><span class="tk-variable">dichas</span> = <span class="tk-texto">"ap"</span></span><span class="linea"><span class="hueco" id="p1-hueco">?</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">oculta</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">¿Qué código arma la palabra oculta?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="dentro"><span>for letra in secreta:
+    oculta = ""
+    if letra in dichas:
+        oculta += letra + " "
+    else:
+        oculta += "_ "</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="secreta"><span>oculta = ""
+for letra in secreta:
+    if letra in secreta:
+        oculta += letra + " "
+    else:
+        oculta += "_ "</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>oculta = ""
+for letra in secreta:
+    if letra in dichas:
+        oculta += letra + " "
+    else:
+        oculta += "_ "</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="reves"><span>oculta = ""
+for letra in secreta:
+    if dichas in letra:
+        oculta += letra + " "
+    else:
+        oculta += "_ "</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="armado" id="p1-armado" hidden>
+          <p class="armado__titulo">Así se arma con <code>dichas = "ap"</code>:</p>
+          <p class="rotulo-cinta">secreta</p>
+          <div id="p1-secreta"></div>
+          <p class="rotulo-cinta">dichas</p>
+          <div id="p1-dichas"></div>
+          <div class="expresion" id="p1-oculta" aria-live="polite"></div>
+        </div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: leer una letra -->
+    <section class="paso" id="paso-leer" data-comprobar aria-labelledby="t-leer">
+      <span class="paso__etiqueta">Parte 2 de 4</span>
+      <h2 class="paso__titulo" id="t-leer">Leer una letra</h2>
+      <p>El jugador puede escribir <code>A</code> en mayúscula, o con un espacio de más. La palabra va en minúsculas, así que el juego debe entender siempre <code>"a"</code>. ¿Qué línea lee bien la letra?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">¿Qué línea lee bien la letra?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="sola"><span>nueva = input("Letra: ")</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="lower"><span>nueva = input("Letra: ").lower()</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="upper"><span>nueva = input("Letra: ").strip().upper()</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>nueva = input("Letra: ").strip().lower()</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: ¿está o no está? -->
+    <section class="paso" id="paso-esta" data-comprobar aria-labelledby="t-esta">
+      <span class="paso__etiqueta">Parte 3 de 4</span>
+      <h2 class="paso__titulo" id="t-esta">¿Está o no está?</h2>
+      <p>Si la letra está en la palabra, «¡Bien!»; si no, se pierde una vida. Con <code>secreta = "papaya"</code> y 6 vidas, probamos <strong>a</strong>, <strong>p</strong>, <strong>y</strong> y <strong>x</strong>. ¿Qué condición va en el espacio en blanco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">nueva</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Letra: "</span>).<span class="tk-funcion">strip</span>().<span class="tk-funcion">lower</span>()</span><span class="linea"><span class="tk-variable">dichas</span> += <span class="tk-variable">nueva</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="hueco" id="p3-hueco">?</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Bien!"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-variable">vidas</span> -= <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"No está. Vidas: <span class="tk-llave">{</span><span class="tk-variable">vidas</span><span class="tk-llave">}</span>"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p3-opciones">
+          <legend class="visualmente-oculto">¿Qué condición va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p3" value="find"><span>secreta.find(nueva) &gt; 0</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="bien"><span>nueva in secreta</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="count"><span>secreta.count(nueva) == 1</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="igual"><span>nueva == secreta</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: ¿ganaste? -->
+    <section class="paso" id="paso-ganar" data-comprobar aria-labelledby="t-ganar">
+      <span class="paso__etiqueta">Parte 4 de 4</span>
+      <h2 class="paso__titulo" id="t-ganar">¿Ganaste?</h2>
+      <p>El bucle sigue mientras quedan vidas. Después de mostrar la palabra, hay que ver si ya está completa. Con «papaya» y las letras <strong>a</strong>, <strong>p</strong> e <strong>y</strong>, el juego debe terminar justo tras la <strong>y</strong>. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Tu programa"><code><span class="linea"><span class="tk-palabra">while</span> <span class="tk-variable">vidas</span> &gt; <span class="tk-numero">0</span>:</span><span class="linea linea--hecha">    <span class="tk-comentario"># Parte 1: arma oculta ✓</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">oculta</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="hueco" id="p4-hueco">?</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"¡Ganaste!"</span>)</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea linea--hecha">    <span class="tk-comentario"># Partes 2 y 3: la letra nueva ✓</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">¿Qué condición va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="con"><span>"_" in oculta</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="igual"><span>oculta == secreta</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>"_" not in oculta</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="largo"><span>len(dichas) == len(secreta)</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: el juego completo -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="t-jugar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-jugar">¡Tu juego funciona!</h2>
+      <p>Este es tu programa completo: <code>elegir_palabra()</code> elige una fruta al azar. Juega las partidas que necesites hasta cumplir las <strong>tres misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo">Letra:</label>
+              <input type="text" id="t-campo" maxlength="3" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Otra partida</button>
+          </div>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="reto-codigo">
+            <pre class="codigo" id="t-codigo" aria-label="Tu programa completo"><code id="t-codigo-lineas"></code></pre>
+          </div>
+        </div>
+        <div class="lab__visual tablero">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div class="vidas" id="t-vidas" role="img"></div>
+          <p class="rotulo-cinta">la palabra</p>
+          <div id="t-palabra"></div>
+          <p class="rotulo-cinta">dichas</p>
+          <div id="t-dichas"></div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="bien">Recibe un «¡Bien!»</li>
+            <li data-mision="fallo">Pierde una vida</li>
+            <li data-mision="gana">Gana una partida</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🍓</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Un texto puede guardar lo que va pasando (<code>dichas</code>), y con <code>for</code> e <code>in</code> se arma otro a partir de él.</p>
+        <ul class="usado" aria-label="Lo que usaste">
+          <li>for letra in secreta</li><li>in / not in</li><li>dichas += nueva</li><li>.strip().lower()</li><li>while vidas &gt; 0</li><li>break</li><li>random.randint()</li>
+        </ul>
+        <pre class="codigo resumen-codigo" aria-label="Tu programa completo"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/cinta.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  // Un texto tal como lo escribe Python, con sus comillas y los espacios a la vista
+  function comillas(s) { return '"' + s.replace(/ /g, "␣") + '"'; }
+
+  var VIDAS = 6;
+  var PALABRAS = ["papaya", "cereza", "mango"];
+
+  /* La palabra con guiones, como la arma el programa: "p a p a _ a " */
+  function armarOculta(secreta, dichas) {
+    return Array.from(secreta).map(function (c) { return dichas.indexOf(c) !== -1 ? c + " " : "_ "; }).join("");
+  }
+
+  /* ---------- El programa completo, línea a línea ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+
+  var L = [
+    kw("import") + " " + v("random"),                                                         // 0
+    kw("def") + " " + f("elegir_palabra") + "():",                                            // 1
+    "    " + v("n") + " = " + v("random") + "." + f("randint") + "(" + n("1") + ", " + n("3") + ")",
+    "    " + kw("if") + " " + v("n") + " == " + n("1") + ":",
+    "        " + kw("return") + " " + s('"papaya"'),
+    "    " + kw("elif") + " " + v("n") + " == " + n("2") + ":",                               // 5
+    "        " + kw("return") + " " + s('"cereza"'),
+    "    " + kw("return") + " " + s('"mango"'),
+    v("secreta") + " = " + f("elegir_palabra") + "()",                                       // 8
+    v("dichas") + " = " + s('""'),
+    v("vidas") + " = " + n("6"),                                                              // 10
+    kw("while") + " " + v("vidas") + " &gt; " + n("0") + ":",                                 // 11
+    "    " + v("oculta") + " = " + s('""'),
+    "    " + kw("for") + " " + v("letra") + " " + kw("in") + " " + v("secreta") + ":",
+    "        " + kw("if") + " " + v("letra") + " " + kw("in") + " " + v("dichas") + ":",
+    "            " + v("oculta") + " += " + v("letra") + " + " + s('" "'),                    // 15
+    "        " + kw("else") + ":",
+    "            " + v("oculta") + " += " + s('"_ "'),
+    "    " + f("print") + "(" + v("oculta") + ")",                                            // 18
+    "    " + kw("if") + " " + s('"_"') + " " + kw("not") + " " + kw("in") + " " + v("oculta") + ":",
+    "        " + f("print") + "(" + s('"¡Ganaste!"') + ")",                                   // 20
+    "        " + kw("break"),
+    "    " + v("nueva") + " = " + f("input") + "(" + s('"Letra: "') + ")." + f("strip") + "()." + f("lower") + "()",  // 22
+    "    " + v("dichas") + " += " + v("nueva"),
+    "    " + kw("if") + " " + v("nueva") + " " + kw("in") + " " + v("secreta") + ":",
+    "        " + f("print") + "(" + s('"¡Bien!"') + ")",                                      // 25
+    "    " + kw("else") + ":",
+    "        " + v("vidas") + " -= " + n("1"),
+    "        " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"No está. Vidas: ' + llave("vidas") + '"') + ")",
+    kw("if") + " " + v("vidas") + " == " + n("0") + ":",                                      // 29
+    "    " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"Perdiste. Era ' + llave("secreta") + '"') + ")"
+  ];
+  var LINEA_INPUT = 22;
+
+  function pintarLineas(code, lineas) {
+    code.innerHTML = lineas.map(function (h) { return '<span class="linea">' + h + "</span>"; }).join("");
+  }
+
+  function rango(a, b) {
+    var r = [];
+    for (var k = a; k <= b; k++) r.push(k);
+    return r;
+  }
+
+  /* Pinta una lista de pruebas: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = p.etiqueta;
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* ---------- Pasos de elegir una opción (las cuatro partes) ----------
+     cfg: { id, nombre, correcta, hueco (opcional), probar(valor) → filas, ok, pistas,
+            alAcertar (opcional), alLimpiar (opcional) } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiarMarcas() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    }
+
+    function limpiar() {
+      limpiarMarcas();
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      if (cfg.alLimpiar) cfg.alLimpiar();
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiar();
+      if (cfg.hueco) $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        if (cfg.alAcertar) cfg.alAcertar();
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        if (cfg.hueco) $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    // Tras acertar, deja volver a elegir para ver por qué fallan las demás (el avance no se pierde)
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- El juego en marcha (pasos 1 y 6) ----------
+     o: { prefijo, conCodigo, alResultado(mision), alTerminar(partida) } */
+  function crearJuego(o) {
+    var p = o.prefijo;
+    var partida = {};
+    var ultima = -1;
+    var cPalabra = Cinta.crear($(p + "-palabra"), "", { indices: false });
+    var cDichas = Cinta.crear($(p + "-dichas"), "", { indices: false });
+
+    function alAzar() {
+      // Nunca la misma palabra dos partidas seguidas
+      var k = Math.floor(Math.random() * PALABRAS.length);
+      if (k === ultima) k = (k + 1) % PALABRAS.length;
+      ultima = k;
+      return PALABRAS[k];
+    }
+
+    function sabe(c) { return partida.dichas.indexOf(c) !== -1; }
+
+    /* La palabra: las letras dichas a la vista; final: "gano" o "perdio" */
+    function pintarPalabra(nueva, final) {
+      var sec = partida.secreta;
+      cPalabra.texto(Array.from(sec).map(function (c) { return sabe(c) || final ? c : "_"; }).join(""));
+      cPalabra.clases(function (i) {
+        var c = sec[i];
+        if (final === "gano") return "cinta__casilla--igual";
+        if (final === "perdio") return sabe(c) ? "" : "cinta__casilla--distinta";
+        if (!sabe(c)) return "cinta__casilla--apagada";
+        return c === nueva ? "cinta__casilla--cambio" : "";
+      });
+    }
+
+    function pintarDichas(nueva) {
+      cDichas.texto(partida.dichas);
+      cDichas.clases(function (i, c) { return partida.secreta.indexOf(c) !== -1 ? "cinta__casilla--igual" : "cinta__casilla--distinta"; });
+      if (!nueva) return;
+      // La letra nueva viaja de la consola al final de dichas (dichas += nueva)
+      var respuestas = $(p + "-registro").querySelectorAll(".registro__respuesta");
+      var desde = respuestas[respuestas.length - 1];
+      if (desde) Codigo.volar(desde, cDichas.letra(-1), nueva, "vuelo--salida");
+    }
+
+    function pintarVidas(pierde) {
+      var caja = $(p + "-vidas");
+      caja.textContent = "";
+      for (var k = 0; k < VIDAS; k++) {
+        var c = document.createElement("span");
+        c.className = "vida" + (k >= partida.vidas ? " vida--perdida" : "") + (pierde && k === partida.vidas ? " vida--cae" : "");
+        c.textContent = "♥";
+        caja.appendChild(c);
+      }
+      caja.setAttribute("aria-label", "Vidas: " + partida.vidas + " de " + VIDAS);
+    }
+
+    BucleInput.crear({
+      prefijo: p,
+      vueltas: null,
+      rotulo: "Intento",
+      pregunta: "Letra:",
+      lineaInput: LINEA_INPUT,
+      siguiente: "Escribe otra letra.",
+      validar: function (texto) {
+        return /^\p{L}$/u.test(texto) ? null : "Escribe una sola letra.";
+      },
+      alEmpezar: function () {
+        partida = { secreta: alAzar(), dichas: "", vidas: VIDAS, intentos: 0, gano: false };
+        pintarPalabra(null);
+        pintarDichas(null);
+        pintarVidas(false);
+        Codigo.agregar($(p + "-registro"), armarOculta(partida.secreta, ""));
+        return (o.conCodigo ? "<code>elegir_palabra()</code> eligió" : "La computadora eligió") +
+          " una fruta de <strong>" + partida.secreta.length + " letras</strong>. <code>dichas</code> empieza vacío y tienes " + VIDAS + " vidas.";
+      },
+      alDato: function (texto) {
+        var nueva = texto.toLowerCase();
+        partida.intentos++;
+        partida.dichas += nueva;
+        var esta = partida.secreta.indexOf(nueva) !== -1;
+        var activas = [LINEA_INPUT, 23, 24];
+        var saltadas = [];
+        var salida = [];
+        var dice;
+        if (esta) {
+          salida.push("¡Bien!");
+          activas.push(25);
+          saltadas.push(26, 27, 28);
+          dice = "«" + nueva + "» está en la palabra: ¡Bien!";
+          if (o.alResultado) o.alResultado("bien");
+        } else {
+          partida.vidas--;
+          salida.push("No está. Vidas: " + partida.vidas);
+          activas.push(26, 27, 28);
+          saltadas.push(25);
+          dice = "«" + nueva + "» no está: pierdes una vida.";
+          if (o.alResultado) o.alResultado("fallo");
+        }
+        pintarDichas(nueva);
+        pintarVidas(!esta);
+        activas.push(11);
+        if (partida.vidas === 0) {
+          pintarPalabra(null, "perdio");
+          return {
+            texto: dice + " Ya no quedan vidas: el <code>while</code> termina.",
+            camino: { activas: activas.concat([29, 30]), saltadas: saltadas.concat(rango(12, 21)) },
+            salida: salida,
+            fin: true
+          };
+        }
+        var oculta = armarOculta(partida.secreta, partida.dichas);
+        salida.push(oculta);
+        activas = activas.concat([12, 13, 14, 18, 19]);
+        if (oculta.indexOf("_") !== -1) activas.push(16, 17);
+        if (oculta.replace(/_ /g, "").length) activas.push(15);
+        if (oculta.indexOf("_") === -1) {
+          partida.gano = true;
+          salida.push("¡Ganaste!");
+          pintarPalabra(nueva, "gano");
+          return {
+            texto: dice + " Ya no queda ningún <code>_</code>: ¡ganaste! <code>break</code> termina el juego.",
+            camino: { activas: activas.concat([20, 21]), saltadas: saltadas.concat([16, 17]) },
+            salida: salida,
+            fin: true
+          };
+        }
+        pintarPalabra(nueva);
+        return {
+          texto: dice + " Otra vuelta: se arma la palabra de nuevo y aún quedan <code>_</code>.",
+          camino: { activas: activas, saltadas: saltadas.concat([20, 21]) },
+          salida: salida
+        };
+      },
+      alFinal: function () {
+        if (partida.gano) return {};
+        return { linea: 30, texto: "", salida: "Perdiste. Era " + partida.secreta };
+      },
+      alTerminar: function () { o.alTerminar(partida); }
+    });
+  }
+
+  /* ---------- 1. Demo ---------- */
+  crearJuego({
+    prefijo: "d",
+    conCodigo: false,
+    alTerminar: function (partida) {
+      Pasos.feedback($("d-fb"), "ok", (partida.gano
+        ? "¡La adivinaste en " + partida.intentos + (partida.intentos === 1 ? " intento" : " intentos") + "!"
+        : "Esta vez no: era «" + partida.secreta + "».") +
+        " Así funcionará tu juego. Juega más si quieres; luego lo construimos en cuatro partes.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 2. Parte 1: la palabra oculta ---------- */
+  var PROGRAMAS_OCULTA = {
+    bien: armarOculta,
+    secreta: function (sec) { return armarOculta(sec, sec); },
+    // dichas in letra: solo es True si dichas es esa letra, o si está vacío
+    reves: function (sec, dichas) {
+      return Array.from(sec).map(function (c) { return c.indexOf(dichas) !== -1 ? c + " " : "_ "; }).join("");
+    },
+    // oculta vuelve a "" en cada vuelta: solo queda la última letra
+    dentro: function (sec, dichas) { return armarOculta(sec.slice(-1), dichas); }
+  };
+  var cSecreta1 = Cinta.crear($("p1-secreta"), "papaya", { indices: false });
+  var cDichas1 = Cinta.crear($("p1-dichas"), "ap", { indices: false });
+  var armado = [];
+
+  function cortarArmado() {
+    armado.forEach(clearTimeout);
+    armado = [];
+  }
+
+  /* El for, letra a letra: la casilla de secreta, su pareja en dichas y lo que se suma */
+  function animarArmado() {
+    var sec = "papaya";
+    var dichas = "ap";
+    var caja = $("p1-armado");
+    cortarArmado();
+    caja.hidden = false;
+    cSecreta1.marcar(null);
+    cDichas1.marcar(null);
+    cDichas1.clases(null);
+    $("p1-oculta").textContent = 'oculta = ""';
+    var acumulado = "";
+    function paso(k) {
+      if (k === sec.length) {
+        cSecreta1.marcar(null);
+        cDichas1.marcar(null);
+        return;
+      }
+      var c = sec[k];
+      var j = dichas.indexOf(c);
+      cSecreta1.marcar(k);
+      cDichas1.marcar(j === -1 ? null : j);
+      cDichas1.clases(function (i) { return i === j ? "cinta__casilla--igual" : ""; });
+      acumulado += j === -1 ? "_ " : c + " ";
+      $("p1-oculta").textContent = "oculta = " + JSON.stringify(acumulado);
+      if (Pasos.reducirMovimiento) paso(k + 1);
+      else armado.push(setTimeout(function () { paso(k + 1); }, 750));
+    }
+    if (Pasos.reducirMovimiento) paso(0);
+    else armado.push(setTimeout(function () { paso(0); }, 400));
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-oculta",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) {
+      return ["", "a", "ap"].map(function (d) {
+        var sale = PROGRAMAS_OCULTA[valor]("papaya", d);
+        return { etiqueta: "dichas = " + JSON.stringify(d), salida: sale, ok: sale === armarOculta("papaya", d) };
+      });
+    },
+    ok: "¡Eso es! oculta empieza vacía antes del for, y cada letra de secreta suma la letra (si está en dichas) o un guion.",
+    pistas: {
+      dentro: "oculta = \"\" está dentro del for: vuelve a vaciarse en cada vuelta, y al final solo queda la última letra.",
+      secreta: "letra in secreta siempre es True: cada letra está en su propia palabra. Así se ve todo desde el principio.",
+      reves: "dichas in letra busca \"ap\" dentro de una sola letra: nunca está. Y con dichas vacío, \"\" está en cualquier texto. Es al revés: letra in dichas."
+    },
+    alAcertar: animarArmado,
+    alLimpiar: function () {
+      cortarArmado();
+      $("p1-armado").hidden = true;
+    }
+  });
+
+  /* ---------- 3. Parte 2: leer una letra ---------- */
+  var LECTURAS = {
+    sola: function (t) { return t; },
+    lower: function (t) { return t.toLowerCase(); },
+    upper: function (t) { return t.trim().toUpperCase(); },
+    bien: function (t) { return t.trim().toLowerCase(); }
+  };
+  var parte2 = crearEleccion({
+    id: "paso-leer",
+    nombre: "p2",
+    correcta: "bien",
+    probar: function (valor) {
+      return ["a", " A", "P "].map(function (t) {
+        var sale = LECTURAS[valor](t);
+        return { etiqueta: "Escribe " + comillas(t), salida: "nueva = " + comillas(sale), ok: sale === LECTURAS.bien(t) };
+      });
+    },
+    ok: "¡Bien! .strip() quita los espacios y .lower() la pasa a minúscula: siempre llega una letra limpia, lista para buscarla en la palabra.",
+    pistas: {
+      sola: "La letra llega tal cual: «␣A», con espacio y mayúscula, no está en \"papaya\".",
+      lower: ".lower() pasa la «A» a minúscula, pero el espacio se queda: \"␣a\" no está en \"papaya\". Falta .strip().",
+      upper: "Quita los espacios, pero deja la letra en mayúscula: \"A\" no está en \"papaya\", que va en minúsculas."
+    }
+  });
+
+  /* ---------- 4. Parte 3: ¿está o no está? ---------- */
+  var CONDICIONES_ESTA = {
+    bien: function (sec, l) { return sec.indexOf(l) !== -1; },
+    find: function (sec, l) { return sec.indexOf(l) > 0; },
+    count: function (sec, l) { return sec.split(l).length - 1 === 1; },
+    igual: function (sec, l) { return l === sec; }
+  };
+
+  function jugarLetras(condicion) {
+    var vidas = VIDAS;
+    return ["a", "p", "y", "x"].map(function (l) {
+      if (condicion("papaya", l)) return "¡Bien!";
+      vidas--;
+      return "No está. Vidas: " + vidas;
+    });
+  }
+
+  var parte3 = crearEleccion({
+    id: "paso-esta",
+    nombre: "p3",
+    correcta: "bien",
+    hueco: "p3-hueco",
+    probar: function (valor) {
+      var esperado = jugarLetras(CONDICIONES_ESTA.bien);
+      var sale = jugarLetras(CONDICIONES_ESTA[valor]);
+      return ["a", "p", "y", "x"].map(function (l, k) {
+        return { etiqueta: "Letra: " + l, salida: sale[k], ok: sale[k] === esperado[k] };
+      });
+    },
+    ok: "¡Exacto! nueva in secreta es True si la letra está en cualquier lugar de la palabra, una vez o varias.",
+    pistas: {
+      find: "Con la «p» dice que no está: secreta.find(\"p\") es 0, porque está en la casilla 0, y 0 > 0 es False. Con in no hace falta pensar en índices.",
+      count: "Con la «a» dice que no está: aparece 3 veces, y 3 == 1 es False. Solo acierta con las letras que aparecen una vez.",
+      igual: "Compara la letra con la palabra entera: \"a\" == \"papaya\" es False. in busca la letra dentro de la palabra."
+    }
+  });
+
+  /* ---------- 5. Parte 4: ¿ganaste? ---------- */
+  var GANA = {
+    bien: function (oculta) { return oculta.indexOf("_") === -1; },
+    con: function (oculta) { return oculta.indexOf("_") !== -1; },
+    igual: function (oculta) { return oculta === "papaya"; },
+    largo: function (oculta, dichas) { return dichas.length === 6; }
+  };
+
+  var parte4 = crearEleccion({
+    id: "paso-ganar",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      var filas = [];
+      var termino = false;
+      ["", "a", "ap", "apy"].forEach(function (dichas, k) {
+        var oculta = armarOculta("papaya", dichas);
+        var etiqueta = (k === 0 ? "Al empezar" : "Tras la " + dichas.slice(-1)) + ": " + oculta.trim();
+        var debe = k === 3;
+        if (termino) {
+          filas.push({ etiqueta: etiqueta, salida: "(el juego ya terminó)", ok: false });
+          return;
+        }
+        var gana = GANA[valor](oculta, dichas);
+        if (gana) termino = true;
+        filas.push({ etiqueta: etiqueta, salida: gana ? "¡Ganaste!" : (debe ? "Letra: … ¡sigue preguntando!" : "Letra: …"), ok: gana === debe });
+      });
+      return filas;
+    },
+    ok: "¡Eso es! Mientras quede un _, falta alguna letra. Cuando no queda ninguno, la palabra está completa: ganaste.",
+    pistas: {
+      con: "Al empezar todo son guiones, y \"_\" in oculta ya es True: ¡gana sin decir ninguna letra! Es al revés: gana cuando no queda ningún guion.",
+      igual: "oculta lleva espacios: \"p a p a y a \" nunca es igual a \"papaya\". El juego no termina nunca.",
+      largo: "dichas tiene 3 letras (a, p, y) y «papaya», 6: las letras repetidas se dicen una sola vez. No termina aunque la palabra ya esté completa."
+    }
+  });
+
+  /* ---------- 6. El juego completo ---------- */
+  var misiones = {};
+  pintarLineas($("t-codigo-lineas"), L);
+  pintarLineas($("r-codigo-lineas"), L);
+
+  function cumplir(m) {
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  crearJuego({
+    prefijo: "t",
+    conCodigo: true,
+    alResultado: cumplir,
+    alTerminar: function (partida) {
+      if (partida.gano) cumplir("gana");
+      var faltan = ["bien", "fallo", "gana"].filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) {
+        Pasos.feedback($("t-fb"), "ok", "¡Misiones cumplidas! Tu juego esconde la palabra, cuenta las vidas y sabe cuándo ganaste.");
+        leccion.desbloquear();
+        return;
+      }
+      var pistas = {
+        bien: "Para recibir «¡Bien!», prueba una vocal: casi todas las frutas tienen alguna «a».",
+        fallo: "Para perder una vida, prueba una letra rara, como la «w».",
+        gana: "Para ganar, empieza por las vocales y piensa qué fruta puede ser."
+      };
+      Pasos.feedback($("t-fb"), "pista", (partida.gano ? "¡Ganaste! " : "Era «" + partida.secreta + "». ") + pistas[faltan[0]] + " Toca «Otra partida».");
+    }
+  });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-oculta": parte1.entrar,
+      "paso-leer": parte2.entrar,
+      "paso-esta": parte3.entrar,
+      "paso-ganar": parte4.entrar
+    },
+    comprobar: {
+      "paso-oculta": parte1.comprobar,
+      "paso-leer": parte2.comprobar,
+      "paso-esta": parte3.comprobar,
+      "paso-ganar": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
