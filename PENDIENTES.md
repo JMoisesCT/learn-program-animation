@@ -9,7 +9,8 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Texto a fondo: van 3 de 5.** Siguen **Buscar en un texto** (`texto-buscar`: `.count()`, `.find()` y su `-1`, `.startswith()` / `.endswith()`, `.isdigit()` antes de `int()`) y el **Proyecto: el ahorcado** (`texto-proyecto`), según el plan de CLAUDE.md, con la cinta (`Cinta.crear`). Al publicar Buscar, añadir «Siguiente» en Métodos que transforman. Después, planear **Errores** en CLAUDE.md y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
+2. **Texto a fondo: van 4 de 5.** Sigue el **Proyecto: el ahorcado** (`texto-proyecto`), según el plan de CLAUDE.md. Al publicarlo, añadir «Siguiente» en Buscar en un texto. Después, planear **Errores** en CLAUDE.md y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas».
+   **Probar con alumnos** si se entiende el `-1` de `.find()` (paso «Antes y después de la @»: sin @, `correo[:-1]` corta la última letra sin dar error).
    **Probar con alumnos** las tijeras de Rebanadas en un móvil de verdad (arrastrar y tocar la cinta; usan `touch-action: none`, así que sobre la cinta la página no se desplaza) y si «los números van en los cortes» se entiende.
    **Detalle visto**: en móvil, las líneas largas se desplazan en vez de caber (la de `print(▢)` en el reto de Métodos, con la cadena elegida dentro; las opciones sí se parten en dos líneas).
    **Recursión, completa (4/4).**
@@ -38,6 +39,20 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-22 · Texto a fondo 4/5: Buscar en un texto
+
+**Lección** `lecciones/texto/buscar/` (`data-leccion="texto-buscar"`), 8 pasos:
+1. `.count()` sobre «banana»: cada aparición se ilumina por turnos (verde y azul, alternados) y el contador sube con ella. Hay que contar algo que aparezca varias veces y algo que no esté. Con «ana» explica que no se solapan (cuenta 1) y con «A», que las mayúsculas cuentan.
+2. `.find()` sobre «ana@web.pe»: la casilla azul revisa de izquierda a derecha hasta encontrar el pedazo (sube en verde) o llega al final y todo se apaga con `-1`. Hay que buscar algo que esté y algo que no.
+3. Antes y después de la @: predecir qué guarda `usuario`, y línea a línea `arroba`, `usuario = correo[:arroba]` y `dominio = correo[arroba + 1:]` caen en sus cajas mientras la cinta marca cada parte. Con «Probar un correo sin @», `.find()` da `-1` y `correo[:-1]` corta la última letra sin error: hay que revisar antes con `in`.
+4. `.startswith()` / `.endswith()` sobre «playa.jpg»: se comparan solo las casillas del principio o del final (verde si coinciden, naranja si no) y sale un chip `True`/`False`. Con «ya» (está, pero en el medio) remite a `in`; con «.JPG», a las mayúsculas.
+5. `.isdigit()` antes de `int()`: una consola pide la edad; dígitos en verde y lo demás en naranja. Explica el espacio, el signo «-», el punto y el `ValueError` que daría `int()` sin el `if`.
+6. Volver a preguntar: `while True` con `input().strip()`, `.isdigit()` y `break` (con `BucleInput`). Hay que ver al menos un rechazo antes del número.
+7. Reto: qué condición acepta solo celulares de 9 dígitos que empiezan con 9. Cuatro pruebas con el chip de cada parte del `and`; las trampas: sin `len`, sin `.isdigit()` y `find("9") != -1` en vez de `.startswith("9")`.
+8. Resumen.
+
+Portada y botón «Siguiente» en Métodos que transforman. Probado con Playwright en 1280 y 390 px, reanudando en cada paso y con movimiento reducido: sin errores.
 
 ### 2026-10-21 · Texto a fondo 3/5: Métodos que transforman
 
