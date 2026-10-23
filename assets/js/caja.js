@@ -5,8 +5,13 @@
        <code class="caja__nombre">edad</code>
      </div>
 
-   Caja.poner(cajaEl, valor)          el valor viejo sale volando y entra el nuevo; si en el paso
+   Caja.poner(cajaEl, valor, origen)  el valor viejo sale volando y entra el nuevo; si en el paso
                                       hay una línea de código ejecutándose, viaja desde ella
+                                      (o desde `origen`, un elemento o rectángulo, si se indica:
+                                      p. ej. el argumento de la llamada para un parámetro)
+                                      Si se crean varias cajas en el mismo paso, añadirlas todas
+                                      antes de poner los valores: el vuelo sigue a la caja si se
+                                      mueve, pero así va derecho a su lugar.
    Caja.actualizar(cajaEl, valor)     cambia el valor con un pequeño pulso (para sliders)
    Caja.vaciar(cajaEl)
 */
@@ -28,7 +33,7 @@
     el.addEventListener("animationend", function () { el.remove(); }, { once: true });
   }
 
-  function poner(caja, valor) {
+  function poner(caja, valor, origen) {
     var viejo = valorActual(caja);
     if (viejo) {
       if (viejo.classList.contains("caja__valor--vacia")) {
@@ -44,10 +49,13 @@
     nuevo.textContent = String(valor);
     cuerpo(caja).appendChild(nuevo);
 
-    if (window.Codigo && Codigo.volarDesdeLinea) {
-      Codigo.volarDesdeLinea(caja, nuevo, String(valor), "caja__valor", function () {
-        nuevo.classList.add("caja__valor--pulso");
-      });
+    function llegar() { nuevo.classList.add("caja__valor--pulso"); }
+    // La copia que vuela va fuera de la caja: lleva su color a mano
+    var clase = "caja__valor" + (caja.classList.contains("caja--acento") ? " vuelo--acento" : "");
+    if (window.Codigo && origen && Codigo.volar) {
+      Codigo.volar(origen, nuevo, String(valor), clase, llegar);
+    } else if (window.Codigo && Codigo.volarDesdeLinea) {
+      Codigo.volarDesdeLinea(caja, nuevo, String(valor), clase, llegar);
     } else {
       nuevo.classList.add("caja__valor--entrando");
     }
