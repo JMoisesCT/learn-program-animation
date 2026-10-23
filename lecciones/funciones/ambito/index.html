@@ -34,8 +34,11 @@
     .zona .caja { gap: var(--esp-1); }
     .zona .caja__cuerpo { width: 5.5rem; height: 4.25rem; padding-bottom: var(--esp-2); }
     .zona .caja__valor { max-width: 5rem; min-width: 2.5rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
-    .caja--nace { animation: caja-nace 420ms var(--curva-rebote) both; }
-    @keyframes caja-nace { from { transform: scale(0.4); opacity: 0; } }
+    /* La caja aparece sin moverse (su valor llega volando a ella); solo su nombre da un salto */
+    .caja--nace { animation: caja-nace 300ms ease both; }
+    .caja--nace .caja__nombre { animation: nombre-nace 420ms var(--curva-rebote) both; }
+    @keyframes caja-nace { from { opacity: 0; } }
+    @keyframes nombre-nace { from { transform: scale(0.4); } }
     @keyframes zona-cierra {
       0% { opacity: 1; }
       100% { opacity: 0.25; transform: scale(0.97); }
@@ -252,8 +255,10 @@
 
   /* ---------- Zonas: cajas del programa y cajas de dentro de la función ----------
      Cada paso de la traza trae el estado completo:
-       { prog: [["pagar", 15]], fun: [["precio", 5]] | null, leer: ["prog" | "fun", nombre], error: true }
-     fun = null: la función no se está ejecutando (si lo estaba, su zona se borra). */
+       { prog: [["pagar", 15]], fun: [["precio", 5]] | null, leer: ["prog" | "fun", nombre], error: true,
+         desde: 4 }
+     fun = null: la función no se está ejecutando (si lo estaba, su zona se borra).
+     desde: línea de la llamada; los parámetros que nacen vuelan desde su argumento. */
   function crearZonas(el) {
     var fn = el.getAttribute("data-funcion");
     function zona(clase, titulo, vacia) {
@@ -270,6 +275,7 @@
     }
     return {
       fn: fn,
+      codigo: el.closest(".paso").querySelector(".codigo"),
       prog: zona("zona--programa", "Programa", "Aún no hay variables."),
       fun: zona("zona--funcion", "Dentro de <code>" + fn + "()</code>", "Todavía no se ha llamado a " + fn + "()."),
       abierta: false,
@@ -284,19 +290,17 @@
     return caja;
   }
 
-  function sincronizar(zona, lista, acento) {
+  /* lineaOrigen: (opcional) la línea de donde salen los valores nuevos; cada uno vuela desde
+     la pieza con su valor (un 5) o con su nombre (el argumento x de cambiar(x)) */
+  function sincronizar(zona, lista, acento, lineaOrigen) {
     var quedan = {};
+    // Primero las cajas, todas en su lugar: si no, cada valor vuela adonde estaba su caja
+    // antes de que llegaran las demás
     lista.forEach(function (par) {
       var nombre = par[0];
-      var valor = String(par[1]);
-      var caja = zona.cajas[nombre];
-      if (!caja) {
-        caja = zona.cajas[nombre] = crearCaja(nombre, acento);
-        zona.cont.appendChild(caja);
-      }
-      if (caja.getAttribute("data-valor") !== valor) {
-        Caja.poner(caja, valor);
-        caja.setAttribute("data-valor", valor);
+      if (!zona.cajas[nombre]) {
+        zona.cajas[nombre] = crearCaja(nombre, acento);
+        zona.cont.appendChild(zona.cajas[nombre]);
       }
       quedan[nombre] = true;
     });
@@ -306,6 +310,14 @@
       delete zona.cajas[n];
     });
     zona.vacia.hidden = lista.length > 0;
+    // Después, los valores
+    lista.forEach(function (par) {
+      var caja = zona.cajas[par[0]];
+      var valor = String(par[1]);
+      if (caja.getAttribute("data-valor") === valor) return;
+      Caja.poner(caja, valor, lineaOrigen ? Codigo.piezaEnLinea(lineaOrigen, [valor, par[0]]) : undefined);
+      caja.setAttribute("data-valor", valor);
+    });
   }
 
   function terminarCierre(z) {
@@ -322,7 +334,7 @@
       if (!z.abierta) z.fun.vacia.textContent = "Recién abierta: aún no hay cajas.";
       z.abierta = true;
       z.fun.raiz.classList.add("zona--activa");
-      sincronizar(z.fun, e.fun, true);
+      sincronizar(z.fun, e.fun, true, e.desde !== undefined ? z.codigo.querySelectorAll(".linea")[e.desde] : null);
     } else if (z.abierta) {
       // La función terminó: su zona se apaga y sus cajas se borran
       z.abierta = false;
@@ -353,7 +365,7 @@
       var e = p.estado || {};
       if (e.prog) prog = e.prog;
       if (e.fun !== undefined) fun = e.fun;
-      p.estado = { prog: prog, fun: fun, leer: e.leer, error: e.error };
+      p.estado = { prog: prog, fun: fun, leer: e.leer, error: e.error, desde: e.desde };
       return p;
     });
   }
@@ -363,8 +375,11 @@
     if (lineas.length) lineas[lineas.length - 1].classList.add("consola__linea--error");
   }
 
+  // Cada ejecución es el programa entero: la consola empieza vacía (si no, al cambiar de versión
+  // quedaba la salida de la otra, p. ej. el NameError encima del 15)
   function conZonas(z, consola) {
-    return function (paso) {
+    return function (paso, i) {
+      if (i === 0) Codigo.consola(consola, []);
       pintarZonas(z, paso.estado);
       if (paso.estado.error) marcarError(consola);
     };
@@ -375,10 +390,10 @@
     return [
       { linea: 0, texto: "Python recuerda la receta <strong>total</strong>. Todavía no crea ninguna caja." },
       { linea: 4, texto: "Llama a <strong>total(5, 3)</strong>: se abre la zona de la función.", estado: { fun: [] } },
-      { linea: 0, texto: "Nacen <strong>precio</strong> y <strong>cantidad</strong>, dentro de la función.", estado: { fun: [["precio", 5], ["cantidad", 3]] } },
+      { linea: 0, texto: "Nacen <strong>precio</strong> y <strong>cantidad</strong>, dentro de la función.", estado: { fun: [["precio", 5], ["cantidad", 3]], desde: 4 } },
       { linea: 1, texto: "Nace <strong>suma</strong>, también dentro: 5 * 3 = 15.", estado: { fun: [["precio", 5], ["cantidad", 3], ["suma", 15]] } },
       { linea: 2, texto: "return entrega el 15 y la función termina: <strong>sus cajas se borran</strong>.", estado: { fun: null } },
-      { linea: 4, texto: "De vuelta en el programa, el 15 se guarda en <strong>pagar</strong>.", estado: { prog: [["pagar", 15]] } }
+      { linea: 4, flecha: true, texto: "De vuelta en el programa, el 15 se guarda en <strong>pagar</strong>.", estado: { prog: [["pagar", 15]] } }
     ];
   }
 
@@ -433,10 +448,10 @@
       { linea: 0, texto: "Python recuerda la receta <strong>cambiar</strong>." },
       { linea: 4, texto: "Nace <strong>x</strong> en el programa, con un 5.", estado: { prog: [["x", 5]] } },
       { linea: 5, texto: "Llama a <strong>cambiar(x)</strong>: le pasa el <strong>valor</strong> de x, un 5.", estado: { fun: [], leer: ["prog", "x"] } },
-      { linea: 0, texto: "Nace <strong>otra x</strong>, dentro de la función, con una copia del 5. Mismo nombre, otra caja.", estado: { fun: [["x", 5]] } },
+      { linea: 0, texto: "Nace <strong>otra x</strong>, dentro de la función, con una copia del 5. Mismo nombre, otra caja.", estado: { fun: [["x", 5]], desde: 5 } },
       { linea: 1, texto: "x = 100 cambia la x de <strong>dentro</strong>. La de fuera ni se entera.", estado: { fun: [["x", 100]] } },
       { linea: 2, salida: "dentro: 100", texto: "Dentro de la función, x es la caja verde: imprime 100.", estado: { leer: ["fun", "x"] } },
-      { linea: 5, texto: "La función termina: la x de dentro se borra.", estado: { fun: null } },
+      { linea: 5, flecha: true, texto: "La función termina: la x de dentro se borra.", estado: { fun: null } },
       { linea: 6, salida: "fuera: 5", texto: "Aquí x es la del programa: <strong>sigue valiendo 5</strong>.", estado: { leer: ["prog", "x"] } }
     ]);
   }
@@ -464,15 +479,15 @@
     var inicio = [
       { linea: 3, texto: "Nace <strong>puntos</strong> en el programa, con 10.", estado: { prog: [["puntos", 10]], fun: null } },
       { linea: 4, texto: "Llama a <strong>subir(puntos)</strong> con el 10.", estado: { fun: [], leer: ["prog", "puntos"] } },
-      { linea: 0, texto: "Nace la <strong>puntos</strong> de dentro, con una copia del 10.", estado: { fun: [["puntos", 10]] } }
+      { linea: 0, texto: "Nace la <strong>puntos</strong> de dentro, con una copia del 10.", estado: { fun: [["puntos", 10]], desde: 4 } }
     ];
     var resto = p4Version === 0 ? [
       { linea: 1, texto: "Suma 1 a la puntos de <strong>dentro</strong>: 11.", estado: { fun: [["puntos", 11]] } },
-      { linea: 4, texto: "La función termina <strong>sin return</strong>: el 11 se borra con su caja.", estado: { fun: null } },
+      { linea: 4, flecha: true, texto: "La función termina <strong>sin return</strong>: el 11 se borra con su caja.", estado: { fun: null } },
       { linea: 5, salida: "10", texto: "La puntos del programa nunca cambió: imprime 10.", estado: { leer: ["prog", "puntos"] } }
     ] : [
       { linea: 1, texto: "return 10 + 1 → <strong>11</strong>: entrega el 11 y la función termina.", estado: { fun: null } },
-      { linea: 4, texto: "El 11 que devolvió se guarda en la <strong>puntos del programa</strong>.", estado: { prog: [["puntos", 11]] } },
+      { linea: 4, flecha: true, texto: "El 11 que devolvió se guarda en la <strong>puntos del programa</strong>.", estado: { prog: [["puntos", 11]] } },
       { linea: 5, salida: "11", texto: "Imprime 11.", estado: { leer: ["prog", "puntos"] } }
     ];
     return acumular(inicio.concat(resto));
@@ -576,6 +591,7 @@
       p2Ultima = b.getAttribute("data-p2");
       trazaP2.cancelar();
       vaciarZonas(z2);
+      Codigo.consola($("p2-consola"), []);
       pintarUltimaP2();
     });
   });
@@ -623,6 +639,7 @@
       p4Version = Number(b.getAttribute("data-p4"));
       trazaP4.cancelar();
       vaciarZonas(z4);
+      Codigo.consola($("p4-consola"), []);
       pintarVersionP4();
     });
   });

@@ -18,17 +18,16 @@ Por orden de prioridad:
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
 3. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
-4. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. En Varios parámetros, Funciones que deciden, Variables locales y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
-5. **Origen del vuelo en los parámetros.** Cuando un parámetro recibe su valor, la línea activa es la del `def`, así que el valor sale de ahí y no del argumento de la llamada. Se podría permitir indicar el origen (p. ej. un elemento opcional en `Caja.poner`) para que salga del argumento.
-6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
+4. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. Variables locales ya también. En Varios parámetros, Funciones que deciden y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
+5. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
    - arrastrar y soltar líneas para ordenarlas (CLAUDE.md lo pide en Pedagogía; hoy solo arrastran «Texto y números» y los discos de las Torres de Hanói);
    - un panel «Tu programa» que crece con cada parte resuelta y que al final se ejecuta.
-7. **Detalles menores vistos al probar:**
+6. **Detalles menores vistos al probar:**
    - en móvil, si una línea es más ancha que la pantalla, la flecha de salto pasa por encima del texto de esa línea;
    - la copia que vuela a la consola es pequeña (tamaño de código, escalada); podría salir algo más grande;
    - la portada no tiene animación (p. ej. el camino de sublecciones se podría ir rellenando).
 
-8. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
+7. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
    - «bombilla» en Combinar condiciones (circuitos de `and`/`or`) → ¿«foco»? (es lo habitual en Perú y México, pero «foco» también significa otra cosa);
    - «Entradas del zoo» en Condiciones anidadas → ¿«zoológico»?;
    - «Ojo:» (6 veces, en Bucles, Salir antes, Recorrer un texto y Condicionales) → ¿«Cuidado:»?;
@@ -40,6 +39,20 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-23 · Arreglo de los vuelos de valores (Variables locales y el resto)
+
+**Problema** (visto en Funciones 5/7 · Variables locales): al llamar a `total(5, 3)`, el 5 y el 3 volaban a lugares distintos de sus cajas y luego saltaban a ellas. Dos causas:
+- las cajas se creaban una a una y el texto «Recién abierta: aún no hay cajas.» seguía ocupando lugar al lanzar el vuelo, así que cada valor apuntaba adonde estaba su caja antes de que llegaran las demás (el 5 aterrizaba 214 px a la izquierda);
+- en general, `Codigo.volar` medía el destino solo al salir: si algo se movía durante el vuelo (se ocultaba el chip True/False de encima, la línea de consola entraba subiendo 8 px, se quitaba una tarjeta de la pila), el valor aterrizaba en el lugar viejo y luego saltaba. Pasaba también en Recorrer un texto, Salir antes, Decidir en cada vuelta, Funciones 1/7, Recursión que devuelve valores y Torres de Hanói.
+
+**Arreglo**:
+- `Codigo.volar` vuelve a medir el destino en cada cuadro: el valor lo sigue y aterriza donde está. La copia toma el tamaño exacto del destino (antes una `caja__valor` pequeña volaba con el `min-width` de la grande) y, si el destino entra con una animación, se mide ya en su lugar final.
+- `Caja.poner(caja, valor, origen)` acepta un origen (elemento o rectángulo) y `Codigo.piezaEnLinea(linea, textos)` da la pieza de una línea con ese texto. Los parámetros ahora salen de su argumento en la llamada, no de la línea del `def`: Variables locales (`desde` en el estado del paso), Funciones 1/7 (`doble(4)`, `saludar("Ana")`), Varios parámetros (de la ficha de cada argumento; el valor por defecto sigue saliendo del `def`) y Funciones que deciden (`aprobado(15)`, `doble(5)`).
+- Variables locales: primero se crean todas las cajas de un paso y después se ponen los valores; la caja que nace ya no se escala (solo su nombre da un salto), para que el valor no vuele a una caja que está cambiando de tamaño; la copia que vuela a una caja verde va en verde; flecha de vuelta (`flecha: true`) al volver de la función.
+- Variables locales, pasos «Desde fuera no se ven» y «Sacar un valor con return»: la consola se vacía al empezar cada ejecución y al cambiar de versión (antes quedaba el `NameError` de `print(suma)` encima del 15 de `print(pagar)`).
+
+Probado con Playwright en todas las lecciones a 1280 y 390 px con un detector que compara dónde aterriza cada copia con su destino: sin errores de JavaScript.
 
 ### 2026-10-22 · Texto a fondo 5/5: Proyecto: el ahorcado
 

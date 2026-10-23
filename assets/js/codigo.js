@@ -24,6 +24,9 @@
        Si la línea tiene una pieza con ese mismo texto (un 12, un "Ana"), sale de ahí.
    Codigo.volar(origen, destinoEl, texto, clase, alLlegar)
        lo mismo, pero sale de `origen` (un elemento o un rectángulo de getBoundingClientRect).
+   Codigo.piezaEnLinea(lineaEl, ["5", "precio"])
+       rectángulo de la primera pieza de la línea con uno de esos textos (o de todo su texto):
+       un origen para Codigo.volar o Caja.poner, p. ej. el argumento de la llamada.
 */
 (function () {
   "use strict";
@@ -215,15 +218,22 @@
     return caja.width ? caja : el.getBoundingClientRect();
   }
 
+  // La pieza de una línea con alguno de esos textos (se busca desde el final), o todo su texto
+  function piezaEnLinea(linea, textos) {
+    textos = [].concat(textos);
+    var piezas = linea.querySelectorAll("span");
+    for (var t = 0; t < textos.length; t++) {
+      for (var k = piezas.length - 1; k >= 0; k--) {
+        if (!piezas[k].children.length && piezas[k].textContent.trim() === String(textos[t])) return piezas[k].getBoundingClientRect();
+      }
+    }
+    return rectDeTexto(linea);
+  }
+
   function origenEnLinea(el, texto) {
     var paso = el.closest(".paso") || document;
     var linea = paso.querySelector(".codigo .linea--activa");
-    if (!linea) return null;
-    var piezas = linea.querySelectorAll("span");
-    for (var k = piezas.length - 1; k >= 0; k--) {
-      if (!piezas[k].children.length && piezas[k].textContent.trim() === texto) return piezas[k].getBoundingClientRect();
-    }
-    return rectDeTexto(linea);
+    return linea ? piezaEnLinea(linea, texto) : null;
   }
 
   function volarDesdeLinea(el, destino, texto, clase, alLlegar) {
@@ -235,10 +245,14 @@
       destino.classList.remove("vuelo-destino");
       if (alLlegar) alLlegar();
     }
+    // Una línea de consola ocupa todo el ancho: se mide solo su texto
+    function medir() { return destino.matches(".consola__linea") ? rectDeTexto(destino) : destino.getBoundingClientRect(); }
     var a = reducir() || !document.body.animate || !origen ? null :
       origen.getBoundingClientRect ? origen.getBoundingClientRect() : origen;
-    // Una línea de consola ocupa todo el ancho: se mide solo su texto
-    var b = destino.matches(".consola__linea") ? rectDeTexto(destino) : destino.getBoundingClientRect();
+    // Si el destino acaba de entrar con una animación (p. ej. una línea de consola que sube),
+    // se mide ya en su lugar final: el vuelo hace de entrada
+    if (a && destino.getAnimations) destino.getAnimations().forEach(function (an) { an.finish(); });
+    var b = medir();
     if (!a || !b.width || (a.bottom < 0 && b.bottom < 0)) { llegar(); return; }
 
     destino.classList.add("vuelo-destino");
@@ -246,29 +260,44 @@
     copia.className = "vuelo " + (clase || "");
     copia.setAttribute("aria-hidden", "true");
     copia.textContent = texto;
-    copia.style.left = b.left + "px";
-    copia.style.top = b.top + "px";
-    copia.style.width = b.width + "px";
-    copia.style.height = b.height + "px";
+    // Con el tamaño exacto del destino, aunque su clase (p. ej. caja__valor) traiga otros límites
+    copia.style.minWidth = "0";
+    copia.style.maxWidth = "none";
     document.body.appendChild(copia);
 
-    // Sale pequeño de la línea, sube en arco y aterriza con su tamaño
-    var dx = a.left + a.width / 2 - (b.left + b.width / 2);
-    var dy = a.top + a.height / 2 - (b.top + b.height / 2);
-    var arco = Math.min(60, 20 + Math.abs(dx) / 6);
-    var vuelo = copia.animate([
-      { transform: "translate(" + dx + "px, " + dy + "px) scale(0.55)", opacity: 0.3 },
-      { transform: "translate(" + dx / 2 + "px, " + (dy / 2 - arco) + "px) scale(0.85)", opacity: 1, offset: 0.5 },
-      { transform: "none", opacity: 1 }
-    ], { duration: 560, easing: "cubic-bezier(0.45, 0, 0.25, 1)" });
-    vuelo.onfinish = vuelo.oncancel = function () {
+    // Sale pequeño de la línea, sube en arco y aterriza con su tamaño. El destino se vuelve a
+    // medir en cada cuadro: si se mueve mientras tanto (aparece otra caja al lado, se oculta un
+    // chip encima), el valor lo sigue y aterriza donde está, no donde estaba al salir.
+    var ax = a.left + a.width / 2;
+    var ay = a.top + a.height / 2;
+    var arco = Math.min(60, 20 + Math.abs(ax - (b.left + b.width / 2)) / 6);
+    var inicio = null;
+    function cuadro(ahora) {
+      if (inicio === null) inicio = ahora;
+      var t = Math.max(0, Math.min(1, (ahora - inicio) / 560));
+      var e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(2 - 2 * t, 3) / 2;
+      var ahoraB = destino.isConnected ? medir() : null;
+      // El destino se fue o se ocultó (p. ej. cambió el paso): el vuelo acaba ahí
+      if (!ahoraB || !ahoraB.width) { copia.remove(); llegar(); return; }
+      b = ahoraB;
+      var dx = (ax - (b.left + b.width / 2)) * (1 - e);
+      var dy = (ay - (b.top + b.height / 2)) * (1 - e) - arco * 4 * e * (1 - e);
+      copia.style.left = b.left + "px";
+      copia.style.top = b.top + "px";
+      copia.style.width = b.width + "px";
+      copia.style.height = b.height + "px";
+      copia.style.opacity = String(Math.min(1, 0.3 + 1.4 * e));
+      copia.style.transform = t < 1 ? "translate(" + dx + "px, " + dy + "px) scale(" + (0.55 + 0.45 * e) + ")" : "none";
+      if (t < 1) { requestAnimationFrame(cuadro); return; }
       copia.remove();
       llegar();
-    };
+    }
+    cuadro(performance.now());
   }
 
   window.Codigo = {
     marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano,
-    salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea, volar: volar
+    salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea, volar: volar,
+    piezaEnLinea: piezaEnLinea
   };
 })();
