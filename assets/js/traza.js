@@ -14,12 +14,17 @@
                                  flecha de salto desde la línea anterior; si no se indica, se
                                  dibuja cuando la ejecución vuelve arriba (otra vuelta, una llamada)
      alPaso: function (paso, i) { … },   pinta el estado (cajas, chips…)
+     pila: p,                             (opcional) la Pila.crear que pinta paso.estado: su código
+                                          y su rótulo reservan el alto que alcanzan en la traza
      alReiniciar: function () { … },
      alTerminar: function () { … },
      intervalo: 800,                      ms entre pasos al reproducir
      repetible: false                     true: al terminar, los botones siguen activos y
                                           vuelven a ejecutar el código sin borrar la consola
    });
+
+   La explicación reserva el alto del texto más largo de la traza, para que los botones
+   de debajo no salten de un paso a otro.
 
    t.reiniciar()   vuelve a generar la traza y empieza desde cero
    t.reproducir()  empieza a avanzar solo (como pulsar el botón de reproducir)
@@ -43,6 +48,13 @@
 
     function terminado() { return i >= pasos.length; }
 
+    function reservar() {
+      if (o.pila) o.pila.reservar(pasos.map(function (p) { return p.estado; }));
+      if (!o.explicacion) return;
+      var textos = [inicio].concat(pasos.map(function (p) { return p.texto || ""; }));
+      Codigo.reservarAlto(o.explicacion, textos, function (copia, texto) { copia.innerHTML = texto; });
+    }
+
     function detener() {
       if (timer) clearInterval(timer);
       timer = null;
@@ -61,6 +73,7 @@
       previa = null;
       Codigo.limpiar(o.codigo);
       if (o.explicacion) o.explicacion.textContent = inicio;
+      reservar();
     }
 
     function reiniciar() {
@@ -78,6 +91,7 @@
         pasos = o.generar();
         i = 0;
         previa = null;
+        reservar();
       }
       var paso = pasos[i];
       i++;

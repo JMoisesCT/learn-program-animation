@@ -27,6 +27,11 @@
    Codigo.piezaEnLinea(lineaEl, ["5", "precio"])
        rectángulo de la primera pieza de la línea con uno de esos textos (o de todo su texto):
        un origen para Codigo.volar o Caja.poner, p. ej. el argumento de la llamada.
+   Codigo.reservarAlto(el, estados, pintar)
+       fija el alto mínimo de el al mayor que alcanza al pasar por todos los estados, para
+       que lo de debajo (los botones) no salte de un paso a otro. pintar(copia, estado) deja
+       una copia invisible de el en ese estado; se vuelve a medir cuando el aparece o cambia
+       de ancho. Traza lo hace con la explicación; Pila, con el código (fichas) y el rótulo.
 */
 (function () {
   "use strict";
@@ -295,9 +300,42 @@
     cuadro(performance.now());
   }
 
+  /* ---------- Alto reservado ---------- */
+  function reservarAlto(el, estados, pintar) {
+    var r = el._reserva;
+    if (!r) {
+      r = el._reserva = {};
+      r.medir = function () {
+        // Oculto (otro paso) no se puede medir: se hace al aparecer
+        if (!el.offsetParent || el.offsetWidth === r.ancho) return;
+        r.ancho = el.offsetWidth;
+        // La copia conserva los id (hay estilos por id) mientras se mide: dura un instante
+        var copia = el.cloneNode(true);
+        copia.removeAttribute("aria-live");
+        copia.setAttribute("aria-hidden", "true");
+        copia.style.cssText = "position: absolute; visibility: hidden; pointer-events: none; min-height: 0; width: " + r.ancho + "px";
+        el.parentNode.insertBefore(copia, el);
+        var alto = 0;
+        r.estados.forEach(function (e) {
+          r.pintar(copia, e);
+          alto = Math.max(alto, copia.offsetHeight);
+        });
+        copia.remove();
+        el.style.minHeight = alto ? alto + "px" : "";
+      };
+      // Al cambiar el alto (el propio min-height) no se repite: solo si cambia el ancho
+      if (window.ResizeObserver) new ResizeObserver(function () { r.medir(); }).observe(el);
+      else window.addEventListener("resize", function () { r.medir(); });
+    }
+    r.estados = estados;
+    r.pintar = pintar;
+    r.ancho = -1;
+    r.medir();
+  }
+
   window.Codigo = {
     marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano,
     salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea, volar: volar,
-    piezaEnLinea: piezaEnLinea
+    piezaEnLinea: piezaEnLinea, reservarAlto: reservarAlto
   };
 })();

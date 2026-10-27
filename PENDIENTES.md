@@ -17,17 +17,24 @@ Por orden de prioridad:
    **Recursión, completa (4/4).**
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
-3. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
-4. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. Variables locales ya también. En Varios parámetros, Funciones que deciden y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
-5. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
+3. **Explicar mejor la vuelta de la recursión** (ideas propuestas, sin hacer; decidir cuáles):
+   - **La fila del cine** como intuición antes del código: «¿en qué fila estoy?» se pregunta hacia adelante (ida) y la respuesta vuelve sumando 1 (vuelta).
+   - **El alumno deshace la pila**: la pila empieza llena y solo se puede tocar la tarjeta de arriba; al tocarla calcula, devuelve y su valor cae en el ▢ de la de abajo.
+   - **Completar el ▢ en cada vuelta**: antes de quitar una tarjeta, elegir qué valor devuelve (`return 4 * ▢`).
+   - **La cuenta que crece y se encoge**: `factorial(4)` → `4 * factorial(3)` → `4 * (3 * (2 * 1))` a la ida, y `4 * (3 * 2)` → `4 * 6` → `24` a la vuelta, al lado de la pila.
+   - **Tabla de seguimiento** (llamada | n | espera | devuelve): las filas se llenan de arriba abajo a la ida y la columna «devuelve» de abajo arriba a la vuelta; sirve para trazar en papel.
+   - **Colores de ida y de vuelta** en la consola y en las flechas, y un paso que pregunte «¿el programa termina al llegar al caso base?» (error común).
+4. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
+5. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. Variables locales ya también. En Varios parámetros, Funciones que deciden y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
+6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
    - arrastrar y soltar líneas para ordenarlas (CLAUDE.md lo pide en Pedagogía; hoy solo arrastran «Texto y números» y los discos de las Torres de Hanói);
    - un panel «Tu programa» que crece con cada parte resuelta y que al final se ejecuta.
-6. **Detalles menores vistos al probar:**
+7. **Detalles menores vistos al probar:**
    - en móvil, si una línea es más ancha que la pantalla, la flecha de salto pasa por encima del texto de esa línea;
    - la copia que vuela a la consola es pequeña (tamaño de código, escalada); podría salir algo más grande;
    - la portada no tiene animación (p. ej. el camino de sublecciones se podría ir rellenando).
 
-7. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
+8. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
    - «bombilla» en Combinar condiciones (circuitos de `and`/`or`) → ¿«foco»? (es lo habitual en Perú y México, pero «foco» también significa otra cosa);
    - «Entradas del zoo» en Condiciones anidadas → ¿«zoológico»?;
    - «Ojo:» (6 veces, en Bucles, Salir antes, Recorrer un texto y Condicionales) → ¿«Cuidado:»?;
@@ -39,6 +46,20 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-27 · Recursión: el código y los botones ya no saltan
+
+**Problema**: en las trazas de Recursión, al tocar «Ejecutar línea» el código y los botones de debajo se movían de un paso a otro (hasta 165 px), así que el botón se escapaba del dedo o del ratón. Tres causas:
+- las fichas de las llamadas pausadas (`n=3`) añaden filas debajo de la línea de la llamada, y el bloque de código crecía y se encogía;
+- el rótulo «Ahora corre» se partía en dos o tres líneas cuando la llamada tenía varias variables (Torres de Hanói) y empujaba el código;
+- la explicación de cada paso tiene un largo distinto (en el móvil, de 1 a 5 líneas).
+
+**Arreglo**:
+- `Codigo.reservarAlto(el, estados, pintar)`: mide una copia invisible de `el` en cada estado y le fija el mayor alto como `min-height`; vuelve a medir cuando aparece o cambia de ancho (`ResizeObserver`).
+- `Traza` reserva el alto de la explicación más larga, y con la opción nueva `pila` (la `Pila.crear` que pinta `paso.estado`) llama a `pila.reservar(estados)`: el código guarda el alto con todas las fichas y el rótulo, el de su llamada más larga. Las 6 trazas de Recursión pasan `pila`.
+- CSS: la explicación queda centrada en su espacio (`align-content: center`); el rótulo se pega al código y su cuerpo va al lado de «Ahora corre:» si hay lugar (en Hanói ocupa dos líneas en vez de tres).
+
+La reserva de la explicación vale para todas las lecciones con `Traza`. Probado con Playwright a 1280 y 390 px: en las 6 trazas de Recursión el botón «Ejecutar línea» se mueve 0–1 px durante toda la ejecución (antes, 55–165 px), y sin errores de JavaScript en ninguna lección.
 
 ### 2026-10-23 · Arreglo de los vuelos de valores (Variables locales y el resto)
 
