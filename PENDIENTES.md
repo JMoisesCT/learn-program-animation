@@ -9,7 +9,7 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Listas: plan listo en CLAUDE.md (8 lecciones).** Lo siguiente: `assets/js/lista.js` (la fila de casilleros) y Listas 1/8 · Muchos valores en una variable; al publicarla, convertir la tarjeta «Próximamente» de la portada en `tarjeta-tema` y añadir «Siguiente» en el Proyecto: el ahorcado. **Errores** se pasó detrás de Listas; falta planear sus sublecciones.
+2. **Listas (1/8 publicada).** Lo siguiente: Listas 2/8 · Agregar y quitar, y el resto del plan de CLAUDE.md; al publicar cada una, su `<li>` en la portada y el «Siguiente» de la anterior (Listas 1/8 aún no tiene). **Errores** se pasó detrás de Listas; falta planear sus sublecciones.
    **Texto a fondo, completo (5/5).**
    **Probar con alumnos** el ahorcado en un móvil de verdad (en el reto, el tablero y las misiones van antes que el programa, que tiene 31 líneas) y si se entiende que repetir una letra que no está quita otra vida (el programa no lo revisa; podría ser una mejora con `if nueva in dichas:` y `continue`).
    **Probar con alumnos** si se entiende el `-1` de `.find()` (paso «Antes y después de la @»: sin @, `correo[:-1]` corta la última letra sin dar error).
@@ -45,6 +45,22 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-27 · Listas 1/8: Muchos valores en una variable
+
+**`assets/js/lista.js`** (`Lista.crear`) y sus estilos (`.lista` en `base.css`): la lista como fila de casilleros con el índice encima (y el negativo debajo, opcional), corchetes en los bordes de la fila (nunca quedan solos en otra fila) y etiquetas con el nombre. Los textos se ven con comillas y en verde. Anima `cambiar`, `agregar`, `insertar`, `quitar` y `reordenar` (los casilleros que se quedan se deslizan a su lugar nuevo); una lista de listas se ve como cuadrícula. `Lista.python` da lo que imprime `print`.
+
+**Lección** `lecciones/listas/` (`data-leccion="listas"`), 8 pasos:
+1. Cinco notas, cinco variables: cinco cajas `nota1` … `nota5`; con «Juntar en una lista», el código pasa a `notas = [14, 9, 17, 11, 6]` y cada nota vuela de su caja a su casillero.
+2. Cada casillero tiene su número: un control mueve el índice de `print(notas[i])`; hay que encontrar la primera y la última.
+3. Lo mismo que en un texto: sin los números a la vista, predecir `len(notas)`, `notas[-1]` y `notas[5]` (IndexError).
+4. Un nombre entero en cada casillero: `palabra[1]` en la cinta de `"Ana"` frente a `alumnos[1]` y `len(alumnos)` en la lista (la trampa: 12 letras).
+5. Cambiar un casillero: `notas[1] = 12` (el 9 sale y entra el 12) frente a `palabra[0] = "M"` (TypeError). Hay que probar los dos.
+6. Una por una: `for nota in notas` con la caja `nota` y `17 in notas`, línea a línea.
+7. Reto: corregir la nota de Sofía con dos listas en el mismo orden (`notas[2] = 18`); las trampas: `notas[3]` (contar desde 1), `notas[17]` (la nota en vez del índice) y `notas = 18` (se pierde la lista).
+8. Resumen.
+
+Portada: Listas pasa a `tarjeta-tema` con su primera lección, y una tarjeta «Próximamente» para Errores. Botón «Siguiente: Listas» en el Proyecto: el ahorcado. Probado con Playwright a 1280 y 390 px: sin errores de JavaScript.
 
 ### 2026-10-27 · Plan de Listas
 
