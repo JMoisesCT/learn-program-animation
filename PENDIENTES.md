@@ -46,6 +46,20 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 6/8: Dos nombres, una lista
+
+**Lección** `lecciones/listas/referencias/` (`data-leccion="listas-referencias"`), 8 pasos:
+1. Con números, dos cajas: `b = a` copia el 5 y cambiar `b` no toca `a`.
+2. ¿Y con una lista?: predecir qué imprime `print(a)` tras `b = a` y `b.append(20)`; aparece una segunda etiqueta sobre la misma fila.
+3. Una lista, dos etiquetas: cambiar con un nombre y mirar con el otro, en los dos sentidos.
+4. Si quieres otra lista, cópiala: `b = a.copy()` hace una fila nueva y cada una cambia por su lado.
+5. ¿Otro nombre u otra lista?: predecir tres programas (`y = x`, `x.copy()`, `x[:]`).
+6. Una lista que entra en una función: `agregar_nota(notas, 15)` cambia la lista de afuera; `sumar_uno(x)` con un número, no.
+7. Reto: guardar las notas originales con `notas.copy()` antes de corregirlas; trampas `notas`, `notas[1]` y `notas.sort()`.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 5/8: De texto a lista y de vuelta
 
 **Lección** `lecciones/listas/texto/` (`data-leccion="listas-texto"`), 8 pasos:
