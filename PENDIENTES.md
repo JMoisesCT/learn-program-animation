@@ -46,6 +46,20 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 5/8: De texto a lista y de vuelta
+
+**Lección** `lecciones/listas/texto/` (`data-leccion="listas-texto"`), 8 pasos:
+1. Cortar una frase en palabras: `frase.split()` sobre una frase que el alumno cambia; cada palabra vuela de la cinta a su casillero, también con varios espacios seguidos.
+2. ¿Letras o palabras?: predecir `len(frase)`, `len(frase.split())`, `frase.split()[-1]` y `list("sol")`.
+3. Cortar en otro lugar: `"pan, té, ají"` con `.split()`, `.split(",")` y `.split(", ")`.
+4. Limpiar cada pedazo: `cosas[i] = cosas[i].strip()` en un `for i in range(len(cosas))`.
+5. De vuelta a un texto: `sep.join(partes)` con varios separadores, y el `TypeError` con números.
+6. Varios números en una línea: `input().split()` y `notas.append(int(p))`, con la suma al final.
+7. Reto: el día, el mes y el año de `"21/10/2026"` con `fecha.split("/")`; trampas `split()`, `list(fecha)` y `"/".join(fecha)`.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 4/8: Ordenar y buscar
 
 **Lección** `lecciones/listas/ordenar/` (`data-leccion="listas-ordenar"`), 8 pasos:
