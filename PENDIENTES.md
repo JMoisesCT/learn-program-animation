@@ -46,6 +46,19 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 8/8: Proyecto: tres en raya (michi)
+
+**Lección** `lecciones/listas/proyecto/` (`data-leccion="listas-proyecto"`), 7 pasos:
+1. Jugar una partida sin código, tocando el tablero (contra la PC o con otra persona), con la lista `tablero` al lado.
+2. Parte 1 · Poner una ficha: `tablero[f][c] = turno` (trampas: al revés, `tablero[f] = turno` y `==`).
+3. Parte 2 · Leer la fila y la columna: `dato.isdigit() and int(dato) <= 2` (trampas: sin `isdigit`, con `or` y solo `isdigit`).
+4. Parte 3 · ¿Hay tres en línea?: las casillas de la columna k en `gano` (`t[0][k], t[1][k], t[2][k]`).
+5. Parte 4 · Ahora le toca al otro: cambiar el turno con `if`/`else` (trampas: dos `if` separados, solo un `print` y `turno = "O"`).
+6. Reto: el programa completo (48 líneas) con `BucleInput` y cuatro misiones: ganar con una columna, con una diagonal, intentar una casilla ocupada y llegar a un empate.
+7. Resumen con el programa completo.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 7/8: Listas dentro de listas
 
 **Lección** `lecciones/listas/anidadas/` (`data-leccion="listas-anidadas"`), 8 pasos:
