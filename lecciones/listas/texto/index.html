@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>De texto a lista y de vuelta · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: pasar de texto a lista y de vuelta en Python. .split() corta una frase en palabras, .split(&quot;,&quot;) con otro separador, .strip() de cada pedazo, &quot; &quot;.join() para pegarlos, list() y leer varios números en una sola línea.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); text-align: center; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .consola__linea--error { color: var(--color-error); }
+    .consola .consola__linea { white-space: pre-wrap; }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    * + .rotulo-cinta { margin-top: var(--esp-3); }
+    .btn code { font-weight: 700; }
+    /* Las frases caben en una fila de la cinta: casillas algo más pequeñas que en Texto a fondo */
+    .cinta { --cinta-hueco: 0.25rem; }
+    .cinta__fila { --c: min(var(--cinta-max), max(1.3rem, calc(100cqi / var(--cinta-n, 6) - var(--cinta-hueco)))); }
+
+    /* ---------- Escribir una frase ---------- */
+    .campo--arriba { margin: 0 0 var(--esp-2); }
+    .sugerencias { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin: 0 0 var(--esp-4); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .sugerencias .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); white-space: pre; }
+
+    /* ---------- Elegir y predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); white-space: pre; }
+    .elegir--arriba { margin: 0 0 var(--esp-4); }
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+    .prediccion__visual { margin-top: var(--esp-3); }
+
+    /* ---------- Cinta que se arma con join ---------- */
+    .cinta--armando { position: relative; }
+    .cinta__casilla--oculta .cinta__letra { opacity: 0; }
+    .cinta__casilla--oculta .cinta__indice { opacity: 0; }
+    .destino-pedazo { position: absolute; pointer-events: none; }
+
+    /* ---------- Consola que espera una línea ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .entrada label { font-family: var(--fuente-codigo); font-weight: 700; }
+    .entrada input { flex: 1 1 8rem; min-width: 0; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .zona-notas[hidden] { display: none; }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+    .salida-esperada { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .salida-esperada code { font-weight: 700; color: var(--color-texto); }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .elegir .btn { padding: var(--esp-2) var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-texto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: .split() corta una frase en palabras -->
+    <section class="paso" id="paso-split" data-requiere aria-labelledby="t-split">
+      <span class="paso__etiqueta">Listas 5/8 · De texto a lista y de vuelta</span>
+      <h1 class="paso__titulo" id="t-split">Cortar una frase en palabras</h1>
+      <p>Un texto es una fila de letras. <code>.split()</code> lo corta en los espacios y guarda cada palabra en un casillero de una <strong>lista</strong>. Ejecútalo, y luego prueba una frase con <strong>varios espacios</strong> seguidos.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="campo campo--arriba">
+            <label for="s1-frase">Tu frase</label>
+            <input type="text" id="s1-frase" value="hoy hay sol" maxlength="22" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="sugerencias" role="group" aria-label="Frases para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="hoy   hay sol">hoy   hay sol</button>
+            <button type="button" class="btn btn-secundario" data-valor="  me gusta ">␣␣me gusta␣</button>
+          </div>
+          <pre class="codigo" id="s1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">frase</span> = <span class="tk-texto">"<span id="s1-codigo-frase">hoy hay sol</span>"</span></span><span class="linea"><span class="tk-variable">palabras</span> = <span class="tk-variable">frase</span>.<span class="tk-funcion">split</span>()</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">palabras</span>)</span></code></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">✂ Ejecutar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">frase</p>
+          <div id="s1-cinta"></div>
+          <p class="rotulo-cinta">palabras</p>
+          <div id="s1-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Contar: letras frente a palabras, y list() -->
+    <section class="paso" id="paso-contar" data-requiere aria-labelledby="t-contar">
+      <h2 class="paso__titulo" id="t-contar">¿Letras o palabras?</h2>
+      <p>Con <code>.split()</code> es fácil contar las palabras de una frase. Pero fíjate bien en qué cuenta cada cosa.</p>
+
+      <div class="tarjeta">
+        <p class="rotulo-cinta">frase = "hola a todos"</p>
+        <div id="s2-cinta"></div>
+        <div id="s2-zona-lista" hidden>
+          <p class="rotulo-cinta">frase.split()</p>
+          <div id="s2-lista"></div>
+        </div>
+        <ol class="predicciones" id="s2-predicciones">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">len(frase)</code>
+              <div class="elegir" role="group" aria-label="Respuesta para len(frase)">
+                <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+                <button type="button" class="btn btn-secundario" data-valor="10" aria-pressed="false">10</button>
+                <button type="button" class="btn btn-secundario" data-valor="12" aria-pressed="false">12</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">len(frase.split())</code>
+              <div class="elegir" role="group" aria-label="Respuesta para len(frase.split())">
+                <button type="button" class="btn btn-secundario" data-valor="12" aria-pressed="false">12</button>
+                <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+                <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">frase.split()[-1]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para frase.split()[-1]">
+                <button type="button" class="btn btn-secundario" data-valor="s" aria-pressed="false">"s"</button>
+                <button type="button" class="btn btn-secundario" data-valor="todos" aria-pressed="false">"todos"</button>
+                <button type="button" class="btn btn-secundario" data-valor="hola" aria-pressed="false">"hola"</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">list("sol")</code>
+              <div class="elegir" role="group" aria-label="Respuesta para list(&quot;sol&quot;)">
+                <button type="button" class="btn btn-secundario" data-valor="uno" aria-pressed="false">['sol']</button>
+                <button type="button" class="btn btn-secundario" data-valor="letras" aria-pressed="false">['s', 'o', 'l']</button>
+              </div>
+            </div>
+            <div class="prediccion__visual" id="s2-sol" hidden>
+              <div id="s2-sol-cinta"></div>
+              <div id="s2-sol-lista"></div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 3. Otro separador: .split(",") -->
+    <section class="paso" id="paso-separador" data-requiere aria-labelledby="t-separador">
+      <h2 class="paso__titulo" id="t-separador">Cortar en otro lugar</h2>
+      <p>Entre los paréntesis de <code>.split()</code> puedes decir <strong>dónde</strong> cortar. Queremos la lista de compras limpia: <code>['pan', 'té', 'ají']</code>. ¿Con qué separador sale?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--arriba" id="s3-elegir" role="group" aria-label="¿Dónde cortar?">
+            <button type="button" class="btn btn-secundario" data-valor="nada" aria-pressed="false">.split()</button>
+            <button type="button" class="btn btn-secundario" data-valor="coma" aria-pressed="false">.split(",")</button>
+            <button type="button" class="btn btn-secundario" data-valor="coma-espacio" aria-pressed="false">.split(", ")</button>
+          </div>
+          <pre class="codigo" id="s3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">compras</span> = <span class="tk-texto">"pan, té, ají"</span></span><span class="linea"><span class="tk-variable">cosas</span> = <span class="tk-variable">compras</span>.<span class="tk-funcion">split</span>(<span class="tk-texto" id="s3-sep"></span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">cosas</span>)</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">compras</p>
+          <div id="s3-cinta"></div>
+          <p class="rotulo-cinta">cosas</p>
+          <div id="s3-lista"></div>
+          <p class="nota">En los casilleros, <code>␣</code> es un espacio.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Limpiar cada pedazo con .strip() en un for -->
+    <section class="paso" id="paso-limpiar" data-requiere aria-labelledby="t-limpiar">
+      <h2 class="paso__titulo" id="t-limpiar">Limpiar cada pedazo</h2>
+      <p>A veces los espacios no son parejos y ningún separador sirve. Entonces se corta en las comas y se limpia cada casillero con <code>.strip()</code>, uno por uno. Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">datos</span> = <span class="tk-texto">"pan , té,ají "</span></span><span class="linea"><span class="tk-variable">cosas</span> = <span class="tk-variable">datos</span>.<span class="tk-funcion">split</span>(<span class="tk-texto">","</span>)</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">cosas</span>)):</span><span class="linea">    <span class="tk-variable">cosas</span>[<span class="tk-variable">i</span>] = <span class="tk-variable">cosas</span>[<span class="tk-variable">i</span>].<span class="tk-funcion">strip</span>()</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">cosas</span>)</span></code></pre>
+          <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">datos</p>
+          <div id="s4-cinta"></div>
+          <p class="rotulo-cinta">cosas</p>
+          <div id="s4-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. De vuelta: join -->
+    <section class="paso" id="paso-join" data-requiere aria-labelledby="t-join">
+      <h2 class="paso__titulo" id="t-join">De vuelta a un texto</h2>
+      <p><code>.join()</code> hace lo contrario de <code>.split()</code>: pega los casilleros de una lista en un solo texto, con el separador entre cada uno. El separador va <strong>antes</strong> del punto. Prueba dos separadores, y luego con una lista de números.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--arriba" id="s5-elegir" role="group" aria-label="Separador">
+            <button type="button" class="btn btn-secundario" data-valor="/" aria-pressed="false">"/"</button>
+            <button type="button" class="btn btn-secundario" data-valor="-" aria-pressed="false">"-"</button>
+            <button type="button" class="btn btn-secundario" data-valor=" " aria-pressed="false">" "</button>
+            <button type="button" class="btn btn-secundario" data-valor="" aria-pressed="false">""</button>
+          </div>
+          <pre class="codigo" id="s5-codigo" aria-label="Código"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-numeros">▶ Probar con números</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">partes</p>
+          <div id="s5-lista"></div>
+          <p class="rotulo-cinta">fecha</p>
+          <div id="s5-cinta" class="cinta--armando"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Varios números en una sola línea -->
+    <section class="paso" id="paso-numeros" data-requiere aria-labelledby="t-numeros">
+      <h2 class="paso__titulo" id="t-numeros">Varios números en una línea</h2>
+      <p>Con <code>input().split()</code> el usuario escribe todas sus notas en una sola línea. Pero cada pedazo es un <strong>texto</strong>: hay que pasarlo a número con <code>int()</code> antes de sumar. Escribe varias notas separadas por espacios.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">partes</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Notas: "</span>).<span class="tk-funcion">split</span>()</span><span class="linea"><span class="tk-variable">notas</span> = []</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">p</span> <span class="tk-palabra">in</span> <span class="tk-variable">partes</span>:</span><span class="linea">    <span class="tk-variable">notas</span>.<span class="tk-funcion">append</span>(<span class="tk-funcion">int</span>(<span class="tk-variable">p</span>))</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Total:"</span>, <span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>))</span></code></pre>
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Consola</span></div>
+          <div class="entrada" id="s6-fila">
+            <label for="s6-campo">Notas:</label>
+            <input type="text" id="s6-campo" value="14 9 17" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="numeric">
+            <button type="button" class="btn btn-secundario" id="s6-enviar">Enviar ⏎</button>
+          </div>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-otras" hidden>✎ Otras notas</button>
+            <button type="button" class="btn btn-secundario" id="s6-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s6-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="nota" id="s6-espera">Aquí aparecerán las listas cuando envíes tus notas.</p>
+          <div class="zona-notas" id="s6-zona-partes" hidden>
+            <p class="rotulo-cinta">partes</p>
+            <div id="s6-partes"></div>
+          </div>
+          <div class="zona-notas" id="s6-zona-notas" hidden>
+            <p class="rotulo-cinta">notas</p>
+            <div id="s6-notas"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: partir una fecha -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">El día, el mes y el año</h2>
+      <p>En Rebanadas sacaste las partes de una fecha contando posiciones. Con lo de hoy es más fácil. ¿Qué va en el espacio en blanco para que el programa imprima <code>21 10 2026</code>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">fecha</span> = <span class="tk-texto">"21/10/2026"</span></span><span class="linea"><span class="tk-variable">partes</span> = <span class="hueco" id="reto-hueco">?</span></span><span class="linea"><span class="tk-variable">dia</span> = <span class="tk-funcion">int</span>(<span class="tk-variable">partes</span>[<span class="tk-numero">0</span>])</span><span class="linea"><span class="tk-variable">mes</span> = <span class="tk-funcion">int</span>(<span class="tk-variable">partes</span>[<span class="tk-numero">1</span>])</span><span class="linea"><span class="tk-variable">anio</span> = <span class="tk-funcion">int</span>(<span class="tk-variable">partes</span>[<span class="tk-numero">2</span>])</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">dia</span>, <span class="tk-variable">mes</span>, <span class="tk-variable">anio</span>)</span></code></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="split"><span>fecha.split()</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="list"><span>list(fecha)</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="barra"><span>fecha.split("/")</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="join"><span>"/".join(fecha)</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">fecha</p>
+          <div id="reto-cinta"></div>
+          <p class="rotulo-cinta" id="reto-rotulo">partes</p>
+          <div id="reto-lista"></div>
+          <div id="reto-cinta-partes" hidden></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="salida-esperada">Debe imprimir: <code>21 10 2026</code></p>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>.split()</code> corta un texto en una lista de textos; <code>.join()</code> pega una lista de textos en un solo texto.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-texto">"hoy hay sol"</span>.<span class="tk-funcion">split</span>()          <span class="tk-comentario"># ['hoy', 'hay', 'sol']</span></span><span class="linea"><span class="tk-texto">"pan,leche"</span>.<span class="tk-funcion">split</span>(<span class="tk-texto">","</span>)        <span class="tk-comentario"># ['pan', 'leche']</span></span><span class="linea"><span class="tk-funcion">len</span>(<span class="tk-variable">frase</span>.<span class="tk-funcion">split</span>())         <span class="tk-comentario"># cuántas palabras</span></span><span class="linea"><span class="tk-funcion">list</span>(<span class="tk-texto">"sol"</span>)                 <span class="tk-comentario"># ['s', 'o', 'l']</span></span><span class="linea"><span class="tk-texto">"/"</span>.<span class="tk-funcion">join</span>([<span class="tk-texto">"21"</span>, <span class="tk-texto">"10"</span>])    <span class="tk-comentario"># '21/10'</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">p</span> <span class="tk-palabra">in</span> <span class="tk-funcion">input</span>().<span class="tk-funcion">split</span>():</span><span class="linea">    <span class="tk-variable">notas</span>.<span class="tk-funcion">append</span>(<span class="tk-funcion">int</span>(<span class="tk-variable">p</span>))  <span class="tk-comentario"># cada pedazo es texto</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../referencias/index.html">Siguiente: Dos nombres, una lista →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/cinta.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function escapar(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  /* Lo que imprime print: la línea sale volando desde donde se indique */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  /* Recuerda qué casos vio el alumno en cada paso */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* Temporizadores de una animación, para poder cortarla */
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) { ids.push(setTimeout(fn, espera(ms))); },
+      parar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  // Un espacio dentro de un casillero se ve como ␣ (igual que en la cinta)
+  function visible(v) { return typeof v === "string" ? v.replace(/ /g, "␣") : v; }
+
+  /* ---------- Cortar como Python ---------- */
+  // Los pedazos de texto.split(sep): cada uno con dónde empieza (a) y dónde acaba (b) en el texto
+  function pedazos(texto, sep) {
+    var r = [];
+    if (sep === undefined) {
+      var re = /\S+/g, m;
+      while ((m = re.exec(texto))) r.push({ texto: m[0], a: m.index, b: m.index + m[0].length });
+      return r;
+    }
+    var desde = 0, k;
+    while ((k = texto.indexOf(sep, desde)) !== -1) {
+      r.push({ texto: texto.slice(desde, k), a: desde, b: k });
+      desde = k + sep.length;
+    }
+    r.push({ texto: texto.slice(desde), a: desde, b: texto.length });
+    return r;
+  }
+
+  // Qué casillas del texto son separadores (se tiran al cortar)
+  function esSeparador(texto, sep) {
+    var marcas = Array.from(texto).map(function () { return false; });
+    if (sep === undefined) {
+      Array.from(texto).forEach(function (c, i) { marcas[i] = /\s/.test(c); });
+      return marcas;
+    }
+    var desde = 0, k;
+    while ((k = texto.indexOf(sep, desde)) !== -1) {
+      for (var j = k; j < k + sep.length; j++) marcas[j] = true;
+      desde = k + sep.length;
+    }
+    return marcas;
+  }
+
+  // El rectángulo que ocupan las casillas de a hasta b (sin incluirla) en la cinta
+  function rectRango(cinta, a, b) {
+    var primera = cinta.letra(Math.min(a, cinta.largo - 1));
+    var ultima = cinta.letra(Math.max(a, b - 1));
+    if (!primera || !ultima) return cinta.el.getBoundingClientRect();
+    var r1 = primera.getBoundingClientRect();
+    var r2 = ultima.getBoundingClientRect();
+    if (a >= b) return { left: r1.left - 4, right: r1.left + 4, top: r1.top, bottom: r1.bottom, width: 8, height: r1.height };
+    var r = { left: Math.min(r1.left, r2.left), right: Math.max(r1.right, r2.right), top: Math.min(r1.top, r2.top), bottom: Math.max(r1.bottom, r2.bottom) };
+    r.width = r.right - r.left;
+    r.height = r.bottom - r.top;
+    return r;
+  }
+
+  /* La cinta se corta: los separadores se apagan y cada pedazo vuela a su casillero */
+  function animarSplit(o) {
+    var texto = o.texto;
+    var lista = o.lista;
+    var cinta = o.cinta;
+    var partes = pedazos(texto, o.sep);
+    var seps = esSeparador(texto, o.sep);
+    lista.valores([]);
+    cinta.rango(null);
+    cinta.clases(function (i) { return seps[i] ? "cinta__casilla--distinta" : ""; });
+    var k = 0;
+    function siguiente() {
+      if (k >= partes.length) {
+        cinta.rango(null);
+        if (o.alTerminar) o.reloj.luego(o.alTerminar, 450);
+        return;
+      }
+      var p = partes[k];
+      cinta.rango(p.a, p.b);
+      lista.agregar(o.mostrar ? o.mostrar(p.texto) : p.texto, rectRango(cinta, p.a, p.b));
+      k++;
+      o.reloj.luego(siguiente, o.ritmo || 480);
+    }
+    o.reloj.luego(siguiente, 350);
+    return partes.map(function (p) { return p.texto; });
+  }
+
+  /* ---------- 1. .split() ---------- */
+  var cinta1 = Cinta.crear($("s1-cinta"), "hoy hay sol");
+  var lista1 = Lista.crear($("s1-lista"), []);
+  var reloj1 = reloj();
+  var s1 = vistos();
+
+  function frase1() { return $("s1-frase").value; }
+
+  function prepararSplit() {
+    reloj1.parar();
+    var f = frase1();
+    $("s1-codigo-frase").textContent = f;
+    cinta1.texto(f);
+    cinta1.clases(null);
+    cinta1.rango(null);
+    lista1.valores([]);
+    Codigo.limpiar($("s1-codigo"));
+    Codigo.consola($("s1-consola"), []);
+    $("s1-ejecutar").disabled = false;
+  }
+
+  function ejecutarSplit(leccion) {
+    prepararSplit();
+    var f = frase1();
+    if (!f.trim()) {
+      Pasos.feedback($("s1-fb"), "pista", "Escribe al menos una palabra.");
+      return;
+    }
+    $("s1-ejecutar").disabled = true;
+    var codigo = $("s1-codigo");
+    Codigo.marcar(codigo, { activas: [0] });
+    reloj1.luego(function () {
+      Codigo.marcar(codigo, { activas: [1] });
+      var palabras = animarSplit({
+        texto: f, lista: lista1, cinta: cinta1, reloj: reloj1,
+        alTerminar: function () {
+          Codigo.marcar(codigo, { activas: [2] });
+          imprimir($("s1-consola"), Lista.python(palabras), lista1.el);
+          $("s1-ejecutar").disabled = false;
+          revisarSplit(f, palabras, leccion);
+        }
+      });
+    }, 500);
+  }
+
+  function revisarSplit(f, palabras, leccion) {
+    var raros = /\s\s|^\s|\s$/.test(f);
+    s1.marcar(raros ? "espacios" : "normal");
+    var fb = $("s1-fb");
+    var cuantas = palabras.length === 1 ? "1 palabra" : palabras.length + " palabras";
+    if (s1.todos(["normal", "espacios"])) {
+      Pasos.feedback(fb, "ok", ".split() corta donde hay espacios, sin importar cuántos, y los espacios no quedan en ninguna palabra. Cada palabra es un texto en su casillero: " + cuantas + ".");
+      leccion.desbloquear();
+    } else if (raros) {
+      Pasos.feedback(fb, "pista", "¡Los espacios de más desaparecieron! " + cuantas + " y ningún casillero vacío. Ahora prueba una frase normal, con un espacio entre palabras.");
+    } else {
+      Pasos.feedback(fb, "pista", "Cortó en cada espacio: " + cuantas + ". ¿Y con varios espacios seguidos, o al principio? Prueba una de las frases de arriba.");
+    }
+  }
+
+  /* ---------- Predicciones ---------- */
+  function predicciones(filas, datos, alTerminar) {
+    var aciertos = datos.map(function () { return false; });
+    filas.forEach(function (fila, k) {
+      var botones = fila.querySelectorAll("button[data-valor]");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var p = datos[k];
+          var valor = btn.getAttribute("data-valor");
+          var acierta = valor === p.correcta;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+          if (!acierta) return;
+          p.marcar();
+          fila.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) alTerminar();
+        });
+      });
+    });
+  }
+
+  /* ---------- 2. ¿Letras o palabras? ---------- */
+  var FRASE2 = "hola a todos";
+  var cinta2 = Cinta.crear($("s2-cinta"), FRASE2);
+  var lista2 = Lista.crear($("s2-lista"), []);
+  var reloj2 = reloj();
+  var listaSol = null;
+  var cintaSol = null;
+
+  function mostrarLista2() {
+    if (!$("s2-zona-lista").hidden) return;
+    $("s2-zona-lista").hidden = false;
+    animarSplit({ texto: FRASE2, lista: lista2, cinta: cinta2, reloj: reloj2, ritmo: 300 });
+  }
+
+  var datos2 = [
+    {
+      correcta: "12",
+      ok: "len de un texto cuenta sus caracteres, y los espacios también cuentan: 12.",
+      pistas: {
+        "3": "3 son las palabras. Pero frase es un texto: len cuenta sus caracteres.",
+        "10": "10 son las letras sin los espacios. len también cuenta los espacios."
+      },
+      marcar: function () { cinta2.rango(0, FRASE2.length); }
+    },
+    {
+      correcta: "3",
+      ok: "frase.split() es una lista de 3 palabras, y len de una lista cuenta sus casilleros: 3.",
+      pistas: {
+        "12": "12 son los caracteres de la frase. Pero aquí len recibe la lista que da .split().",
+        "2": "2 son los espacios, los cortes. Con 2 cortes salen 3 pedazos."
+      },
+      marcar: function () { cinta2.rango(null); mostrarLista2(); }
+    },
+    {
+      correcta: "todos",
+      ok: "frase.split() es una lista, y [-1] es su último casillero: la palabra \"todos\".",
+      pistas: {
+        s: "\"s\" sería frase[-1], la última letra del texto. Aquí [-1] va después de .split(): el último casillero de la lista.",
+        hola: "\"hola\" es el primer casillero, [0]. -1 es el último."
+      },
+      marcar: function () { mostrarLista2(); reloj2.luego(function () { lista2.marcar(-1); }, 1600); }
+    },
+    {
+      correcta: "letras",
+      ok: "list() pone cada carácter de un texto en su propio casillero: ['s', 'o', 'l']. Para tener la palabra entera en un casillero, sería \"sol\".split().",
+      pistas: {
+        uno: "Eso da \"sol\".split(): no hay espacios, así que queda un solo pedazo. list() separa cada letra."
+      },
+      marcar: function () {
+        $("s2-sol").hidden = false;
+        if (!cintaSol) cintaSol = Cinta.crear($("s2-sol-cinta"), "sol");
+        if (!listaSol) listaSol = Lista.crear($("s2-sol-lista"), []);
+        var k = 0;
+        function siguiente() {
+          if (k >= 3) { cintaSol.marcar(null); return; }
+          cintaSol.marcar(k);
+          listaSol.agregar("sol"[k], cintaSol.letra(k));
+          k++;
+          reloj2.luego(siguiente, 400);
+        }
+        reloj2.luego(siguiente, 200);
+      }
+    }
+  ];
+
+  /* ---------- 3. Otro separador ---------- */
+  var COMPRAS = "pan, té, ají";
+  var SEPARADORES3 = {
+    "nada": { sep: undefined, codigo: "" },
+    "coma": { sep: ",", codigo: '","' },
+    "coma-espacio": { sep: ", ", codigo: '", "' }
+  };
+  var cinta3 = Cinta.crear($("s3-cinta"), COMPRAS);
+  var lista3 = Lista.crear($("s3-lista"), []);
+  var reloj3 = reloj();
+  var s3 = vistos();
+
+  function prepararSeparador() {
+    reloj3.parar();
+    cinta3.clases(null);
+    cinta3.rango(null);
+    lista3.valores([]);
+    Codigo.limpiar($("s3-codigo"));
+    Codigo.consola($("s3-consola"), []);
+  }
+
+  function cortar3(clave, leccion) {
+    prepararSeparador();
+    var op = SEPARADORES3[clave];
+    $("s3-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === clave));
+    });
+    $("s3-sep").textContent = op.codigo;
+    var codigo = $("s3-codigo");
+    Codigo.marcar(codigo, { activas: [1] });
+    var fb = $("s3-fb");
+    Pasos.limpiarFeedback(fb);
+    var cosas = animarSplit({
+      texto: COMPRAS, sep: op.sep, lista: lista3, cinta: cinta3, reloj: reloj3, mostrar: visible,
+      alTerminar: function () {
+        Codigo.marcar(codigo, { activas: [2] });
+        imprimir($("s3-consola"), Lista.python(cosas), lista3.el);
+        s3.marcar(clave);
+        if (clave === "coma-espacio") {
+          lista3.clases(function () { return "lista__casilla--igual"; });
+          Pasos.feedback(fb, "ok", "¡Limpia! El separador puede tener más de un carácter: corta donde hay coma y espacio, y los dos se van.");
+          leccion.desbloquear();
+        } else if (clave === "coma") {
+          lista3.clases(function (i, v) { return v.charAt(0) === "␣" ? "lista__casilla--distinta" : ""; });
+          Pasos.feedback(fb, "pista", "Cortó en las comas, pero el espacio que va después de cada coma quedó al principio de \"␣té\" y \"␣ají\". Prueba otro separador.");
+        } else {
+          lista3.clases(function (i, v) { return v.slice(-1) === "," ? "lista__casilla--distinta" : ""; });
+          Pasos.feedback(fb, "pista", "Sin nada entre los paréntesis, corta en los espacios: las comas quedaron pegadas a \"pan,\" y \"té,\". Prueba otro separador.");
+        }
+      }
+    });
+  }
+
+  /* ---------- 4. Limpiar cada pedazo ---------- */
+  var DATOS4 = "pan , té,ají ";
+  var COSAS4 = pedazos(DATOS4, ",").map(function (p) { return p.texto; });
+  var cinta4 = Cinta.crear($("s4-cinta"), DATOS4);
+  var lista4 = Lista.crear($("s4-lista"), []);
+  var reloj4 = reloj();
+
+  function trazaLimpiar() {
+    var pasos = [
+      { linea: 0, texto: "<code>datos</code> trae espacios de más, en lugares distintos." },
+      { linea: 1, cortar: true, texto: "Se corta en las comas: 3 pedazos, algunos con espacios (<code>␣</code>) en los bordes." }
+    ];
+    COSAS4.forEach(function (c, k) {
+      var limpio = c.trim();
+      pasos.push({ linea: 2, k: k, texto: (k === 0 ? "<code>i</code> empieza en " : "Otra vuelta: <code>i</code> vale ") + "<strong>" + k + "</strong>." });
+      pasos.push({
+        linea: 3, k: k, limpio: limpio,
+        texto: "<code>cosas[" + k + "].strip()</code> quita los espacios de los bordes, y el resultado <strong>vuelve a su casillero</strong>: <code>\"" + escapar(limpio) + "\"</code>."
+      });
+    });
+    pasos.push({ linea: 2, fin: true, texto: "<code>i</code> ya pasó por los 3 casilleros: el bucle termina." });
+    pasos.push({ linea: 4, salida: Lista.python(COSAS4.map(function (c) { return c.trim(); })), texto: "La lista quedó limpia." });
+    return pasos;
+  }
+
+  /* ---------- 5. join ---------- */
+  var PARTES5 = ["21", "10", "2026"];
+  var NUMEROS5 = [21, 10, 2026];
+  var lista5 = Lista.crear($("s5-lista"), PARTES5);
+  var cinta5 = Cinta.crear($("s5-cinta"), "");
+  var reloj5 = reloj();
+  var s5 = vistos();
+  var separador5 = "/";
+  var corrida5 = 0;
+
+  function codigoJoin(sep, numeros) {
+    var lista = numeros
+      ? NUMEROS5.map(function (n) { return '<span class="tk-numero">' + n + "</span>"; })
+      : PARTES5.map(function (t) { return '<span class="tk-texto">"' + t + '"</span>'; });
+    return "<code>" +
+      '<span class="linea"><span class="tk-variable">partes</span> = [' + lista.join(", ") + "]</span>" +
+      '<span class="linea"><span class="tk-variable">fecha</span> = <span class="tk-texto">"' + escapar(sep) + '"</span>.<span class="tk-funcion">join</span>(<span class="tk-variable">partes</span>)</span>' +
+      '<span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">fecha</span>)</span></code>';
+  }
+
+  function prepararJoin(sep, numeros) {
+    reloj5.parar();
+    corrida5++;
+    separador5 = sep;
+    $("s5-codigo").innerHTML = codigoJoin(sep, numeros);
+    $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(!numeros && b.getAttribute("data-valor") === sep));
+    });
+    lista5.valores(numeros ? NUMEROS5 : PARTES5);
+    lista5.clases(null);
+    cinta5.texto("");
+    cinta5.el.querySelectorAll(".destino-pedazo").forEach(function (d) { d.remove(); });
+    Codigo.consola($("s5-consola"), []);
+  }
+
+  /* Cada casillero vuela a su lugar en el texto nuevo; los separadores aparecen en azul */
+  function animarJoin(alTerminar) {
+    var sep = separador5;
+    var resultado = PARTES5.join(sep);
+    cinta5.texto(resultado);
+    var n = resultado.length;
+    for (var i = 0; i < n; i++) cinta5.casilla(i).classList.add("cinta__casilla--oculta");
+    cinta5.clases(function (i) { return esSeparador(resultado, sep || undefined)[i] && sep ? "cinta__casilla--cambio" : ""; });
+    var rangos = [];
+    var pos = 0;
+    PARTES5.forEach(function (p) {
+      rangos.push({ a: pos, b: pos + p.length });
+      pos += p.length + sep.length;
+    });
+    var k = 0;
+    var esta = corrida5;
+    function mostrar(a, b) {
+      if (esta !== corrida5) return;   // ya empezó otra ejecución
+      for (var j = a; j < b; j++) {
+        var c = cinta5.casilla(j);
+        if (c) c.classList.remove("cinta__casilla--oculta");
+      }
+    }
+    function siguiente() {
+      if (k >= rangos.length) { reloj5.luego(alTerminar, 300); return; }
+      var r = rangos[k];
+      var base = cinta5.el.getBoundingClientRect();
+      var caja = rectRango(cinta5, r.a, r.b);
+      var destino = document.createElement("span");
+      destino.className = "destino-pedazo";
+      destino.style.left = (caja.left - base.left) + "px";
+      destino.style.top = (caja.top - base.top) + "px";
+      destino.style.width = caja.width + "px";
+      destino.style.height = caja.height + "px";
+      cinta5.el.appendChild(destino);
+      var origen = lista5.valor(k);
+      lista5.marcar(k);
+      var actual = k;
+      Codigo.volar(origen, destino, PARTES5[k], "vuelo--salida", function () {
+        destino.remove();
+        if (esta !== corrida5) return;
+        mostrar(r.a, r.b);
+        // El separador entra después de cada pedazo, menos del último
+        if (actual < rangos.length - 1) reloj5.luego(function () { mostrar(r.b, r.b + sep.length); }, 150);
+      });
+      k++;
+      reloj5.luego(siguiente, 750);
+    }
+    siguiente();
+  }
+
+  function ejecutarJoin(sep, leccion) {
+    prepararJoin(sep, false);
+    var codigo = $("s5-codigo");
+    Codigo.marcar(codigo, { activas: [1] });
+    $("s5-numeros").disabled = true;
+    animarJoin(function () {
+      lista5.marcar(null);
+      Codigo.marcar(codigo, { activas: [2] });
+      imprimir($("s5-consola"), PARTES5.join(sep), cinta5.el);
+      $("s5-numeros").disabled = false;
+      s5.marcar("sep:" + sep);
+      revisarJoin(leccion, sep === "" ? "Con \"\" no hay nada entre los pedazos: quedan pegados, \"21102026\"." : "Entre cada par de casilleros quedó un \"" + sep + "\": " + PARTES5.join(sep) + ".");
+    });
+  }
+
+  function ejecutarJoinNumeros(leccion) {
+    prepararJoin(separador5, true);
+    var codigo = $("s5-codigo");
+    Codigo.marcar(codigo, { activas: [1] });
+    lista5.marcar(0);
+    lista5.clases(function () { return "lista__casilla--distinta"; });
+    imprimir($("s5-consola"), "TypeError: sequence item 0: expected str instance, int found", null, true);
+    s5.marcar("numeros");
+    revisarJoin(leccion, "Error: .join() solo pega textos, y el casillero 0 tiene el número 21 («se esperaba un texto, llegó un int»). Habría que pasar cada número a texto con str().");
+  }
+
+  function revisarJoin(leccion, texto) {
+    var separadores = ["/", "-", " ", ""].filter(function (s) { return s5.tiene("sep:" + s); }).length;
+    var fb = $("s5-fb");
+    if (separadores >= 2 && s5.tiene("numeros")) {
+      Pasos.feedback(fb, "ok", texto + " .join() es el viaje de vuelta: de una lista de textos a un solo texto, con el separador que tú elijas.");
+      leccion.desbloquear();
+    } else if (separadores < 2) {
+      Pasos.feedback(fb, s5.tiene("numeros") ? "pista" : "ok", texto + " Prueba otro separador.");
+    } else {
+      Pasos.feedback(fb, "ok", texto + " Ahora toca «Probar con números».");
+    }
+  }
+
+  /* ---------- 6. Varios números en una línea ---------- */
+  var listaPartes6 = Lista.crear($("s6-partes"), []);
+  var listaNotas6 = Lista.crear($("s6-notas"), []);
+  var reloj6 = reloj();
+  var texto6 = null;
+
+  function partes6() { return texto6 === null ? [] : texto6.split(/\s+/).filter(Boolean); }
+
+  function trazaNumeros() {
+    var partes = partes6();
+    if (!partes.length) return [];
+    var notas = partes.map(Number);
+    var suma = notas.reduce(function (a, b) { return a + b; }, 0);
+    var pasos = [{
+      linea: 0, partes: true,
+      texto: "<code>input()</code> devuelve el texto <code>\"" + escapar(texto6) + "\"</code> y <code>.split()</code> lo corta en " + partes.length +
+        (partes.length === 1 ? " pedazo" : " pedazos") + ". Son <strong>textos</strong>, no números."
+    }, { linea: 1, vacia: true, texto: "<code>notas</code> empieza como una lista vacía." }];
+    partes.forEach(function (p, k) {
+      pasos.push({ linea: 2, k: k, texto: (k === 0 ? "El <code>for</code> empieza" : "Otra vuelta") + ": <code>p</code> vale <code>\"" + p + "\"</code>, un texto." });
+      pasos.push({ linea: 3, k: k, texto: "<code>int(\"" + p + "\")</code> es el número <strong>" + Number(p) + "</strong>, y <code>.append</code> lo pone al final de <code>notas</code>." });
+    });
+    pasos.push({ linea: 2, fin: true, texto: "No quedan pedazos: el bucle termina." });
+    pasos.push({ linea: 4, salida: "Total: " + suma, total: true, texto: "<code>sum(notas)</code> suma los números: <strong>" + suma + "</strong>." });
+    return pasos;
+  }
+
+  function anotarEntrada() {
+    if (texto6 === null) return;
+    var l = document.createElement("span");
+    l.className = "consola__linea";
+    l.innerHTML = '<span class="registro__pregunta">Notas:</span> <span class="registro__respuesta"></span>';
+    l.querySelector(".registro__respuesta").textContent = texto6;
+    var consola = $("s6-consola");
+    var vacia = consola.querySelector(".consola__vacia");
+    if (vacia) vacia.remove();
+    consola.appendChild(l);
+  }
+
+  function enviarNumeros() {
+    var valor = $("s6-campo").value.trim();
+    var fb = $("s6-fb");
+    if (!valor) { Pasos.feedback(fb, "pista", "Escribe algunas notas, por ejemplo: 14 9 17"); return; }
+    var trozos = valor.split(/\s+/);
+    if (trozos.some(function (t) { return !/^\d+$/.test(t); })) {
+      Pasos.feedback(fb, "pista", /,/.test(valor)
+        ? "Sepáralas con espacios, no con comas: .split() sin nada corta en los espacios."
+        : "Escribe solo números enteros separados por espacios: int() no puede con «" + trozos.filter(function (t) { return !/^\d+$/.test(t); })[0] + "».");
+      return;
+    }
+    if (trozos.length > 6) { Pasos.feedback(fb, "pista", "Con hasta 6 notas basta para verlo."); return; }
+    Pasos.limpiarFeedback(fb);
+    texto6 = valor;
+    $("s6-fila").hidden = true;
+    $("s6-otras").hidden = false;
+    trazaNum.reiniciar();
+    trazaNum.reproducir();
+  }
+
+  function otrasNotas() {
+    trazaNum.detener();
+    texto6 = null;
+    trazaNum.reiniciar();
+    bloquear6();
+    $("s6-fila").hidden = false;
+    $("s6-otras").hidden = true;
+    $("s6-campo").focus();
+    $("s6-campo").select();
+  }
+
+  function bloquear6() {
+    $("s6-ejecutar").disabled = true;
+    $("s6-reproducir").disabled = true;
+    $("s6-explicacion").textContent = "Escribe tus notas en la consola y toca «Enviar».";
+  }
+
+  /* ---------- 7. Reto: partir una fecha ---------- */
+  var FECHA = "21/10/2026";
+  var cintaReto = Cinta.crear($("reto-cinta"), FECHA);
+  var listaReto = Lista.crear($("reto-lista"), []);
+  var cintaPartesReto = Cinta.crear($("reto-cinta-partes"), "");
+  var relojReto = reloj();
+
+  // Lo que hace el programa con cada opción: partes, y lo que imprime o el error
+  function correrReto(valor) {
+    var partes;
+    if (valor === "split") partes = [FECHA];
+    else if (valor === "list") partes = Array.from(FECHA);
+    else if (valor === "barra") partes = FECHA.split("/");
+    else partes = Array.from(FECHA).join("/");
+    var nums = [];
+    for (var k = 0; k < 3; k++) {
+      var t = partes[k];
+      if (!/^\d+$/.test(t)) return { partes: partes, error: "ValueError: invalid literal for int() with base 10: '" + t + "'", linea: 2 + k };
+      nums.push(Number(t));
+    }
+    return { partes: partes, salida: nums.join(" ") };
+  }
+
+  var pistasReto = {
+    split: "Sin nada entre los paréntesis, .split() corta en los espacios, y la fecha no tiene: queda un solo pedazo, \"21/10/2026\", e int() no puede con él.",
+    list: "list() pone cada carácter en su casillero: partes[0] es \"2\", partes[1] es \"1\" y partes[2] es \"/\". int(\"/\") da error.",
+    join: ".join() va al revés: pega cosas en un texto. \"/\".join(fecha) mete una barra entre cada letra, y partes queda como un texto: partes[1] es \"/\"."
+  };
+
+  function limpiarReto() {
+    relojReto.parar();
+    cintaReto.clases(null);
+    cintaReto.rango(null);
+    listaReto.valores([]);
+    $("reto-lista").hidden = false;
+    $("reto-cinta-partes").hidden = true;
+    $("reto-rotulo").textContent = "partes";
+    Codigo.limpiar($("reto-codigo"));
+    Codigo.consola($("reto-consola"), []);
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  function mostrarResultadoReto(r) {
+    var codigo = $("reto-codigo");
+    if (r.error) {
+      Codigo.marcar(codigo, { activas: [r.linea] });
+      if (Array.isArray(r.partes)) listaReto.marcar(r.linea - 2);
+      else cintaPartesReto.marcar(r.linea - 2);
+      imprimir($("reto-consola"), r.error, null, true);
+      return;
+    }
+    Codigo.marcar(codigo, { activas: [5] });
+    listaReto.clases(function () { return "lista__casilla--igual"; });
+    imprimir($("reto-consola"), r.salida, listaReto.el);
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto();
+    var r = correrReto(marcada.value);
+    Codigo.marcar($("reto-codigo"), { activas: [1] });
+    if (Array.isArray(r.partes)) {
+      if (marcada.value === "list") {
+        // Cada carácter, a su casillero
+        var k = 0;
+        (function siguiente() {
+          if (k >= r.partes.length) { relojReto.luego(function () { cintaReto.marcar(null); mostrarResultadoReto(r); }, 300); return; }
+          cintaReto.marcar(k);
+          listaReto.agregar(r.partes[k], cintaReto.letra(k));
+          k++;
+          relojReto.luego(siguiente, 160);
+        })();
+      } else {
+        animarSplit({
+          texto: FECHA, sep: marcada.value === "barra" ? "/" : undefined, lista: listaReto, cinta: cintaReto, reloj: relojReto, ritmo: 380,
+          alTerminar: function () { mostrarResultadoReto(r); }
+        });
+      }
+    } else {
+      $("reto-lista").hidden = true;
+      $("reto-cinta-partes").hidden = false;
+      $("reto-rotulo").textContent = "partes (¡es un texto!)";
+      cintaPartesReto.texto(r.partes);
+      cintaPartesReto.clases(function (i, c) { return c === "/" ? "cinta__casilla--cambio" : ""; });
+      relojReto.luego(function () { mostrarResultadoReto(r); }, 500);
+    }
+
+    if (marcada.value === "barra") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! .split(\"/\") corta en las barras: [\"21\", \"10\", \"2026\"]. Cada pedazo es un texto, por eso va int() en cada uno. Sin contar posiciones, y sirve aunque el día tenga una sola cifra.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (x) { x.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  var campo1 = $("s1-frase");
+  campo1.addEventListener("input", prepararSplit);
+  campo1.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    ejecutarSplit(leccion);
+  });
+  document.querySelectorAll("#paso-split .sugerencias [data-valor]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      campo1.value = b.getAttribute("data-valor");
+      ejecutarSplit(leccion);
+    });
+  });
+  $("s1-ejecutar").addEventListener("click", function () { ejecutarSplit(leccion); });
+
+  predicciones(Array.prototype.slice.call(document.querySelectorAll("#s2-predicciones .prediccion")), datos2, function () {
+    Pasos.feedback($("s2-fb"), "ok", "len(frase) cuenta caracteres; len(frase.split()) cuenta palabras. Y list() separa cada letra.");
+    leccion.desbloquear();
+  });
+
+  $("s3-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { cortar3(b.getAttribute("data-valor"), leccion); });
+  });
+
+  var trazaLimp = Traza.crear({
+    codigo: $("s4-codigo"),
+    explicacion: $("s4-explicacion"),
+    consola: $("s4-consola"),
+    ejecutar: $("s4-ejecutar"),
+    reproducir: $("s4-reproducir"),
+    reiniciar: $("s4-reiniciar"),
+    generar: trazaLimpiar,
+    intervalo: 1000,
+    alReiniciar: function () {
+      reloj4.parar();
+      cinta4.clases(null);
+      cinta4.rango(null);
+      lista4.valores([]);
+      Pasos.limpiarFeedback($("s4-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.cortar) {
+        animarSplit({ texto: DATOS4, sep: ",", lista: lista4, cinta: cinta4, reloj: reloj4, mostrar: visible, ritmo: 260 });
+        return;
+      }
+      if (paso.fin) { lista4.marcar(null); return; }
+      if (paso.k === undefined) return;
+      // Si se avanzó antes de que terminara de cortar, la lista se completa de golpe
+      if (paso.k === 0 && paso.linea === 2) { reloj4.parar(); cinta4.rango(null); if (lista4.largo < COSAS4.length) lista4.valores(COSAS4.map(visible)); }
+      lista4.marcar(paso.k);
+      if (paso.limpio !== undefined) {
+        var linea = $("s4-codigo").querySelectorAll(".linea")[3];
+        lista4.cambiar(paso.k, paso.limpio, Codigo.piezaEnLinea(linea, "strip"));
+        lista4.casilla(paso.k).classList.add("lista__casilla--igual");
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s4-fb"), "ok", "Primero se corta y después se limpia cada casillero, con su índice: cosas[i] = cosas[i].strip(). Así no importa cuántos espacios haya.");
+      leccion.desbloquear();
+    }
+  });
+
+  $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { ejecutarJoin(b.getAttribute("data-valor"), leccion); });
+  });
+  $("s5-numeros").addEventListener("click", function () { ejecutarJoinNumeros(leccion); });
+
+  var trazaNum = Traza.crear({
+    codigo: $("s6-codigo"),
+    explicacion: $("s6-explicacion"),
+    consola: $("s6-consola"),
+    ejecutar: $("s6-ejecutar"),
+    reproducir: $("s6-reproducir"),
+    reiniciar: $("s6-reiniciar"),
+    generar: trazaNumeros,
+    intervalo: 950,
+    alReiniciar: function () {
+      reloj6.parar();
+      listaPartes6.valores([]);
+      listaNotas6.valores([]);
+      $("s6-zona-notas").hidden = true;
+      $("s6-zona-partes").hidden = true;
+      $("s6-espera").hidden = texto6 !== null;
+      anotarEntrada();
+    },
+    alPaso: function (paso) {
+      if (paso.partes) {
+        $("s6-zona-partes").hidden = false;
+        var origen = $("s6-consola").querySelector(".registro__respuesta");
+        var trozos = partes6();
+        var k = 0;
+        (function siguiente() {
+          if (k >= trozos.length) return;
+          listaPartes6.agregar(trozos[k], origen);
+          k++;
+          reloj6.luego(siguiente, 140);
+        })();
+        return;
+      }
+      if (paso.vacia) { $("s6-zona-notas").hidden = false; return; }
+      if (paso.fin) { listaPartes6.marcar(null); return; }
+      if (paso.k === undefined) return;
+      if (listaPartes6.largo < partes6().length) { reloj6.parar(); listaPartes6.valores(partes6()); }
+      listaPartes6.marcar(paso.k);
+      if (paso.linea === 3) listaNotas6.agregar(Number(partes6()[paso.k]), listaPartes6.valor(paso.k));
+    },
+    alTerminar: function () {
+      var cuantas = partes6().length;
+      if (cuantas >= 2) {
+        Pasos.feedback($("s6-fb"), "ok", "partes tiene textos (en verde, con comillas) y notas, números. Sin el int(), sum(partes) daría TypeError: no se pueden sumar textos.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s6-fb"), "pista", "Funcionó, pero con una sola nota no se ve la gracia. Toca «Otras notas» y escribe varias, separadas por espacios.");
+      }
+    }
+  });
+  bloquear6();
+  $("s6-enviar").addEventListener("click", enviarNumeros);
+  $("s6-campo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    enviarNumeros();
+  });
+  $("s6-otras").addEventListener("click", otrasNotas);
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial de cada paso
+  prepararSplit();
+  prepararSeparador();
+  $("s3-sep").textContent = '","';
+  prepararJoin("/", false);
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-limpiar": function () { trazaLimp.detener(); },
+      "paso-numeros": function () { trazaNum.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listas dentro de listas · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: listas de listas en Python. Un tablero como cuadrícula, tablero[fila] y tablero[fila][columna], cambiar una casilla y recorrerla con dos for.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .expresion { flex-wrap: wrap; overflow-wrap: anywhere; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); white-space: pre; }
+    .expresion--columna { flex-direction: column; gap: 0; }
+    .consola .consola__linea { white-space: pre-wrap; }
+    .consola__linea--error { color: var(--color-error); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    * + .rotulo-cinta { margin-top: var(--esp-3); }
+
+    /* ---------- 1. Tres filas, una lista ---------- */
+    .filas-sueltas { display: grid; gap: var(--esp-1); }
+    .filas-sueltas--se-van { opacity: 0.25; transition: opacity 600ms ease 900ms; }
+    .contador-vars { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador-vars strong { color: var(--color-texto); }
+
+    /* ---------- Controles ---------- */
+    .control-slider { margin: var(--esp-4) 0 0; }
+    .control-slider label { display: flex; justify-content: space-between; gap: var(--esp-3); font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+    .control-slider--columna output { color: var(--color-acento); }
+    .control-slider--columna input[type="range"] { accent-color: var(--color-acento); }
+
+    /* tablero[i]: la fila entera, marcada (la casilla de tablero[i][j] va además en azul fuerte) */
+    .lista__casilla--fila.lista__casilla--marcada > .lista__interna > .lista__casilla:not(.lista__casilla--marcada):not([data-clase]) > .lista__valor { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .lista--cuadricula .lista__nombres { margin-bottom: var(--esp-3); }
+
+    /* Una fila contada (len del tablero) */
+    .lista__casilla--fila.fila--contada { background: var(--color-acento-suave); }
+    .lista__casilla--fila.fila--contada > .lista__indice--fila { background: var(--color-acento); color: #fff; }
+
+    /* ---------- Predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); white-space: pre; }
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- Recorrer ---------- */
+    .version-elegir { margin: 0 0 var(--esp-4); }
+    .cajas--uno { padding-top: var(--esp-3); }
+    .consola__trozo { display: inline; }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-anidadas">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: tres filas en una lista -->
+    <section class="paso" id="paso-juntar" data-requiere aria-labelledby="t-juntar">
+      <span class="paso__etiqueta">Listas 7/8 · Listas dentro de listas</span>
+      <h1 class="paso__titulo" id="t-juntar">Un tablero en tres filas</h1>
+      <p>Un tablero de tres en raya tiene 3 filas, y cada fila es una lista de 3 casillas. ¿Y si juntamos las tres filas en <strong>una sola lista</strong>? Toca el botón.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-juntar">Juntar en una lista ▸</button>
+            <button type="button" class="btn btn-secundario" id="s1-separar" hidden>↺ Separar otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="filas-sueltas" id="s1-filas"></div>
+          <div id="s1-tablero" hidden></div>
+          <p class="contador-vars" id="s1-contador" aria-live="polite"><strong>3</strong> listas sueltas</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. tablero[i] es una fila entera -->
+    <section class="paso" id="paso-fila" data-requiere aria-labelledby="t-fila">
+      <h2 class="paso__titulo" id="t-fila">Cada casillero es una fila</h2>
+      <p><code>tablero</code> es una lista de 3 casilleros, y en cada casillero hay <strong>otra lista</strong>. Mueve el control y mira qué da <code>tablero[i]</code> en las otras dos filas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"></pre>
+          <div class="control-slider">
+            <label for="s2-i">Fila <output id="s2-i-valor" for="s2-i">1</output></label>
+            <input type="range" id="s2-i" min="0" max="2" step="1" value="1">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-tablero"></div>
+          <div class="expresion expresion--columna" aria-live="polite">
+            <span id="s2-expr">tablero[1]</span>
+            <span class="expresion__flecha" aria-hidden="true">↓</span>
+            <span class="expresion__final" id="s2-valor"></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. tablero[f][c]: primero la fila, luego la columna -->
+    <section class="paso" id="paso-celda" data-requiere aria-labelledby="t-celda">
+      <h2 class="paso__titulo" id="t-celda">Primero la fila, luego la columna</h2>
+      <p>Con dos índices llegas a una casilla: <code>tablero[f]</code> da la fila y <code>[c]</code> elige dentro de ella. Mueve los controles y encuentra las <strong>tres X</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"></pre>
+          <div class="control-slider">
+            <label for="s3-f">Fila <output id="s3-f-valor" for="s3-f">0</output></label>
+            <input type="range" id="s3-f" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="control-slider control-slider--columna">
+            <label for="s3-c">Columna <output id="s3-c-valor" for="s3-c">1</output></label>
+            <input type="range" id="s3-c" min="0" max="2" step="1" value="1">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-tablero"></div>
+          <div class="expresion expresion--columna" aria-live="polite" id="s3-expresion"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Predecir sin números -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">¿Qué da cada una?</h2>
+      <p>Ahora los números no se ven. Cuenta tú las filas y las columnas, desde 0.</p>
+
+      <div class="tarjeta">
+        <p class="rotulo-cinta">tablero</p>
+        <div id="s4-tablero"></div>
+        <ol class="predicciones" id="s4-predicciones">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">len(tablero)</code>
+              <div class="elegir" role="group" aria-label="Respuesta para len(tablero)">
+                <button type="button" class="btn btn-secundario" data-valor="9" aria-pressed="false">9</button>
+                <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+                <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">tablero[2][0]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para tablero[2][0]">
+                <button type="button" class="btn btn-secundario" data-valor="espacio" aria-pressed="false">" "</button>
+                <button type="button" class="btn btn-secundario" data-valor="X" aria-pressed="false">"X"</button>
+                <button type="button" class="btn btn-secundario" data-valor="O" aria-pressed="false">"O"</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">tablero[3][0]</code>
+              <div class="elegir" role="group" aria-label="Respuesta para tablero[3][0]">
+                <button type="button" class="btn btn-secundario" data-valor="O" aria-pressed="false">"O"</button>
+                <button type="button" class="btn btn-secundario" data-valor="espacio" aria-pressed="false">" "</button>
+                <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="consola" id="s4-consola" aria-live="polite" hidden><span class="consola__titulo">Salida</span></div>
+        <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. Cambiar una casilla -->
+    <section class="paso" id="paso-cambiar" data-requiere aria-labelledby="t-cambiar">
+      <h2 class="paso__titulo" id="t-cambiar">Tu jugada</h2>
+      <p>Te toca jugar con la <strong>O</strong>. Como cualquier lista, una fila se puede cambiar: <code>tablero[f][c] = "O"</code>. Elige una casilla <strong>vacía</strong> y ejecuta.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <div id="s5-tablero"></div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"></pre>
+          <div class="control-slider">
+            <label for="s5-f">Fila <output id="s5-f-valor" for="s5-f">0</output></label>
+            <input type="range" id="s5-f" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="control-slider control-slider--columna">
+            <label for="s5-c">Columna <output id="s5-c-valor" for="s5-c">0</output></label>
+            <input type="range" id="s5-c" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-limpiar">↺ Tablero de nuevo</button>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">▶ Ejecutar</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Recorrer con dos for y dibujar -->
+    <section class="paso" id="paso-recorrer" data-requiere aria-labelledby="t-recorrer">
+      <h2 class="paso__titulo" id="t-recorrer">Fila a fila, casilla a casilla</h2>
+      <p>Como en Bucles anidados: el <code>for</code> de fuera toma cada <strong>fila</strong> y el de dentro, cada <strong>casilla</strong> de esa fila. Así se dibuja el tablero. Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir version-elegir" id="s6-elegir" role="group" aria-label="¿Qué versión ejecutar?">
+            <button type="button" class="btn btn-secundario" data-valor="dos" aria-pressed="true">Con dos for</button>
+            <button type="button" class="btn btn-secundario" data-valor="join" aria-pressed="false">Con .join()</button>
+          </div>
+          <pre class="codigo" id="s6-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s6-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">tablero</p>
+          <div id="s6-tablero"></div>
+          <div id="s6-fila"></div>
+          <div class="cajas cajas--uno" id="s6-cajas">
+            <div class="caja caja--acento" id="s6-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">celda</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: ¿dónde están las casillas vacías? -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Dónde puedo jugar?</h2>
+      <p>Este programa recorre el tablero con las <strong>posiciones</strong> (<code>range(len(…))</code>) e imprime la fila y la columna de cada casilla vacía. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Código"></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="cf"><span>tablero[c][f]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="fc"><span>tablero[f][c]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="f"><span>tablero[f]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="0c"><span>tablero[0][c]</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">tablero</p>
+          <div id="reto-tablero"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite" hidden><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Una lista de listas es una cuadrícula: <code>tablero[f]</code> da una fila entera y <code>tablero[f][c]</code>, una casilla. Se recorre con dos <code>for</code>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../proyecto/index.html">Siguiente: Proyecto: tres en raya →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* ---------- Código Python coloreado ---------- */
+  var PALABRAS = /^(for|in|if|else|def|return|True|False|None)$/;
+  var PIEZA = /("[^"\n]*")|(#.*)|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?/g;
+
+  function escapar(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function tk(clase, t) { return '<span class="tk-' + clase + '">' + escapar(t) + "</span>"; }
+
+  function py(linea) {
+    var html = "";
+    var desde = 0;
+    linea.replace(PIEZA, function (todo, texto, comentario, numero, nombre, parentesis, pos) {
+      html += escapar(linea.slice(desde, pos));
+      desde = pos + todo.length;
+      if (texto) html += tk("texto", texto);
+      else if (comentario) html += tk("comentario", comentario);
+      else if (numero) html += tk("numero", numero);
+      else if (PALABRAS.test(nombre)) html += tk("palabra", nombre) + escapar(parentesis || "");
+      else if (parentesis) html += tk("funcion", nombre) + escapar(parentesis);
+      else html += tk("variable", nombre);
+      return todo;
+    });
+    html += escapar(linea.slice(desde));
+    return html.replace("▢", '<span class="hueco" id="reto-hueco">?</span>');
+  }
+
+  function codigo(pre, lineas) {
+    pre.innerHTML = "<code>" + lineas.map(function (l) { return '<span class="linea">' + py(l) + "</span>"; }).join("") + "</code>";
+  }
+
+  /* Cómo se escribe una fila en el código: ["X", "O", " "] */
+  function fila(f) { return Lista.texto(f); }
+
+  /* El tablero escrito en tres líneas, con la primera fila al lado del nombre */
+  function lineasTablero(t) {
+    return t.map(function (f, k) {
+      return (k === 0 ? "tablero = [" : "           ") + fila(f) + (k === t.length - 1 ? "]" : ",");
+    });
+  }
+
+  function copia(t) { return t.map(function (f) { return f.slice(); }); }
+
+  /* Lo que imprime print: la línea sale volando desde donde se indique */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      cuantos: function (claves) { return claves.filter(function (k) { return s[k]; }).length; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* Una lista nueva en el, aunque ya hubiera otra pintada ahí */
+  function nuevaLista(el, valores, opciones) {
+    el.textContent = "";
+    return Lista.crear(el, valores, opciones);
+  }
+
+  // Los casilleros de una fila de la cuadrícula (para hacerla volar entera)
+  function interna(l, f) {
+    var c = l.casilla(f);
+    return c ? c.querySelector(".lista__interna") : null;
+  }
+
+  var TABLERO = [["X", "O", " "], [" ", "X", " "], ["O", " ", "X"]];
+
+  /* ---------- 1. Tres filas, una lista ---------- */
+  var filas1 = [];
+  var tablero1 = null;
+  var juntando = false;
+
+  function separar() {
+    juntando = false;
+    codigo($("s1-codigo"), TABLERO.map(function (f, k) { return "fila" + k + " = " + fila(f); }));
+    var zona = $("s1-filas");
+    zona.textContent = "";
+    zona.hidden = false;
+    zona.classList.remove("filas-sueltas--se-van");
+    filas1 = TABLERO.map(function (f, k) {
+      var el = document.createElement("div");
+      zona.appendChild(el);
+      return Lista.crear(el, f.slice(), { nombres: ["fila" + k] });
+    });
+    $("s1-tablero").hidden = true;
+    $("s1-contador").innerHTML = "<strong>3</strong> listas sueltas";
+    $("s1-juntar").hidden = false;
+    $("s1-separar").hidden = true;
+  }
+
+  function juntar(leccion) {
+    if (juntando) return;
+    juntando = true;
+    $("s1-juntar").hidden = true;
+    codigo($("s1-codigo"), lineasTablero(TABLERO));
+    Codigo.marcar($("s1-codigo"), { activas: [0, 1, 2] });
+    var zona = $("s1-tablero");
+    zona.hidden = false;
+    tablero1 = nuevaLista(zona, copia(TABLERO), { nombres: ["tablero"] });
+    $("s1-contador").innerHTML = "<strong>1</strong> variable: una lista de 3 listas";
+    // Las casillas quedan ocultas hasta que llega su valor
+    TABLERO.forEach(function (f, k) {
+      f.forEach(function (v, c) { tablero1.valor([k, c]).classList.add("vuelo-destino"); });
+    });
+    var k = 0;
+    function siguienteFila() {
+      TABLERO[k].forEach(function (v, c) {
+        var origen = filas1[k].valor(c);
+        var destino = tablero1.valor([k, c]);
+        var rect = origen.getBoundingClientRect();
+        origen.style.visibility = "hidden";
+        Codigo.volar(rect, destino, Lista.texto(v), "lista__valor lista__vuelo", function () {
+          destino.classList.add("lista__valor--pulso");
+        });
+      });
+      k++;
+      if (k < TABLERO.length) { setTimeout(siguienteFila, espera(450)); return; }
+      $("s1-filas").classList.add("filas-sueltas--se-van");
+      setTimeout(function () {
+        $("s1-filas").hidden = true;
+        $("s1-separar").hidden = false;
+        juntando = false;
+        Pasos.feedback($("s1-fb"), "ok", "tablero es una lista de 3 casilleros, y cada casillero guarda una lista: una fila. A la izquierda, el índice de cada fila; arriba, el de cada columna.");
+        leccion.desbloquear();
+      }, espera(1500));
+    }
+    siguienteFila();
+  }
+
+  /* ---------- 2. tablero[i] es una fila entera ---------- */
+  var tablero2 = Lista.crear($("s2-tablero"), copia(TABLERO), { nombres: ["tablero"] });
+  var s2 = vistos();
+  s2.marcar(1);   // la fila que se ve al entrar
+
+  function mostrarFila(i, leccion, conVuelo) {
+    codigo($("s2-codigo"), lineasTablero(TABLERO).concat(["print(tablero[" + i + "])"]));
+    Codigo.marcar($("s2-codigo"), { activas: [3] });
+    $("s2-i-valor").textContent = String(i);
+    $("s2-expr").textContent = "tablero[" + i + "]";
+    $("s2-valor").textContent = fila(TABLERO[i]);
+    tablero2.marcar(i);
+    Codigo.consola($("s2-consola"), []);
+    imprimir($("s2-consola"), Lista.python(TABLERO[i]), conVuelo ? interna(tablero2, i) : null);
+    if (!leccion) return;
+
+    s2.marcar(i);
+    var fb = $("s2-fb");
+    var faltan = 3 - s2.cuantos([0, 1, 2]);
+    if (!faltan) {
+      Pasos.feedback(fb, "ok", "tablero[i] no es una letra ni un número: es una lista entera, la fila i. Y len(tablero) es 3, porque tiene 3 filas.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, "pista", "tablero[" + i + "] es la fila " + i + ": una lista con sus 3 casillas. " +
+        (faltan === 1 ? "Te falta ver una fila." : "Te faltan " + faltan + " filas."));
+    }
+  }
+
+  /* ---------- 3. tablero[f][c] ---------- */
+  var tablero3 = Lista.crear($("s3-tablero"), copia(TABLERO));
+  var s3 = vistos();
+
+  function expresion(el, partes) {
+    el.innerHTML = "";
+    partes.forEach(function (p, k) {
+      if (k > 0) {
+        var flecha = document.createElement("span");
+        flecha.className = "expresion__flecha";
+        flecha.setAttribute("aria-hidden", "true");
+        flecha.textContent = el.classList.contains("expresion--columna") ? "↓" : "→";
+        el.appendChild(flecha);
+      }
+      var s = document.createElement("span");
+      if (k === partes.length - 1) s.className = "expresion__final";
+      s.textContent = p;
+      el.appendChild(s);
+    });
+  }
+
+  function mostrarCelda(leccion) {
+    var f = Number($("s3-f").value);
+    var c = Number($("s3-c").value);
+    var v = TABLERO[f][c];
+    $("s3-f-valor").textContent = String(f);
+    $("s3-c-valor").textContent = String(c);
+    codigo($("s3-codigo"), lineasTablero(TABLERO).concat(["print(tablero[" + f + "][" + c + "])"]));
+    Codigo.marcar($("s3-codigo"), { activas: [3] });
+    tablero3.marcar([f, c]);
+    expresion($("s3-expresion"), ["tablero[" + f + "][" + c + "]", fila(TABLERO[f]) + "[" + c + "]", Lista.texto(v)]);
+    if (!leccion) return;
+
+    var fb = $("s3-fb");
+    if (v === "X") s3.marcar(f + "," + c);
+    var claves = ["0,0", "1,1", "2,2"];
+    var halladas = s3.cuantos(claves);
+    if (halladas === 3) {
+      Pasos.feedback(fb, "ok", "¡Las tres! tablero[0][0], tablero[1][1] y tablero[2][2]: la diagonal. Primero el número de la fila y después el de la columna.");
+      leccion.desbloquear();
+    } else if (v === "X") {
+      Pasos.feedback(fb, "pista", "¡Una X! Está en la fila " + f + ", columna " + c + ": tablero[" + f + "][" + c + "]. " +
+        (halladas === 2 ? "Te falta una." : "Te faltan " + (3 - halladas) + "."));
+    } else {
+      Pasos.feedback(fb, "pista", "tablero[" + f + "] es la fila " + f + ", y su casilla " + c + " tiene " +
+        (v === " " ? "un espacio: está vacía." : "una " + v + ".") + " Busca las X.");
+    }
+  }
+
+  /* ---------- 4. Predecir sin números ---------- */
+  var tablero4 = Lista.crear($("s4-tablero"), copia(TABLERO), { indices: false });
+  var datos4 = [
+    {
+      correcta: "3",
+      ok: "len(tablero) cuenta los casilleros de la lista de fuera: 3 filas.",
+      pistas: {
+        "9": "9 son todas las casillas. Pero tablero tiene 3 casilleros: cada uno es una fila.",
+        "2": "2 es el índice de la última fila. Hay 3 filas: de la 0 a la 2."
+      },
+      marcar: function () {
+        [0, 1, 2].forEach(function (k) { tablero4.casilla(k).classList.add("fila--contada"); });
+      }
+    },
+    {
+      correcta: "O",
+      ok: "tablero[2] es la última fila, [\"O\", \" \", \"X\"], y su casilla 0 es la \"O\".",
+      pistas: {
+        espacio: "Eso es tablero[0][2]: invertiste el orden. Primero va la fila (2) y luego la columna (0).",
+        X: "La X de la fila 2 está en la columna 2. ¿Qué hay en la columna 0?"
+      },
+      marcar: function () { tablero4.marcar([2, 0]); }
+    },
+    {
+      correcta: "error",
+      ok: "No hay fila 3: las filas van de 0 a 2. Python se detiene con IndexError antes de mirar la columna.",
+      pistas: {
+        O: "Cuenta las filas desde 0: la última es la 2. ¿Hay fila 3?",
+        espacio: "Python no inventa una fila vacía. Las filas llegan hasta la 2: ¿qué pasa con la 3?"
+      },
+      marcar: function () {
+        tablero4.marcar(null);
+        var consola = $("s4-consola");
+        consola.hidden = false;
+        Codigo.consola(consola, []);
+        imprimir(consola, "IndexError: list index out of range", null, true);
+      }
+    }
+  ];
+
+  function predicciones(filas, datos, alTerminar) {
+    var aciertos = datos.map(function () { return false; });
+    filas.forEach(function (fila, k) {
+      var botones = fila.querySelectorAll("button[data-valor]");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var p = datos[k];
+          var valor = btn.getAttribute("data-valor");
+          var acierta = valor === p.correcta;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+          if (!acierta) return;
+          p.marcar();
+          fila.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) alTerminar();
+        });
+      });
+    });
+  }
+
+  /* ---------- 5. Cambiar una casilla ---------- */
+  var tablero5 = Lista.crear($("s5-tablero"), copia(TABLERO), { nombres: ["tablero"] });
+  var corriendo5 = [];
+
+  function posicion5() { return [Number($("s5-f").value), Number($("s5-c").value)]; }
+
+  function escribir5() {
+    var p = posicion5();
+    $("s5-f-valor").textContent = String(p[0]);
+    $("s5-c-valor").textContent = String(p[1]);
+    codigo($("s5-codigo"), ["tablero[" + p[0] + "][" + p[1] + "] = \"O\"", "print(tablero[" + p[0] + "])"]);
+  }
+
+  function cancelar5() {
+    corriendo5.forEach(clearTimeout);
+    corriendo5 = [];
+    $("s5-ejecutar").disabled = false;
+  }
+
+  function limpiar5() {
+    cancelar5();
+    tablero5.valores(copia(TABLERO));
+    escribir5();
+    Codigo.consola($("s5-consola"), []);
+    Pasos.limpiarFeedback($("s5-fb"));
+  }
+
+  function elegir5() {
+    cancelar5();
+    escribir5();
+    tablero5.clases(null);
+    tablero5.marcar(posicion5());
+  }
+
+  function ejecutar5(leccion) {
+    cancelar5();
+    escribir5();
+    var p = posicion5();
+    var antes = tablero5.lista[p[0]][p[1]];
+    var pre = $("s5-codigo");
+    var lineas = pre.querySelectorAll(".linea");
+    $("s5-ejecutar").disabled = true;
+    Codigo.marcar(pre, { activas: [0] });
+    tablero5.marcar(p);
+    corriendo5.push(setTimeout(function () {
+      tablero5.cambiar(p, "O", Codigo.piezaEnLinea(lineas[0], '"O"'));
+      tablero5.clases(function (fc) {
+        return fc[0] === p[0] && fc[1] === p[1] ? (antes === " " ? "lista__casilla--igual" : "lista__casilla--distinta") : "";
+      });
+    }, espera(350)));
+    corriendo5.push(setTimeout(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      tablero5.marcar(p[0]);
+      imprimir($("s5-consola"), Lista.python(tablero5.lista[p[0]]), interna(tablero5, p[0]));
+      $("s5-ejecutar").disabled = false;
+      var fb = $("s5-fb");
+      if (antes === " ") {
+        Pasos.feedback(fb, "ok", "Cambió solo la casilla de la fila " + p[0] + ", columna " + p[1] + ": tablero[" + p[0] + "] es una lista, y una lista se puede cambiar por dentro.");
+        leccion.desbloquear();
+      } else if (antes === "O") {
+        Pasos.feedback(fb, "pista", "Ahí ya había una O: no cambió nada que se vea. Busca una casilla vacía.");
+      } else {
+        Pasos.feedback(fb, "pista", "Python no se queja: tapó la X con una O. En el juego eso sería trampa; en el proyecto revisarás antes si la casilla es \" \". Toca «Tablero de nuevo» y elige una vacía.");
+      }
+    }, espera(1200)));
+  }
+
+  /* ---------- 6. Recorrer con dos for ---------- */
+  var VERSIONES6 = {
+    dos: ["for fila in tablero:", "    for celda in fila:", "        print(\"[\" + celda + \"]\", end=\"\")", "    print()"],
+    join: ["for fila in tablero:", "    print(\" | \".join(fila))"]
+  };
+  var version6 = "dos";
+  var tablero6 = Lista.crear($("s6-tablero"), copia(TABLERO));
+  var fila6 = Lista.crear($("s6-fila"), [], { nombres: ["fila"] });
+  var renglon6 = null;   // la línea de la consola que se está escribiendo (end="")
+
+  function trazaRecorrer() {
+    var pasos = [];
+    TABLERO.forEach(function (f, k) {
+      pasos.push({
+        linea: 0, f: k,
+        texto: k === 0
+          ? "El <code>for</code> de fuera toma la primera fila: <code>fila</code> es <code>" + escapar(fila(f)) + "</code>."
+          : "Otra vuelta del de fuera: <code>fila</code> es ahora la fila " + k + "."
+      });
+      if (version6 === "join") {
+        pasos.push({ linea: 1, f: k, linea6: f.join(" | "), texto: "<code>\" | \".join(fila)</code> une las 3 casillas con <code>\" | \"</code> en medio, y <code>print</code> las imprime en una línea." });
+        return;
+      }
+      f.forEach(function (v, c) {
+        pasos.push({
+          linea: 1, f: k, c: c,
+          texto: c === 0
+            ? "El <code>for</code> de dentro empieza por la casilla 0: <code>celda</code> es <code>\"" + v + "\"</code>."
+            : "Siguiente casilla de la misma fila: <code>celda</code> es <code>\"" + v + "\"</code>."
+        });
+        pasos.push({ linea: 2, f: k, c: c, trozo: "[" + v + "]", texto: "Imprime <code>[" + v + "]</code> sin saltar de línea (<code>end=\"\"</code>)." });
+      });
+      pasos.push({ linea: 3, f: k, salto: true, texto: "Terminó la fila " + k + ": <code>print()</code> salta a la línea siguiente." });
+    });
+    pasos.push({ linea: 0, fin: true, texto: "Ya no quedan filas: el tablero quedó dibujado." });
+    return pasos;
+  }
+
+  function escribirTrozo(texto) {
+    var consola = $("s6-consola");
+    if (!renglon6) {
+      Codigo.agregar(consola, "");
+      renglon6 = consola.lastElementChild;
+    }
+    var trozo = document.createElement("span");
+    trozo.className = "consola__trozo";
+    trozo.textContent = texto;
+    renglon6.appendChild(trozo);
+    Codigo.volarDesdeLinea($("s6-codigo"), trozo, texto, "vuelo--salida");
+  }
+
+  function prepararVersion6(version) {
+    version6 = version;
+    $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === version));
+    });
+    codigo($("s6-codigo"), VERSIONES6[version]);
+    $("s6-cajas").hidden = version === "join";
+  }
+
+  /* ---------- 7. Reto: ¿dónde están las casillas vacías? ---------- */
+  var RETO = [["X", "O", " "], ["O", " ", " "], ["X", "X", "O"]];
+  var tableroReto = Lista.crear($("reto-tablero"), copia(RETO));
+  var condiciones = {
+    fc: function (f, c) { return RETO[f][c] === " "; },
+    cf: function (f, c) { return RETO[c][f] === " "; },
+    f: function () { return false; },        // una fila entera nunca es " "
+    "0c": function (f, c) { return RETO[0][c] === " "; }
+  };
+  var pistasReto = {
+    cf: "Invertiste fila y columna: tablero[c][f] mira la casilla espejo. Imprimió posiciones donde hay fichas (en naranja).",
+    f: "tablero[f] es una fila entera, una lista: nunca es igual a \" \". No imprimió nada.",
+    "0c": "tablero[0][c] mira siempre la fila 0, sea cual sea f. Por eso repite la columna 2 en todas las filas."
+  };
+
+  function vacias(cond) {
+    var r = [];
+    for (var f = 0; f < RETO.length; f++) {
+      for (var c = 0; c < RETO[f].length; c++) if (cond(f, c)) r.push([f, c]);
+    }
+    return r;
+  }
+
+  function limpiarReto() {
+    tableroReto.marcar(null);
+    tableroReto.clases(null);
+    $("reto-consola").hidden = true;
+    Codigo.consola($("reto-consola"), []);
+    Codigo.limpiar($("reto-codigo"));
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function escribirReto() {
+    codigo($("reto-codigo"), lineasTablero(RETO).concat([
+      "for f in range(len(tablero)):",
+      "    for c in range(len(tablero[f])):",
+      "        if ▢ == \" \":",
+      "            print(f, c)"
+    ]));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto();
+    Codigo.marcar($("reto-codigo"), { activas: [6] });
+    var impresas = vacias(condiciones[marcada.value]);
+    var consola = $("reto-consola");
+    consola.hidden = false;
+    Codigo.consola(consola, impresas.map(function (p) { return p[0] + " " + p[1]; }));
+    tableroReto.clases(function (fc) {
+      var impresa = impresas.some(function (p) { return p[0] === fc[0] && p[1] === fc[1]; });
+      if (!impresa) return "";
+      return RETO[fc[0]][fc[1]] === " " ? "lista__casilla--igual" : "lista__casilla--distinta";
+    });
+    if (marcada.value === "fc") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! f recorre las filas y c las columnas de cada fila; tablero[f][c] es la casilla, y f y c dicen dónde está. Las tres vacías, en verde.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Resumen ---------- */
+  codigo($("resumen-codigo"), lineasTablero(TABLERO).concat([
+    "tablero[1]           # [' ', 'X', ' '], la fila 1",
+    "tablero[1][2]        # \" \": fila 1, columna 2",
+    "tablero[0][2] = \"O\"  # cambia una casilla",
+    "for fila in tablero:",
+    "    for celda in fila:",
+    "        print(celda)"
+  ]));
+
+  /* ---------- Conexiones ---------- */
+  $("s1-juntar").addEventListener("click", function () { juntar(leccion); });
+  $("s1-separar").addEventListener("click", function () {
+    separar();
+    $("s1-juntar").focus();
+  });
+
+  $("s2-i").addEventListener("input", function () { mostrarFila(Number(this.value), leccion, true); });
+  $("s3-f").addEventListener("input", function () { mostrarCelda(leccion); });
+  $("s3-c").addEventListener("input", function () { mostrarCelda(leccion); });
+
+  predicciones(Array.prototype.slice.call(document.querySelectorAll("#s4-predicciones .prediccion")), datos4, function () {
+    tablero4.mostrar({ indices: true });
+    Pasos.feedback($("s4-fb"), "ok", "¡Las tres bien! Aquí están los números: las filas a la izquierda y las columnas arriba.");
+    leccion.desbloquear();
+  });
+
+  $("s5-f").addEventListener("input", elegir5);
+  $("s5-c").addEventListener("input", elegir5);
+  $("s5-ejecutar").addEventListener("click", function () { ejecutar5(leccion); });
+  $("s5-limpiar").addEventListener("click", limpiar5);
+
+  var traza6 = Traza.crear({
+    codigo: $("s6-codigo"),
+    explicacion: $("s6-explicacion"),
+    ejecutar: $("s6-ejecutar"),
+    reproducir: $("s6-reproducir"),
+    reiniciar: $("s6-reiniciar"),
+    generar: trazaRecorrer,
+    intervalo: 650,
+    alReiniciar: function () {
+      Caja.vaciar($("s6-caja"));
+      tablero6.marcar(null);
+      fila6.valores([]);
+      renglon6 = null;
+      Codigo.consola($("s6-consola"), []);
+      Pasos.limpiarFeedback($("s6-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) {
+        tablero6.marcar(null);
+        fila6.marcar(null);
+        return;
+      }
+      var f = paso.f;
+      if (paso.linea === 0) {
+        tablero6.marcar(f);
+        fila6.valores(TABLERO[f].slice());
+        TABLERO[f].forEach(function (v, c) {
+          Codigo.volar(tablero6.valor([f, c]), fila6.valor(c), Lista.texto(v), "lista__valor lista__vuelo");
+        });
+        return;
+      }
+      if (paso.linea6 !== undefined) {
+        Codigo.agregar($("s6-consola"), paso.linea6);
+        Codigo.volarDesdeLinea($("s6-codigo"), $("s6-consola").lastElementChild, paso.linea6, "vuelo--salida");
+        return;
+      }
+      if (paso.salto) { renglon6 = null; fila6.marcar(null); return; }
+      if (paso.linea === 1) {
+        tablero6.marcar([f, paso.c]);
+        fila6.marcar(paso.c);
+        Caja.poner($("s6-caja"), Lista.texto(TABLERO[f][paso.c]), fila6.valor(paso.c));
+        return;
+      }
+      if (paso.trozo) escribirTrozo(paso.trozo);
+    },
+    alTerminar: function () {
+      if (version6 === "dos") {
+        Pasos.feedback($("s6-fb"), "ok", "Por cada fila, el for de dentro pasó por sus 3 casillas: 9 casillas en total, fila a fila. Mira también la versión corta con .join().");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s6-fb"), "ok", "Con .join() basta un for: cada fila ya es una lista de textos, y join las une en una línea.");
+      }
+    }
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prepararVersion6(b.getAttribute("data-valor"));
+      traza6.reiniciar();
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial de cada paso
+  separar();
+  mostrarFila(1, null, false);
+  mostrarCelda(null);
+  escribir5();
+  prepararVersion6("dos");
+  traza6.reiniciar();
+  escribirReto();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cambiar": function () { cancelar5(); },
+      "paso-recorrer": function () { traza6.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

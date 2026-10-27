@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dos nombres, una lista · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: en Python, b = a no copia una lista: le pone otro nombre. Cambiar b cambia a; .copy() y a[:] hacen otra lista, y una función que cambia una lista la cambia también afuera.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .cajas--dos { gap: var(--esp-5) var(--esp-6); }
+
+    /* ---------- Elegir y predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    .pregunta { margin: var(--esp-4) 0 0; text-align: center; font-weight: 600; }
+    .predicciones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); background: var(--color-superficie); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion .codigo { margin: 0; }
+    .prediccion .codigo code { padding: 0; background: none; border-radius: 0; font-size: inherit; }
+    .prediccion .elegir { margin-top: var(--esp-3); }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+    .prediccion__visual:empty { display: none; }
+    .prediccion__visual { margin-top: var(--esp-2); }
+
+    /* ---------- Jugar con los dos nombres ---------- */
+    .acciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin-top: var(--esp-4); }
+    .acciones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+
+    /* La etiqueta que se acaba de usar, y la de una función (en verde) */
+    .lista__nombre { transition: background-color var(--dur-rapida), color var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .lista__nombre.nombre--usado { background: var(--color-azul); color: #fff; box-shadow: 0 0 0 4px rgba(31, 95, 214, 0.2); }
+    .lista__nombre.nombre--local { color: var(--color-acento); background: var(--color-acento-suave); }
+    .lista__nombre.nombre--local::after { color: var(--color-acento); }
+    .dos-listas { display: grid; gap: var(--esp-2); }
+    /* El tamaño de los casilleros, fijo para 7 elementos: la lista no se encoge al crecer y no mueve lo de debajo */
+    #s3-lista .lista__fila { --c: min(var(--lista-max), max(2.1rem, calc(100cqi / 8 - var(--lista-hueco) - 0.8rem))); }
+
+    /* ---------- Zonas: el programa y dentro de la función ---------- */
+    .zonas { display: grid; gap: var(--esp-3); }
+    .zona { padding: var(--esp-2) var(--esp-3) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur), opacity var(--dur); }
+    .zona__titulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .zona__titulo code { padding: 0; background: none; text-transform: none; letter-spacing: 0; }
+    .zona--programa .zona__titulo { color: var(--color-azul); }
+    .zona__cajas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: var(--esp-4) var(--esp-6); min-height: 6.5rem; padding: var(--esp-3) var(--esp-2) 0; }
+    .zona__cajas > .lista { flex: 1 1 100%; }
+    .zona__vacia { align-self: center; margin: 0; font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); text-align: center; }
+    .zona--funcion { border-style: dashed; background: transparent; }
+    .zona--activa { border-style: solid; border-color: var(--color-acento); background: var(--color-superficie); }
+    .zona--activa .zona__titulo { color: var(--color-acento); }
+    .zona--cerrando { animation: zona-cierra 700ms ease-in both; }
+    .zona .caja { gap: var(--esp-1); }
+    .zona .caja__cuerpo { width: 5.5rem; height: 4.25rem; padding-bottom: var(--esp-2); }
+    .zona .caja__valor { max-width: 5rem; min-width: 2.5rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+    .caja--acento-local .caja__cuerpo { border-color: var(--color-acento); background: linear-gradient(to bottom, transparent 30%, var(--color-acento-suave) 30%); }
+    .caja--acento-local .caja__cuerpo::before, .caja--acento-local .caja__cuerpo::after { background: var(--color-acento); }
+    .caja--acento-local .caja__valor { border-color: var(--color-acento); }
+    .caja--acento-local .caja__nombre { color: var(--color-acento); background: var(--color-acento-suave); }
+    @keyframes zona-cierra { 100% { opacity: 0.35; transform: scale(0.98); } }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+    .reto-caja { display: flex; justify-content: center; padding: var(--esp-2) 0 0; }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .zona__cajas { gap: var(--esp-3) var(--esp-5); }
+      .zona .caja__cuerpo { width: 4.75rem; height: 3.75rem; }
+      .zona .caja__valor { max-width: 4.25rem; font-size: var(--texto-md); }
+      .zona .caja__nombre { font-size: var(--texto-xs); }
+      .acciones .btn { font-size: var(--texto-xs); padding: var(--esp-2); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-referencias">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Con números: b = a copia el valor -->
+    <section class="paso" id="paso-numeros" data-requiere aria-labelledby="t-numeros">
+      <span class="paso__etiqueta">Listas 6/8 · Dos nombres, una lista</span>
+      <h1 class="paso__titulo" id="t-numeros">Con números: dos cajas</h1>
+      <p>Ya lo sabes: con números, <code>b = a</code> copia el valor en otra caja. Si después cambias <code>b</code>, ¿qué le pasa a <code>a</code>? Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="s1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas cajas--dos">
+            <div class="caja" id="s1-caja-a">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">a</code>
+            </div>
+            <div class="caja" id="s1-caja-b">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">b</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Con listas: predecir y ver -->
+    <section class="paso" id="paso-listas" data-requiere aria-labelledby="t-listas">
+      <h2 class="paso__titulo" id="t-listas">¿Y con una lista?</h2>
+      <p>Lo mismo, pero con una lista: <code>b = a</code> y luego se agrega un 20 usando <code>b</code>. Antes de ejecutar, adivina qué imprime <code>print(a)</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"></pre>
+          <p class="pregunta" id="s2-pregunta">¿Qué imprime <code>print(a)</code>?</p>
+          <div class="elegir" id="s2-elegir" role="group" aria-labelledby="s2-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="sin" aria-pressed="false">[14, 9, 17]</button>
+            <button type="button" class="btn btn-secundario" data-valor="con" aria-pressed="false">[14, 9, 17, 20]</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+          </div>
+          <p class="explicacion" id="s2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Jugar: cambiar con un nombre y mirar con el otro -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="t-jugar">
+      <h2 class="paso__titulo" id="t-jugar">Una lista, dos etiquetas</h2>
+      <p>Cambia la lista usando <code>b</code> y mírala con <code>print(a)</code>. Después, al revés: cámbiala con <code>a</code> y mírala con <code>print(b)</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <div id="s3-lista"></div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"></pre>
+          <div class="acciones" id="s3-acciones" role="group" aria-label="Líneas para ejecutar">
+            <button type="button" class="btn btn-secundario" data-accion-lista="b-append">b.append(13)</button>
+            <button type="button" class="btn btn-secundario" data-accion-lista="a-append">a.append(11)</button>
+            <button type="button" class="btn btn-secundario" data-accion-lista="b-cambiar">b[0] = 20</button>
+            <button type="button" class="btn btn-secundario" data-accion-lista="a-cambiar">a[1] = 10</button>
+            <button type="button" class="btn btn-secundario" data-accion-lista="a-print">print(a)</button>
+            <button type="button" class="btn btn-secundario" data-accion-lista="b-print">print(b)</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-otra">↺ Empezar de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. .copy(): otra lista -->
+    <section class="paso" id="paso-copia" data-requiere aria-labelledby="t-copia">
+      <h2 class="paso__titulo" id="t-copia">Si quieres otra lista, cópiala</h2>
+      <p><code>a.copy()</code> hace una lista <strong>nueva</strong> con los mismos valores. Desde ahí, cada una cambia por su lado. Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual dos-listas">
+          <div id="s4-lista-a"></div>
+          <div id="s4-lista-b"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Predecir: ¿otro nombre u otra lista? -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">¿Otro nombre u otra lista?</h2>
+      <p>En cada programa, fíjate en la segunda línea: ¿<code>y</code> es otro nombre de <code>x</code>, o una lista nueva? Elige qué imprime.</p>
+
+      <div class="tarjeta">
+        <ol class="predicciones" id="s5-predicciones"></ol>
+        <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 6. Una lista que entra en una función -->
+    <section class="paso" id="paso-funcion" data-requiere aria-labelledby="t-funcion">
+      <h2 class="paso__titulo" id="t-funcion">Una lista que entra en una función</h2>
+      <p>En Variables locales viste que cambiar un parámetro no cambia nada afuera. ¿Pasa lo mismo con una lista? Ejecuta las dos versiones.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" id="s6-elegir" role="group" aria-label="¿Qué recibe la función?" style="margin: 0 0 var(--esp-4)">
+            <button type="button" class="btn btn-secundario" data-valor="lista" aria-pressed="true">Una lista</button>
+            <button type="button" class="btn btn-secundario" data-valor="numero" aria-pressed="false">Un número</button>
+          </div>
+          <pre class="codigo" id="s6-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s6-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas">
+            <div class="zona zona--programa">
+              <p class="zona__titulo">Programa</p>
+              <div class="zona__cajas">
+                <div id="s6-lista"></div>
+                <div class="caja" id="s6-caja-x" hidden>
+                  <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                  <code class="caja__nombre">x</code>
+                </div>
+              </div>
+            </div>
+            <div class="zona zona--funcion" id="s6-zona">
+              <p class="zona__titulo">Dentro de <code id="s6-fnombre">agregar_nota()</code></p>
+              <div class="zona__cajas">
+                <p class="zona__vacia" id="s6-vacia">Se abre al llamar a la función.</p>
+                <div class="caja caja--acento-local" id="s6-caja-f" hidden>
+                  <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                  <code class="caja__nombre" id="s6-caja-f-nombre">nota</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: guardar las notas originales -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Guarda las notas originales</h2>
+      <p>Antes de corregir una nota, quieres guardar las notas como estaban. Al final, <code>print(originales)</code> debe mostrar <code>[14, 9, 17]</code>. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Código"></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="alias"><span>notas</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="copia"><span>notas.copy()</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="uno"><span>notas[1]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="sort"><span>notas.sort()</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual dos-listas">
+          <div id="reto-notas"></div>
+          <div id="reto-orig"></div>
+          <div class="reto-caja" id="reto-zona-caja" hidden>
+            <div class="caja" id="reto-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">originales</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>b = a</code> no copia una lista: le pone otro nombre. Para tener otra lista, usa <code>a.copy()</code> o <code>a[:]</code>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../anidadas/index.html">Siguiente: Listas dentro de listas →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* ---------- Código coloreado como en los bloques oscuros ---------- */
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not|import)$/;
+
+  function colorear(linea, idHueco) {
+    return linea.replace(/("[^"]*")|(#.*)|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?|(▢)/g, function (todo, texto, comentario, numero, nombre, parentesis, hueco) {
+      if (texto) return '<span class="tk-texto">' + texto + "</span>";
+      if (comentario) return '<span class="tk-comentario">' + comentario + "</span>";
+      if (numero) return '<span class="tk-numero">' + numero + "</span>";
+      if (hueco) return '<span class="hueco"' + (idHueco ? ' id="' + idHueco + '"' : "") + ">?</span>";
+      if (PALABRAS.test(nombre)) return '<span class="tk-palabra">' + nombre + "</span>" + (parentesis || "");
+      if (parentesis) return '<span class="tk-funcion">' + nombre + "</span>" + parentesis;
+      return '<span class="tk-variable">' + nombre + "</span>";
+    });
+  }
+
+  function escribir(pre, lineas, idHueco) {
+    pre.innerHTML = "<code>" + lineas.map(function (l) {
+      return '<span class="linea">' + colorear(l, idHueco) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  /* Lo que imprime print: la línea sale volando desde donde se indique */
+  function imprimir(consola, texto, desde) {
+    Codigo.agregar(consola, texto);
+    if (desde) Codigo.volar(desde, consola.lastElementChild, texto, "vuelo--salida");
+  }
+
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); },
+      borrar: function () { s = {}; }
+    };
+  }
+
+  /* Las etiquetas de una lista: cuál se acaba de usar y cuáles son de una función */
+  function etiqueta(lista, nombre) {
+    var encontrada = null;
+    lista.el.querySelectorAll(".lista__nombre").forEach(function (n) { if (n.textContent === nombre) encontrada = n; });
+    return encontrada;
+  }
+
+  function usar(lista, nombre) {
+    lista.el.querySelectorAll(".lista__nombre").forEach(function (n) {
+      n.classList.toggle("nombre--usado", n.textContent === nombre);
+    });
+  }
+
+  /* ---------- 1. Con números ---------- */
+  escribir($("s1-codigo"), ["a = 5", "b = a", "b = 8", "print(a)"]);
+
+  function trazaNumeros() {
+    return [
+      { linea: 0, hacer: "a", texto: "<code>a</code> guarda 5." },
+      { linea: 1, hacer: "b", texto: "<code>b = a</code> copia el valor: ahora hay <strong>dos cajas</strong> con un 5 cada una." },
+      { linea: 2, hacer: "b8", texto: "<code>b</code> pasa a valer 8. ¿Y <code>a</code>?" },
+      { linea: 3, salida: "5", texto: "<code>a</code> sigue con 5: son dos cajas distintas." }
+    ];
+  }
+
+  /* ---------- 2. Con listas: predecir y ver ---------- */
+  escribir($("s2-codigo"), ["a = [14, 9, 17]", "b = a", "b.append(20)", "print(a)"]);
+  var lista2 = Lista.crear($("s2-lista"), []);
+  var prediccion2 = null;
+
+  function trazaListas() {
+    return [
+      { linea: 0, hacer: "crear", texto: "<code>a</code> es una lista con 3 notas." },
+      { linea: 1, hacer: "alias", texto: "<code>b = a</code> <strong>no copia</strong> la lista: le pega una segunda etiqueta, <code>b</code>, a la misma lista." },
+      { linea: 2, hacer: "append", texto: "<code>b.append(20)</code> agrega un 20 al final de la lista… la única que hay." },
+      { linea: 3, salida: "[14, 9, 17, 20]", texto: "<code>print(a)</code> muestra esa misma lista: <strong>también tiene el 20</strong>." }
+    ];
+  }
+
+  function elegir2(valor) {
+    prediccion2 = valor;
+    $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+    $("s2-ejecutar").disabled = false;
+    $("s2-reproducir").disabled = false;
+    Pasos.limpiarFeedback($("s2-fb"));
+  }
+
+  /* ---------- 3. Jugar con los dos nombres ---------- */
+  var BASE3 = ["a = [14, 9, 17]", "b = a"];
+  var lista3 = Lista.crear($("s3-lista"), [14, 9, 17], { nombres: ["a", "b"] });
+  var lineas3 = [];
+  var cambio3 = {};
+  var s3 = vistos();
+
+  function otro(nombre) { return nombre === "a" ? "b" : "a"; }
+
+  // El código guarda el alto de sus 8 líneas: los botones de debajo no se mueven al crecer
+  Codigo.reservarAlto($("s3-codigo"), [BASE3.concat(["x", "x", "x", "x", "x", "x"])], function (copia, lineas) { escribir(copia, lineas); });
+
+  function empezar3() {
+    lineas3 = [];
+    cambio3 = {};
+    s3.borrar();
+    escribir($("s3-codigo"), BASE3);
+    lista3.valores([14, 9, 17]);
+    usar(lista3, null);
+    Codigo.consola($("s3-consola"), []);
+    Pasos.limpiarFeedback($("s3-fb"));
+  }
+
+  // Añade la línea al código (como mucho 6 además de las dos primeras) y la marca
+  function anotar3(texto) {
+    lineas3.push(texto);
+    if (lineas3.length > 6) lineas3.shift();
+    var pre = $("s3-codigo");
+    escribir(pre, BASE3.concat(lineas3));
+    var ultima = BASE3.length + lineas3.length - 1;
+    Codigo.marcar(pre, { activas: [ultima] });
+    return pre.querySelectorAll(".linea")[ultima];
+  }
+
+  function accion3(clave, leccion) {
+    var partes = clave.split("-");
+    var nombre = partes[0];
+    var que = partes[1];
+    var fb = $("s3-fb");
+    if (que === "append" && lista3.largo >= 7) {
+      Pasos.feedback(fb, "pista", "La lista ya está larga. Prueba otra cosa, o toca «Empezar de nuevo».");
+      return;
+    }
+    var texto = { append: nombre + ".append(" + (nombre === "a" ? 11 : 13) + ")", cambiar: nombre + (nombre === "a" ? "[1] = 10" : "[0] = 20"), print: "print(" + nombre + ")" }[que];
+    var linea = anotar3(texto);
+    usar(lista3, nombre);
+
+    if (que === "print") {
+      imprimir($("s3-consola"), Lista.python(lista3.lista), lista3.el.querySelector(".lista__fila"));
+      if (cambio3[otro(nombre)]) {
+        s3.marcar("ve-" + nombre);
+        if (s3.todos(["ve-a", "ve-b"])) {
+          Pasos.feedback(fb, "ok", "Da igual qué nombre uses: a y b son dos etiquetas pegadas en la misma lista. Hay una sola lista, y lo que cambias con un nombre se ve con el otro.");
+          leccion.desbloquear();
+        } else {
+          Pasos.feedback(fb, "pista", nombre + " muestra el cambio que hiciste con " + otro(nombre) + ": apuntan a la misma lista. Ahora al revés: cambia con " + nombre + " y mira con print(" + otro(nombre) + ").");
+        }
+      } else {
+        Pasos.feedback(fb, "pista", "print(" + nombre + ") muestra la lista. Ahora cámbiala usando " + otro(nombre) + " y vuelve a mirar con print(" + nombre + ").");
+      }
+      return;
+    }
+    cambio3[nombre] = true;
+    if (que === "append") lista3.agregar(nombre === "a" ? 11 : 13, Codigo.piezaEnLinea(linea, nombre === "a" ? "11" : "13"));
+    else if (nombre === "a") lista3.cambiar(1, 10, Codigo.piezaEnLinea(linea, "10"));
+    else lista3.cambiar(0, 20, Codigo.piezaEnLinea(linea, "20"));
+    if (!s3.todos(["ve-a", "ve-b"])) {
+      Pasos.feedback(fb, "pista", "Cambiaste la lista usando " + nombre + ". ¿Qué tendrá " + otro(nombre) + "? Toca print(" + otro(nombre) + ").");
+    }
+  }
+
+  /* ---------- 4. .copy(): otra lista ---------- */
+  escribir($("s4-codigo"), ["a = [14, 9, 17]", "b = a.copy()", "b.append(20)", "print(a)", "print(b)"]);
+  var lista4a = Lista.crear($("s4-lista-a"), []);
+  var lista4b = Lista.crear($("s4-lista-b"), []);
+  var tiempos4 = [];
+
+  function trazaCopia() {
+    return [
+      { linea: 0, hacer: "crear", texto: "<code>a</code> es una lista con 3 notas." },
+      { linea: 1, hacer: "copiar", texto: "<code>a.copy()</code> hace <strong>otra lista</strong> con los mismos valores, y <code>b</code> es su etiqueta." },
+      { linea: 2, hacer: "append", texto: "<code>b.append(20)</code> agrega el 20 a la lista de <code>b</code>. La de <code>a</code> no se entera." },
+      { linea: 3, salida: "[14, 9, 17]", texto: "<code>a</code> sigue igual." },
+      { linea: 4, salida: "[14, 9, 17, 20]", texto: "<code>b</code> tiene el 20: son dos listas distintas." }
+    ];
+  }
+
+  function limpiar4() {
+    tiempos4.forEach(clearTimeout);
+    tiempos4 = [];
+    lista4a.valores([]);
+    lista4a.nombres([]);
+    lista4b.valores([]);
+    lista4b.nombres([]);
+    $("s4-lista-a").hidden = true;
+    $("s4-lista-b").hidden = true;
+  }
+
+  /* ---------- 5. Predecir ---------- */
+  var PREDICCIONES = [
+    {
+      codigo: ["x = [1, 2]", "y = x", "y.append(3)", "print(len(x))"],
+      opciones: ["2", "3", "💥 Error"],
+      correcta: "3",
+      ok: "y = x no hace otra lista: y es otro nombre de x. Al agregar con y, x también tiene el 3.",
+      pistas: {
+        "2": "y no es una lista nueva: es otro nombre de x. ¿Qué le pasó a la lista al agregar con y?",
+        "💥 Error": "No hay error: y.append(3) agrega el 3 a la lista, que también se llama x."
+      },
+      final: [{ valores: [1, 2, 3], nombres: ["x", "y"] }]
+    },
+    {
+      codigo: ["x = [1, 2]", "y = x.copy()", "y[0] = 9", "print(x[0])"],
+      opciones: ["1", "9", "💥 Error"],
+      correcta: "1",
+      ok: "y es una copia: otra lista. Cambiar y[0] no toca la de x.",
+      pistas: {
+        "9": "x.copy() hace una lista nueva. El 9 entró en la lista de y, no en la de x.",
+        "💥 Error": "No hay error: y es una lista con su propio casillero 0."
+      },
+      final: [{ valores: [1, 2], nombres: ["x"] }, { valores: [9, 2], nombres: ["y"] }]
+    },
+    {
+      codigo: ["x = [1, 2]", "y = x[:]", "x.append(3)", "print(y)"],
+      opciones: ["[1, 2]", "[1, 2, 3]", "[3]"],
+      correcta: "[1, 2]",
+      ok: "x[:] es una rebanada de principio a fin: una lista nueva, como .copy(). Lo que agregas a x no llega a y.",
+      pistas: {
+        "[1, 2, 3]": "x[:] es una rebanada: siempre es una lista nueva. ¿A cuál de las dos se agregó el 3?",
+        "[3]": "y se hizo antes de agregar el 3, como copia de [1, 2]. El 3 solo entra en x."
+      },
+      final: [{ valores: [1, 2, 3], nombres: ["x"] }, { valores: [1, 2], nombres: ["y"] }]
+    }
+  ];
+
+  function armarPredicciones(leccion) {
+    var ol = $("s5-predicciones");
+    var aciertos = PREDICCIONES.map(function () { return false; });
+    PREDICCIONES.forEach(function (p, k) {
+      var li = document.createElement("li");
+      li.className = "prediccion";
+      li.innerHTML = '<pre class="codigo" aria-label="Programa ' + (k + 1) + '"></pre>' +
+        '<div class="elegir" role="group" aria-label="¿Qué imprime el programa ' + (k + 1) + '?"></div>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>' +
+        '<div class="prediccion__visual dos-listas"></div>';
+      escribir(li.querySelector(".codigo"), p.codigo);
+      var grupo = li.querySelector(".elegir");
+      p.opciones.forEach(function (op) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("aria-pressed", "false");
+        b.textContent = op;
+        grupo.appendChild(b);
+      });
+      var botones = grupo.querySelectorAll("button");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var valor = btn.textContent;
+          var acierta = valor === p.correcta;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          Pasos.feedback(li.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+          if (!acierta) return;
+          li.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          // Cómo quedaron las listas al final
+          var visual = li.querySelector(".prediccion__visual");
+          visual.textContent = "";
+          p.final.forEach(function (f) {
+            var d = document.createElement("div");
+            visual.appendChild(d);
+            Lista.crear(d, f.valores, { nombres: f.nombres });
+          });
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) {
+            Pasos.feedback($("s5-fb"), "ok", "¡Las tres bien! La pregunta es siempre la misma: ¿hay una lista con dos nombres, o dos listas? b = a da dos nombres; .copy() y [:] dan dos listas.");
+            leccion.desbloquear();
+          }
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  /* ---------- 6. Una lista que entra en una función ---------- */
+  var VERSIONES6 = {
+    lista: ["def agregar_nota(lista, nota):", "    lista.append(nota)", "", "notas = [14, 9]", "agregar_nota(notas, 15)", "print(notas)"],
+    numero: ["def sumar_uno(n):", "    n = n + 1", "", "x = 5", "sumar_uno(x)", "print(x)"]
+  };
+  var version6 = "lista";
+  var lista6 = Lista.crear($("s6-lista"), []);
+  var s6 = vistos();
+
+  function trazaFuncion() {
+    if (version6 === "lista") {
+      return [
+        { linea: 3, hacer: "crear", texto: "<code>notas</code> es una lista con 2 notas." },
+        { linea: 4, texto: "Se llama a <code>agregar_nota(notas, 15)</code>." },
+        { linea: 0, hacer: "entrar", texto: "Nace la caja <code>nota</code> con 15. Pero <code>lista</code> no es una caja nueva: es <strong>otra etiqueta en la misma lista</strong>." },
+        { linea: 1, hacer: "append", texto: "<code>lista.append(nota)</code> agrega el 15… a la única lista que hay." },
+        { linea: 4, hacer: "salir", flecha: true, texto: "La función termina: se borran <code>nota</code> y la etiqueta <code>lista</code>. La lista se queda, con el 15." },
+        { linea: 5, salida: "[14, 9, 15]", texto: "<code>notas</code> tiene el 15: la función la cambió también afuera." }
+      ];
+    }
+    return [
+      { linea: 3, hacer: "crear", texto: "<code>x</code> guarda 5." },
+      { linea: 4, texto: "Se llama a <code>sumar_uno(x)</code>." },
+      { linea: 0, hacer: "entrar", texto: "Nace la caja <code>n</code> con una <strong>copia</strong> del 5." },
+      { linea: 1, hacer: "n6", texto: "<code>n</code> pasa a valer 6. Solo cambia la caja de la función." },
+      { linea: 4, hacer: "salir", flecha: true, texto: "La función termina: la caja <code>n</code> se borra." },
+      { linea: 5, salida: "5", texto: "<code>x</code> sigue con 5: la función cambió su copia, no la caja de afuera." }
+    ];
+  }
+
+  function limpiar6() {
+    lista6.valores([]);
+    lista6.nombres([]);
+    $("s6-lista").hidden = true;
+    Caja.vaciar($("s6-caja-x"));
+    $("s6-caja-x").hidden = true;
+    Caja.vaciar($("s6-caja-f"));
+    $("s6-caja-f").hidden = true;
+    $("s6-vacia").hidden = false;
+    $("s6-zona").classList.remove("zona--activa", "zona--cerrando");
+  }
+
+  function prepararFuncion(version) {
+    version6 = version;
+    $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === version));
+    });
+    escribir($("s6-codigo"), VERSIONES6[version]);
+    $("s6-fnombre").textContent = version === "lista" ? "agregar_nota()" : "sumar_uno()";
+    $("s6-caja-f-nombre").textContent = version === "lista" ? "nota" : "n";
+    if (trazaFun) trazaFun.reiniciar();
+  }
+
+  function pasoFuncion(paso) {
+    var lineas = $("s6-codigo").querySelectorAll(".linea");
+    var esLista = version6 === "lista";
+    if (paso.hacer === "crear") {
+      if (esLista) {
+        $("s6-lista").hidden = false;
+        lista6.valores([14, 9]);
+        lista6.nombres(["notas"]);
+      } else {
+        $("s6-caja-x").hidden = false;
+        Caja.poner($("s6-caja-x"), 5);
+      }
+    } else if (paso.hacer === "entrar") {
+      var zona = $("s6-zona");
+      zona.classList.remove("zona--cerrando");
+      zona.classList.add("zona--activa");
+      $("s6-vacia").hidden = true;
+      $("s6-caja-f").hidden = false;
+      if (esLista) {
+        lista6.nombres(["notas", "lista"]);
+        etiqueta(lista6, "lista").classList.add("nombre--local");
+        Caja.poner($("s6-caja-f"), 15, Codigo.piezaEnLinea(lineas[4], "15"));
+      } else {
+        Caja.poner($("s6-caja-f"), 5, $("s6-caja-x").querySelector(".caja__valor"));
+      }
+    } else if (paso.hacer === "append") {
+      lista6.agregar(15, $("s6-caja-f").querySelector(".caja__valor:not(.caja__valor--saliendo)"));
+    } else if (paso.hacer === "n6") {
+      Caja.poner($("s6-caja-f"), 6);
+    } else if (paso.hacer === "salir") {
+      var z = $("s6-zona");
+      z.classList.remove("zona--activa");
+      z.classList.add("zona--cerrando");
+      $("s6-caja-f").hidden = true;
+      $("s6-vacia").hidden = false;
+      if (esLista) lista6.nombres(["notas"]);
+    }
+  }
+
+  /* ---------- 7. Reto ---------- */
+  escribir($("reto-codigo"), ["notas = [14, 9, 17]", "originales = ▢", "notas[1] = 12", "print(originales)"], "reto-hueco");
+  var retoNotas = Lista.crear($("reto-notas"), [14, 9, 17], { nombres: ["notas"] });
+  var retoOrig = Lista.crear($("reto-orig"), []);
+  var tiemposReto = [];
+  var pistasReto = {
+    alias: "originales es otro nombre de la misma lista: al corregir notas, también cambió. Hace falta otra lista.",
+    uno: "notas[1] es solo el 9, no toda la lista.",
+    sort: "notas.sort() ordena la lista y devuelve None: originales se queda con None (y además notas quedó ordenada)."
+  };
+
+  function limpiarReto() {
+    tiemposReto.forEach(clearTimeout);
+    tiemposReto = [];
+    Codigo.limpiar($("reto-codigo"));
+    retoNotas.valores([14, 9, 17]);
+    retoNotas.nombres(["notas"]);
+    retoNotas.clases(null);
+    retoOrig.valores([]);
+    retoOrig.nombres([]);
+    $("reto-orig").hidden = true;
+    $("reto-zona-caja").hidden = true;
+    Caja.vaciar($("reto-caja"));
+    Codigo.consola($("reto-consola"), []);
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  /* Ejecuta el programa con la opción elegida, línea a línea */
+  function ejecutarReto(valor) {
+    var pre = $("reto-codigo");
+    var lineas = pre.querySelectorAll(".linea");
+    var final = [14, 12, 17];
+    var sale = "";
+    Codigo.marcar(pre, { activas: [0] });
+    tiemposReto.push(setTimeout(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      if (valor === "alias") {
+        retoNotas.nombres(["notas", "originales"]);
+      } else if (valor === "copia") {
+        $("reto-orig").hidden = false;
+        retoOrig.nombres(["originales"]);
+        [14, 9, 17].forEach(function (v, k) { retoOrig.agregar(v, retoNotas.valor(k).getBoundingClientRect()); });
+      } else if (valor === "uno") {
+        $("reto-zona-caja").hidden = false;
+        retoNotas.marcar(1);
+        Caja.poner($("reto-caja"), 9, retoNotas.valor(1));
+      } else {
+        // sort ordena la lista y devuelve None
+        retoNotas.reordenar([1, 0, 2]);
+        $("reto-zona-caja").hidden = false;
+        Caja.poner($("reto-caja"), "None");
+      }
+    }, espera(500)));
+    tiemposReto.push(setTimeout(function () {
+      retoNotas.marcar(null);
+      Codigo.marcar(pre, { activas: [2] });
+      retoNotas.cambiar(1, 12, Codigo.piezaEnLinea(lineas[2], "12"));
+      if (valor === "sort") final = [9, 12, 17];
+    }, espera(1400)));
+    tiemposReto.push(setTimeout(function () {
+      Codigo.marcar(pre, { activas: [3] });
+      var desde;
+      if (valor === "alias") { sale = Lista.python(final); desde = retoNotas.el.querySelector(".lista__fila"); }
+      else if (valor === "copia") { sale = "[14, 9, 17]"; desde = retoOrig.el.querySelector(".lista__fila"); }
+      else if (valor === "uno") { sale = "9"; desde = $("reto-caja").querySelector(".caja__valor:not(.caja__valor--saliendo)"); }
+      else { sale = "None"; desde = $("reto-caja").querySelector(".caja__valor:not(.caja__valor--saliendo)"); }
+      imprimir($("reto-consola"), sale, desde);
+    }, espera(2300)));
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto();
+    ejecutarReto(marcada.value);
+    if (marcada.value === "copia") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! notas.copy() hace otra lista antes de corregir: originales se queda con [14, 9, 17]. notas[:] también habría funcionado.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Resumen ---------- */
+  escribir($("resumen-codigo"), [
+    "a = [14, 9, 17]",
+    "b = a         # otro nombre",
+    "b.append(20)  # a también",
+    "c = a.copy()  # otra lista",
+    "c.append(5)   # a no cambia"
+  ]);
+
+  /* ---------- Conexiones ---------- */
+  var trazaNum = Traza.crear({
+    codigo: $("s1-codigo"),
+    explicacion: $("s1-explicacion"),
+    consola: $("s1-consola"),
+    ejecutar: $("s1-ejecutar"),
+    reproducir: $("s1-reproducir"),
+    reiniciar: $("s1-reiniciar"),
+    generar: trazaNumeros,
+    intervalo: 1000,
+    alReiniciar: function () {
+      Caja.vaciar($("s1-caja-a"));
+      Caja.vaciar($("s1-caja-b"));
+      Pasos.limpiarFeedback($("s1-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.hacer === "a") Caja.poner($("s1-caja-a"), 5);
+      else if (paso.hacer === "b") Caja.poner($("s1-caja-b"), 5, $("s1-caja-a").querySelector(".caja__valor"));
+      else if (paso.hacer === "b8") Caja.poner($("s1-caja-b"), 8);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s1-fb"), "ok", "Con números, b = a copia el valor en otra caja. Cambiar b no toca a. ¿Pasará lo mismo con una lista?");
+      leccion.desbloquear();
+    }
+  });
+
+  var trazaLis = Traza.crear({
+    codigo: $("s2-codigo"),
+    explicacion: $("s2-explicacion"),
+    consola: $("s2-consola"),
+    ejecutar: $("s2-ejecutar"),
+    reproducir: $("s2-reproducir"),
+    reiniciar: $("s2-reiniciar"),
+    generar: trazaListas,
+    intervalo: 1100,
+    alReiniciar: function () {
+      lista2.valores([]);
+      lista2.nombres([]);
+      $("s2-lista").hidden = true;
+      Pasos.limpiarFeedback($("s2-fb"));
+      // Primero hay que adivinar
+      if (!prediccion2) {
+        $("s2-ejecutar").disabled = true;
+        $("s2-reproducir").disabled = true;
+      }
+    },
+    alPaso: function (paso) {
+      if (paso.hacer === "crear") {
+        $("s2-lista").hidden = false;
+        lista2.valores([14, 9, 17]);
+        lista2.nombres(["a"]);
+      } else if (paso.hacer === "alias") {
+        lista2.nombres(["a", "b"]);
+      } else if (paso.hacer === "append") {
+        usar(lista2, "b");
+        lista2.agregar(20);
+      } else if (paso.salida) {
+        usar(lista2, "a");
+      }
+    },
+    alTerminar: function () {
+      var texto = "Una lista no se copia con b = a: a y b son dos nombres de la misma lista. Por eso el 20 que agregaste con b aparece al imprimir a.";
+      if (prediccion2 === "con") Pasos.feedback($("s2-fb"), "ok", "¡Bien pensado! " + texto);
+      else if (prediccion2 === "sin") Pasos.feedback($("s2-fb"), "pista", "Sorpresa: no es [14, 9, 17]. " + texto);
+      else Pasos.feedback($("s2-fb"), "pista", "No hay error: el programa funciona. " + texto);
+      leccion.desbloquear();
+    }
+  });
+
+  $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegir2(b.getAttribute("data-valor")); });
+  });
+
+  $("s3-acciones").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { accion3(b.getAttribute("data-accion-lista"), leccion); });
+  });
+  $("s3-otra").addEventListener("click", empezar3);
+
+  var trazaCop = Traza.crear({
+    codigo: $("s4-codigo"),
+    explicacion: $("s4-explicacion"),
+    consola: $("s4-consola"),
+    ejecutar: $("s4-ejecutar"),
+    reproducir: $("s4-reproducir"),
+    reiniciar: $("s4-reiniciar"),
+    generar: trazaCopia,
+    intervalo: 1300,
+    alReiniciar: function () {
+      limpiar4();
+      Pasos.limpiarFeedback($("s4-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.hacer === "crear") {
+        $("s4-lista-a").hidden = false;
+        lista4a.valores([14, 9, 17]);
+        lista4a.nombres(["a"]);
+      } else if (paso.hacer === "copiar") {
+        $("s4-lista-b").hidden = false;
+        lista4b.nombres(["b"]);
+        // Cada valor sale de su casillero de a y entra en uno nuevo de b
+        [14, 9, 17].forEach(function (v, k) {
+          tiempos4.push(setTimeout(function () {
+            lista4b.agregar(v, lista4a.valor(k).getBoundingClientRect());
+          }, espera(k * 220)));
+        });
+      } else if (paso.hacer === "append") {
+        lista4b.agregar(20);
+      } else if (paso.linea === 3) {
+        lista4a.rango(0, 3);
+        lista4b.rango(null);
+      } else if (paso.linea === 4) {
+        lista4a.rango(null);
+        lista4b.rango(0, 4);
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s4-fb"), "ok", "Con .copy() hay dos listas, cada una con su etiqueta: lo que cambias en una no le pasa a la otra. a[:], la rebanada de principio a fin, también hace una copia.");
+      leccion.desbloquear();
+    }
+  });
+
+  armarPredicciones({ desbloquear: function () { leccion.desbloquear(); } });
+
+  var trazaFun = null;
+  trazaFun = Traza.crear({
+    codigo: $("s6-codigo"),
+    explicacion: $("s6-explicacion"),
+    consola: $("s6-consola"),
+    ejecutar: $("s6-ejecutar"),
+    reproducir: $("s6-reproducir"),
+    reiniciar: $("s6-reiniciar"),
+    generar: trazaFuncion,
+    intervalo: 1100,
+    alReiniciar: function () {
+      limpiar6();
+      Pasos.limpiarFeedback($("s6-fb"));
+    },
+    alPaso: pasoFuncion,
+    alTerminar: function () {
+      s6.marcar(version6);
+      $("s6-elegir").querySelector('[data-valor="' + version6 + '"]').classList.add("hecho");
+      var fb = $("s6-fb");
+      var texto = version6 === "lista"
+        ? "La función recibió otro nombre de la misma lista: lo que agregó se ve afuera."
+        : "La función recibió una copia del número: cambiarla no tocó a x.";
+      if (s6.todos(["lista", "numero"])) {
+        Pasos.feedback(fb, "ok", texto + " Un número entra a la función como copia; una lista entra con otro nombre, y si la función la cambia, cambia también afuera.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", texto + " Ahora prueba con " + (version6 === "lista" ? "un número" : "una lista") + ".");
+      }
+    }
+  });
+  escribir($("s6-codigo"), VERSIONES6.lista);
+  trazaFun.reiniciar();
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { prepararFuncion(b.getAttribute("data-valor")); });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial
+  empezar3();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-numeros": function () { trazaNum.detener(); },
+      "paso-listas": function () { trazaLis.detener(); },
+      "paso-copia": function () { trazaCop.detener(); },
+      "paso-funcion": function () { trazaFun.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
