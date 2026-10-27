@@ -17,13 +17,12 @@ Por orden de prioridad:
    **Recursión, completa (4/4).**
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
-3. **Explicar mejor la vuelta de la recursión** (ideas propuestas, sin hacer; decidir cuáles):
-   - **La fila del cine** como intuición antes del código: «¿en qué fila estoy?» se pregunta hacia adelante (ida) y la respuesta vuelve sumando 1 (vuelta).
-   - **El alumno deshace la pila**: la pila empieza llena y solo se puede tocar la tarjeta de arriba; al tocarla calcula, devuelve y su valor cae en el ▢ de la de abajo.
-   - **Completar el ▢ en cada vuelta**: antes de quitar una tarjeta, elegir qué valor devuelve (`return 4 * ▢`).
+3. **Explicar mejor la vuelta de la recursión**: ya están «deshacer la pila» y «completar el ▢» (paso «Ahora la vuelta la haces tú», en Recursión que devuelve valores; la fila del cine ya estaba). Ideas que quedan, sin hacer:
    - **La cuenta que crece y se encoge**: `factorial(4)` → `4 * factorial(3)` → `4 * (3 * (2 * 1))` a la ida, y `4 * (3 * 2)` → `4 * 6` → `24` a la vuelta, al lado de la pila.
    - **Tabla de seguimiento** (llamada | n | espera | devuelve): las filas se llenan de arriba abajo a la ida y la columna «devuelve» de abajo arriba a la vuelta; sirve para trazar en papel.
    - **Colores de ida y de vuelta** en la consola y en las flechas, y un paso que pregunte «¿el programa termina al llegar al caso base?» (error común).
+   - **Deshacer la pila también en Recursión 1/4** (`abrir(n)`, sin valores: tocar la de arriba y elegir qué imprime al volver) y en Árbol de llamadas.
+   **Probar con alumnos** el paso nuevo: si se entiende que solo se toca la de arriba y si las pistas de las respuestas equivocadas ayudan.
 4. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
 5. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. Variables locales ya también. En Varios parámetros, Funciones que deciden y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
 6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
@@ -46,6 +45,16 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-27 · Recursión 2/4: el alumno deshace la pila
+
+**Paso nuevo** «Ahora la vuelta la haces tú» en `lecciones/recursion/valores/` (después de «Cada llamada devuelve su parte»; la lección pasa de 7 a 8 pasos, la clave `recursion-valores` no cambia):
+- La pila empieza llena: programa, `factorial(4)`, `(3)` y `(2)` pausadas en la línea 5 con su `return n * ▢`, y `factorial(1)` arriba. Solo se puede tocar la de arriba (anillo que late, «👆 Tócala: es la única que puede volver»); tocar otra da una pista: está pausada y espera a la de encima.
+- Al tocarla, se elige qué devuelve entre cuatro números (`¿Qué devuelve factorial(3)?` con `return 3 * 2`). Cada respuesta equivocada tiene su pista: lo que recibió (2), la suma (5), el total de todo (24) o su n. Las pistas van en la explicación, que en el móvil queda justo encima de las opciones.
+- Al acertar, la tarjeta muestra «↩ devuelve 6», se va y el valor vuela al ▢ de la de abajo, que retoma («▶ sigue en la línea 5») y pasa a ser la de arriba. Al final se toca el programa, que imprime 24.
+- `Pila.crear(el, { alTocar })` y `tocable` en el estado (tarjeta de arriba como botón, con Enter o espacio; `p.tope()` para darle el foco). El código, el rótulo, la explicación y las opciones reservan su lugar: la tarjeta de arriba no se mueve en todo el recorrido.
+
+Probado con Playwright a 1280 y 390 px (toques y respuestas equivocadas, teclado, «Llenar la pila otra vez»): sin errores de JavaScript.
 
 ### 2026-10-27 · Recursión: el código y los botones ya no saltan
 
