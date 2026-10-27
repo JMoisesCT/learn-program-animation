@@ -46,6 +46,76 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 6/8: Dos nombres, una lista
+
+**Lección** `lecciones/listas/referencias/` (`data-leccion="listas-referencias"`), 8 pasos:
+1. Con números, dos cajas: `b = a` copia el 5 y cambiar `b` no toca `a`.
+2. ¿Y con una lista?: predecir qué imprime `print(a)` tras `b = a` y `b.append(20)`; aparece una segunda etiqueta sobre la misma fila.
+3. Una lista, dos etiquetas: cambiar con un nombre y mirar con el otro, en los dos sentidos.
+4. Si quieres otra lista, cópiala: `b = a.copy()` hace una fila nueva y cada una cambia por su lado.
+5. ¿Otro nombre u otra lista?: predecir tres programas (`y = x`, `x.copy()`, `x[:]`).
+6. Una lista que entra en una función: `agregar_nota(notas, 15)` cambia la lista de afuera; `sumar_uno(x)` con un número, no.
+7. Reto: guardar las notas originales con `notas.copy()` antes de corregirlas; trampas `notas`, `notas[1]` y `notas.sort()`.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
+### 2026-10-27 · Listas 5/8: De texto a lista y de vuelta
+
+**Lección** `lecciones/listas/texto/` (`data-leccion="listas-texto"`), 8 pasos:
+1. Cortar una frase en palabras: `frase.split()` sobre una frase que el alumno cambia; cada palabra vuela de la cinta a su casillero, también con varios espacios seguidos.
+2. ¿Letras o palabras?: predecir `len(frase)`, `len(frase.split())`, `frase.split()[-1]` y `list("sol")`.
+3. Cortar en otro lugar: `"pan, té, ají"` con `.split()`, `.split(",")` y `.split(", ")`.
+4. Limpiar cada pedazo: `cosas[i] = cosas[i].strip()` en un `for i in range(len(cosas))`.
+5. De vuelta a un texto: `sep.join(partes)` con varios separadores, y el `TypeError` con números.
+6. Varios números en una línea: `input().split()` y `notas.append(int(p))`, con la suma al final.
+7. Reto: el día, el mes y el año de `"21/10/2026"` con `fecha.split("/")`; trampas `split()`, `list(fecha)` y `"/".join(fecha)`.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
+### 2026-10-27 · Listas 4/8: Ordenar y buscar
+
+**Lección** `lecciones/listas/ordenar/` (`data-leccion="listas-ordenar"`), 8 pasos:
+1. De menor a mayor: `ordenadas = sorted(notas)`; aparece otra fila y la original no cambia.
+2. Ordenar la misma lista: `notas.sort()` (los casilleros viajan a su lugar) frente a `notas = notas.sort()` (`None`).
+3. Al revés, y también textos: `sorted(…, reverse=True)` con notas y con nombres (las mayúsculas van antes).
+4. El podio: qué rebanada de `ranking` va en el espacio en blanco (`[:3]`; trampas `[3:]`, `[-3:]` y `[1:3]`).
+5. ¿Dónde está? ¿Cuántas veces?: `.index()` y `.count()`, y el `ValueError` de `.index()` frente al `-1` de `.find()`.
+6. ¿Quién expone hoy?: `random.choice(alumnos)` como una ruleta.
+7. Reto: `mejor(alumnos, notas)` devuelve `alumnos[notas.index(max(notas))]`, con tres juegos de datos.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
+### 2026-10-27 · Listas 3/8: Recorrer y acumular
+
+**Lección** `lecciones/listas/recorrer/` (`data-leccion="listas-recorrer"`), 8 pasos:
+1. Sumar todas las notas: `total = total + nota` línea a línea; cada nota vuela del casillero a la caja y `total` crece.
+2. ¿Cuántos aprobaron?: predecir qué imprime (2, 3 o 5) y ejecutar; los casilleros se pintan verde o naranja y `cuantos` sube con los verdes.
+3. La mayor hasta ahora: en cada vuelta el alumno decide si `mayor` cambia (la trampa: `12 > 12` en la primera vuelta).
+4. Python ya lo sabe hacer: `sum`, `max`, `min` y `len` comparados con lo hecho a mano, y el promedio `sum(notas) / len(notas)` (trampas: 57 y 14.25).
+5. Una lista solo con los aprobados: `aprobados = []` y `aprobados.append(nota)` dentro del `if`; la segunda lista crece.
+6. ¿De quién es la nota?: `for i in range(len(notas))` con `alumnos` y `notas` en el mismo orden; se marca el mismo casillero en las dos.
+7. Reto: ¿quién sacó la mayor nota? (`mejor` guarda un índice: `mejor = i`); trampas: `notas[i]` (IndexError), `mejor + 1` e `i + 1`, con tres pruebas.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
+### 2026-10-27 · Listas 2/8: Agregar y quitar
+
+**Lección** `lecciones/listas/cambiar/` (`data-leccion="listas-cambiar"`), 8 pasos:
+1. Una lista que crece: `compras = []` y botones que agregan cosas con `.append()`; cada valor vuela a un casillero al final. Hay que agregar 3.
+2. Meterse en la fila: `fila.insert(i, "Iván")` con un control de posición; los casilleros de la derecha se corren y su índice sube 1. Hay que probar al principio y en medio.
+3. Sacar a alguien de la fila: `atendido = fila.pop()` frente a `fila.pop(0)`; el casillero se va y su valor vuela a la caja `atendido`.
+4. Quitar por lo que es: `compras.remove("pan")` quita solo el primero de dos; `remove("queso")` da `ValueError` y con `if "queso" in compras:` no.
+5. ¿Hay que guardarlo?: predecir qué imprime `notas = notas.append(15)`; la lista pierde su nombre y `notas` queda con `None`.
+6. Llenar la lista tú mismo: `while True` con `input()`, `break` con «fin» y `notas.append(int(dato))` (`BucleInput`); cada nota vuela a un casillero.
+7. Reto, la fila del cine: qué tres líneas dejan `["Eva", "Luis", "Sofía", "Iván"]`; las trampas: `pop()` en vez de `pop(0)`, el orden de `insert` y `pop(0)`, y `fila = fila.append(...)` (`None` y `AttributeError`).
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 1/8: Muchos valores en una variable
 
 **`assets/js/lista.js`** (`Lista.crear`) y sus estilos (`.lista` en `base.css`): la lista como fila de casilleros con el índice encima (y el negativo debajo, opcional), corchetes en los bordes de la fila (nunca quedan solos en otra fila) y etiquetas con el nombre. Los textos se ven con comillas y en verde. Anima `cambiar`, `agregar`, `insertar`, `quitar` y `reordenar` (los casilleros que se quedan se deslizan a su lugar nuevo); una lista de listas se ve como cuadrícula. `Lista.python` da lo que imprime `print`.
