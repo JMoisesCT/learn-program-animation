@@ -46,6 +46,20 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 2/8: Agregar y quitar
+
+**Lección** `lecciones/listas/cambiar/` (`data-leccion="listas-cambiar"`), 8 pasos:
+1. Una lista que crece: `compras = []` y botones que agregan cosas con `.append()`; cada valor vuela a un casillero al final. Hay que agregar 3.
+2. Meterse en la fila: `fila.insert(i, "Iván")` con un control de posición; los casilleros de la derecha se corren y su índice sube 1. Hay que probar al principio y en medio.
+3. Sacar a alguien de la fila: `atendido = fila.pop()` frente a `fila.pop(0)`; el casillero se va y su valor vuela a la caja `atendido`.
+4. Quitar por lo que es: `compras.remove("pan")` quita solo el primero de dos; `remove("queso")` da `ValueError` y con `if "queso" in compras:` no.
+5. ¿Hay que guardarlo?: predecir qué imprime `notas = notas.append(15)`; la lista pierde su nombre y `notas` queda con `None`.
+6. Llenar la lista tú mismo: `while True` con `input()`, `break` con «fin» y `notas.append(int(dato))` (`BucleInput`); cada nota vuela a un casillero.
+7. Reto, la fila del cine: qué tres líneas dejan `["Eva", "Luis", "Sofía", "Iván"]`; las trampas: `pop()` en vez de `pop(0)`, el orden de `insert` y `pop(0)`, y `fila = fila.append(...)` (`None` y `AttributeError`).
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 1/8: Muchos valores en una variable
 
 **`assets/js/lista.js`** (`Lista.crear`) y sus estilos (`.lista` en `base.css`): la lista como fila de casilleros con el índice encima (y el negativo debajo, opcional), corchetes en los bordes de la fila (nunca quedan solos en otra fila) y etiquetas con el nombre. Los textos se ven con comillas y en verde. Anima `cambiar`, `agregar`, `insertar`, `quitar` y `reordenar` (los casilleros que se quedan se deslizan a su lugar nuevo); una lista de listas se ve como cuadrícula. `Lista.python` da lo que imprime `print`.
