@@ -46,6 +46,20 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 4/8: Ordenar y buscar
+
+**Lección** `lecciones/listas/ordenar/` (`data-leccion="listas-ordenar"`), 8 pasos:
+1. De menor a mayor: `ordenadas = sorted(notas)`; aparece otra fila y la original no cambia.
+2. Ordenar la misma lista: `notas.sort()` (los casilleros viajan a su lugar) frente a `notas = notas.sort()` (`None`).
+3. Al revés, y también textos: `sorted(…, reverse=True)` con notas y con nombres (las mayúsculas van antes).
+4. El podio: qué rebanada de `ranking` va en el espacio en blanco (`[:3]`; trampas `[3:]`, `[-3:]` y `[1:3]`).
+5. ¿Dónde está? ¿Cuántas veces?: `.index()` y `.count()`, y el `ValueError` de `.index()` frente al `-1` de `.find()`.
+6. ¿Quién expone hoy?: `random.choice(alumnos)` como una ruleta.
+7. Reto: `mejor(alumnos, notas)` devuelve `alumnos[notas.index(max(notas))]`, con tres juegos de datos.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 3/8: Recorrer y acumular
 
 **Lección** `lecciones/listas/recorrer/` (`data-leccion="listas-recorrer"`), 8 pasos:
