@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: tres en raya · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Listas: construir por partes en Python el juego de tres en raya (michi), con el tablero como lista de listas, tablero[f][c], leer fila y columna con .isdigit(), revisar filas, columnas y diagonales, turnos y empate.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; --color-o: #c92a5c; --color-o-suave: #fde8ef; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+    .lab .codigo { margin-top: var(--esp-4); }
+    .rotulo-cinta { margin: var(--esp-3) 0 var(--esp-1); text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .lista__valor--espacio { color: var(--color-texto-suave); }
+
+    /* ---------- Consola que espera respuestas ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 4.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .consola .consola__linea { white-space: pre; }
+    .consola .consola__linea--error { color: var(--color-error); }
+    .registro { max-height: 17rem; overflow-y: auto; overscroll-behavior: contain; }
+
+    /* ---------- El tablero del juego ---------- */
+    .juego { display: grid; justify-items: center; gap: var(--esp-2); }
+    .juego__parte { display: grid; justify-items: center; width: 100%; }
+    .juego__parte > .tablero-lista { width: 100%; }
+    .codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.9rem; }
+    .turno { margin: 0 0 var(--esp-3); min-height: 1.6em; text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .turno .ficha-x { color: var(--color-azul); }
+    .turno .ficha-o { color: var(--color-o); }
+    .turno--fin { color: var(--color-ok); }
+
+    .michi { --m: 3.6rem; display: grid; justify-content: center; grid-template-columns: 1.3rem repeat(3, var(--m)); grid-auto-rows: auto; gap: 0.3rem; align-items: center; justify-items: center; }
+    .michi__num { font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .michi__num--col { color: var(--color-acento); }
+    .michi__num--fila { color: var(--color-azul); }
+    .michi__casilla {
+      width: var(--m); height: var(--m);
+      display: grid; place-items: center;
+      padding: 0; border: 2px solid var(--color-borde); border-radius: var(--radio-sm);
+      background: var(--color-superficie); box-shadow: var(--sombra);
+      font: inherit; font-size: calc(var(--m) * 0.55); font-weight: 800; line-height: 1;
+      color: var(--color-texto); cursor: pointer;
+      transition: background-color var(--dur), border-color var(--dur), transform var(--dur-rapida);
+    }
+    .michi__casilla:hover:not(:disabled) { border-color: #b8c0ca; }
+    .michi__casilla:active:not(:disabled) { transform: scale(0.95); }
+    .michi__casilla:disabled { cursor: default; }
+    .michi__casilla--x { color: var(--color-azul); }
+    .michi__casilla--o { color: var(--color-o); }
+    .michi__casilla--nueva { animation: ficha-entra 380ms var(--curva-rebote) both; }
+    .michi__casilla--gana { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .michi__casilla--ocupada { animation: sacudir 380ms ease; border-color: var(--color-pista); }
+    @keyframes ficha-entra { from { transform: scale(0.4); } }
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .modo { margin: 0 0 var(--esp-4); }
+    .demo-expr { margin: var(--esp-3) 0 0; min-height: 1.6em; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .demo-expr .tk-texto { color: #0b6b37; }
+    .tablero-lista { --lista-max: 2.7rem; }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Opciones y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas li:nth-child(4) { animation-delay: 600ms; }
+    .pruebas li:nth-child(5) { animation-delay: 800ms; }
+    .prueba__etiqueta { display: flex; align-items: center; gap: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); white-space: pre; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* Tablero chiquito dentro de una prueba */
+    .mini { display: inline-grid; grid-template-columns: repeat(3, 1.15rem); gap: 2px; flex: none; }
+    .mini span { display: grid; place-items: center; height: 1.15rem; border-radius: 3px; background: var(--color-superficie); border: 1px solid var(--color-borde); font-size: 0.75rem; font-weight: 800; line-height: 1; }
+    .mini .mini--x { color: var(--color-azul); }
+    .mini .mini--o { color: var(--color-o); }
+    .mini .mini--marca { background: var(--color-acento-suave); border-color: var(--color-acento); }
+
+    .resultado-p1 { margin-top: var(--esp-5); padding: var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); animation: aparecer var(--dur) ease both; }
+    .resultado-p1__titulo { margin: 0; text-align: center; font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); font-size: var(--texto-xs); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+      .michi { --m: 3rem; }
+      .juego { gap: var(--esp-3) var(--esp-4); }
+      .tablero-lista { --lista-max: 2.2rem; --lista-hueco: 0.2rem; }
+      .registro { max-height: 13rem; }
+      .codigo.codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.8rem; }
+    }
+    /* En el móvil, el tablero va antes que la consola, y las misiones antes que el programa, que es largo */
+    @media (max-width: 1023.98px) {
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { display: contents; }
+      #paso-jugar .lab__visual { order: 0; margin-bottom: var(--esp-4); }
+      #paso-jugar .consola, #paso-jugar .fila-botones, #paso-jugar .explicacion { order: 1; }
+      #paso-jugar .lab__resultado { order: 2; margin-top: var(--esp-4); }
+      #paso-jugar .reto-codigo { order: 3; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .michi__casilla--nueva, .michi__casilla--ocupada { animation: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Lo que vamos a construir -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="h-demo">
+      <span class="paso__etiqueta">Listas 8/8 · Proyecto</span>
+      <h1 class="paso__titulo" id="h-demo">Proyecto: tres en raya (michi)</h1>
+      <p>Vas a programar el tres en raya: gana quien pone <strong>tres fichas en línea</strong>, en una fila, una columna o una diagonal. El tablero será una <strong>lista de listas</strong>. Primero, juega una partida tocando las casillas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir modo" id="d-modo" role="group" aria-label="¿Contra quién juegas?">
+            <button type="button" class="btn btn-secundario" data-valor="pc" aria-pressed="true">🤖 Contra la PC</button>
+            <button type="button" class="btn btn-secundario" data-valor="persona" aria-pressed="false">👥 Dos personas</button>
+          </div>
+          <p class="turno" id="d-turno" aria-live="polite"></p>
+          <div class="michi" id="d-michi" role="group" aria-label="Tablero"></div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Otra partida</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">tablero</p>
+          <div class="tablero-lista" id="d-lista"></div>
+          <p class="demo-expr" id="d-expr" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: poner una ficha -->
+    <section class="paso" id="paso-poner" data-comprobar aria-labelledby="h-poner">
+      <span class="paso__etiqueta">Parte 1 de 4</span>
+      <h2 class="paso__titulo" id="h-poner">Poner una ficha</h2>
+      <p>El jugador dijo la fila <code>f</code> y la columna <code>c</code>. Con <code>f = 0</code> y <code>c = 2</code>, su ficha debe ir arriba a la derecha. ¿Qué línea la pone?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">tablero</span> = [[<span class="tk-texto">" "</span>, <span class="tk-texto">" "</span>, <span class="tk-texto">" "</span>],</span><span class="linea">           [<span class="tk-texto">" "</span>, <span class="tk-texto">" "</span>, <span class="tk-texto">" "</span>],</span><span class="linea">           [<span class="tk-texto">" "</span>, <span class="tk-texto">" "</span>, <span class="tk-texto">" "</span>]]</span><span class="linea"><span class="tk-variable">turno</span> = <span class="tk-texto">"X"</span></span><span class="linea"><span class="tk-variable">f</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-variable">c</span> = <span class="tk-numero">2</span></span><span class="linea"><span class="hueco" id="p1-hueco">?</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">¿Qué línea pone la ficha?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="invertido"><span>tablero[c][f] = turno</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>tablero[f][c] = turno</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="fila"><span>tablero[f] = turno</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="compara"><span>tablero[f][c] == turno</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="resultado-p1" id="p1-resultado" hidden>
+          <p class="resultado-p1__titulo">Así quedó <code>tablero</code> tras las tres jugadas:</p>
+          <div class="tablero-lista" id="p1-lista"></div>
+        </div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: leer fila y columna -->
+    <section class="paso" id="paso-leer" data-comprobar aria-labelledby="h-leer">
+      <span class="paso__etiqueta">Parte 2 de 4</span>
+      <h2 class="paso__titulo" id="h-leer">Leer la fila y la columna</h2>
+      <p>La función <code>leer</code> pide un dato hasta que sea <strong>0, 1 o 2</strong>. Si el jugador escribe otra cosa, no debe romperse el programa ni aceptar una casilla que no existe. ¿Qué condición va en el espacio en blanco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">leer</span>(<span class="tk-variable">texto</span>):</span><span class="linea">    <span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">        <span class="tk-variable">dato</span> = <span class="tk-funcion">input</span>(<span class="tk-variable">texto</span>).<span class="tk-funcion">strip</span>()</span><span class="linea">        <span class="tk-palabra">if</span> <span class="hueco" id="p2-hueco">?</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-funcion">int</span>(<span class="tk-variable">dato</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Escribe 0, 1 o 2."</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">¿Qué condición va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="int"><span>int(dato) &lt;= 2</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="or"><span>dato.isdigit() or int(dato) &lt;= 2</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>dato.isdigit() and int(dato) &lt;= 2</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="digito"><span>dato.isdigit()</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: ¿ganó? -->
+    <section class="paso" id="paso-gano" data-comprobar aria-labelledby="h-gano">
+      <span class="paso__etiqueta">Parte 3 de 4</span>
+      <h2 class="paso__titulo" id="h-gano">¿Hay tres en línea?</h2>
+      <p><code>tres(a, b, c, ficha)</code> dice si las tres casillas tienen esa ficha. <code>gano</code> la usa con cada fila, cada columna y las dos diagonales. Ya revisa la <strong>fila k</strong>. ¿Qué casillas forman la <strong>columna k</strong>?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--compacto" aria-label="Tu programa"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">tres</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>, <span class="tk-variable">c</span>, <span class="tk-variable">ficha</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">a</span> == <span class="tk-variable">ficha</span> <span class="tk-palabra">and</span> <span class="tk-variable">b</span> == <span class="tk-variable">ficha</span> <span class="tk-palabra">and</span> <span class="tk-variable">c</span> == <span class="tk-variable">ficha</span></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">gano</span>(<span class="tk-variable">t</span>, <span class="tk-variable">ficha</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">k</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">3</span>):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-funcion">tres</span>(<span class="tk-variable">t</span>[<span class="tk-variable">k</span>][<span class="tk-numero">0</span>], <span class="tk-variable">t</span>[<span class="tk-variable">k</span>][<span class="tk-numero">1</span>], <span class="tk-variable">t</span>[<span class="tk-variable">k</span>][<span class="tk-numero">2</span>], <span class="tk-variable">ficha</span>):</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-palabra">True</span></span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-funcion">tres</span>(<span class="hueco" id="p3-hueco">?</span>, <span class="tk-variable">ficha</span>):</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-palabra">True</span></span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-funcion">tres</span>(<span class="tk-variable">t</span>[<span class="tk-numero">0</span>][<span class="tk-numero">0</span>], <span class="tk-variable">t</span>[<span class="tk-numero">1</span>][<span class="tk-numero">1</span>], <span class="tk-variable">t</span>[<span class="tk-numero">2</span>][<span class="tk-numero">2</span>], <span class="tk-variable">ficha</span>):</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-palabra">True</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">tres</span>(<span class="tk-variable">t</span>[<span class="tk-numero">0</span>][<span class="tk-numero">2</span>], <span class="tk-variable">t</span>[<span class="tk-numero">1</span>][<span class="tk-numero">1</span>], <span class="tk-variable">t</span>[<span class="tk-numero">2</span>][<span class="tk-numero">0</span>], <span class="tk-variable">ficha</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p3-opciones">
+          <legend class="visualmente-oculto">¿Qué casillas forman la columna k?</legend>
+          <label class="opcion"><input type="radio" name="p3" value="fila"><span>t[k][0], t[k][1], t[k][2]</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="cero"><span>t[0][0], t[1][0], t[2][0]</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="bien"><span>t[0][k], t[1][k], t[2][k]</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="misma"><span>t[0][k], t[0][k], t[0][k]</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: el turno -->
+    <section class="paso" id="paso-turno" data-comprobar aria-labelledby="h-turno">
+      <span class="paso__etiqueta">Parte 4 de 4</span>
+      <h2 class="paso__titulo" id="h-turno">Ahora le toca al otro</h2>
+      <p>Si la casilla está ocupada, <code>continue</code> vuelve a empezar la vuelta: el mismo jugador intenta otra vez. Si no, se pone la ficha, se revisa si ganó o si el tablero se llenó, y al final cambia el turno. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Tu programa"><code><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea linea--hecha">    <span class="tk-comentario"># muestra el tablero, lee f y c ✓</span></span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">tablero</span>[<span class="tk-variable">f</span>][<span class="tk-variable">c</span>] != <span class="tk-texto">" "</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Esa casilla está ocupada."</span>)</span><span class="linea">        <span class="tk-palabra">continue</span></span><span class="linea">    <span class="tk-variable">tablero</span>[<span class="tk-variable">f</span>][<span class="tk-variable">c</span>] = <span class="tk-variable">turno</span></span><span class="linea linea--hecha">    <span class="tk-comentario"># si ganó o si se llenó: break ✓</span></span><span class="linea">    <span class="hueco" id="p4-hueco">?</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="anuncia"><span>print(f"Turno de {turno}")</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="dos-if"><span>if turno == "X":
+    turno = "O"
+if turno == "O":
+    turno = "X"</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>if turno == "X":
+    turno = "O"
+else:
+    turno = "X"</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="siempre-o"><span>turno = "O"</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: el juego completo -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="h-jugar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-jugar">¡Tu juego funciona!</h2>
+      <p>Este es tu programa completo. Juegan dos: escribe la fila y la columna de cada jugada en la consola (o toca la casilla, que las escribe por ti). Juega hasta cumplir las <strong>cuatro misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="registro" id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo" id="t-etiqueta">Fila:</label>
+              <input type="text" id="t-campo" maxlength="3" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Otra partida</button>
+          </div>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <span id="t-vuelta" hidden></span>
+          <div class="reto-codigo">
+            <pre class="codigo codigo--compacto" id="t-codigo" aria-label="Tu programa completo"><code id="t-codigo-lineas"></code></pre>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="turno" id="t-turno" aria-live="polite"></p>
+          <div class="juego">
+            <div class="juego__parte">
+              <div class="michi" id="t-michi" role="group" aria-label="Tablero"></div>
+            </div>
+            <div class="juego__parte">
+              <p class="rotulo-cinta">tablero</p>
+              <div class="tablero-lista" id="t-lista"></div>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="columna">Gana con una columna</li>
+            <li data-mision="diagonal">Gana con una diagonal</li>
+            <li data-mision="ocupada">Intenta jugar en una casilla ocupada</li>
+            <li data-mision="empate">Llega a un empate</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Una lista de listas guarda una cuadrícula: <code>tablero[f][c]</code> es la fila <code>f</code>, columna <code>c</code>, y se puede leer y cambiar.</p>
+        <ul class="usado" aria-label="Lo que usaste">
+          <li>tablero[f][c]</li><li>for fila in tablero</li><li>" " in fila</li><li>" | ".join(fila)</li><li>.isdigit()</li><li>while True</li><li>break / continue</li><li>def gano(t, ficha)</li>
+        </ul>
+        <pre class="codigo codigo--compacto resumen-codigo" aria-label="Tu programa completo"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir el proyecto</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* ---------- El juego en JavaScript (lo que hace el programa en Python) ---------- */
+  function vacio() { return [[" ", " ", " "], [" ", " ", " "], [" ", " ", " "]]; }
+  function copiar(t) { return t.map(function (fila) { return Array.isArray(fila) ? fila.slice() : fila; }); }
+
+  // Las 8 líneas del tablero: [tipo, casillas]
+  var LINEAS = [];
+  for (var k = 0; k < 3; k++) {
+    LINEAS.push(["fila", [[k, 0], [k, 1], [k, 2]]]);
+    LINEAS.push(["columna", [[0, k], [1, k], [2, k]]]);
+  }
+  LINEAS.push(["diagonal", [[0, 0], [1, 1], [2, 2]]]);
+  LINEAS.push(["diagonal", [[0, 2], [1, 1], [2, 0]]]);
+
+  /* Las líneas completas de esa ficha: [{ tipo, casillas }] (vacío si no ganó) */
+  function lineasDe(t, ficha) {
+    return LINEAS.filter(function (l) {
+      return l[1].every(function (p) { return t[p[0]][p[1]] === ficha; });
+    }).map(function (l) { return { tipo: l[0], casillas: l[1] }; });
+  }
+
+  function lleno(t) {
+    return t.every(function (fila) { return fila.indexOf(" ") === -1; });
+  }
+
+  // Cómo imprime el programa una fila: " | ".join(fila)
+  function filaTexto(fila) { return fila.join(" | "); }
+
+  function ficha(t) { return '<span class="ficha-' + t.toLowerCase() + '">' + t + "</span>"; }
+
+  /* ---------- El tablero que se toca ---------- */
+  function crearMichi(el, alTocar) {
+    var botones = [];
+    el.textContent = "";
+    function num(clase, t) {
+      var s = document.createElement("span");
+      s.className = "michi__num " + clase;
+      s.textContent = t;
+      s.setAttribute("aria-hidden", "true");
+      el.appendChild(s);
+    }
+    num("", "");
+    for (var c = 0; c < 3; c++) num("michi__num--col", String(c));
+    for (var f = 0; f < 3; f++) {
+      num("michi__num--fila", String(f));
+      botones.push([]);
+      for (var c2 = 0; c2 < 3; c2++) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "michi__casilla";
+        (function (ff, cc) { b.addEventListener("click", function () { alTocar(ff, cc); }); })(f, c2);
+        el.appendChild(b);
+        botones[f].push(b);
+      }
+    }
+    return {
+      pintar: function (t, opciones) {
+        opciones = opciones || {};
+        var gana = {};
+        (opciones.gana || []).forEach(function (l) { l.casillas.forEach(function (p) { gana[p[0] + "," + p[1]] = true; }); });
+        botones.forEach(function (fila, f) {
+          fila.forEach(function (b, c) {
+            var v = t[f][c];
+            b.textContent = v === " " ? "" : v;
+            b.className = "michi__casilla" + (v === "X" ? " michi__casilla--x" : v === "O" ? " michi__casilla--o" : "") +
+              (gana[f + "," + c] ? " michi__casilla--gana" : "");
+            b.setAttribute("aria-label", "Fila " + f + ", columna " + c + ": " + (v === " " ? "vacía" : v));
+            b.disabled = !!opciones.bloqueado;
+          });
+        });
+      },
+      boton: function (f, c) { return botones[f][c]; },
+      nueva: function (f, c) {
+        var b = botones[f][c];
+        b.classList.remove("michi__casilla--nueva");
+        void b.offsetWidth;
+        b.classList.add("michi__casilla--nueva");
+      },
+      ocupada: function (f, c) {
+        var b = botones[f][c];
+        b.classList.remove("michi__casilla--ocupada");
+        void b.offsetWidth;
+        b.classList.add("michi__casilla--ocupada");
+      }
+    };
+  }
+
+  /* ---------- 1. Demo: una partida tocando las casillas ---------- */
+  var demo = { t: vacio(), turno: "X", fin: false, modo: "pc", pensando: null };
+  var dLista = Lista.crear($("d-lista"), vacio());
+  var dMichi = crearMichi($("d-michi"), tocarDemo);
+
+  function turnoDemo() {
+    if (demo.modo === "pc") return demo.turno === "X" ? "Te toca a ti: eres la " + ficha("X") + "." : "La PC piensa… (es la " + ficha("O") + ")";
+    return "Turno de " + ficha(demo.turno) + ".";
+  }
+
+  function empezarDemo() {
+    if (demo.pensando) clearTimeout(demo.pensando);
+    demo.t = vacio();
+    demo.turno = "X";
+    demo.fin = false;
+    demo.pensando = null;
+    dLista.valores(vacio());
+    dMichi.pintar(demo.t);
+    $("d-turno").className = "turno";
+    $("d-turno").innerHTML = turnoDemo();
+    $("d-expr").textContent = "";
+    $("d-otra").hidden = true;
+    Pasos.limpiarFeedback($("d-fb"));
+  }
+
+  function jugarDemo(f, c) {
+    var quien = demo.turno;
+    demo.t[f][c] = quien;
+    dMichi.pintar(demo.t, { bloqueado: false });
+    dMichi.nueva(f, c);
+    dLista.marcar([f, c]);
+    dLista.cambiar([f, c], quien, dMichi.boton(f, c));
+    $("d-expr").innerHTML = 'tablero[' + f + '][' + c + '] = <span class="tk-texto">"' + quien + '"</span>';
+    var lineas = lineasDe(demo.t, quien);
+    if (lineas.length || lleno(demo.t)) {
+      demo.fin = true;
+      dMichi.pintar(demo.t, { gana: lineas, bloqueado: true });
+      dLista.clases(function (i) {
+        return lineas.some(function (l) { return l.casillas.some(function (p) { return p[0] === i[0] && p[1] === i[1]; }); }) ? "lista__casilla--igual" : "";
+      });
+      $("d-turno").className = "turno turno--fin";
+      var texto;
+      if (lineas.length) {
+        $("d-turno").innerHTML = "¡Ganó " + ficha(quien) + "!";
+        var l = lineas[0];
+        texto = (demo.modo === "pc" ? (quien === "X" ? "¡Le ganaste a la PC" : "¡Esta vez ganó la PC") : "¡Ganó " + quien) +
+          " con una " + l.tipo + "! Fíjate en la lista: cada casilla del tablero es tablero[fila][columna].";
+      } else {
+        $("d-turno").textContent = "¡Empate! No quedan casillas.";
+        texto = "Empate: no queda ningún \" \" en la lista. Fíjate: cada casilla del tablero es tablero[fila][columna].";
+      }
+      Pasos.feedback($("d-fb"), "ok", texto + " Juega más si quieres; luego lo construimos en cuatro partes.");
+      $("d-otra").hidden = false;
+      leccion.desbloquear();
+      return;
+    }
+    demo.turno = quien === "X" ? "O" : "X";
+    $("d-turno").innerHTML = turnoDemo();
+    if (demo.modo === "pc" && demo.turno === "O") {
+      dMichi.pintar(demo.t, { bloqueado: true });
+      demo.pensando = setTimeout(function () {
+        demo.pensando = null;
+        var p = jugadaPC(demo.t);
+        jugarDemo(p[0], p[1]);
+      }, espera(700));
+    }
+  }
+
+  /* La PC: gana si puede, si no tapa a la X, si no el centro, si no una casilla al azar */
+  function jugadaPC(t) {
+    var libres = [];
+    t.forEach(function (fila, f) { fila.forEach(function (v, c) { if (v === " ") libres.push([f, c]); }); });
+    function completa(fichaBuscada) {
+      for (var k = 0; k < libres.length; k++) {
+        var prueba = copiar(t);
+        prueba[libres[k][0]][libres[k][1]] = fichaBuscada;
+        if (lineasDe(prueba, fichaBuscada).length) return libres[k];
+      }
+      return null;
+    }
+    return completa("O") || completa("X") || (t[1][1] === " " ? [1, 1] : libres[Math.floor(Math.random() * libres.length)]);
+  }
+
+  function tocarDemo(f, c) {
+    if (demo.fin || demo.pensando) return;
+    if (demo.t[f][c] !== " ") {
+      dMichi.ocupada(f, c);
+      Pasos.feedback($("d-fb"), "pista", "Esa casilla ya está ocupada: tablero[" + f + "][" + c + "] es \"" + demo.t[f][c] + "\". Elige una vacía.");
+      return;
+    }
+    Pasos.limpiarFeedback($("d-fb"));
+    jugarDemo(f, c);
+  }
+
+  /* ---------- Pruebas y pasos de elegir una opción ---------- */
+  function mini(t, marcas) {
+    var m = document.createElement("span");
+    m.className = "mini";
+    m.setAttribute("aria-hidden", "true");
+    marcas = marcas || {};
+    t.forEach(function (fila, f) {
+      fila.forEach(function (v, c) {
+        var s = document.createElement("span");
+        s.textContent = v === " " ? "" : v;
+        s.className = (v === "X" ? "mini--x" : v === "O" ? "mini--o" : "") + (marcas[f + "," + c] ? " mini--marca" : "");
+        m.appendChild(s);
+      });
+    });
+    return m;
+  }
+
+  /* Pinta una lista de pruebas: [{ etiqueta, salida, ok, tablero (opcional) }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      if (p.tablero) li.children[0].appendChild(mini(p.tablero, p.marcas));
+      li.children[0].appendChild(document.createTextNode(p.etiqueta));
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* cfg: { id, nombre, correcta, hueco, sangria, probar(valor) → filas, ok, pistas, alAcertar, alComprobar, alLimpiar } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiar() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      if (cfg.alLimpiar) cfg.alLimpiar();
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiar();
+      $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (cfg.alComprobar) cfg.alComprobar(marcada.value);
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        // Una opción de varias líneas entra en el espacio en blanco con su sangría
+        $(cfg.hueco).textContent = r.nextElementSibling.textContent.replace(/\n/g, "\n" + (cfg.sangria || ""));
+        leccion.listoParaComprobar(true);
+      });
+    });
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- 2. Parte 1: poner una ficha ---------- */
+  var JUGADAS_P1 = [[0, 2, "X"], [2, 1, "O"], [1, 1, "X"]];
+  var POSICION = ["arriba", "en el medio", "abajo"];
+  var LADO = ["a la izquierda", "al centro", "a la derecha"];
+  var p1Lista = Lista.crear($("p1-lista"), vacio());
+
+  function lugar(f, c) { return f === 1 && c === 1 ? "en el centro" : POSICION[f] + " " + LADO[c]; }
+
+  /* Aplica las tres jugadas con la línea elegida: el tablero que queda y qué pasó en cada una */
+  function ponerConOpcion(valor) {
+    var t = vacio();
+    var filas = JUGADAS_P1.map(function (j) {
+      var f = j[0], c = j[1], quien = j[2];
+      var etiqueta = quien + ": f = " + f + ", c = " + c;
+      var salida, ok;
+      if (valor === "bien") {
+        t[f][c] = quien;
+        salida = lugar(f, c);
+        ok = true;
+      } else if (valor === "invertido") {
+        t[c][f] = quien;
+        ok = f === c;
+        salida = ok ? lugar(f, c) + " (f y c iguales)" : lugar(c, f);
+      } else if (valor === "fila") {
+        t[f] = quien;
+        salida = "tablero[" + f + "] es \"" + quien + "\"";
+        ok = false;
+      } else {
+        salida = "no pone nada";
+        ok = false;
+      }
+      return { etiqueta: etiqueta, salida: salida, ok: ok };
+    });
+    return { t: t, filas: filas };
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-poner",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) { return ponerConOpcion(valor).filas; },
+    alComprobar: function (valor) {
+      var t = ponerConOpcion(valor).t;
+      $("p1-resultado").hidden = false;
+      p1Lista.valores(t);
+      // En verde, las fichas que quedaron donde debían; en naranja, las que no
+      var esperado = ponerConOpcion("bien").t;
+      p1Lista.clases(function (i, v) {
+        if (!Array.isArray(i)) return "lista__casilla--distinta";
+        if (v === " ") return "";
+        return esperado[i[0]][i[1]] === v ? "lista__casilla--igual" : "lista__casilla--distinta";
+      });
+    },
+    ok: "¡Eso es! Primero la fila, después la columna: tablero[f] es la lista de la fila f, y [c] elige su casillero.",
+    pistas: {
+      invertido: "Está al revés: tablero[c][f] usa la columna como fila. La X de f = 0, c = 2 cayó abajo a la izquierda. Primero va la fila.",
+      fila: "tablero[f] es la fila entera: al darle \"X\", la fila deja de ser una lista y se pierden sus tres casillas. Falta elegir la columna con [c].",
+      compara: "== compara: pregunta si la casilla ya es \"X\", pero no la cambia. Para poner la ficha se usa un solo =."
+    },
+    alLimpiar: function () { $("p1-resultado").hidden = true; }
+  });
+
+  /* ---------- 3. Parte 2: leer la fila y la columna ---------- */
+  var LEER = {
+    bien: function (d) { return /^\d+$/.test(d) && Number(d) <= 2 ? Number(d) : "pide"; },
+    int: function (d) {
+      if (!/^-?\d+$/.test(d)) return "ValueError";
+      return Number(d) <= 2 ? Number(d) : "pide";
+    },
+    or: function (d) {
+      if (/^\d+$/.test(d)) return Number(d);
+      if (!/^-?\d+$/.test(d)) return "ValueError";
+      return Number(d) <= 2 ? Number(d) : "pide";
+    },
+    digito: function (d) { return /^\d+$/.test(d) ? Number(d) : "pide"; }
+  };
+
+  function salidaLeer(r) {
+    if (r === "pide") return "Escribe 0, 1 o 2.";
+    if (r === "ValueError") return "💥 ValueError";
+    if (r < 0 || r > 2) return "devuelve " + r + (r > 2 ? " → IndexError" : ": ¡otra fila!");
+    return "devuelve " + r;
+  }
+
+  var parte2 = crearEleccion({
+    id: "paso-leer",
+    nombre: "p2",
+    correcta: "bien",
+    hueco: "p2-hueco",
+    probar: function (valor) {
+      return ["1", "5", "a", "-1"].map(function (d) {
+        var sale = LEER[valor](d);
+        return { etiqueta: "Escribe " + d, salida: salidaLeer(sale), ok: sale === LEER.bien(d) };
+      });
+    },
+    ok: "¡Bien! Primero .isdigit() revisa que sean solo dígitos; recién entonces int(dato) <= 2 revisa el tamaño. Con and, si lo primero es False, Python ni siquiera intenta el int().",
+    pistas: {
+      int: "Con «a», int(\"a\") da ValueError y el programa se detiene. Y «-1» pasa: -1 <= 2 es True, y tablero[-1] es la última fila. Falta revisar antes con .isdigit().",
+      or: "Con or basta que una parte sea True: «5» tiene solo dígitos y pasa (luego, IndexError). Y con «a», como .isdigit() es False, Python prueba int(\"a\"): ValueError. Las dos cosas deben cumplirse.",
+      digito: "«5» tiene solo dígitos y pasa, pero no hay fila 5: tablero[5] da IndexError. También hay que revisar que no sea mayor que 2."
+    }
+  });
+
+  /* ---------- 4. Parte 3: ¿hay tres en línea? ---------- */
+  function tablero(texto) {
+    // "X.O/.X./..X" → lista de listas (el punto es una casilla vacía)
+    return texto.split("/").map(function (f) { return Array.from(f).map(function (v) { return v === "." ? " " : v; }); });
+  }
+
+  var COLUMNA = {
+    bien: function (t, k) { return [t[0][k], t[1][k], t[2][k]]; },
+    fila: function (t, k) { return [t[k][0], t[k][1], t[k][2]]; },
+    cero: function (t) { return [t[0][0], t[1][0], t[2][0]]; },
+    misma: function (t, k) { return [t[0][k], t[0][k], t[0][k]]; }
+  };
+
+  function ganoCon(valor, t, f) {
+    function tres(a) { return a[0] === f && a[1] === f && a[2] === f; }
+    for (var k = 0; k < 3; k++) {
+      if (tres([t[k][0], t[k][1], t[k][2]])) return true;
+      if (tres(COLUMNA[valor](t, k))) return true;
+    }
+    if (tres([t[0][0], t[1][1], t[2][2]])) return true;
+    return tres([t[0][2], t[1][1], t[2][0]]);
+  }
+
+  var PRUEBAS_P3 = [
+    { t: "OXO/.X./.XO", etiqueta: "columna 1", marcas: ["0,1", "1,1", "2,1"] },
+    { t: "X.O/XO./X..", etiqueta: "columna 0", marcas: ["0,0", "1,0", "2,0"] },
+    { t: "..X/.O./O..", etiqueta: "una X sola", marcas: [] }
+  ];
+
+  var parte3 = crearEleccion({
+    id: "paso-gano",
+    nombre: "p3",
+    correcta: "bien",
+    hueco: "p3-hueco",
+    probar: function (valor) {
+      return PRUEBAS_P3.map(function (p) {
+        var t = tablero(p.t);
+        var sale = ganoCon(valor, t, "X");
+        var debe = ganoCon("bien", t, "X");
+        var marcas = {};
+        p.marcas.forEach(function (m) { marcas[m] = true; });
+        return { tablero: t, marcas: marcas, etiqueta: p.etiqueta, salida: "→ " + (sale ? "True" : "False"), ok: sale === debe };
+      });
+    },
+    ok: "¡Exacto! En la columna k cambia la fila (0, 1, 2) y la columna se queda fija: t[0][k], t[1][k], t[2][k].",
+    pistas: {
+      fila: "Esa es la fila k otra vez: la columna nunca se revisa. Con la columna 1 llena de X, gano dice False.",
+      cero: "Revisa siempre la columna 0, sea cual sea k: la columna 1 llena de X no cuenta. Hay que usar k.",
+      misma: "Revisa tres veces la misma casilla de arriba: con una sola X en t[0][2], ya dice que ganó. En una columna, la fila cambia: t[0][k], t[1][k], t[2][k]."
+    }
+  });
+
+  /* ---------- 5. Parte 4: el turno ---------- */
+  // Jugadas que intentan, en orden; la tercera cae en una casilla ocupada
+  var INTENTOS_P4 = [[1, 1], [0, 0], [0, 0], [2, 2], [0, 2]];
+  var CAMBIO = {
+    bien: function (t) { return t === "X" ? "O" : "X"; },
+    "dos-if": function (t) { if (t === "X") t = "O"; if (t === "O") t = "X"; return t; },
+    "siempre-o": function () { return "O"; },
+    anuncia: function (t) { return t; }
+  };
+
+  function turnosCon(valor) {
+    var t = vacio();
+    var turno = "X";
+    return INTENTOS_P4.map(function (j, k) {
+      var quien = turno;
+      var etiqueta = "Jugada " + (k + 1) + " (" + j[0] + ", " + j[1] + ")";
+      if (t[j[0]][j[1]] !== " ") return { etiqueta: etiqueta, quien: quien, salida: quien + ": ocupada" };
+      t[j[0]][j[1]] = quien;
+      turno = CAMBIO[valor](turno);
+      return { etiqueta: etiqueta, quien: quien, salida: "juega " + quien, tablero: copiar(t), marcas: (function () { var m = {}; m[j[0] + "," + j[1]] = true; return m; })() };
+    });
+  }
+
+  var parte4 = crearEleccion({
+    id: "paso-turno",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    sangria: "    ",
+    probar: function (valor) {
+      var esperado = turnosCon("bien");
+      return turnosCon(valor).map(function (r, k) {
+        return { etiqueta: r.etiqueta, salida: r.salida, ok: r.quien === esperado[k].quien, tablero: r.tablero, marcas: r.marcas };
+      });
+    },
+    ok: "¡Eso es! Si era X, pasa a O; si no, a X. Y cuando la casilla está ocupada, continue se salta el cambio: el mismo jugador intenta otra vez.",
+    pistas: {
+      anuncia: "Solo anuncia el turno, pero no lo cambia: X juega siempre.",
+      "dos-if": "Con dos if separados, el primero cambia X por O, y enseguida el segundo ve una O y la cambia por X: siempre juega X. Hace falta else.",
+      "siempre-o": "Después de la primera jugada, turno es \"O\" para siempre: la X no vuelve a jugar."
+    }
+  });
+
+  /* ---------- 6. El juego completo ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+  function idx(a, b) { return v("t") + "[" + a + "][" + b + "]"; }
+  var VACIA = "[" + s('" "') + ", " + s('" "') + ", " + s('" "') + "]";
+
+  var L = [
+    kw("def") + " " + f("tres") + "(" + v("a") + ", " + v("b") + ", " + v("c") + ", " + v("ficha") + "):",            // 0
+    "    " + kw("return") + " " + v("a") + " == " + v("ficha") + " " + kw("and") + " " + v("b") + " == " + v("ficha") + " " + kw("and") + " " + v("c") + " == " + v("ficha"),
+    kw("def") + " " + f("gano") + "(" + v("t") + ", " + v("ficha") + "):",                                               // 2
+    "    " + kw("for") + " " + v("k") + " " + kw("in") + " " + f("range") + "(" + n("3") + "):",
+    "        " + kw("if") + " " + f("tres") + "(" + idx(v("k"), n("0")) + ", " + idx(v("k"), n("1")) + ", " + idx(v("k"), n("2")) + ", " + v("ficha") + "):",
+    "            " + kw("return") + " " + kw("True"),                                                                     // 5
+    "        " + kw("if") + " " + f("tres") + "(" + idx(n("0"), v("k")) + ", " + idx(n("1"), v("k")) + ", " + idx(n("2"), v("k")) + ", " + v("ficha") + "):",
+    "            " + kw("return") + " " + kw("True"),
+    "    " + kw("if") + " " + f("tres") + "(" + idx(n("0"), n("0")) + ", " + idx(n("1"), n("1")) + ", " + idx(n("2"), n("2")) + ", " + v("ficha") + "):",
+    "        " + kw("return") + " " + kw("True"),
+    "    " + kw("return") + " " + f("tres") + "(" + idx(n("0"), n("2")) + ", " + idx(n("1"), n("1")) + ", " + idx(n("2"), n("0")) + ", " + v("ficha") + ")",  // 10
+    kw("def") + " " + f("lleno") + "(" + v("t") + "):",                                                                  // 11
+    "    " + kw("for") + " " + v("fila") + " " + kw("in") + " " + v("t") + ":",
+    "        " + kw("if") + " " + s('" "') + " " + kw("in") + " " + v("fila") + ":",
+    "            " + kw("return") + " " + kw("False"),
+    "    " + kw("return") + " " + kw("True"),                                                                             // 15
+    kw("def") + " " + f("leer") + "(" + v("texto") + "):",                                                               // 16
+    "    " + kw("while") + " " + kw("True") + ":",
+    "        " + v("dato") + " = " + f("input") + "(" + v("texto") + ")." + f("strip") + "()",                           // 18
+    "        " + kw("if") + " " + v("dato") + "." + f("isdigit") + "() " + kw("and") + " " + f("int") + "(" + v("dato") + ") &lt;= " + n("2") + ":",
+    "            " + kw("return") + " " + f("int") + "(" + v("dato") + ")",                                              // 20
+    "        " + f("print") + "(" + s('"Escribe 0, 1 o 2."') + ")",
+    v("tablero") + " = [" + VACIA + ",",                                                                                  // 22
+    "           " + VACIA + ",",
+    "           " + VACIA + "]",
+    v("turno") + " = " + s('"X"'),                                                                                        // 25
+    kw("while") + " " + kw("True") + ":",                                                                                 // 26
+    "    " + kw("for") + " " + v("fila") + " " + kw("in") + " " + v("tablero") + ":",
+    "        " + f("print") + "(" + s('" | "') + "." + f("join") + "(" + v("fila") + "))",
+    "    " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"Turno de ' + llave("turno") + '"') + ")",           // 29
+    "    " + v("f") + " = " + f("leer") + "(" + s('"Fila: "') + ")",                                                     // 30
+    "    " + v("c") + " = " + f("leer") + "(" + s('"Columna: "') + ")",
+    "    " + kw("if") + " " + v("tablero") + "[" + v("f") + "][" + v("c") + "] != " + s('" "') + ":",                      // 32
+    "        " + f("print") + "(" + s('"Esa casilla está ocupada."') + ")",
+    "        " + kw("continue"),
+    "    " + v("tablero") + "[" + v("f") + "][" + v("c") + "] = " + v("turno"),                                          // 35
+    "    " + kw("if") + " " + f("gano") + "(" + v("tablero") + ", " + v("turno") + "):",
+    "        " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"¡Ganó ' + llave("turno") + '!"') + ")",
+    "        " + kw("break"),
+    "    " + kw("if") + " " + f("lleno") + "(" + v("tablero") + "):",                                                    // 39
+    "        " + f("print") + "(" + s('"¡Empate!"') + ")",
+    "        " + kw("break"),
+    "    " + kw("if") + " " + v("turno") + " == " + s('"X"') + ":",                                                      // 42
+    "        " + v("turno") + " = " + s('"O"'),
+    "    " + kw("else") + ":",
+    "        " + v("turno") + " = " + s('"X"'),                                                                          // 45
+    kw("for") + " " + v("fila") + " " + kw("in") + " " + v("tablero") + ":",                                             // 46
+    "    " + f("print") + "(" + s('" | "') + "." + f("join") + "(" + v("fila") + "))"
+  ];
+  var LINEA_INPUT = 18;
+
+  function pintarLineas(code, lineas) {
+    code.innerHTML = lineas.map(function (h) { return '<span class="linea">' + h + "</span>"; }).join("");
+  }
+  pintarLineas($("t-codigo-lineas"), L);
+  pintarLineas($("r-codigo-lineas"), L);
+
+  function rango(a, b) {
+    var r = [];
+    for (var k = a; k <= b; k++) r.push(k);
+    return r;
+  }
+
+  var juego = { t: vacio(), turno: "X", espera: "fila", f: null };
+  var tLista = Lista.crear($("t-lista"), vacio());
+  var tMichi = crearMichi($("t-michi"), tocarReto);
+  var registro = $("t-registro");
+  var misiones = {};
+  var config;
+
+  function tablaSalida(t) { return t.map(filaTexto); }
+
+  function bajarConsola() {
+    setTimeout(function () { registro.scrollTop = registro.scrollHeight; }, 0);
+  }
+
+  function pintarTurno(fin) {
+    var el = $("t-turno");
+    el.className = "turno" + (fin ? " turno--fin" : "");
+    el.innerHTML = fin || ("Turno de " + ficha(juego.turno) + " · escribe la " + (juego.espera === "fila" ? "<strong>fila</strong>" : "<strong>columna</strong>"));
+  }
+
+  function preguntar(cual) {
+    juego.espera = cual;
+    config.pregunta = cual === "fila" ? "Fila:" : "Columna:";
+    config.siguiente = cual === "fila" ? "Escribe la fila." : "Escribe la columna.";
+    $("t-etiqueta").textContent = config.pregunta;
+  }
+
+  function cumplir(m) {
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  // Lo que pasa con un dato inválido o válido de leer(texto)
+  function leerDato(texto) {
+    return /^\d+$/.test(texto) && Number(texto) <= 2 ? Number(texto) : null;
+  }
+
+  config = {
+    prefijo: "t",
+    vueltas: null,
+    pregunta: "Fila:",
+    lineaInput: LINEA_INPUT,
+    validar: function () { return null; },   // el programa revisa el dato él mismo (leer)
+    alEmpezar: function () {
+      juego.t = vacio();
+      juego.turno = "X";
+      juego.fin = null;
+      preguntar("fila");
+      tLista.valores(vacio());
+      tMichi.pintar(juego.t);
+      tablaSalida(juego.t).concat(["Turno de X"]).forEach(function (l) { Codigo.agregar(registro, l); });
+      pintarTurno();
+      return "El tablero empieza con las 9 casillas en <code>\" \"</code>. Empieza la " + ficha("X") + ".";
+    },
+    alDato: function (texto) {
+      var dato = leerDato(texto);
+      var llamada = juego.espera === "fila" ? 30 : 31;
+      bajarConsola();
+      if (dato === null) {
+        var porque = texto === "" ? "No escribiste nada" : /^\d+$/.test(texto) ? "«" + texto + "» es mayor que 2" : "«" + texto + "» no son solo dígitos";
+        pintarTurno();
+        return {
+          texto: porque + ": <code>leer</code> no lo acepta y vuelve a preguntar.",
+          camino: { activas: [llamada, 17, 18, 19, 21], saltadas: [20] },
+          salida: ["Escribe 0, 1 o 2."]
+        };
+      }
+      if (juego.espera === "fila") {
+        juego.f = dato;
+        preguntar("columna");
+        pintarTurno();
+        return {
+          texto: "<code>leer</code> devuelve <strong>" + dato + "</strong>: <code>f = " + dato + "</code>.",
+          camino: { activas: [30, 18, 19, 20], saltadas: [21] }
+        };
+      }
+      var fi = juego.f, c = dato, quien = juego.turno;
+      var base = [31, 18, 19, 20, 32];
+      preguntar("fila");
+      if (juego.t[fi][c] !== " ") {
+        cumplir("ocupada");
+        tMichi.ocupada(fi, c);
+        tLista.marcar([fi, c]);
+        pintarTurno();
+        return {
+          texto: "<code>tablero[" + fi + "][" + c + "]</code> es <code>\"" + juego.t[fi][c] + "\"</code>: está ocupada. <code>continue</code> vuelve a empezar la vuelta y " + ficha(quien) + " intenta otra vez.",
+          camino: { activas: base.concat([33, 34, 26, 27, 28, 29]), saltadas: rango(35, 45).concat([21]) },
+          salida: ["Esa casilla está ocupada."].concat(tablaSalida(juego.t), ["Turno de " + quien])
+        };
+      }
+      juego.t[fi][c] = quien;
+      tMichi.pintar(juego.t);
+      tMichi.nueva(fi, c);
+      tLista.marcar([fi, c]);
+      var respuestas = registro.querySelectorAll(".registro__respuesta");
+      tLista.cambiar([fi, c], quien, respuestas.length ? respuestas[respuestas.length - 1] : tMichi.boton(fi, c));
+      var lineas = lineasDe(juego.t, quien);
+      if (lineas.length) {
+        lineas.forEach(function (l) { if (l.tipo !== "fila") cumplir(l.tipo); });
+        tMichi.pintar(juego.t, { gana: lineas, bloqueado: true });
+        tLista.clases(function (i) {
+          return lineas.some(function (l) { return l.casillas.some(function (p) { return p[0] === i[0] && p[1] === i[1]; }); }) ? "lista__casilla--igual" : "";
+        });
+        juego.fin = { gano: quien, tipo: lineas[0].tipo };
+        pintarTurno("¡Ganó " + ficha(quien) + " con una " + lineas.map(function (l) { return l.tipo; }).join(" y una ") + "!");
+        return {
+          texto: "<code>tablero[" + fi + "][" + c + "] = \"" + quien + "\"</code> y <code>gano(tablero, \"" + quien + "\")</code> da <code>True</code>: ¡ganó! <code>break</code> termina el juego.",
+          camino: { activas: base.concat([35, 36, 37, 38, 46, 47]), saltadas: [21, 33, 34].concat(rango(39, 45)) },
+          salida: ["¡Ganó " + quien + "!"].concat(tablaSalida(juego.t)),
+          fin: true
+        };
+      }
+      if (lleno(juego.t)) {
+        cumplir("empate");
+        tMichi.pintar(juego.t, { bloqueado: true });
+        juego.fin = { empate: true };
+        pintarTurno("¡Empate! No queda ningún \" \".");
+        return {
+          texto: "Nadie hizo tres en línea y <code>lleno(tablero)</code> da <code>True</code>: no queda ningún <code>\" \"</code>. ¡Empate! <code>break</code> termina el juego.",
+          camino: { activas: base.concat([35, 36, 39, 40, 41, 46, 47]), saltadas: [21, 33, 34, 37, 38].concat(rango(42, 45)) },
+          salida: ["¡Empate!"].concat(tablaSalida(juego.t)),
+          fin: true
+        };
+      }
+      juego.turno = quien === "X" ? "O" : "X";
+      pintarTurno();
+      var cambio = quien === "X" ? [42, 43] : [42, 44, 45];
+      var salto = quien === "X" ? [44, 45] : [43];
+      return {
+        texto: "<code>tablero[" + fi + "][" + c + "] = \"" + quien + "\"</code>. Nadie ganó y quedan casillas: ahora juega " + ficha(juego.turno) + ".",
+        camino: { activas: base.concat([35, 36, 39], cambio, [26, 27, 28, 29]), saltadas: [21, 33, 34, 37, 38, 40, 41].concat(salto) },
+        salida: tablaSalida(juego.t).concat(["Turno de " + juego.turno])
+      };
+    },
+    alTerminar: function () {
+      bajarConsola();
+      var faltan = ["columna", "diagonal", "ocupada", "empate"].filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) {
+        Pasos.feedback($("t-fb"), "ok", "¡Misiones cumplidas! Tu juego pone las fichas en la lista de listas, revisa cada línea, no deja pisar una casilla y sabe cuándo hay empate.");
+        leccion.desbloquear();
+        return;
+      }
+      var pistas = {
+        columna: "Para ganar con una columna, juega X en la misma columna en tres filas: por ejemplo, 0 1, 1 1 y 2 1.",
+        diagonal: "Para ganar con una diagonal, pon tres fichas en 0 0, 1 1 y 2 2 (o en 0 2, 1 1 y 2 0).",
+        ocupada: "Para la misión de la casilla ocupada, escribe una fila y una columna donde ya haya una ficha.",
+        empate: "Para un empate, cada jugador debe tapar las líneas del otro hasta llenar las 9 casillas."
+      };
+      var inicio = juego.fin && juego.fin.gano ? "¡Ganó " + juego.fin.gano + "! " : "¡Empate! ";
+      Pasos.feedback($("t-fb"), "pista", inicio + pistas[faltan[0]] + " Toca «Otra partida».");
+    }
+  };
+  BucleInput.crear(config);
+
+  /* Tocar una casilla escribe por ti lo que falta: la fila y la columna, o solo la columna */
+  function tocarReto(fi, c) {
+    if ($("t-fila").hidden) return;
+    var campo = $("t-campo");
+    if (juego.espera === "fila") {
+      campo.value = String(fi);
+      $("t-enviar").click();
+    }
+    campo.value = String(c);
+    $("t-enviar").click();
+    campo.blur();
+    var b = tMichi.boton(fi, c);
+    if (!b.disabled) b.focus();
+  }
+
+  $("t-otra").addEventListener("click", function () {
+    juego.fin = null;
+    Pasos.limpiarFeedback($("t-fb"));
+  });
+
+  /* ---------- Conexiones ---------- */
+  $("d-modo").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      demo.modo = b.getAttribute("data-valor");
+      $("d-modo").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      empezarDemo();
+    });
+  });
+  $("d-otra").addEventListener("click", function () {
+    empezarDemo();
+    dMichi.boton(1, 1).focus();
+  });
+  empezarDemo();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-poner": parte1.entrar,
+      "paso-leer": parte2.entrar,
+      "paso-gano": parte3.entrar,
+      "paso-turno": parte4.entrar
+    },
+    comprobar: {
+      "paso-poner": parte1.comprobar,
+      "paso-leer": parte2.comprobar,
+      "paso-gano": parte3.comprobar,
+      "paso-turno": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
