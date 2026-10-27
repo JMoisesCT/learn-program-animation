@@ -46,6 +46,20 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 3/8: Recorrer y acumular
+
+**Lección** `lecciones/listas/recorrer/` (`data-leccion="listas-recorrer"`), 8 pasos:
+1. Sumar todas las notas: `total = total + nota` línea a línea; cada nota vuela del casillero a la caja y `total` crece.
+2. ¿Cuántos aprobaron?: predecir qué imprime (2, 3 o 5) y ejecutar; los casilleros se pintan verde o naranja y `cuantos` sube con los verdes.
+3. La mayor hasta ahora: en cada vuelta el alumno decide si `mayor` cambia (la trampa: `12 > 12` en la primera vuelta).
+4. Python ya lo sabe hacer: `sum`, `max`, `min` y `len` comparados con lo hecho a mano, y el promedio `sum(notas) / len(notas)` (trampas: 57 y 14.25).
+5. Una lista solo con los aprobados: `aprobados = []` y `aprobados.append(nota)` dentro del `if`; la segunda lista crece.
+6. ¿De quién es la nota?: `for i in range(len(notas))` con `alumnos` y `notas` en el mismo orden; se marca el mismo casillero en las dos.
+7. Reto: ¿quién sacó la mayor nota? (`mejor` guarda un índice: `mejor = i`); trampas: `notas[i]` (IndexError), `mejor + 1` e `i + 1`, con tres pruebas.
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 2/8: Agregar y quitar
 
 **Lección** `lecciones/listas/cambiar/` (`data-leccion="listas-cambiar"`), 8 pasos:
