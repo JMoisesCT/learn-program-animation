@@ -9,7 +9,12 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Listas (1/8 publicada).** Lo siguiente: Listas 2/8 · Agregar y quitar, y el resto del plan de CLAUDE.md; al publicar cada una, su `<li>` en la portada y el «Siguiente» de la anterior (Listas 1/8 aún no tiene). **Errores** se pasó detrás de Listas; falta planear sus sublecciones.
+2. **Listas, completo (8/8).** Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: tres en raya y pasar su tarjeta «Próximamente» de la portada a lección.
+   **Probar con alumnos** las lecciones de Listas en un móvil de verdad, sobre todo:
+   - si los casilleros que se corren al insertar y quitar (Agregar y quitar) se siguen con la vista;
+   - si «dos etiquetas, una lista» (Dos nombres, una lista) se entiende o hace falta otra imagen (p. ej. flechas);
+   - el tres en raya: tocar el tablero y escribir fila y columna en la consola (el programa del reto tiene 48 líneas).
+   **Detalles vistos**: en móvil, las cintas de frases largas (De texto a lista) usan casillas de 1.3rem y se leen pequeñas; en la cuadrícula, el casillero marcado sube 4 px (en las pruebas parece una lista partida en dos filas).
    **Texto a fondo, completo (5/5).**
    **Probar con alumnos** el ahorcado en un móvil de verdad (en el reto, el tablero y las misiones van antes que el programa, que tiene 31 líneas) y si se entiende que repetir una letra que no está quita otra vida (el programa no lo revisa; podría ser una mejora con `if nueva in dichas:` y `continue`).
    **Probar con alumnos** si se entiende el `-1` de `.find()` (paso «Antes y después de la @»: sin @, `correo[:-1]` corta la última letra sin dar error).
@@ -45,6 +50,10 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-27 · Listas: cómo se hizo
+
+Las lecciones 2 a 8 se escribieron en paralelo, una por agente (cada uno en su copia del repositorio y su rama), a partir de Listas 1/8 y `lista.js`; luego se revisaron con capturas a 390 px, se fusionaron en orden y se ajustó `lista.js` con lo que encontraron (tamaño de los casilleros según lo largo de los valores, `capacidad`, copia en profundidad, fila marcada en la cuadrícula). Scripts de prueba: recorrer todos los pasos desbloqueados (`maximo` en `lpa:progreso`) con capturas, y buscar listas partidas en dos filas.
 
 ### 2026-10-27 · Listas 8/8: Proyecto: tres en raya (michi)
 
