@@ -46,6 +46,20 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-27 · Listas 7/8: Listas dentro de listas
+
+**Lección** `lecciones/listas/anidadas/` (`data-leccion="listas-anidadas"`), 8 pasos:
+1. Un tablero en tres filas: de `fila0`, `fila1` y `fila2` a `tablero = [[…], …]`; cada casilla vuela a la cuadrícula.
+2. Cada casillero es una fila: `print(tablero[i])` imprime una lista entera.
+3. Primero la fila, luego la columna: dos controles para `tablero[f][c]`, con la expresión resuelta paso a paso; hay que encontrar las tres X.
+4. ¿Qué da cada una?: predecir `len(tablero)` (trampa: 9), `tablero[2][0]` y `tablero[3][0]` (IndexError).
+5. Tu jugada: `tablero[f][c] = "O"` en una casilla vacía.
+6. Fila a fila, casilla a casilla: dos `for` que dibujan el tablero en la consola, y una versión con `" | ".join(fila)`.
+7. Reto: ¿dónde puedo jugar? (`tablero[f][c]` en el `if`; trampas `tablero[c][f]`, `tablero[f]` y `tablero[0][c]`).
+8. Resumen.
+
+Portada y botón «Siguiente» en la lección anterior. Probado con Playwright a 1280 y 390 px (respuestas equivocadas y movimiento reducido incluidos): sin errores de JavaScript ni desborde horizontal.
+
 ### 2026-10-27 · Listas 6/8: Dos nombres, una lista
 
 **Lección** `lecciones/listas/referencias/` (`data-leccion="listas-referencias"`), 8 pasos:
