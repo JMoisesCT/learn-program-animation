@@ -7,6 +7,9 @@
                      Pila.llamada("promedio(14, 17)", [["a", 14], ["b", 17]], "15.5")],
               leer: [nivel, "nombre"] });
    p.vaciar();                       solo queda la tarjeta del programa
+   p.reservar(estados);              (con codigo) el código y el rótulo guardan el mayor alto que
+                                     alcanzan en esos estados: los botones de debajo no saltan.
+                                     Traza lo hace sola si recibe la pila (opción pila).
 
    Cada estado trae la pila completa, de abajo arriba. La tarjeta de arriba es la que
    trabaja; las de abajo esperan. Si trae devuelve, está terminando y lo muestra
@@ -136,6 +139,20 @@
     return { raiz: raiz, cuerpo: cuerpo, nivel: -1, clave: null };
   }
 
+  function llenarRotulo(cuerpo, pila) {
+    var nivel = pila.length - 1;
+    var datos = pila[nivel];
+    cuerpo.textContent = "";
+    if (nivel === 0) cuerpo.appendChild(crear("span", "rotulo__programa", "el programa"));
+    else cuerpo.appendChild(crear("code", "rotulo__llamada", datos.titulo));
+    datos.vars.forEach(function (par) {
+      var c = crear("span", "var");
+      c.appendChild(crear("code", "var__nombre", par[0]));
+      c.appendChild(crear("code", "var__valor", String(par[1])));
+      cuerpo.appendChild(c);
+    });
+  }
+
   function pintarRotulo(r, pila) {
     var nivel = pila.length - 1;
     var datos = pila[nivel];
@@ -143,15 +160,7 @@
     if (clave === r.clave) return;
     var otra = nivel !== r.nivel || r.clave === null || r.clave.split("|")[1] !== datos.titulo;
     r.clave = clave;
-    r.cuerpo.textContent = "";
-    if (nivel === 0) r.cuerpo.appendChild(crear("span", "rotulo__programa", "el programa"));
-    else r.cuerpo.appendChild(crear("code", "rotulo__llamada", datos.titulo));
-    datos.vars.forEach(function (par) {
-      var c = crear("span", "var");
-      c.appendChild(crear("code", "var__nombre", par[0]));
-      c.appendChild(crear("code", "var__valor", String(par[1])));
-      r.cuerpo.appendChild(c);
-    });
+    llenarRotulo(r.cuerpo, pila);
     // Al llamar entra desde arriba, como la tarjeta nueva; al volver, desde abajo
     if (otra) {
       r.raiz.classList.remove("rotulo--sube", "rotulo--baja");
@@ -259,8 +268,19 @@
       pintar({ pila: [programa()] });
     }
 
+    // El código (con sus fichas) y el rótulo guardan el alto que alcanzan en la traza
+    function reservar(estados) {
+      if (codigo) Codigo.reservarAlto(codigo, estados, function (copia, e) {
+        copia.querySelectorAll(".pausas, .codigo__salto").forEach(function (x) { x.remove(); });
+        Codigo.pausas(copia, fichas(e.pila));
+      });
+      if (rotulo) Codigo.reservarAlto(rotulo.raiz, estados, function (copia, e) {
+        llenarRotulo(copia.querySelector(".rotulo__cuerpo"), e.pila);
+      });
+    }
+
     vaciar();
-    return { pintar: pintar, vaciar: vaciar };
+    return { pintar: pintar, vaciar: vaciar, reservar: reservar };
   }
 
   window.Pila = { crear: crearPila, programa: programa, llamada: llamada };
