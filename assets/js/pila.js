@@ -34,6 +34,11 @@
    (por defecto, sus variables).
    Con rotulo: true (y codigo), encima del código se lee qué llamada lo está ejecutando:
    «Ahora corre: abrir(2) n 2», la tarjeta de arriba. Cambia al llamar y al volver.
+
+   Para que el alumno haga la vuelta él mismo: con la opción alTocar(nivel, arriba), tocar
+   una tarjeta la llama con su nivel (0 = programa) y si es la de arriba. Si el estado trae
+   tocable: "👆 Tócala", la de arriba se ve como un botón (anillo, cursor, Enter o espacio)
+   con ese aviso; p.tope() da su elemento, para darle el foco.
 */
 (function () {
   "use strict";
@@ -68,10 +73,13 @@
     vars.appendChild(vacia);
     cab.appendChild(titulo);
     cab.appendChild(estado);
+    var toca = crear("p", "marco__toca");
+    toca.hidden = true;
     raiz.appendChild(cab);
     raiz.appendChild(vars);
     raiz.appendChild(falta);
-    return { titulo: datos.titulo, raiz: raiz, estado: estado, vars: vars, vacia: vacia, falta: falta, chips: {} };
+    raiz.appendChild(toca);
+    return { titulo: datos.titulo, raiz: raiz, estado: estado, vars: vars, vacia: vacia, falta: falta, toca: toca, chips: {} };
   }
 
   // «le falta: …»: lo que la llamada hará cuando vuelva la de arriba
@@ -174,6 +182,7 @@
 
   function crearPila(el, opciones) {
     var codigo = opciones && opciones.codigo;
+    var alTocar = opciones && opciones.alTocar;
     var rotulo = codigo && opciones.rotulo ? crearRotulo(codigo) : null;
     var titulo = crear("p", "pila__titulo");
     var cont = crear("div", "pila__marcos");
@@ -241,6 +250,7 @@
         } else if (!sigue) m.raiz.classList.remove("marco--sigue");
         pintarVars(m, datos.vars, e.leer && e.leer[0] === nivel ? e.leer[1] : null);
         pintarFalta(m, pausada || sigue ? datos.falta : undefined, sigue ? datos.recibe : undefined);
+        pintarToca(m, arriba && e.tocable ? e.tocable : "");
         m.devuelve = datos.devuelve;
       });
       titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
@@ -249,6 +259,38 @@
       if (codigo) Codigo.pausas(codigo, fichas(pila));
       if (rotulo) pintarRotulo(rotulo, pila);
     }
+
+    // La tarjeta de arriba, cuando el alumno la tiene que tocar, es un botón
+    function pintarToca(m, aviso) {
+      var r = m.raiz;
+      r.classList.toggle("marco--tocable", !!aviso);
+      m.toca.hidden = !aviso;
+      m.toca.textContent = aviso;
+      if (aviso) {
+        r.setAttribute("role", "button");
+        r.setAttribute("tabindex", "0");
+        r.setAttribute("aria-label", m.titulo + ": " + aviso.replace(/^\W+/, ""));
+      } else {
+        r.removeAttribute("role");
+        r.removeAttribute("tabindex");
+        r.removeAttribute("aria-label");
+      }
+    }
+
+    function tocar(ev) {
+      if (!alTocar) return;
+      var raiz = ev.target.closest(".marco");
+      for (var i = 0; i < marcos.length; i++) {
+        if (marcos[i].raiz === raiz) { alTocar(i, i === marcos.length - 1); return; }
+      }
+    }
+    cont.addEventListener("click", tocar);
+    cont.addEventListener("keydown", function (ev) {
+      if ((ev.key === "Enter" || ev.key === " ") && ev.target.classList.contains("marco--tocable")) {
+        ev.preventDefault();
+        tocar(ev);
+      }
+    });
 
     // Una ficha por tarjeta pausada, de abajo arriba, en la línea donde espera
     function fichas(pila) {
@@ -279,8 +321,10 @@
       });
     }
 
+    function marcoDeArriba() { return marcos[marcos.length - 1].raiz; }
+
     vaciar();
-    return { pintar: pintar, vaciar: vaciar, reservar: reservar };
+    return { pintar: pintar, vaciar: vaciar, reservar: reservar, tope: marcoDeArriba };
   }
 
   window.Pila = { crear: crearPila, programa: programa, llamada: llamada };
