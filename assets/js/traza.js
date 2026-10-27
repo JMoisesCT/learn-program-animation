@@ -12,7 +12,10 @@
        return [{ linea: 0, texto: "…", salida: "…", estado: { … } }, …];
      },                          (opcional) flecha: true / false en un paso fuerza o evita la
                                  flecha de salto desde la línea anterior; si no se indica, se
-                                 dibuja cuando la ejecución vuelve arriba (otra vuelta, una llamada)
+                                 dibuja cuando la ejecución vuelve arriba (otra vuelta, una llamada).
+                                 fase: "ida" / "vuelta" (recursión) colorea la flecha del paso:
+                                 a la ida (una llamada) o a la vuelta (volver de ella); en una
+                                 consola con la clase consola--fases, también lo que imprime
      alPaso: function (paso, i) { … },   pinta el estado (cajas, chips…)
      pila: p,                             (opcional) la Pila.crear que pinta paso.estado: su código
                                           y su rótulo reservan el alto que alcanzan en la traza
@@ -103,13 +106,14 @@
         // Lo que imprime print viaja de la línea a la consola
         var texto = String(paso.salida);
         Codigo.agregar(o.consola, texto);
+        if (paso.fase && o.consola.classList.contains("consola--fases")) o.consola.lastElementChild.classList.add("consola__linea--" + paso.fase);
         Codigo.volarDesdeLinea(o.codigo, o.consola.lastElementChild, texto, "vuelo--salida");
       }
       if (o.alPaso) o.alPaso(paso, i - 1);
       // La flecha, después de pintar el paso: así mide las líneas como quedan (p. ej. sin la
       // ficha de la llamada que retoma)
       var salta = paso.flecha !== undefined ? paso.flecha : desde !== null && paso.linea < desde;
-      if (salta && desde !== null) Codigo.salto(o.codigo, desde, paso.linea);
+      if (salta && desde !== null) Codigo.salto(o.codigo, desde, paso.linea, paso.fase);
       else Codigo.quitarSalto(o.codigo);
       if (terminado()) {
         detener();
