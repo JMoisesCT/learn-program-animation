@@ -9,7 +9,8 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Texto a fondo, completo (5/5).** Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones, como las de Funciones, Recursión y Texto a fondo) y luego **Listas**, decidiendo qué se levanta de la regla «nada de listas». Al publicar Errores, añadir «Siguiente» en el Proyecto: el ahorcado.
+2. **Listas: plan listo en CLAUDE.md (8 lecciones).** Lo siguiente: `assets/js/lista.js` (la fila de casilleros) y Listas 1/8 · Muchos valores en una variable; al publicarla, convertir la tarjeta «Próximamente» de la portada en `tarjeta-tema` y añadir «Siguiente» en el Proyecto: el ahorcado. **Errores** se pasó detrás de Listas; falta planear sus sublecciones.
+   **Texto a fondo, completo (5/5).**
    **Probar con alumnos** el ahorcado en un móvil de verdad (en el reto, el tablero y las misiones van antes que el programa, que tiene 31 líneas) y si se entiende que repetir una letra que no está quita otra vida (el programa no lo revisa; podría ser una mejora con `if nueva in dichas:` y `continue`).
    **Probar con alumnos** si se entiende el `-1` de `.find()` (paso «Antes y después de la @»: sin @, `correo[:-1]` corta la última letra sin dar error).
    **Probar con alumnos** las tijeras de Rebanadas en un móvil de verdad (arrastrar y tocar la cinta; usan `touch-action: none`, así que sobre la cinta la página no se desplaza) y si «los números van en los cortes» se entiende.
@@ -44,6 +45,10 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-27 · Plan de Listas
+
+Plan del tema en CLAUDE.md, 8 lecciones en `lecciones/listas/`: Muchos valores en una variable, Agregar y quitar, Recorrer y acumular, Ordenar y buscar, De texto a lista y de vuelta, Dos nombres, una lista, Listas dentro de listas y Proyecto: tres en raya (michi). La visualización central será una fila de casilleros (`Lista.crear`, por hacer). Listas va antes que Errores (antes era al revés).
 
 ### 2026-10-27 · Recursión: la vuelta, mejor explicada
 
