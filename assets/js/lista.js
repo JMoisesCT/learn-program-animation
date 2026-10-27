@@ -6,7 +6,9 @@
        indices: true,       número de cada casillero encima (notas[0], notas[1]…)
        negativos: false,    número negativo debajo (notas[-1] es el último)
        nombres: ["notas"],  (opcional) etiquetas que apuntan a la lista (dos nombres, una lista)
-       corchetes: true      [ y ] en los extremos, como se escribe en Python
+       corchetes: true,     [ y ] en los extremos, como se escribe en Python
+       capacidad: 4         (opcional) el tamaño de los casilleros se calcula para al menos
+                            tantos elementos: si la lista va a crecer, así no se achican
      });
 
    Los textos se ven con comillas ("Ana") y los números sin ellas. Una lista de listas
@@ -133,7 +135,12 @@
     function renumerar() {
       var cs = casillas();
       var n = cs.length;
-      el.style.setProperty("--lista-n", String(Math.max(n + 1, 4)));
+      // Cuántos casilleros «normales» ocupa la fila: un texto largo cuenta por más de uno,
+      // así los casilleros se achican a tiempo y la lista no se parte en dos filas
+      var peso = cuadricula ? n : valores.reduce(function (t, v) {
+        return t + Math.max(1, 0.26 * texto(v).length + 0.3);
+      }, 0);
+      el.style.setProperty("--lista-n", String(Math.round(Math.max(peso + 1, opciones.capacidad || 4) * 10) / 10));
       cs.forEach(function (c, i) {
         if (cuadricula) {
           c.classList.toggle("lista__casilla--primera", i === 0);
@@ -168,7 +175,8 @@
     }
 
     function pintar(nuevos) {
-      valores = nuevos.slice();
+      // Copia en profundidad: cambiar la lista (o una fila de la cuadrícula) no toca el original
+      valores = JSON.parse(JSON.stringify(nuevos));
       cuadricula = valores.length > 0 && valores.every(Array.isArray);
       if (fila) fila.remove();
       fantasma = null;
@@ -337,6 +345,7 @@
         valores[f][normal(i[1], valores[f].length)] = v;
       }
       else valores[normal(i, valores.length)] = v;
+      renumerar();
       llegar(nuevo, v, origen);
       return c;
     }
