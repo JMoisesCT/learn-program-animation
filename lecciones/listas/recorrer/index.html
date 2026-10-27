@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recorrer y acumular · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: recorrer una lista en Python. Sumar, contar y buscar la mayor con un for, sum(), max(), min() y el promedio, filtrar en una lista nueva y usar range(len(notas)) para la posición.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .expresion { overflow-wrap: anywhere; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .consola__linea--error { color: var(--color-error); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    * + .rotulo-cinta { margin-top: var(--esp-3); }
+    .cajas--dos { padding-top: var(--esp-3); gap: var(--esp-4) var(--esp-6); }
+
+    /* ---------- Predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .pregunta { margin: var(--esp-4) 0 0; text-align: center; font-weight: 600; }
+    .prediccion { margin-top: var(--esp-4); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- 3. La mayor, a mano ---------- */
+    .decidir { display: grid; gap: var(--esp-2); justify-items: center; margin-top: var(--esp-4); }
+    .decidir__pregunta { margin: 0; min-height: 1.6em; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-lg); text-align: center; }
+    .decidir__pregunta .chip { padding: 0 0.35em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .decidir .elegir { margin-top: 0; }
+    .decidir .elegir .btn { font-family: var(--fuente); }
+
+    /* ---------- 4. Máquinas ---------- */
+    .maquinas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin-top: var(--esp-4); }
+    .maquinas .btn { min-height: 2.75rem; font-family: var(--fuente-codigo); }
+    .maquinas .btn--usada::after { content: " ✓"; color: var(--color-ok); }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .prueba__error { color: var(--color-error); font-weight: 700; }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .pruebas li { font-size: var(--texto-xs); padding: var(--esp-2) var(--esp-3); }
+      .cajas--dos { gap: var(--esp-4) var(--esp-5); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-recorrer">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Sumar con un for -->
+    <section class="paso" id="paso-sumar" data-requiere aria-labelledby="t-sumar">
+      <span class="paso__etiqueta">Listas 3/8 · Recorrer y acumular</span>
+      <h1 class="paso__titulo" id="t-sumar">Sumar todas las notas</h1>
+      <p>Con un <code>for</code> pasas por cada casillero. Si en cada vuelta sumas la nota a una caja <code>total</code>, al final tienes la suma de todas. Ejecútalo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>, <span class="tk-numero">6</span>]</span><span class="linea"><span class="tk-variable">total</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-variable">total</span> = <span class="tk-variable">total</span> + <span class="tk-variable">nota</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">total</span>)</span></code></pre>
+          <p class="explicacion" id="s1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-lista"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="s1-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nota</code>
+            </div>
+            <div class="caja caja--acento" id="s1-total">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">total</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Contar aprobados -->
+    <section class="paso" id="paso-contar" data-requiere aria-labelledby="t-contar">
+      <h2 class="paso__titulo" id="t-contar">¿Cuántos aprobaron?</h2>
+      <p>Ahora el <code>for</code> no suma la nota: suma <strong>1</strong> solo cuando la nota aprueba (11 o más). Antes de ejecutarlo, ¿cuánto crees que imprimirá?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>, <span class="tk-numero">6</span>]</span><span class="linea"><span class="tk-variable">cuantos</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">cuantos</span> = <span class="tk-variable">cuantos</span> + <span class="tk-numero">1</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">cuantos</span>)</span></code></pre>
+          <div class="elegir" id="s2-elegir" role="group" aria-label="¿Cuánto imprimirá?">
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+            <button type="button" class="btn btn-secundario" data-valor="5" aria-pressed="false">5</button>
+          </div>
+          <div id="s2-ejecucion" hidden>
+            <p class="explicacion" id="s2-explicacion" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s2-reiniciar" hidden>↺ Reiniciar</button>
+              <button type="button" class="btn btn-secundario" id="s2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+              <button type="button" class="btn btn-secundario" id="s2-ejecutar">Ejecutar línea ▸</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-lista"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="s2-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nota</code>
+            </div>
+            <div class="caja caja--acento" id="s2-cuantos">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">cuantos</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. La mayor, a mano -->
+    <section class="paso" id="paso-mayor" data-requiere aria-labelledby="t-mayor">
+      <h2 class="paso__titulo" id="t-mayor">La mayor hasta ahora</h2>
+      <p><code>mayor</code> empieza con la primera nota. En cada vuelta, si la nota es más grande, ocupa su lugar. Tú decides: ¿cambia <code>mayor</code> en esta vuelta?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">12</span>, <span class="tk-numero">9</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>, <span class="tk-numero">18</span>, <span class="tk-numero">6</span>]</span><span class="linea"><span class="tk-variable">mayor</span> = <span class="tk-variable">notas</span>[<span class="tk-numero">0</span>]</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt; <span class="tk-variable">mayor</span>:</span><span class="linea">        <span class="tk-variable">mayor</span> = <span class="tk-variable">nota</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">mayor</span>)</span></code></pre>
+          <div class="decidir">
+            <p class="decidir__pregunta" id="s3-pregunta" aria-live="polite"></p>
+            <div class="elegir" id="s3-elegir" role="group" aria-label="¿Cambia mayor?">
+              <button type="button" class="btn btn-secundario" data-valor="si">Sí, cambia</button>
+              <button type="button" class="btn btn-secundario" data-valor="no">No, se queda</button>
+            </div>
+            <div class="fila-botones" id="s3-otra" hidden>
+              <button type="button" class="btn btn-secundario" id="s3-otra-btn">↺ Otra vez</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-lista"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--acento" id="s3-mayor">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mayor</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. sum, max, min, len y el promedio -->
+    <section class="paso" id="paso-maquinas" data-requiere aria-labelledby="t-maquinas">
+      <h2 class="paso__titulo" id="t-maquinas">Python ya lo sabe hacer</h2>
+      <p>Sumar y buscar la mayor son tan comunes que Python trae funciones que lo hacen solas. Prueba las cuatro.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>, <span class="tk-numero">6</span>]</span><span class="linea" id="s4-linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>))</span></code></pre>
+          <div class="maquinas" id="s4-maquinas" role="group" aria-label="Funciones para probar">
+            <button type="button" class="btn btn-secundario" data-valor="sum">sum(notas)</button>
+            <button type="button" class="btn btn-secundario" data-valor="max">max(notas)</button>
+            <button type="button" class="btn btn-secundario" data-valor="min">min(notas)</button>
+            <button type="button" class="btn btn-secundario" data-valor="len">len(notas)</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s4-lista"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s4-expr">sum(notas)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s4-valor">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+          <div class="prediccion" id="s4-promedio" hidden>
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">sum(notas) / len(notas)</code>
+              <div class="elegir" role="group" aria-label="¿Cuánto da el promedio?">
+                <button type="button" class="btn btn-secundario" data-valor="57" aria-pressed="false">57</button>
+                <button type="button" class="btn btn-secundario" data-valor="14.25" aria-pressed="false">14.25</button>
+                <button type="button" class="btn btn-secundario" data-valor="11.4" aria-pressed="false">11.4</button>
+              </div>
+            </div>
+            <div class="feedback" id="s4-promedio-fb" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Filtrar en una lista nueva -->
+    <section class="paso" id="paso-filtrar" data-requiere aria-labelledby="t-filtrar">
+      <h2 class="paso__titulo" id="t-filtrar">Una lista solo con los aprobados</h2>
+      <p>Contar te dice cuántos; a veces quieres <strong>cuáles</strong>. Empieza con una lista vacía y, en cada vuelta, agrega la nota solo si aprueba.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>, <span class="tk-numero">6</span>]</span><span class="linea"><span class="tk-variable">aprobados</span> = []</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">aprobados</span>.<span class="tk-funcion">append</span>(<span class="tk-variable">nota</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">aprobados</span>)</span></code></pre>
+          <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">notas</p>
+          <div id="s5-notas"></div>
+          <p class="rotulo-cinta">aprobados</p>
+          <div id="s5-aprobados"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. La posición: range(len(notas)) -->
+    <section class="paso" id="paso-posicion" data-requiere aria-labelledby="t-posicion">
+      <h2 class="paso__titulo" id="t-posicion">¿De quién es la nota?</h2>
+      <p>Con <code>for nota in notas</code> tienes la nota, pero no sabes de quién es. Con <code>range(len(notas))</code> recorres los <strong>índices</strong>, y con el mismo <code>i</code> lees las dos listas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">alumnos</span> = [<span class="tk-texto">"Ana"</span>, <span class="tk-texto">"Luis"</span>, <span class="tk-texto">"Sofía"</span>, <span class="tk-texto">"Iván"</span>]</span><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>]</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>)):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">notas</span>[<span class="tk-variable">i</span>] &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">alumnos</span>[<span class="tk-variable">i</span>], <span class="tk-texto">"aprobó"</span>)</span></code></pre>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s6-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">alumnos</p>
+          <div id="s7-alumnos"></div>
+          <p class="rotulo-cinta">notas</p>
+          <div id="s7-notas"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="s6-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: ¿quién sacó la mayor nota? -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">¿Quién sacó la mayor nota?</h2>
+      <p>Ahora no basta con la nota más alta: queremos el <strong>nombre</strong>. <code>mejor</code> guarda el índice de la mejor nota hasta ahora. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">alumnos</span> = [<span class="tk-texto">"Ana"</span>, <span class="tk-texto">"Luis"</span>, <span class="tk-texto">"Sofía"</span>, <span class="tk-texto">"Iván"</span>]</span><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">19</span>, <span class="tk-numero">17</span>, <span class="tk-numero">11</span>]</span><span class="linea"><span class="tk-variable">mejor</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>)):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">notas</span>[<span class="tk-variable">i</span>] &gt; <span class="tk-variable">notas</span>[<span class="tk-variable">mejor</span>]:</span><span class="linea">        <span class="hueco" id="reto-hueco">?</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">alumnos</span>[<span class="tk-variable">mejor</span>])</span></code></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="nota"><span>mejor = notas[i]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="i"><span>mejor = i</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="mas1"><span>mejor = mejor + 1</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="i1"><span>mejor = i + 1</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">alumnos</p>
+          <div id="reto-alumnos"></div>
+          <p class="rotulo-cinta">notas</p>
+          <div id="reto-notas"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--acento" id="reto-mejor">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mejor</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Recorrer una lista es pasar por cada casillero y acumular algo: una suma, una cuenta, la mayor o una lista nueva.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-variable">total</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-variable">total</span> = <span class="tk-variable">total</span> + <span class="tk-variable">nota</span>   <span class="tk-comentario"># lo mismo que sum(notas)</span></span><span class="linea"><span class="tk-funcion">max</span>(<span class="tk-variable">notas</span>), <span class="tk-funcion">min</span>(<span class="tk-variable">notas</span>)       <span class="tk-comentario"># la mayor y la menor</span></span><span class="linea"><span class="tk-variable">promedio</span> = <span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>) / <span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>)</span><span class="linea"><span class="tk-variable">aprobados</span> = []</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">aprobados</span>.<span class="tk-funcion">append</span>(<span class="tk-variable">nota</span>)</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>)):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">alumnos</span>[<span class="tk-variable">i</span>], <span class="tk-variable">notas</span>[<span class="tk-variable">i</span>])</span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../ordenar/index.html">Siguiente: Ordenar y buscar →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Lo que imprime print: la línea sale volando desde donde se indique */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  var NOTAS = [14, 9, 17, 11, 6];
+  function aprueba(n) { return n >= 11; }
+  function colorNota(v) { return aprueba(v) ? "lista__casilla--igual" : "lista__casilla--distinta"; }
+
+  /* ---------- 1. Sumar con un for ---------- */
+  var lista1 = Lista.crear($("s1-lista"), NOTAS, { nombres: ["notas"] });
+
+  function trazaSumar() {
+    var pasos = [
+      { linea: 0, texto: "<code>notas</code> guarda 5 notas." },
+      { linea: 1, total: 0, texto: "<code>total</code> empieza en <strong>0</strong>: todavía no sumó nada." }
+    ];
+    var total = 0;
+    NOTAS.forEach(function (n, k) {
+      pasos.push({
+        linea: 2, k: k,
+        texto: (k === 0 ? "Primera vuelta" : "Otra vuelta") + ": <code>nota</code> vale <strong>" + n + "</strong>."
+      });
+      var antes = total;
+      total += n;
+      pasos.push({
+        linea: 3, k: k, total: total,
+        texto: "<code>total = " + antes + " + " + n + "</code>: ahora <code>total</code> vale <strong>" + total + "</strong>."
+      });
+    });
+    pasos.push({ linea: 2, fin: true, texto: "Ya pasó por los 5 casilleros: el bucle termina." });
+    pasos.push({ linea: 4, salida: String(total), texto: "Imprime la suma de todas las notas: <code>" + total + "</code>." });
+    return pasos;
+  }
+
+  /* ---------- 2. Contar aprobados ---------- */
+  var lista2 = Lista.crear($("s2-lista"), NOTAS, { nombres: ["notas"] });
+  var prediccion2 = null;
+
+  function trazaContar() {
+    var pasos = [
+      { linea: 0, texto: "<code>notas</code> guarda 5 notas." },
+      { linea: 1, cuantos: 0, texto: "<code>cuantos</code> empieza en <strong>0</strong>." }
+    ];
+    var cuantos = 0;
+    NOTAS.forEach(function (n, k) {
+      pasos.push({ linea: 2, k: k, texto: "<code>nota</code> vale <strong>" + n + "</strong>." });
+      pasos.push({
+        linea: 3, k: k, pinta: true,
+        texto: "¿" + n + " &gt;= 11? " + (aprueba(n) ? "<strong>Sí</strong>: aprueba." : "<strong>No</strong>: se salta la suma.")
+      });
+      if (aprueba(n)) {
+        cuantos++;
+        pasos.push({ linea: 4, k: k, cuantos: cuantos, texto: "<code>cuantos</code> sube de 1 en 1: ahora vale <strong>" + cuantos + "</strong>." });
+      }
+    });
+    pasos.push({ linea: 2, fin: true, texto: "No quedan casilleros: el bucle termina." });
+    pasos.push({ linea: 5, salida: String(cuantos), texto: "Imprime <code>" + cuantos + "</code>: aprobaron 14, 17 y 11." });
+    return pasos;
+  }
+
+  function elegirPrediccion2(valor) {
+    prediccion2 = valor;
+    $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+    $("s2-ejecucion").hidden = false;
+    trazaCont.reiniciar();
+  }
+
+  /* ---------- 3. La mayor, a mano ---------- */
+  var NOTAS3 = [12, 9, 17, 11, 18, 6];
+  var lista3 = Lista.crear($("s3-lista"), NOTAS3, { nombres: ["notas"] });
+  var vuelta3 = 0;
+  var mayor3 = NOTAS3[0];
+  var cambios3 = [];
+  var ocupado3 = false;
+  var tiempo3 = null;
+
+  function botones3(activos) {
+    $("s3-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = !activos; });
+  }
+
+  function pintar3() {
+    lista3.clases(function (k) {
+      if (cambios3.indexOf(k) !== -1) return "lista__casilla--cambio";
+      return k < vuelta3 ? "lista__casilla--apagada" : "";
+    });
+  }
+
+  function preguntar3() {
+    var n = NOTAS3[vuelta3];
+    lista3.marcar(vuelta3);
+    pintar3();
+    Codigo.marcar($("s3-codigo"), { activas: [3] });
+    $("s3-pregunta").innerHTML = "¿<span class=\"chip\">" + n + "</span> &gt; <span class=\"chip\">" + mayor3 + "</span>?";
+    botones3(true);
+  }
+
+  function empezar3() {
+    if (tiempo3) clearTimeout(tiempo3);
+    tiempo3 = null;
+    vuelta3 = 0;
+    mayor3 = NOTAS3[0];
+    cambios3 = [0];
+    ocupado3 = false;
+    Caja.vaciar($("s3-mayor"));
+    Caja.poner($("s3-mayor"), mayor3, null);
+    Codigo.consola($("s3-consola"), []);
+    Pasos.limpiarFeedback($("s3-fb"));
+    $("s3-otra").hidden = true;
+    $("s3-elegir").hidden = false;
+    preguntar3();
+  }
+
+  function responder3(valor, leccion) {
+    if (ocupado3) return;
+    var n = NOTAS3[vuelta3];
+    var cambia = n > mayor3;
+    var dijo = valor === "si";
+    var fb = $("s3-fb");
+    if (dijo !== cambia) {
+      if (n === mayor3) Pasos.feedback(fb, "pista", n + " no es más grande que " + mayor3 + ": son iguales. Con > hace falta ser mayor, así que mayor se queda.");
+      else if (cambia) Pasos.feedback(fb, "pista", n + " es más grande que " + mayor3 + ": la condición nota > mayor da True, así que mayor cambia.");
+      else Pasos.feedback(fb, "pista", n + " es más pequeño que " + mayor3 + ": la condición da False y mayor se queda como está.");
+      return;
+    }
+    ocupado3 = true;
+    botones3(false);
+    if (cambia) {
+      Codigo.marcar($("s3-codigo"), { activas: [4] });
+      Caja.poner($("s3-mayor"), n, lista3.valor(vuelta3));
+      mayor3 = n;
+      cambios3.push(vuelta3);
+      Pasos.feedback(fb, "ok", "¡Sí! " + n + " es más grande: ahora es la mayor hasta ahora.");
+    } else {
+      Codigo.marcar($("s3-codigo"), { activas: [3], saltadas: [4] });
+      Pasos.feedback(fb, "ok", "¡Bien! " + n + " no supera a " + mayor3 + ": mayor se queda.");
+    }
+    vuelta3++;
+    tiempo3 = setTimeout(function () {
+      tiempo3 = null;
+      ocupado3 = false;
+      if (vuelta3 < NOTAS3.length) { preguntar3(); return; }
+      // Fin del bucle: imprime la mayor
+      lista3.marcar(null);
+      pintar3();
+      Codigo.marcar($("s3-codigo"), { activas: [5] });
+      $("s3-pregunta").textContent = "";
+      $("s3-elegir").hidden = true;
+      imprimir($("s3-consola"), String(mayor3), $("s3-mayor").querySelector(".caja__valor:not(.caja__valor--saliendo)"));
+      Pasos.feedback(fb, "ok", "mayor cambió dos veces: con el 17 y con el 18. Al final guarda la nota más alta de toda la lista: " + mayor3 + ".");
+      $("s3-otra").hidden = false;
+      leccion.desbloquear();
+    }, espera(1100));
+  }
+
+  /* ---------- 4. sum, max, min, len y el promedio ---------- */
+  var lista4 = Lista.crear($("s4-lista"), NOTAS, { nombres: ["notas"] });
+  var usadas4 = {};
+  var FUNCIONES = {
+    sum: {
+      valor: 57,
+      dibujar: function () { lista4.rango(0, 5); },
+      texto: "sum suma todos los valores: 14 + 9 + 17 + 11 + 6 = 57. Lo mismo que hiciste con total."
+    },
+    max: {
+      valor: 17,
+      dibujar: function () { lista4.marcar(2); },
+      texto: "max da el valor más grande: 17. Lo mismo que hiciste con mayor."
+    },
+    min: {
+      valor: 6,
+      dibujar: function () { lista4.marcar(4); },
+      texto: "min da el más pequeño: 6. Como mayor, pero con <."
+    },
+    len: {
+      valor: 5,
+      dibujar: function () { lista4.rango(0, 5); },
+      texto: "len cuenta los casilleros: 5. No mira qué hay dentro."
+    }
+  };
+
+  function usarFuncion(nombre, leccion) {
+    var f = FUNCIONES[nombre];
+    lista4.marcar(null);
+    lista4.rango(null);
+    $("s4-linea").innerHTML = '<span class="tk-funcion">print</span>(<span class="tk-funcion">' + nombre + '</span>(<span class="tk-variable">notas</span>))';
+    Codigo.marcar($("s4-codigo"), { activas: [1] });
+    $("s4-expr").textContent = nombre + "(notas)";
+    $("s4-valor").textContent = String(f.valor);
+    f.dibujar();
+    Codigo.consola($("s4-consola"), []);
+    imprimir($("s4-consola"), String(f.valor), lista4.el);
+    usadas4[nombre] = true;
+    $("s4-maquinas").querySelector('[data-valor="' + nombre + '"]').classList.add("btn--usada");
+    var faltan = Object.keys(FUNCIONES).filter(function (k) { return !usadas4[k]; });
+    if (faltan.length) {
+      Pasos.feedback($("s4-fb"), "ok", f.texto + " Te " + (faltan.length === 1 ? "falta " : "faltan ") + faltan.map(function (k) { return k + "()"; }).join(", ") + ".");
+      return;
+    }
+    Pasos.feedback($("s4-fb"), "ok", f.texto + " Con sum y len sale el promedio: ¿cuánto da?");
+    $("s4-promedio").hidden = false;
+  }
+
+  var pistasPromedio = {
+    "57": "57 es sum(notas), la suma. Falta dividir entre cuántas notas hay.",
+    "14.25": "57 / 4 da 14.25, pero len(notas) es 5, no 4. 4 es el último índice."
+  };
+
+  function responderPromedio(btn, leccion) {
+    var valor = btn.getAttribute("data-valor");
+    var caja = $("s4-promedio");
+    caja.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+    if (valor !== "11.4") {
+      Pasos.feedback($("s4-promedio-fb"), "pista", pistasPromedio[valor]);
+      return;
+    }
+    caja.classList.add("prediccion--ok");
+    caja.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    $("s4-linea").innerHTML = '<span class="tk-funcion">print</span>(<span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>) / <span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>))';
+    $("s4-expr").textContent = "57 / 5";
+    $("s4-valor").textContent = "11.4";
+    lista4.marcar(null);
+    lista4.rango(0, 5);
+    Codigo.consola($("s4-consola"), []);
+    imprimir($("s4-consola"), "11.4", lista4.el);
+    Pasos.feedback($("s4-promedio-fb"), "ok", "sum(notas) / len(notas) es 57 / 5 = 11.4. Funciona con cualquier lista, tenga 5 notas o 40.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 5. Filtrar en una lista nueva ---------- */
+  var lista5 = Lista.crear($("s5-notas"), NOTAS);
+  var aprobados5 = Lista.crear($("s5-aprobados"), []);
+
+  function trazaFiltrar() {
+    var pasos = [
+      { linea: 0, texto: "<code>notas</code> guarda 5 notas." },
+      { linea: 1, texto: "<code>aprobados</code> empieza como una lista <strong>vacía</strong>: <code>[]</code>." }
+    ];
+    var hay = [];
+    NOTAS.forEach(function (n, k) {
+      pasos.push({ linea: 2, k: k, texto: "<code>nota</code> vale <strong>" + n + "</strong>." });
+      pasos.push({
+        linea: 3, k: k, pinta: true,
+        texto: "¿" + n + " &gt;= 11? " + (aprueba(n) ? "<strong>Sí</strong>." : "<strong>No</strong>: no se agrega.")
+      });
+      if (aprueba(n)) {
+        hay.push(n);
+        pasos.push({ linea: 4, k: k, agrega: n, texto: "<code>.append(" + n + ")</code> pone el " + n + " al final de <code>aprobados</code>." });
+      }
+    });
+    pasos.push({ linea: 2, fin: true, texto: "No quedan casilleros: el bucle termina." });
+    pasos.push({ linea: 5, salida: Lista.python(hay), texto: "<code>aprobados</code> tiene " + hay.length + " notas, en el mismo orden en que aparecían." });
+    return pasos;
+  }
+
+  /* ---------- 6. La posición ---------- */
+  var ALUMNOS = ["Ana", "Luis", "Sofía", "Iván"];
+  var NOTAS6 = [14, 9, 17, 11];
+  var alumnos6 = Lista.crear($("s7-alumnos"), ALUMNOS);
+  var notas6 = Lista.crear($("s7-notas"), NOTAS6);
+
+  function trazaPosicion() {
+    var pasos = [
+      { linea: 0, texto: "<code>alumnos</code>: 4 nombres." },
+      { linea: 1, texto: "<code>notas</code>: sus 4 notas, en el mismo orden." }
+    ];
+    NOTAS6.forEach(function (n, i) {
+      pasos.push({
+        linea: 2, i: i,
+        texto: i === 0
+          ? "<code>range(len(notas))</code> es <code>range(4)</code>: <code>i</code> empieza en <strong>0</strong>."
+          : "Otra vuelta: <code>i</code> vale <strong>" + i + "</strong>."
+      });
+      pasos.push({
+        linea: 3, i: i, nota: true,
+        texto: "<code>notas[" + i + "]</code> es " + n + ". ¿" + n + " &gt;= 11? " + (aprueba(n) ? "<strong>Sí</strong>." : "<strong>No</strong>.")
+      });
+      if (aprueba(n)) {
+        pasos.push({
+          linea: 4, i: i, alumno: true, salida: ALUMNOS[i] + " aprobó",
+          texto: "<code>alumnos[" + i + "]</code> es <code>\"" + ALUMNOS[i] + "\"</code>: imprime de quién es la nota."
+        });
+      }
+    });
+    pasos.push({ linea: 2, fin: true, texto: "<code>i</code> llegó al 3: el bucle termina." });
+    return pasos;
+  }
+
+  /* ---------- 7. Reto: ¿quién sacó la mayor nota? ---------- */
+  var NOTAS_RETO = [14, 19, 17, 11];
+  var retoAlumnos = Lista.crear($("reto-alumnos"), ALUMNOS);
+  var retoNotas = Lista.crear($("reto-notas"), NOTAS_RETO);
+  var animacionReto = [];
+  var CASOS = [
+    { notas: [14, 19, 17, 11], espera: "Luis" },
+    { notas: [18, 9, 12, 11], espera: "Ana" },
+    { notas: [12, 18, 9, 20], espera: "Iván" }
+  ];
+  var CAMBIOS = {
+    nota: function (mejor, i, notas) { return notas[i]; },
+    i: function (mejor, i) { return i; },
+    mas1: function (mejor) { return mejor + 1; },
+    i1: function (mejor, i) { return i + 1; }
+  };
+  var pistasReto = {
+    nota: "mejor = notas[i] guarda la nota (19), no su índice. En la vuelta siguiente, notas[19] no existe: IndexError.",
+    mas1: "mejor + 1 solo avanza de uno en uno: no salta hasta el casillero de la nota mayor. Mira la tercera prueba: después del 18 hay un 9, y luego el 20.",
+    i1: "i + 1 apunta al casillero de al lado de la mejor nota, no al suyo."
+  };
+
+  /* Ejecuta el programa del reto con la opción elegida: el nombre, o "IndexError" */
+  function correrReto(cambio, notas) {
+    var mejor = 0;
+    var pasos = [];
+    for (var i = 0; i < notas.length; i++) {
+      if (mejor < 0 || mejor >= notas.length) return { res: "IndexError", pasos: pasos };
+      if (notas[i] > notas[mejor]) {
+        mejor = cambio(mejor, i, notas);
+        pasos.push({ i: i, mejor: mejor });
+      }
+    }
+    if (mejor >= ALUMNOS.length) return { res: "IndexError", pasos: pasos };
+    return { res: ALUMNOS[mejor], mejor: mejor, pasos: pasos };
+  }
+
+  function limpiarReto() {
+    animacionReto.forEach(clearTimeout);
+    animacionReto = [];
+    retoAlumnos.marcar(null);
+    retoAlumnos.clases(null);
+    retoNotas.marcar(null);
+    retoNotas.clases(null);
+    Caja.vaciar($("reto-mejor"));
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  /* Con la respuesta correcta, recorre la primera prueba: mejor salta a cada nota más alta */
+  function animarReto() {
+    Caja.poner($("reto-mejor"), 0, null);
+    var mejor = 0;
+    NOTAS_RETO.forEach(function (n, i) {
+      animacionReto.push(setTimeout(function () {
+        retoNotas.marcar(i);
+        if (n > NOTAS_RETO[mejor]) {
+          mejor = i;
+          Caja.poner($("reto-mejor"), i, retoNotas.casilla(i).querySelector(".lista__indice"));
+        }
+      }, espera(700 * (i + 1))));
+    });
+    animacionReto.push(setTimeout(function () {
+      retoNotas.marcar(null);
+      retoNotas.clases(function (k) { return k === mejor ? "lista__casilla--igual" : ""; });
+      retoAlumnos.marcar(mejor);
+      retoAlumnos.clases(function (k) { return k === mejor ? "lista__casilla--igual" : ""; });
+    }, espera(700 * (NOTAS_RETO.length + 1))));
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto();
+
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var todas = true;
+    CASOS.forEach(function (c) {
+      var r = correrReto(CAMBIOS[marcada.value], c.notas).res;
+      var bien = r === c.espera;
+      if (!bien) todas = false;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      li.innerHTML = "<span>" + Lista.python(c.notas) + "</span>" +
+        '<span class="' + (r === "IndexError" ? "prueba__error" : "prueba__res") + '">' +
+        (r === "IndexError" ? r : "'" + r + "'") + (bien ? " ✓" : " ✗ (debería ser '" + c.espera + "')") + "</span>";
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+
+    if (todas) {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! mejor guarda el índice i de la mejor nota. Con ese índice, alumnos[mejor] da el nombre: Luis.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      animarReto();
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  var trazaSum = Traza.crear({
+    codigo: $("s1-codigo"),
+    explicacion: $("s1-explicacion"),
+    consola: $("s1-consola"),
+    ejecutar: $("s1-ejecutar"),
+    reproducir: $("s1-reproducir"),
+    reiniciar: $("s1-reiniciar"),
+    generar: trazaSumar,
+    intervalo: 950,
+    alReiniciar: function () {
+      Caja.vaciar($("s1-nota"));
+      Caja.vaciar($("s1-total"));
+      lista1.marcar(null);
+      lista1.clases(null);
+      Pasos.limpiarFeedback($("s1-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) { lista1.marcar(null); return; }
+      if (paso.k !== undefined) {
+        lista1.marcar(paso.k);
+        lista1.clases(function (j) { return j < paso.k || (j === paso.k && paso.linea === 3) ? "lista__casilla--apagada" : ""; });
+        if (paso.linea === 2) Caja.poner($("s1-nota"), NOTAS[paso.k], lista1.valor(paso.k));
+      }
+      if (paso.total !== undefined) Caja.poner($("s1-total"), paso.total);
+    },
+    alTerminar: function () {
+      lista1.clases(null);
+      Pasos.feedback($("s1-fb"), "ok", "total empezó en 0 y en cada vuelta creció con la nota de ese casillero. Una variable que va juntando algo vuelta a vuelta se llama acumulador.");
+      leccion.desbloquear();
+    }
+  });
+
+  var trazaCont = Traza.crear({
+    codigo: $("s2-codigo"),
+    explicacion: $("s2-explicacion"),
+    consola: $("s2-consola"),
+    ejecutar: $("s2-ejecutar"),
+    reproducir: $("s2-reproducir"),
+    reiniciar: $("s2-reiniciar"),
+    generar: trazaContar,
+    intervalo: 850,
+    alReiniciar: function () {
+      Caja.vaciar($("s2-nota"));
+      Caja.vaciar($("s2-cuantos"));
+      lista2.marcar(null);
+      lista2.clases(null);
+      Pasos.limpiarFeedback($("s2-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) { lista2.marcar(null); return; }
+      if (paso.k !== undefined) {
+        lista2.marcar(paso.k);
+        var hasta = paso.pinta || paso.linea === 4 ? paso.k : paso.k - 1;
+        lista2.clases(function (j, v) { return j <= hasta ? colorNota(v) : ""; });
+        if (paso.linea === 2) Caja.poner($("s2-nota"), NOTAS[paso.k], lista2.valor(paso.k));
+      }
+      if (paso.cuantos !== undefined) Caja.poner($("s2-cuantos"), paso.cuantos);
+    },
+    alTerminar: function () {
+      var fb = $("s2-fb");
+      var base = "cuantos solo creció con las notas en verde: 14, 17 y 11. Imprime 3.";
+      if (prediccion2 === "3") Pasos.feedback(fb, "ok", "¡Lo predijiste! " + base);
+      else if (prediccion2 === "2") Pasos.feedback(fb, "ok", base + " Ojo con el 11: 11 >= 11 es True, así que también cuenta.");
+      else Pasos.feedback(fb, "ok", base + " 5 serían todas las notas: el if hace que solo cuenten las que aprueban.");
+      leccion.desbloquear();
+    }
+  });
+
+  var trazaFil = Traza.crear({
+    codigo: $("s5-codigo"),
+    explicacion: $("s5-explicacion"),
+    consola: $("s5-consola"),
+    ejecutar: $("s5-ejecutar"),
+    reproducir: $("s5-reproducir"),
+    reiniciar: $("s5-reiniciar"),
+    generar: trazaFiltrar,
+    intervalo: 850,
+    alReiniciar: function () {
+      lista5.marcar(null);
+      lista5.clases(null);
+      aprobados5.valores([]);
+      Pasos.limpiarFeedback($("s5-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) { lista5.marcar(null); return; }
+      if (paso.k === undefined) return;
+      lista5.marcar(paso.k);
+      var hasta = paso.pinta || paso.linea === 4 ? paso.k : paso.k - 1;
+      lista5.clases(function (j, v) { return j <= hasta ? colorNota(v) : ""; });
+      if (paso.agrega !== undefined) aprobados5.agregar(paso.agrega, lista5.valor(paso.k));
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s5-fb"), "ok", "notas sigue igual; aprobados es una lista nueva que creció con .append() solo en las vueltas en que el if dio True.");
+      leccion.desbloquear();
+    }
+  });
+
+  var trazaPos = Traza.crear({
+    codigo: $("s6-codigo"),
+    explicacion: $("s6-explicacion"),
+    consola: $("s6-consola"),
+    ejecutar: $("s6-ejecutar"),
+    reproducir: $("s6-reproducir"),
+    reiniciar: $("s6-reiniciar"),
+    generar: trazaPosicion,
+    intervalo: 900,
+    alReiniciar: function () {
+      Caja.vaciar($("s6-i"));
+      alumnos6.marcar(null);
+      notas6.marcar(null);
+      notas6.clases(null);
+      Pasos.limpiarFeedback($("s6-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) { alumnos6.marcar(null); notas6.marcar(null); return; }
+      if (paso.i === undefined) return;
+      if (paso.linea === 2) {
+        alumnos6.marcar(null);
+        notas6.marcar(null);
+        Caja.poner($("s6-i"), paso.i);
+      }
+      if (paso.nota) {
+        notas6.marcar(paso.i);
+        notas6.clases(function (j, v) { return j <= paso.i ? colorNota(v) : ""; });
+      }
+      if (paso.alumno) alumnos6.marcar(paso.i);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s6-fb"), "ok", "Con el mismo i lees el casillero i de las dos listas: la nota en notas[i] y su dueño en alumnos[i].");
+      leccion.desbloquear();
+    }
+  });
+
+  $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegirPrediccion2(b.getAttribute("data-valor")); });
+  });
+
+  $("s3-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { responder3(b.getAttribute("data-valor"), leccion); });
+  });
+  $("s3-otra-btn").addEventListener("click", function () {
+    empezar3();
+    $("s3-elegir").querySelector("button").focus();
+  });
+
+  $("s4-maquinas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { usarFuncion(b.getAttribute("data-valor"), leccion); });
+  });
+  $("s4-promedio").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { responderPromedio(b, leccion); });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial
+  empezar3();
+  Pasos.limpiarFeedback($("s3-fb"));
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-sumar": function () { trazaSum.detener(); },
+      "paso-contar": function () { trazaCont.detener(); },
+      "paso-mayor": function () { if (tiempo3 === null && !ocupado3 && vuelta3 === 0) empezar3(); },
+      "paso-filtrar": function () { trazaFil.detener(); },
+      "paso-posicion": function () { trazaPos.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
