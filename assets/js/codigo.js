@@ -9,9 +9,12 @@
        añade una línea de salida sin repintar las anteriores.
    Codigo.booleano(el, valor)
        pinta un chip True / False con una pequeña animación al cambiar.
-   Codigo.salto(preEl, desde, hasta)
+   Codigo.salto(preEl, desde, hasta, tipo)
        dibuja una flecha curva a la derecha del código, de la línea `desde` a la línea
        `hasta` (índices desde 0): la ejecución vuelve arriba (bucle) o salta (llamada).
+       tipo "ida" (una llamada) o "vuelta" (volver de ella) le da su color; con tipo, si
+       las dos líneas son la misma (una llamada recursiva vuelve a la línea de la de abajo),
+       la flecha da una vuelta pequeña y entra en la misma línea.
    Codigo.quitarSalto(preEl)
        borra la flecha (Codigo.limpiar también la borra).
    Codigo.pausas(preEl, [{ linea: 5, texto: "n=3", clave: "1" }, …])
@@ -86,12 +89,13 @@
     pre.querySelectorAll(".codigo__salto").forEach(function (el) { el.remove(); });
   }
 
-  function salto(pre, desde, hasta) {
+  function salto(pre, desde, hasta, tipo) {
     quitarSalto(pre);
     var ls = lineas(pre);
     var a = ls[desde];
     var b = ls[hasta];
-    if (!a || !b || desde === hasta) return;
+    if (!a || !b || (desde === hasta && !tipo)) return;
+    if (desde === hasta) { rizo(pre, a, tipo); return; }
 
     // La curva rodea por la derecha todas las líneas que quedan entre las dos
     var derecha = 0;
@@ -107,7 +111,7 @@
     var y2 = b.offsetTop + altoFila(b) / 2;
 
     var dibujo = svg("svg", {
-      "class": "codigo__salto",
+      "class": "codigo__salto" + (tipo ? " codigo__salto--" + tipo : ""),
       width: ancho,
       height: pre.scrollHeight,
       "aria-hidden": "true",
@@ -126,6 +130,33 @@
     dibujo.appendChild(svg("path", {
       "class": "codigo__salto-punta",
       d: "M" + (x2 + 8) + " " + (y2 - 6) + " L" + x2 + " " + y2 + " L" + (x2 + 8) + " " + (y2 + 6)
+    }));
+    pre.appendChild(dibujo);
+  }
+
+  // Vuelve a la misma línea: sale por arriba, da una vuelta a la derecha y entra por abajo
+  function rizo(pre, linea, tipo) {
+    var x = finDeTexto(pre, linea) + 8;
+    var xc = Math.min(x + 26, pre.scrollLeft + pre.clientWidth - 6);
+    x = Math.min(x, xc - 12);
+    var y = linea.offsetTop + altoFila(linea) / 2;
+    var h = Math.min(9, altoFila(linea) / 2);
+    var dibujo = svg("svg", {
+      "class": "codigo__salto codigo__salto--" + tipo,
+      width: pre.scrollWidth,
+      height: pre.scrollHeight,
+      "aria-hidden": "true",
+      focusable: "false"
+    });
+    dibujo.appendChild(svg("circle", { "class": "codigo__salto-inicio", cx: x, cy: y - h, r: 3.5 }));
+    dibujo.appendChild(svg("path", {
+      "class": "codigo__salto-trazo",
+      pathLength: 1,
+      d: "M" + x + " " + (y - h) + " C" + (xc + 4) + " " + (y - h - 8) + " " + (xc + 4) + " " + (y + h + 8) + " " + x + " " + (y + h)
+    }));
+    dibujo.appendChild(svg("path", {
+      "class": "codigo__salto-punta",
+      d: "M" + (x + 8) + " " + (y + h - 6) + " L" + x + " " + (y + h) + " L" + (x + 7) + " " + (y + h + 6)
     }));
     pre.appendChild(dibujo);
   }

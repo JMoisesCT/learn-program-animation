@@ -17,12 +17,11 @@ Por orden de prioridad:
    **Recursión, completa (4/4).**
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
-3. **Explicar mejor la vuelta de la recursión**: ya están «deshacer la pila» y «completar el ▢» (paso «Ahora la vuelta la haces tú», en Recursión que devuelve valores; la fila del cine ya estaba). Ideas que quedan, sin hacer:
-   - **La cuenta que crece y se encoge**: `factorial(4)` → `4 * factorial(3)` → `4 * (3 * (2 * 1))` a la ida, y `4 * (3 * 2)` → `4 * 6` → `24` a la vuelta, al lado de la pila.
-   - **Tabla de seguimiento** (llamada | n | espera | devuelve): las filas se llenan de arriba abajo a la ida y la columna «devuelve» de abajo arriba a la vuelta; sirve para trazar en papel.
-   - **Colores de ida y de vuelta** en la consola y en las flechas, y un paso que pregunte «¿el programa termina al llegar al caso base?» (error común).
-   - **Deshacer la pila también en Recursión 1/4** (`abrir(n)`, sin valores: tocar la de arriba y elegir qué imprime al volver) y en Árbol de llamadas.
-   **Probar con alumnos** el paso nuevo: si se entiende que solo se toca la de arriba y si las pistas de las respuestas equivocadas ayudan.
+3. **Probar con alumnos las mejoras de la vuelta en Recursión** (ver el registro del 2026-10-27):
+   - si los colores de ida (naranja, punteado) y de vuelta (azul) se distinguen y se entienden, también con daltonismo (la raya de la consola cambia de forma, no solo de color);
+   - si la cuenta que crece y se encoge (Recursión 2/4) se lee bien en el móvil cuando ocupa dos líneas (con `factorial(5)`);
+   - si la tabla de seguimiento se usa luego para trazar en papel (se podría pedir que la llenen ellos en un reto);
+   - si «Ahora la vuelta la haces tú» en el Árbol de llamadas es demasiado largo (4 vueltas) o demasiado fácil (las hojas vuelven solas).
 4. **Pila con «pausada en la línea N» en Funciones que usan funciones**: hoy sus tarjetas dicen «esperando a suma()». Podría usar `linea`, `falta`, `recibe` y `codigo`/`rotulo` como la Recursión (`total = ▢` → `total = 31`).
 5. **Flecha de vuelta en las otras lecciones de Funciones.** Solo Funciones 1/7 marca `flecha: true` al volver de una función. Variables locales ya también. En Varios parámetros, Funciones que deciden y Funciones que usan funciones, la flecha sale al llamar (sube al `def`), pero no al volver con `return` (baja a la llamada). Basta con añadir `flecha: true` al paso de la traza que vuelve a la línea de la llamada.
 6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
@@ -45,6 +44,18 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-27 · Recursión: la vuelta, mejor explicada
+
+Las cuatro ideas que quedaban para explicar la vuelta de la recursión:
+
+- **Colores de ida y de vuelta.** `Traza` acepta `fase: "ida"` / `"vuelta"` en un paso: la flecha de salto sale naranja al llamar y azul al volver, y si vuelve a la misma línea (la llamada recursiva de `factorial` vuelve a la línea 5 de la de abajo) da una vuelta pequeña en vez de no dibujarse (`Codigo.salto(pre, desde, hasta, tipo)`). En una consola con `consola--fases`, lo que se imprime a la ida lleva una raya punteada naranja y lo de la vuelta una continua azul, con la leyenda `leyenda-fases`. Todas las trazas de Recursión marcan sus fases; la consola de colores está en Recursión 1/4 (`cuenta_regresiva` y `abrir`).
+- **¿Termina en el caso base?** y **deshacer la pila en Recursión 1/4**: paso nuevo «Ahora la vuelta la haces tú» (la lección pasa de 6 a 7 pasos; la clave `recursion` no cambia). La pila de `abrir(3)` empieza llena justo después de «¡Un caramelo!»: primero hay que responder si el programa termina ahí (no: las de abajo siguen esperando); luego se toca la tarjeta de arriba y se elige qué imprime al seguir («Cierro la caja 1», con pistas para «Abro…», otra caja y «Nada»). Cada «Cierro» cierra su caja de regalo y sale en azul en la consola; al final se toca el programa. La pila no se mueve en todo el recorrido (pregunta, opciones y explicación reservan su alto).
+- **La cuenta que crece y se encoge** (Recursión 2/4, `factorial`): encima de la pila, `factorial(4)` → `4 * factorial(3)` → `4 * (3 * (2 * factorial(1)))` a la ida (borde naranja punteado) y `4 * (3 * (2 * 1))` → `4 * (3 * 2)` → `4 * 6` → `24` a la vuelta (borde azul), con la parte que cambia resaltada.
+- **Tabla de seguimiento** (Recursión 2/4, `suma_digitos`): llamada | espera | devuelve. Las filas se llenan hacia abajo a la ida (`2 + ▢`, `caso base`) y la columna «devuelve», hacia arriba a la vuelta; el valor vuela de «devuelve» al ▢ de la fila de arriba. Una nota dice que así se traza en papel.
+- **Deshacer la pila en el Árbol de llamadas**: paso nuevo «Ahora la vuelta la haces tú» (la lección pasa de 7 a 8 pasos; la clave `recursion-arbol` no cambia). Python baja solo por el árbol de `fibonacci(4)` y las hojas vuelven solas; cuando una llamada tiene sus dos partes, se detiene: hay que tocarla (anillo que late; tocar una punteada da una pista) y elegir qué devuelve (pistas para la primera parte, la segunda, su n, +1 y el producto).
+
+Probado con Playwright a 1280 y 390 px (respuestas y toques equivocados incluidos): la pila y el árbol no se mueven durante la vuelta, el botón «Ejecutar línea» tampoco en las trazas con cuenta y tabla, y sin errores de JavaScript en ninguna lección.
 
 ### 2026-10-27 · Recursión 2/4: el alumno deshace la pila
 
