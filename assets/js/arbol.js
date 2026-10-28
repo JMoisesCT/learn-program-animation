@@ -13,7 +13,7 @@
    desde 0), pre (orden en que se llama), post (orden en que vuelve) y x (en hojas).
    raiz.nodos es la lista de todos, en el orden en que se llaman.
    Una rama podada (una llamada que un if no deja hacer): el hijo trae podada: true.
-   Se dibuja apagada, con unas tijeras en su arista; lo que cuelga de ella (si hijos()
+   Se dibuja apagada, con unas tijeras al lado; lo que cuelga de ella (si hijos()
    devuelve algo para él) también se ve apagado y aparece de una vez, cuando se corta.
    Las podadas no vuelven nunca (post: Infinity).
 
@@ -27,7 +27,7 @@
                                          por defecto nodo.eleccion
        pisos: function (prof) { … },     (opcional) rótulo a la izquierda de cada piso («n=3»)
        pildora: function (nodo, visible, listo) { … },   texto bajo el círculo o null
-                                         (por defecto, al volver, String(nodo.valor))
+                                         (por defecto, al volver, nodo.valor si lo tiene)
        tocar: function (nodo) { … },     (opcional) cada nodo es un botón (Enter o espacio)
        nombre: "fibonacci",              aria-label de cada nodo: nombre(n); o
        titulo: function (nodo) { … },    el aria-label completo
@@ -143,9 +143,9 @@
           nodo.etiquetaArista = elecciones.appendChild(e);
         }
         if (nodo.corte) {
-          // Las tijeras, cerca del hijo: ahí se corta la rama
-          var t = 0.78;
-          nodo.tijera = elecciones.appendChild(svg("text", { x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t }, "arbol__tijera"));
+          // Las tijeras, junto al círculo cortado, del lado de afuera de la rama
+          var lado = x2 >= x1 ? 1 : -1;
+          nodo.tijera = elecciones.appendChild(svg("text", { x: x + lado * (R + 4), y: y - R + 1 }, "arbol__tijera"));
           nodo.tijera.textContent = "✂";
         }
       }
@@ -181,7 +181,7 @@
     cont.textContent = "";
     cont.appendChild(dibujo);
 
-    var pildoraDe = opciones.pildora || function (nodo, visible, listo) { return listo ? String(nodo.valor) : null; };
+    var pildoraDe = opciones.pildora || function (nodo, visible, listo) { return listo && nodo.valor !== undefined ? String(nodo.valor) : null; };
 
     function conjunto(lista) {
       var s = {};
