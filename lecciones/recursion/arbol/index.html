@@ -47,44 +47,7 @@
     #p1-prediccion { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
 
-    /* ---------- El árbol de llamadas ----------
-       Cada círculo es una llamada (dentro, su n); debajo, al volver, lo que devolvió.
-       Los que esperan van punteados, como sus tarjetas en la pila. Las aristas salen del
-     borde del círculo; la píldora queda encima. */
-    .arbol { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; font-family: var(--fuente-codigo); }
-    .arbol__arista { fill: none; stroke: #b8c0ca; stroke-width: 2; stroke-linecap: round; transition: stroke var(--dur); }
-    .arbol__arista--camino { stroke: var(--color-pista); stroke-width: 2.5; }
-    .arbol__arista--marcada { stroke: #d99a00; stroke-width: 3; }
-    .arbol__arista--nueva { stroke-dasharray: 1; animation: arista-dibuja 320ms ease-out both; }
-    @keyframes arista-dibuja { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-    .nodo { outline: none; }
-    .nodo--oculto { visibility: hidden; }
-    .nodo__cuerpo { transform-box: fill-box; transform-origin: center; }
-    .nodo--nuevo .nodo__cuerpo { animation: nodo-entra 380ms var(--curva-rebote) both; }
-    @keyframes nodo-entra { from { transform: scale(0.2); opacity: 0; } }
-    .nodo__circulo { fill: var(--color-superficie); stroke: #9aa4b2; stroke-width: 2; transition: fill var(--dur), stroke var(--dur); }
-    .nodo__n { font-size: 14px; font-weight: 700; text-anchor: middle; dominant-baseline: central; fill: var(--color-texto); pointer-events: none; }
-    .nodo--activo .nodo__circulo { fill: var(--color-acento-suave); stroke: var(--color-acento); stroke-width: 3.5; }
-    .nodo--activo .nodo__n { fill: var(--color-acento); }
-    .nodo--espera .nodo__circulo { fill: var(--color-pista-suave); stroke: var(--color-pista); stroke-dasharray: 4 3; }
-    .nodo--listo .nodo__circulo { stroke: var(--color-ok); }
-    .nodo--devuelve .nodo__circulo { fill: var(--color-ok-suave); stroke-width: 3.5; }
-    .nodo__pildora { visibility: hidden; }
-    .nodo__pildora rect { fill: var(--color-ok-suave); stroke: var(--color-ok); stroke-width: 1.5; }
-    .nodo__pildora text { font-size: 11.5px; font-weight: 700; text-anchor: middle; dominant-baseline: central; fill: var(--color-ok); }
-    .nodo--con-pildora .nodo__pildora { visibility: visible; }
-    .nodo--pildora-nueva .nodo__pildora { transform-box: fill-box; transform-origin: center top; animation: pildora-entra 360ms var(--curva-rebote) both; }
-    @keyframes pildora-entra { from { transform: scale(0.3); opacity: 0; } }
-    .nodo--marcado .nodo__circulo { fill: #fff2c2; stroke: #d99a00; stroke-width: 3.5; stroke-dasharray: none; }
-    .nodo--sombra .nodo__circulo { fill: #fff8de; stroke: #d99a00; }
-    .nodo--tocable { cursor: pointer; }
-    .nodo--tocable:hover .nodo__circulo { stroke: var(--color-azul); }
-    .nodo:focus-visible .nodo__circulo { stroke: var(--color-azul); stroke-width: 4; }
-    .nodo--error .nodo__cuerpo { animation: sacudir 360ms ease; }
-    /* La llamada que puede volver, cuando la vuelta la hace el alumno: un anillo que late */
-    .nodo__anillo { fill: none; stroke: var(--color-acento); stroke-width: 3; opacity: 0; pointer-events: none; }
-    .nodo--puede .nodo__anillo { opacity: 0.8; animation: nodo-anillo 1.4s ease-in-out infinite; }
-    @keyframes nodo-anillo { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.85; } }
+    /* ---------- El árbol de llamadas (arbol.js; sus estilos, en base.css) ---------- */
     .arbol__pie { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
     .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border: 2px solid; border-radius: 50%; }
     .leyenda .leyenda__corre::before { border-color: var(--color-acento); background: var(--color-acento-suave); }
@@ -398,6 +361,7 @@
 <script src="../../../assets/js/codigo.js"></script>
 <script src="../../../assets/js/traza.js"></script>
 <script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/arbol.js"></script>
 <script src="../../../assets/js/pasos.js"></script>
 <script>
 (function () {
@@ -435,151 +399,18 @@
 
   var leccion; // se asigna al final, con Pasos.iniciar
 
-  /* ---------- El árbol de llamadas (SVG) ----------
+  /* ---------- El árbol de llamadas (arbol.js) ----------
      Árbol de una función que, con n >= 2, se llama con n - 1 y con n - 2 (fibonacci y ramas).
-     Cada nodo sabe su orden de llamada (pre: en ese orden se llama) y de vuelta (post: en
-     ese orden devuelve). Las hojas se reparten de izquierda a derecha y cada padre queda
-     sobre el centro de sus dos hijos. */
-  var SVG = "http://www.w3.org/2000/svg";
-  var HOJA = 38, PISO = 78, R = 15, MARGEN = 6, PILDORA = 16;
-
-  function svg(tag, atributos, clase) {
-    var el = document.createElementNS(SVG, tag);
-    for (var k in atributos) el.setAttribute(k, atributos[k]);
-    if (clase) el.setAttribute("class", clase);
-    return el;
-  }
-
+     Cada nodo sabe su n y lo que devuelve (valor). */
   function construirArbol(n) {
-    var nodos = [];
-    var pre = 0, post = 0, hojas = 0, pisos = 0;
-    function visitar(k, padre, prof) {
-      var nodo = { id: nodos.length, n: k, padre: padre, prof: prof, hijos: [], pre: pre++ };
-      nodos.push(nodo);
-      pisos = Math.max(pisos, prof + 1);
-      if (k >= 2) {
-        nodo.hijos.push(visitar(k - 1, nodo, prof + 1));
-        nodo.hijos.push(visitar(k - 2, nodo, prof + 1));
-        nodo.x = (nodo.hijos[0].x + nodo.hijos[1].x) / 2;
-        nodo.valor = nodo.hijos[0].valor + nodo.hijos[1].valor;
-      } else {
-        nodo.x = hojas++;
-        nodo.valor = k;
-      }
-      nodo.post = post++;
-      return nodo;
-    }
-    visitar(n, null, 0);
-    return { nodos: nodos, hojas: hojas, pisos: pisos };
-  }
-
-  function crearArbol(cont, n, opciones) {
-    opciones = opciones || {};
-    var datos = construirArbol(n);
-    var nodos = datos.nodos;
-    var ancho = 2 * (MARGEN + R) + (datos.hojas - 1) * HOJA;
-    var alto = 2 * MARGEN + 2 * R + PILDORA + 4 + (datos.pisos - 1) * PISO;
-    var dibujo = svg("svg", { viewBox: "0 0 " + ancho + " " + alto, role: "img", "aria-label": opciones.etiqueta || "Árbol de llamadas" }, "arbol");
-    dibujo.style.maxWidth = Math.round(ancho * 1.3) + "px";
-    var aristas = dibujo.appendChild(svg("g"));
-    var capa = dibujo.appendChild(svg("g"));
-    function px(nodo) { return MARGEN + R + nodo.x * HOJA; }
-    function py(nodo) { return MARGEN + R + nodo.prof * PISO; }
-
-    nodos.forEach(function (nodo) {
-      var x = px(nodo), y = py(nodo);
-      if (nodo.padre) {
-        var p = nodo.padre;
-        nodo.arista = aristas.appendChild(svg("path", {
-          d: "M" + px(p) + " " + (py(p) + R) + " L" + x + " " + (y - R), pathLength: 1
-        }, "arbol__arista"));
-      }
-      var g = svg("g", { transform: "translate(" + x + " " + y + ")" }, "nodo");
-      var cuerpo = g.appendChild(svg("g", {}, "nodo__cuerpo"));
-      cuerpo.appendChild(svg("circle", { r: R + 5 }, "nodo__anillo"));
-      cuerpo.appendChild(svg("circle", { r: R }, "nodo__circulo"));
-      cuerpo.appendChild(svg("text", {}, "nodo__n")).textContent = String(nodo.n);
-      var pildora = cuerpo.appendChild(svg("g", {}, "nodo__pildora"));
-      pildora.appendChild(svg("rect", { x: -16, y: R + 3, width: 32, height: PILDORA, rx: 8 }));
-      nodo.textoPildora = pildora.appendChild(svg("text", { x: 0, y: R + 3 + PILDORA / 2 }));
-      if (opciones.tocar) {
-        g.setAttribute("tabindex", "0");
-        g.setAttribute("role", "button");
-        g.setAttribute("aria-label", opciones.nombre + "(" + nodo.n + ")");
-        g.classList.add("nodo--tocable");
-        g.addEventListener("click", function () { opciones.tocar(nodo); });
-        g.addEventListener("keydown", function (e) {
-          if (e.key !== "Enter" && e.key !== " ") return;
-          e.preventDefault();
-          opciones.tocar(nodo);
-        });
-      }
-      nodo.g = g;
-      capa.appendChild(g);
+    return Arbol.armar({ n: n }, function (d) {
+      return d.n >= 2 ? [{ n: d.n - 1 }, { n: d.n - 2 }] : [];
+    }, function (nodo) {
+      nodo.valor = nodo.hijos.length ? nodo.hijos[0].valor + nodo.hijos[1].valor : nodo.n;
     });
-    cont.textContent = "";
-    cont.appendChild(dibujo);
-
-    /* estado: { llamadas, devueltos, actual } — se ven los nodos ya llamados; los que ya
-       devolvieron llevan su píldora. pildora(nodo, visible, listo) decide su texto.
-       Con puede: true, el nodo actual lleva un anillo que late: el alumno lo tiene que tocar. */
-    var pildora = opciones.pildora || function (nodo, visible, listo) { return listo ? String(nodo.valor) : null; };
-    function pintar(e) {
-      var llamadas = e.llamadas === undefined ? nodos.length : e.llamadas;
-      var devueltos = e.devueltos === undefined ? nodos.length : e.devueltos;
-      nodos.forEach(function (nodo) {
-        var visible = nodo.pre < llamadas;
-        var listo = nodo.post < devueltos;
-        var actual = nodo.id === e.actual;
-        var g = nodo.g;
-        var antes = !g.classList.contains("nodo--oculto");
-        g.classList.toggle("nodo--oculto", !visible);
-        g.classList.toggle("nodo--activo", visible && actual && !listo);
-        g.classList.toggle("nodo--devuelve", visible && actual && listo);
-        g.classList.toggle("nodo--espera", visible && !actual && !listo && e.actual !== undefined);
-        g.classList.toggle("nodo--listo", visible && listo);
-        g.classList.toggle("nodo--nuevo", visible && !antes && !e.quieto);
-        g.classList.toggle("nodo--puede", visible && actual && !!e.puede);
-        var texto = visible ? pildora(nodo, visible, listo) : null;
-        var tenia = g.classList.contains("nodo--con-pildora");
-        g.classList.toggle("nodo--con-pildora", texto !== null);
-        g.classList.toggle("nodo--pildora-nueva", texto !== null && !tenia && !e.quieto);
-        if (texto !== null) nodo.textoPildora.textContent = texto;
-        if (nodo.arista) {
-          var a = nodo.arista;
-          var veia = a.style.visibility !== "hidden";
-          a.style.visibility = visible ? "" : "hidden";
-          a.classList.toggle("arbol__arista--camino", visible && !listo && e.actual !== undefined);
-          a.classList.toggle("arbol__arista--nueva", visible && !veia && !e.quieto);
-        }
-      });
-    }
-
-    // Resalta unos nodos (y, si se pide, todo lo que cuelga de ellos)
-    function marcar(lista, conRamas) {
-      var marcados = {}, sombra = {};
-      lista.forEach(function (nodo) {
-        marcados[nodo.id] = true;
-        if (!conRamas) return;
-        (function bajar(m) {
-          m.hijos.forEach(function (h) { sombra[h.id] = true; bajar(h); });
-        })(nodo);
-      });
-      nodos.forEach(function (nodo) {
-        nodo.g.classList.toggle("nodo--marcado", !!marcados[nodo.id]);
-        nodo.g.classList.toggle("nodo--sombra", !!sombra[nodo.id] && !marcados[nodo.id]);
-        if (nodo.arista) nodo.arista.classList.toggle("arbol__arista--marcada", !!sombra[nodo.id]);
-      });
-    }
-
-    function sacudir(nodo) {
-      nodo.g.classList.remove("nodo--error");
-      void nodo.g.getBoundingClientRect();
-      nodo.g.classList.add("nodo--error");
-    }
-
-    return { nodos: nodos, pintar: pintar, marcar: marcar, sacudir: sacudir };
   }
+
+  function crearArbol(cont, n, opciones) { return Arbol.crear(cont, construirArbol(n), opciones); }
 
   /* ---------- 1. La serie ---------- */
   var SERIE = 8;
