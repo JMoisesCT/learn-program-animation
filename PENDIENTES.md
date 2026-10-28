@@ -20,10 +20,14 @@ Por orden de prioridad:
    **Probar con alumnos** si se entiende el `-1` de `.find()` (paso «Antes y después de la @»: sin @, `correo[:-1]` corta la última letra sin dar error).
    **Probar con alumnos** las tijeras de Rebanadas en un móvil de verdad (arrastrar y tocar la cinta; usan `touch-action: none`, así que sobre la cinta la página no se desplaza) y si «los números van en los cortes» se entiende.
    **Detalle visto**: en móvil, las líneas largas se desplazan en vez de caber (la de `print(▢)` en el reto de Métodos, con la cadena elegida dentro; las opciones sí se parten en dos líneas).
-   **Recursión, completa (4/4).**
+   **Recursión, completa (7/7).** Se añadieron Dígitos y bases, Imprimir combinaciones, A practicar y Proyecto: el candado (ver el registro del 2026-10-28). Para afinar con el autor y con alumnos:
+   - **Dígitos y bases** tiene 10 pasos; si se hace larga, el paso de las luces (3) se puede quitar o juntar con el 4. El control de la base llega a 10 para ver que `a_base(n, 10)` devuelve el mismo número.
+   - **Imprimir combinaciones**: los emojis del árbol de piedra, papel o tijera miden unos 11 px a 390 px; ver si se leen en un móvil de verdad. En móvil, la flecha de salto tapa el final de las líneas largas de la poda y del reto (el detalle de abajo).
+   - **A practicar**: si los 12 ejercicios son demasiados o pocos, y si el balance «¿Cómo te fue?» ayuda. Guarda los resultados en `lpa:progreso` (`resultados` dentro de `recursion-practica`).
+   - **El candado** lee `secreta`, una variable de afuera de la función (`return clave == secreta`); Variables locales no lo cuenta. Ver si se entiende o si conviene pasarla como parámetro.
    **Probar con alumnos** el paso «Una función que se llama dos veces» (Árbol de llamadas) tras la mejora del 2026-10-28: si la fila de valores bajo la línea 5, las fichas bajo cada llamada y la llamada con «↑» en las tarjetas ayudan a seguir quién llama a quién, o si hay demasiado bajo la línea 5. Si funciona, llevar `espera` a Recursión que devuelve valores y a Funciones que usan funciones.
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
-   **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
+   **Torres de Hanói, guardada**: ya no es el proyecto de Recursión (lo es el candado). Sigue en `lecciones/recursion/proyecto/`, intacta y con su clave `recursion-proyecto`, pero no está en la portada ni la enlaza ninguna lección; queda para otro ejemplo (un extra o un reto). Su etiqueta aún dice «Recursión 4/4 · Proyecto»: cambiarla cuando se le dé su nuevo lugar.
 3. **Probar con alumnos las mejoras de la vuelta en Recursión** (ver el registro del 2026-10-27):
    - si los colores de ida (naranja, punteado) y de vuelta (azul) se distinguen y se entienden, también con daltonismo (la raya de la consola cambia de forma, no solo de color);
    - si la cuenta que crece y se encoge (Recursión 2/4) se lee bien en el móvil cuando ocupa dos líneas (con `factorial(5)`);
@@ -51,6 +55,15 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-28 · Recursión: más ejemplos para practicar y un proyecto nuevo
+
+Recursión pasa de 4 a 7 lecciones; el plan está en CLAUDE.md. Las cuatro nuevas se escribieron en paralelo, una por agente, y se revisaron con capturas a 1280 y 390 px.
+- **3/7 · Dígitos y bases** (`bases/`, `recursion-bases`, 10 pasos): `contar_digitos`, los restos de dividir entre 2, `binario` con el `print` antes (al revés) y después de la llamada (en orden), la versión que devuelve un texto, `a_base(n, b)` con controles y un reto para completar `a_base`.
+- **5/7 · Imprimir combinaciones** (`combinaciones/`, `recursion-combinaciones`, 9 pasos): `lanzar(n, tiros)` con monedas, el árbol de decisiones, cuántas salen, piedra, papel o tijera en 2 rondas, podar ramas con `ultima` y el reto de la escalera (`escalera(falta, camino)`, 5 caminos). El árbol pasó a `assets/js/arbol.js` (CSS en `base.css`, `.arbol-llamadas`); Árbol de llamadas lo usa y se ve idéntica (capturas comparadas píxel a píxel).
+- **6/7 · A practicar** (`practica/`, `recursion-practica`, 12 ejercicios): «¿Qué imprime?», «Completa el espacio en blanco», «Encuentra el error» y «Traza en la tabla», y un balance por tipo al final.
+- **7/7 · Proyecto: el candado** (`candado/`, `recursion-candado`, 9 pasos): abrirlo a mano, `probar(n, clave)` genera las 27 claves, parar al encontrarla (el `True` baja por la pila), una pista que poda ramas y un reto con un candado de 4 ruedas y un tope de intentos.
+- **Hanói escondida**: fuera de la portada y sin enlaces (ver arriba). Las etiquetas pasan a `/7` y los «Siguiente» van Valores → Bases → Árbol → Combinaciones → Práctica → Candado → Texto a fondo.
 
 ### 2026-10-28 · Árbol de llamadas: quién llama a quién en fibonacci
 
