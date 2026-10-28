@@ -207,6 +207,7 @@
             <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
             <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
             <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+            <button type="button" class="btn btn-secundario" id="p2-saltar">Siguiente salto ▸▸</button>
           </div>
         </div>
         <div class="lab__visual">
@@ -214,7 +215,7 @@
         </div>
         <div class="lab__resultado">
           <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
-          <p class="nota">La tarjeta espera <strong>dos veces</strong> en la línea 5: primero con <code>▢ + fibonacci(…)</code> y luego, con la primera parte ya puesta, con <code>… + ▢</code>.</p>
+          <p class="nota">Bajo la línea 5 se lee con qué números la ejecuta la tarjeta que corre. Las fichas naranjas dicen en qué llamada espera cada tarjeta: la de la <strong>izquierda</strong> o la de la <strong>derecha</strong>.</p>
           <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
         </div>
       </div>
@@ -669,7 +670,8 @@
     var p = Pila.programa();
     p.linea = 6;
     p.ficha = "programa";
-    p.falta = "print(▢)";
+    p.falta = "print(" + titulo(n2) + ")";
+    p.espera = titulo(n2);
     if (recibe !== undefined) {
       p.sigue = true;
       p.recibe = recibe;
@@ -677,11 +679,27 @@
     return p;
   }
 
+  // La línea 5 con los números de la tarjeta que la ejecuta, cada parte bajo su llamada:
+  // «n=4  return fibonacci(3)     + fibonacci(2)». marca: "izq" o "der" (la llamada que hace)
+  // o "recibe-izq" / "recibe-der" (el valor que acaba de llegar)
+  var COL_IZQ = 15, COL_DER = 34;
+  function espacios(k) { return new Array(Math.max(k, 1) + 1).join(" "); }
+  function linea5(k, izq, der, marca) {
+    function pieza(texto, lado) {
+      if (marca === lado) return [texto, "activa"];
+      if (marca === "recibe-" + lado) return [texto, "recibe"];
+      return texto;
+    }
+    var quien = "n=" + k;
+    return { linea: 4, partes: ["  ", [quien, "quien"], espacios(6 - quien.length) + "return ", pieza(izq, "izq"),
+      espacios(COL_DER - 2 - COL_IZQ - izq.length) + "+ ", pieza(der, "der")] };
+  }
+
   function trazaPila() {
     var pasos = [
       { linea: 0, texto: "Python recuerda la receta <strong>fibonacci</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
-      { linea: 6, texto: "El <code>print</code> necesita <strong>" + titulo(n2) + "</strong>: Python la llama y el programa espera.",
-        estado: { pila: [programa(), Pila.llamada(titulo(n2), [])] } }
+      { linea: 6, parada: true, texto: "El <code>print</code> necesita <strong>" + titulo(n2) + "</strong>: Python la llama.",
+        estado: { pila: [Pila.programa()] } }
     ];
     var llamadas = 0;
 
@@ -695,46 +713,44 @@
     function visitar(k, abajo) {
       llamadas++;
       var nivel = abajo.length;
-      pasos.push({ linea: 0, fase: "ida",
-        texto: nivel === 1 ? "Nace <strong>n = " + k + "</strong> en su tarjeta." : "Otra tarjeta de <strong>fibonacci</strong>, con su propia <strong>n = " + k + "</strong>.",
-        estado: { pila: abajo.concat([tarjeta(k)]) } });
       var base = k <= 1;
-      pasos.push({ linea: 1,
-        texto: "¿n &lt;= 1? " + k + " &lt;= 1 es " + chip(base) + (base ? ": ¡caso base!" : ": todavía no, va por el else."),
+      var izq = titulo(k - 1), der = titulo(k - 2);
+      pasos.push({ linea: 1, fase: "ida",
+        texto: (nivel === 1 ? "Nace <strong>n = " + k + "</strong> en su tarjeta. " : "Otra tarjeta de <strong>fibonacci</strong>, con su propia <strong>n = " + k + "</strong>. ") +
+          "¿n &lt;= 1? " + k + " &lt;= 1 es " + chip(base) + (base ? ": ¡caso base!" : ": todavía no, va por el else."),
         estado: { pila: abajo.concat([tarjeta(k)]), leer: [nivel, "n"] } });
       if (base) {
         pasos.push({ linea: 2, texto: "<strong>return n</strong>: devuelve " + k + " sin llamar a nadie.",
           estado: { pila: abajo.concat([tarjeta(k, { devuelve: String(k) })]) } });
         return k;
       }
-      var falta1 = "return ▢ + fibonacci(" + (k - 2) + ")";
-      var espera1 = tarjeta(k, { linea: 4, falta: falta1 });
-      pasos.push({ linea: 4,
-        texto: "Para sumar <code>fibonacci(" + (k - 1) + ") + fibonacci(" + (k - 2) + ")</code> necesita primero <strong>" + titulo(k - 1) + "</strong>. " +
-          "La tarjeta espera con <code>▢ + fibonacci(" + (k - 2) + ")</code>.",
-        estado: { pila: abajo.concat([espera1, Pila.llamada(titulo(k - 1), [])]), leer: [nivel, "n"] } });
-      var a = visitar(k - 1, abajo.concat([espera1]));
-      pasos.push({ linea: 4, flecha: true, fase: "vuelta",
-        texto: titulo(k - 1) + " devolvió <strong>" + a + "</strong>: cae en el primer espacio en blanco. " + titulo(k) +
-          " ya tiene <code>" + a + " + fibonacci(" + (k - 2) + ")</code>, pero le falta la segunda llamada.",
-        estado: { pila: abajo.concat([tarjeta(k, { linea: 4, sigue: true, falta: falta1, recibe: String(a) })]) } });
-      var falta2 = "return " + a + " + ▢";
-      var espera2 = tarjeta(k, { linea: 4, falta: falta2 });
-      pasos.push({ linea: 4,
-        texto: "Ahora llama a <strong>" + titulo(k - 2) + "</strong>, la segunda. Espera otra vez, ahora con <code>" + a + " + ▢</code>.",
-        estado: { pila: abajo.concat([espera2, Pila.llamada(titulo(k - 2), [])]), leer: [nivel, "n"] } });
-      var b = visitar(k - 2, abajo.concat([espera2]));
-      pasos.push({ linea: 4, flecha: true, fase: "vuelta",
-        texto: titulo(k - 2) + " devolvió <strong>" + b + "</strong>: cae en el segundo espacio en blanco. Ya tiene <code>" + a + " + " + b + "</code>.",
-        estado: { pila: abajo.concat([tarjeta(k, { linea: 4, sigue: true, falta: falta2, recibe: String(b) })]) } });
+      var falta1 = "return " + izq + " + " + der;
+      pasos.push({ linea: 4, parada: true,
+        texto: "Con n = " + k + ", la línea 5 es <code>" + izq + " + " + der + "</code>. Primero llama a la de la <strong>izquierda</strong>: <strong>" + izq + "</strong>.",
+        estado: { pila: abajo.concat([tarjeta(k)]), leer: [nivel, "n"], valores: linea5(k, izq, der, "izq") } });
+      var a = visitar(k - 1, abajo.concat([tarjeta(k, { linea: 4, columna: COL_IZQ, falta: falta1, espera: izq })]));
+      pasos.push({ linea: 4, flecha: true, fase: "vuelta", parada: true,
+        texto: izq + " devolvió <strong>" + a + "</strong>, y el " + a + " ocupa su lugar: " + titulo(k) +
+          " ya tiene <code>" + a + " + " + der + "</code>. Le falta la de la derecha.",
+        estado: { pila: abajo.concat([tarjeta(k, { linea: 4, sigue: true, falta: falta1, espera: izq, recibe: String(a) })]),
+          valores: linea5(k, String(a), der, "recibe-izq") } });
+      var falta2 = "return " + a + " + " + der;
+      pasos.push({ linea: 4, parada: true,
+        texto: "Ahora llama a la de la <strong>derecha</strong>: <strong>" + der + "</strong>.",
+        estado: { pila: abajo.concat([tarjeta(k)]), leer: [nivel, "n"], valores: linea5(k, String(a), der, "der") } });
+      var b = visitar(k - 2, abajo.concat([tarjeta(k, { linea: 4, columna: COL_DER, falta: falta2, espera: der })]));
+      pasos.push({ linea: 4, flecha: true, fase: "vuelta", parada: true,
+        texto: der + " devolvió <strong>" + b + "</strong>, y el " + b + " ocupa su lugar: " + titulo(k) + " ya tiene <code>" + a + " + " + b + "</code>.",
+        estado: { pila: abajo.concat([tarjeta(k, { linea: 4, sigue: true, falta: falta2, espera: der, recibe: String(b) })]),
+          valores: linea5(k, String(a), String(b), "recibe-der") } });
       pasos.push({ linea: 4,
         texto: "<code>" + a + " + " + b + "</code> es <strong>" + (a + b) + "</strong>: " + titulo(k) + " devuelve " + (a + b) + ".",
-        estado: { pila: abajo.concat([tarjeta(k, { devuelve: String(a + b) })]) } });
+        estado: { pila: abajo.concat([tarjeta(k, { devuelve: String(a + b) })]), valores: linea5(k, String(a), String(b)) } });
       return a + b;
     }
 
     var total = String(visitar(n2, [programa()]));
-    pasos.push({ linea: 6, flecha: true, fase: "vuelta", salida: total,
+    pasos.push({ linea: 6, flecha: true, fase: "vuelta", parada: true, salida: total,
       texto: titulo(n2) + " devolvió <strong>" + total + "</strong> al programa, que sigue en la línea 7: <code>print(" + total + ")</code> lo muestra. " +
         "En total, <strong>" + llamadas + (llamadas === 1 ? " llamada" : " llamadas") + "</strong>.",
       estado: { pila: [programa(total)] } });
@@ -747,7 +763,7 @@
       texto = "fibonacci(" + n2 + ") es un caso base: devuelve " + n2 + " sin llamarse. Mueve el control a 3 o 4 y mira las dos llamadas.";
     } else {
       texto = "fibonacci(" + n2 + ") llamó dos veces: a fibonacci(" + (n2 - 1) + ") y a fibonacci(" + (n2 - 2) + "). Cada tarjeta que no era caso base " +
-        "esperó dos veces en la misma línea: primero con ▢ + …, luego con … + ▢. En total, " + llamadasFib(n2) + " llamadas." + (n2 < 4 ? " Prueba con 4." : "");
+        "esperó dos veces en la línea 5: primero en la llamada de la izquierda y luego en la de la derecha. En total, " + llamadasFib(n2) + " llamadas." + (n2 < 4 ? " Prueba con 4." : "");
     }
     Pasos.feedback($("p2-fb"), "ok", texto);
     leccion.desbloquear();
@@ -1213,11 +1229,13 @@
     consola: $("p2-consola"),
     ejecutar: $("p2-ejecutar"),
     reproducir: $("p2-reproducir"),
+    saltar: $("p2-saltar"),
     reiniciar: $("p2-reiniciar"),
     generar: trazaPila,
     pila: pila2,
     intervalo: 900,
     alReiniciar: function () {
+      $("p2-explicacion").textContent = "Toca «Ejecutar línea» para ir paso a paso, o «Siguiente salto» para ir de una llamada (o una vuelta) a la siguiente.";
       pila2.vaciar();
       Pasos.limpiarFeedback($("p2-fb"));
     },

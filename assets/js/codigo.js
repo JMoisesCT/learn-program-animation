@@ -21,6 +21,15 @@
        pone fichas debajo de una línea: las llamadas que esperan pausadas en ella
        (pila.js las pinta solas con la opción codigo). Las fichas que ya no están en la
        lista se van flotando; las nuevas aparecen. Codigo.limpiar también las quita.
+       Con columna: 15 (en caracteres, contando la sangría), la ficha va debajo de esa
+       columna y no al principio: p. ej. bajo una de las dos llamadas de una misma línea.
+       En una línea, o todas sus fichas llevan columna o ninguna.
+   Codigo.valores(preEl, { linea: 4, partes: ["   return ", ["fibonacci(3)", "activa"], …] })
+       una fila debajo de la línea con sus valores puestos (cómo la ve la llamada que la
+       ejecuta). Las partes se escriben una tras otra, con espacios para alinearlas con el
+       código; [texto, "activa"] resalta lo que se está haciendo, [texto, "recibe"] un valor
+       que acaba de llegar y [texto, "quien"] dice de quién son los valores (n=4).
+       Codigo.valores(preEl, null) la quita; Codigo.limpiar también.
    Codigo.volarDesdeLinea(el, destinoEl, texto, clase, alLlegar)
        una copia de `texto` sale de la línea que se ejecuta (la línea activa del código
        del paso de `el`) y vuela hasta destinoEl, que queda oculto hasta que llega.
@@ -53,7 +62,7 @@
   function limpiar(pre) {
     marcar(pre, {});
     quitarSalto(pre);
-    pre.querySelectorAll(".pausas").forEach(function (el) { el.remove(); });
+    pre.querySelectorAll(".pausas, .valores").forEach(function (el) { el.remove(); });
   }
 
   var SVG = "http://www.w3.org/2000/svg";
@@ -64,11 +73,11 @@
     return el;
   }
 
-  /* El texto de un elemento, sin las fichas de pausa que pueda tener debajo */
+  /* El texto de un elemento, sin la fila de valores ni las fichas de pausa que pueda tener debajo */
   function rangoDeTexto(el) {
     var r = document.createRange();
     r.selectNodeContents(el);
-    var fichas = el.querySelector(":scope > .pausas");
+    var fichas = el.querySelector(":scope > .valores, :scope > .pausas");
     if (fichas) r.setEndBefore(fichas);
     return r;
   }
@@ -80,7 +89,7 @@
     return caja.right - pre.getBoundingClientRect().left - pre.clientLeft + pre.scrollLeft;
   }
 
-  // Alto de la primera fila de una línea (debajo puede tener fichas de pausa)
+  // Alto de la primera fila de una línea (debajo puede tener valores y fichas de pausa)
   function altoFila(linea) {
     return Math.min(linea.offsetHeight, parseFloat(getComputedStyle(linea).lineHeight) || linea.offsetHeight);
   }
@@ -162,6 +171,8 @@
   }
 
   /* ---------- Fichas de las llamadas pausadas en una línea ---------- */
+  function columnaDe(f) { return f.columna === undefined ? null : String(f.columna); }
+
   function pausas(pre, lista) {
     var ls = lineas(pre);
     var quedan = {};
@@ -169,7 +180,8 @@
     // Las que se van salen de la línea (no ocupan lugar) y suben desvaneciéndose
     pre.querySelectorAll(".pausa").forEach(function (ficha) {
       var f = quedan[ficha.getAttribute("data-clave")];
-      if (f && ficha.textContent === f.texto && ficha.closest(".linea") === ls[f.linea]) return;
+      if (f && ficha.textContent === f.texto && ficha.closest(".linea") === ls[f.linea] &&
+        ficha.getAttribute("data-columna") === columnaDe(f)) return;
       var grupo = ficha.parentNode;
       if (!reducir() && pre.isConnected && ficha.offsetParent) {
         var a = ficha.getBoundingClientRect();
@@ -182,7 +194,13 @@
         setTimeout(function () { fantasma.remove(); }, 500);
       }
       ficha.remove();
-      if (!grupo.children.length) grupo.remove();
+      // Sin fichas, se va su columna y, si se queda vacía, la fila
+      while (grupo && !grupo.children.length && grupo.classList.contains("pausas__grupo")) {
+        var fila = grupo.parentNode;
+        grupo.remove();
+        grupo = fila;
+      }
+      if (grupo && !grupo.children.length && grupo.classList.contains("pausas")) grupo.remove();
     });
     lista.forEach(function (f) {
       var linea = ls[f.linea];
@@ -190,7 +208,7 @@
       var grupo = linea.querySelector(".pausas");
       if (!grupo) {
         grupo = document.createElement("span");
-        grupo.className = "pausas";
+        grupo.className = "pausas" + (f.columna !== undefined ? " pausas--columnas" : "");
         grupo.setAttribute("aria-hidden", "true");
         // Alineada con el código de la línea, no con su sangría
         grupo.style.setProperty("--sangria", /^ */.exec(linea.textContent)[0].length + "ch");
@@ -200,8 +218,41 @@
       ficha.className = "pausa";
       ficha.setAttribute("data-clave", f.clave);
       ficha.textContent = f.texto;
+      if (f.columna !== undefined) {
+        ficha.setAttribute("data-columna", columnaDe(f));
+        var fila = grupo;
+        grupo = fila.querySelector('.pausas__grupo[data-columna="' + f.columna + '"]');
+        if (!grupo) {
+          grupo = document.createElement("span");
+          grupo.className = "pausas__grupo";
+          grupo.setAttribute("data-columna", columnaDe(f));
+          grupo.style.setProperty("--columna", f.columna + "ch");
+          fila.appendChild(grupo);
+        }
+      }
       grupo.appendChild(ficha);
     });
+  }
+
+  // La fila con los valores puestos va justo debajo de su línea, antes de las fichas
+  function valores(pre, v) {
+    var vieja = pre.querySelector(".valores");
+    var clave = v ? v.linea + "|" + JSON.stringify(v.partes) : "";
+    if (vieja && vieja.getAttribute("data-clave") === clave) return;
+    if (vieja) vieja.remove();
+    var linea = v && lineas(pre)[v.linea];
+    if (!linea) return;
+    var fila = document.createElement("span");
+    fila.className = "valores";
+    fila.setAttribute("data-clave", clave);
+    v.partes.forEach(function (p) {
+      if (typeof p === "string") { fila.appendChild(document.createTextNode(p)); return; }
+      var pieza = document.createElement("span");
+      pieza.className = "valores__" + p[1];
+      pieza.textContent = p[0];
+      fila.appendChild(pieza);
+    });
+    linea.insertBefore(fila, linea.querySelector(".pausas"));
   }
 
   function consola(el, salida) {
@@ -260,6 +311,7 @@
     var piezas = linea.querySelectorAll("span");
     for (var t = 0; t < textos.length; t++) {
       for (var k = piezas.length - 1; k >= 0; k--) {
+        if (piezas[k].closest(".valores, .pausas")) continue;
         if (!piezas[k].children.length && piezas[k].textContent.trim() === String(textos[t])) return piezas[k].getBoundingClientRect();
       }
     }
@@ -366,7 +418,7 @@
 
   window.Codigo = {
     marcar: marcar, limpiar: limpiar, consola: consola, agregar: agregar, booleano: booleano,
-    salto: salto, quitarSalto: quitarSalto, pausas: pausas, volarDesdeLinea: volarDesdeLinea, volar: volar,
+    salto: salto, quitarSalto: quitarSalto, pausas: pausas, valores: valores, volarDesdeLinea: volarDesdeLinea, volar: volar,
     piezaEnLinea: piezaEnLinea, reservarAlto: reservarAlto
   };
 })();
