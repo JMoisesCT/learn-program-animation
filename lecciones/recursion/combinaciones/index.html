@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imprimir combinaciones · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: una función recursiva de Python que imprime todas las combinaciones. lanzar(n, tiros) con monedas, el árbol de decisiones que crece rama por rama, tres opciones por vuelta y ramas que se podan.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .pista-suave { color: var(--color-pista); }
+    #p5-predecir { margin-top: var(--esp-4); }
+
+    /* ---------- Control con número ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .prediccion .btn--bien, .prediccion .btn--bien:hover:not(:disabled) { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .prediccion .btn--mal, .prediccion .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- 1. Las monedas, a mano ---------- */
+    .monedas { display: flex; justify-content: center; gap: var(--esp-4); margin: 0 0 var(--esp-4); padding: 0; list-style: none; }
+    .moneda { display: grid; justify-items: center; gap: var(--esp-1); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .moneda__cara { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; border-radius: 50%; border: 3px dashed var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; color: var(--color-texto-suave); }
+    .moneda--siguiente .moneda__cara { border-color: var(--color-azul); color: var(--color-azul); }
+    .moneda--C .moneda__cara { border: 3px solid #b07800; background: #fff2c2; color: #6b4700; }
+    .moneda--S .moneda__cara { border: 3px solid #6b7480; background: #eef0f3; color: #2b3138; }
+    .moneda--gira .moneda__cara { animation: moneda-gira 460ms ease-out; }
+    @keyframes moneda-gira { 0% { transform: rotateY(90deg) scale(0.85); } 60% { transform: rotateY(-15deg) scale(1.05); } }
+    .lanzar-botones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-3); }
+    .lanzar-botones .btn { min-height: 3.25rem; font-size: var(--texto-md); }
+    .lanzar-botones .btn b { font-family: var(--fuente-codigo); font-size: var(--texto-lg); margin-right: 0.35em; }
+    .halladas__titulo { margin: 0; font-weight: 700; }
+    .halladas { display: flex; flex-wrap: wrap; gap: var(--esp-2); min-height: 2.2rem; margin: var(--esp-2) 0 0; padding: 0; list-style: none; }
+    .hallada { padding: 0.15em 0.7em; border: 2px solid var(--color-ok); border-radius: 999px; background: var(--color-ok-suave); color: var(--color-ok); font-family: var(--fuente-codigo); font-weight: 700; letter-spacing: 0.08em; animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    /* ---------- El árbol (arbol.js; sus estilos, en base.css) ---------- */
+    .arbol-llamadas.arbol--imprime .nodo--hoja.nodo--listo .nodo__circulo { fill: var(--color-ok-suave); stroke-width: 2.5; }
+    .arbol-llamadas.arbol--imprime .nodo--hoja.nodo--listo .nodo__n { fill: var(--color-ok); }
+    .arbol-llamadas .nodo--hoja.nodo--tachado .nodo__circulo { fill: var(--color-pista-suave); stroke: var(--color-pista); stroke-width: 3; stroke-dasharray: none; }
+    .arbol-llamadas .nodo--tachado .nodo__n { fill: var(--color-pista); text-decoration: line-through; }
+    .arbol__pie { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-3); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border: 2px solid; border-radius: 50%; }
+    .leyenda .leyenda__corre::before { border-color: var(--color-acento); background: var(--color-acento-suave); }
+    .leyenda .leyenda__espera::before { border-style: dashed; border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .leyenda .leyenda__listo::before { border-color: var(--color-ok); }
+    .leyenda .leyenda__impresa::before { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .leyenda .leyenda__cortada::before { border-style: dashed; border-color: #b8c0ca; background: var(--color-superficie-2); }
+    .contador { display: inline-block; padding: 0.15em 0.8em; border-radius: 999px; background: var(--color-superficie); border: 2px solid var(--color-borde); font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto); }
+    .contador strong { font-family: var(--fuente-codigo); }
+    .contador--cambio strong { display: inline-block; animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- 4. Cuántas salen: cada moneda duplica ---------- */
+    .dobles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); padding: 0; list-style: none; }
+    .doble { position: relative; display: grid; justify-items: center; gap: var(--esp-1); padding: var(--esp-2) var(--esp-1); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); text-align: center; }
+    .doble__n { font-size: 0.75rem; color: var(--color-texto-suave); white-space: nowrap; }
+    .doble__v { font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; line-height: 1.2; }
+    .doble--oculta { border-style: dashed; background: transparent; }
+    .doble--oculta .doble__v { color: var(--color-texto-suave); opacity: 0.5; }
+    .doble--actual { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .doble--nueva { border-color: var(--color-ok); background: var(--color-ok-suave); animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .doble--nueva .doble__v { color: var(--color-ok); }
+    .doble + .doble::before { content: "×2"; position: absolute; left: calc(-0.5 * var(--esp-2)); top: 50%; transform: translate(-50%, -50%); padding: 0 0.2em; border-radius: 999px; background: var(--color-superficie-2); font-size: 0.7rem; font-weight: 700; color: var(--color-texto-suave); z-index: 1; }
+    .mini__pie { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .mini__pie code { font-size: var(--texto-xs); }
+
+    /* ---------- Reto: espacios en blanco elegidos debajo del código ---------- */
+    .codigo .hueco--lleno { border-bottom-style: solid; color: var(--tk-variable); }
+    .elegir { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-2) var(--esp-3); margin-top: var(--esp-4); }
+    .elegir label { font-weight: 700; }
+    .elegir label span { font-weight: 400; color: var(--color-texto-suave); }
+    .elegir select { min-width: 0; min-height: 2.75rem; padding: var(--esp-1) var(--esp-2); border: 2px dashed var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto); }
+    .elegir select.elegir--lleno { border-style: solid; background: var(--color-superficie); }
+    .escalera { display: block; width: 100%; max-width: 20rem; height: auto; margin: 0 auto; }
+    .escalera__tramo { fill: none; stroke: var(--color-texto-suave); stroke-width: 3; stroke-linejoin: round; }
+    .escalera__num { font-family: var(--fuente-codigo); font-size: 11px; font-weight: 700; fill: var(--color-texto-suave); text-anchor: middle; }
+    .escalera__salto { fill: none; stroke: var(--color-azul); stroke-width: 2.5; stroke-linecap: round; }
+    .escalera__punta { fill: var(--color-azul); }
+    .escalera__etiqueta { font-family: var(--fuente-codigo); font-size: 12px; font-weight: 700; fill: var(--color-azul); text-anchor: middle; }
+    .escalera__pie { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .reto__arbol { margin-top: var(--esp-4); }
+    .consola__linea:empty::before { content: "(línea vacía)"; font-family: var(--fuente); font-weight: 400; font-style: italic; color: var(--color-texto-suave); }
+    .consola .consola__linea--error { color: var(--color-error); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .moneda__cara { width: 3rem; height: 3rem; }
+      .doble__v { font-size: var(--texto-md); }
+      .doble__n { font-size: 0.68rem; }
+      .elegir { grid-template-columns: minmax(0, 1fr); gap: var(--esp-1); }
+      .elegir select + label { margin-top: var(--esp-2); }
+      /* Las líneas de las llamadas son largas: un poco más chicas, para que quepan */
+      #p2-codigo, #p3-codigo, #p5-codigo, #resumen-codigo { font-size: 0.8rem; }
+      #p5-codigo { font-size: 0.76rem; }
+      #p2-codigo .linea, #p3-codigo .linea, #p5-codigo .linea, #p7-codigo .linea, #reto-codigo .linea { padding-right: var(--esp-2); }
+      /* Las más largas ocupan también el margen de la tarjeta */
+      #p7-codigo, #reto-codigo { margin-inline: calc(-1 * var(--esp-4) + 2px); font-size: 0.72rem; }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual { margin-top: var(--esp-5); }
+    }
+    @media (min-width: 1024px) {
+      .lab #p2-codigo, .lab #p3-codigo, .lab #p5-codigo, .lab #p7-codigo, .lab #reto-codigo { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="recursion-combinaciones">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: lanzar las monedas a mano -->
+    <section class="paso" id="paso-mano" data-requiere aria-labelledby="h-mano">
+      <span class="paso__etiqueta">Recursión 5/7 · Imprimir combinaciones</span>
+      <h1 class="paso__titulo" id="h-mano">Cara o sello</h1>
+      <p>Lanzas <strong>3 monedas</strong>, una tras otra. Cada una sale <strong>cara (C)</strong> o <strong>sello (S)</strong>. ¿De cuántas formas distintas pueden salir? Encuéntralas todas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <ol class="monedas" id="p1-monedas" aria-label="Las tres monedas">
+            <li class="moneda"><span class="moneda__cara">?</span>moneda 1</li>
+            <li class="moneda"><span class="moneda__cara">?</span>moneda 2</li>
+            <li class="moneda"><span class="moneda__cara">?</span>moneda 3</li>
+          </ol>
+          <div class="lanzar-botones">
+            <button type="button" class="btn btn-secundario" id="p1-cara"><b>C</b> cara</button>
+            <button type="button" class="btn btn-secundario" id="p1-sello"><b>S</b> sello</button>
+          </div>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <div id="p1-arbol"></div>
+          <p class="arbol__pie">Cada moneda parte el camino en dos. Abajo, cada hoja es una forma de salir.</p>
+        </div>
+        <div class="lab__resultado">
+          <p class="halladas__titulo" id="p1-cuenta">Encontradas: 0</p>
+          <ul class="halladas" id="p1-halladas" aria-labelledby="p1-cuenta"></ul>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. lanzar(n, tiros) con la pila: tiros crece a la ida -->
+    <section class="paso" id="paso-funcion" data-requiere aria-labelledby="h-funcion">
+      <h2 class="paso__titulo" id="h-funcion">Una función que lanza monedas</h2>
+      <p>En Python: <code>n</code> son las monedas que <strong>faltan</strong> y <code>tiros</code>, lo que ya salió. Si no falta ninguna, imprime. Si no, prueba las dos: primero cara y luego sello, con una llamada para cada una.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p2-n">Monedas <output id="p2-n-valor" for="p2-n">2</output></label>
+            <input type="range" id="p2-n" min="1" max="3" step="1" value="2">
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span>, <span class="tk-variable">tiros</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">tiros</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"C"</span>)</span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"S"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">lanzar</span>(<span class="tk-numero" id="p2-codigo-n">2</span>, <span class="tk-texto">""</span>)</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+            <button type="button" class="btn btn-secundario" id="p2-saltar">Siguiente salto ▸▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Bajo la línea de cada llamada se lee con qué valores la hace la tarjeta que corre: <code>tiros</code> con una letra más.</p>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. El árbol de decisiones -->
+    <section class="paso" id="paso-arbol" data-requiere aria-labelledby="h-arbol">
+      <h2 class="paso__titulo" id="h-arbol">El árbol de decisiones</h2>
+      <p>Cada llamada es un círculo, con su <code>tiros</code> adentro. Sus dos llamadas cuelgan de él: la rama <strong>C</strong> y la rama <strong>S</strong>. Mira cómo crece con <code>lanzar(3, "")</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span>, <span class="tk-variable">tiros</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">tiros</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"C"</span>)</span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"S"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">lanzar</span>(<span class="tk-numero">3</span>, <span class="tk-texto">""</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Siguiente llamada ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p3-arbol"></div>
+          <div class="arbol__pie">
+            <span class="contador" id="p3-llamadas">Llamadas: <strong>0</strong></span>
+            <span class="leyenda"><span class="leyenda__corre">corre</span> <span class="leyenda__espera">espera</span> <span class="leyenda__impresa">imprimió</span> <span class="leyenda__listo">terminó</span></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">A la izquierda, cuántas monedas faltan en cada piso (<code>n</code>). Las letras de las ramas, de arriba abajo, forman <code>tiros</code>.</p>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. ¿Cuántas salen? -->
+    <section class="paso" id="paso-cuantas" data-requiere aria-labelledby="h-cuantas">
+      <h2 class="paso__titulo" id="h-cuantas">¿Cuántas salen?</h2>
+      <p>Con 3 monedas salieron 8 combinaciones. ¿Y con otras cantidades? Predice antes de ver el árbol.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p4-pregunta" aria-live="polite"></p>
+          <div class="prediccion" id="p4-opciones" role="group" aria-labelledby="p4-pregunta"></div>
+          <ol class="dobles" id="p4-dobles" aria-label="Combinaciones según las monedas"></ol>
+        </div>
+        <div class="lab__visual">
+          <div id="p4-arbol"></div>
+          <p class="mini__pie" id="p4-pie"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Tres opciones por vuelta -->
+    <section class="paso" id="paso-tres" data-requiere aria-labelledby="h-tres">
+      <h2 class="paso__titulo" id="h-tres">Tres opciones por vuelta</h2>
+      <p>Piedra, papel o tijera, en 2 rondas. En cada ronda hay <strong>tres</strong> jugadas posibles, así que la función se llama <strong>tres</strong> veces.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">jugar</span>(<span class="tk-variable">n</span>, <span class="tk-variable">jugadas</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">jugadas</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">jugar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">jugadas</span> + <span class="tk-texto">"✊"</span>)</span><span class="linea">        <span class="tk-funcion">jugar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">jugadas</span> + <span class="tk-texto">"✋"</span>)</span><span class="linea">        <span class="tk-funcion">jugar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">jugadas</span> + <span class="tk-texto">"✌️"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">jugar</span>(<span class="tk-numero">2</span>, <span class="tk-texto">""</span>)</span></code></pre>
+          <div id="p5-predecir">
+            <p class="prediccion__pregunta" id="p5-pregunta">¿Cuántas líneas imprime <code>jugar(2, "")</code>?</p>
+            <div class="prediccion" id="p5-opciones" role="group" aria-labelledby="p5-pregunta">
+              <button type="button" class="btn btn-secundario" data-valor="6" aria-pressed="false">6</button>
+              <button type="button" class="btn btn-secundario" data-valor="8" aria-pressed="false">8</button>
+              <button type="button" class="btn btn-secundario" data-valor="9" aria-pressed="false">9</button>
+            </div>
+          </div>
+          <div id="p5-controles" hidden>
+            <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reiniciar</button>
+              <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+              <button type="button" class="btn btn-secundario" id="p5-ejecutar">Siguiente llamada ▸</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p5-arbol"></div>
+          <div class="arbol__pie">
+            <span class="contador" id="p5-llamadas">Llamadas: <strong>0</strong></span>
+            <span class="leyenda"><span class="leyenda__corre">corre</span> <span class="leyenda__espera">espera</span> <span class="leyenda__impresa">imprimió</span></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. ¿Cuáles sobran? -->
+    <section class="paso" id="paso-sobran" data-requiere aria-labelledby="h-sobran">
+      <h2 class="paso__titulo" id="h-sobran">Sin dos sellos seguidos</h2>
+      <p>Una regla nueva: no valen las combinaciones con <strong>dos sellos seguidos</strong> (<code>SS</code>). Toca en el árbol las hojas que sobran.</p>
+
+      <div class="tarjeta">
+        <div id="p6-arbol"></div>
+        <p class="arbol__pie" id="p6-cuenta" aria-live="polite">Tachadas: 0</p>
+        <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 7. Podar ramas -->
+    <section class="paso" id="paso-podar" data-requiere aria-labelledby="h-podar">
+      <h2 class="paso__titulo" id="h-podar">Podar ramas</h2>
+      <p>Para cortar a tiempo, cada llamada tiene que saber qué salió la última vez. Se lo pasamos en otro parámetro: <code>ultima</code>. Si fue sello, <strong>no prueba otro sello</strong>: esa rama ni se empieza.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p7-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span>, <span class="tk-variable">tiros</span>, <span class="tk-variable">ultima</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">tiros</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"C"</span>, <span class="tk-texto">"C"</span>)</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">ultima</span> != <span class="tk-texto">"S"</span>:</span><span class="linea">            <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"S"</span>, <span class="tk-texto">"S"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">lanzar</span>(<span class="tk-numero">3</span>, <span class="tk-texto">""</span>, <span class="tk-texto">""</span>)</span></code></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p7-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p7-ejecutar">Siguiente llamada ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p7-arbol"></div>
+          <div class="arbol__pie">
+            <span class="contador" id="p7-llamadas">Llamadas: <strong>0</strong></span>
+            <span class="leyenda"><span class="leyenda__corre">corre</span> <span class="leyenda__impresa">imprimió</span> <span class="leyenda__cortada">cortada ✂</span></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <p class="nota">Sin índices, la función no puede mirar la última letra de <code>tiros</code>: por eso la recuerda aparte, en <code>ultima</code>.</p>
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto: la escalera -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">Subir la escalera</h2>
+      <p>Una escalera de <strong>4 escalones</strong>. Puedes subir de 1 en 1 o de 2 en 2. Completa <code>escalera(falta, camino)</code> para que imprima todas las formas de subirla, y di cuántas son.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Código con dos espacios en blanco"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">escalera</span>(<span class="tk-variable">falta</span>, <span class="tk-variable">camino</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="hueco" id="reto-hueco-uno">▢ 1</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">camino</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">falta</span> &gt;= <span class="tk-numero">1</span>:</span><span class="linea">        <span class="tk-funcion">escalera</span>(<span class="tk-variable">falta</span> - <span class="tk-numero">1</span>, <span class="tk-variable">camino</span> + <span class="tk-texto">"1"</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="hueco" id="reto-hueco-dos">▢ 2</span>:</span><span class="linea">        <span class="tk-funcion">escalera</span>(<span class="tk-variable">falta</span> - <span class="tk-numero">2</span>, <span class="tk-variable">camino</span> + <span class="tk-texto">"2"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">escalera</span>(<span class="tk-numero">4</span>, <span class="tk-texto">""</span>)</span></code></pre>
+          <div class="elegir">
+            <label for="reto-uno">Espacio en blanco 1 <span>(línea 2)</span></label>
+            <select id="reto-uno"><option value="">Elige…</option><option value="f1">falta == 1</option><option value="f0">falta == 0</option><option value="f4">falta == 4</option></select>
+            <label for="reto-dos">Espacio en blanco 2 <span>(línea 6)</span></label>
+            <select id="reto-dos"><option value="">Elige…</option><option value="g9">falta == 2</option><option value="g3">falta &gt; 2</option><option value="g2">falta &gt;= 2</option></select>
+            <label for="reto-cuantos">¿Cuántos caminos?</label>
+            <select id="reto-cuantos"><option value="">Elige…</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="8">8</option></select>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <svg class="escalera" viewBox="0 -4 230 122" role="img" aria-label="Una escalera de 4 escalones. Un camino: 1, 1 y 2.">
+            <path class="escalera__tramo" d="M8 108 H52 V86 H96 V64 H140 V42 H184 V20 H222"/>
+            <text class="escalera__num" x="74" y="101">1</text>
+            <text class="escalera__num" x="118" y="79">2</text>
+            <text class="escalera__num" x="162" y="57">3</text>
+            <text class="escalera__num" x="203" y="35">4</text>
+            <path class="escalera__salto" d="M30 105 Q52 62 74 83"/>
+            <path class="escalera__salto" d="M74 83 Q96 40 118 61"/>
+            <path class="escalera__salto" d="M118 61 Q160 -14 203 17"/>
+            <circle class="escalera__punta" cx="74" cy="83" r="3"/>
+            <circle class="escalera__punta" cx="118" cy="61" r="3"/>
+            <circle class="escalera__punta" cx="203" cy="17" r="3"/>
+            <text class="escalera__etiqueta" x="47" y="70">1</text>
+            <text class="escalera__etiqueta" x="91" y="48">1</text>
+            <text class="escalera__etiqueta" x="150" y="14">2</text>
+          </svg>
+          <p class="escalera__pie">Un camino: 1, 1 y 2. Python lo imprime como <code>112</code>.</p>
+          <div class="reto__arbol" id="reto-arbol-caja" hidden>
+            <div id="reto-arbol"></div>
+            <p class="arbol__pie">Cada rama sube 1 o 2. Las cortadas (✂) se pasarían del último escalón.</p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Una llamada por cada opción, con lo elegido en un parámetro: cada hoja del árbol imprime <strong>una combinación</strong>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span>, <span class="tk-variable">tiros</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">tiros</span>)  <span class="tk-comentario"># una hoja</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-comentario"># una rama por opción;</span></span><span class="linea">        <span class="tk-comentario"># un if puede podar una</span></span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"C"</span>)</span><span class="linea">        <span class="tk-funcion">lanzar</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>, <span class="tk-variable">tiros</span> + <span class="tk-texto">"S"</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../practica/index.html">Siguiente: A practicar →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/arbol.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  // Un texto como se escribe en Python: "CS"
+  function q(t) { return '"' + t + '"'; }
+
+  function espacios(k) { return new Array(Math.max(k, 1) + 1).join(" "); }
+
+  function pulso(el, clase) {
+    el.classList.remove(clase);
+    void el.offsetWidth;
+    el.classList.add(clase);
+  }
+
+  function contar(el, k) {
+    var fuerte = el.querySelector("strong");
+    if (fuerte.textContent === String(k)) return;
+    fuerte.textContent = String(k);
+    if (k) pulso(el, "contador--cambio");
+  }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Los árboles ----------
+     Cada nodo es una llamada: t es lo elegido hasta ahí (tiros, jugadas o camino) y
+     eleccion, la letra de la rama que baja a él. */
+  var NOMBRE = { C: "cara", S: "sello" };
+
+  // lanzar(n, tiros): dos ramas por moneda. Con podar, la de sello no se hace si la
+  // última fue sello (y lo que colgaría de ella se ve apagado)
+  function arbolMonedas(n, podar) {
+    return Arbol.armar({ n: n, t: "", u: "" }, function (d) {
+      if (d.n === 0) return [];
+      return [
+        { n: d.n - 1, t: d.t + "C", u: "C", eleccion: "C" },
+        { n: d.n - 1, t: d.t + "S", u: "S", eleccion: "S", podada: !!podar && d.u === "S" }
+      ];
+    });
+  }
+
+  var MANOS = [["✊", "piedra"], ["✋", "papel"], ["✌️", "tijera"]];
+  function arbolManos(n) {
+    return Arbol.armar({ n: n, t: "" }, function (d) {
+      if (d.n === 0) return [];
+      return MANOS.map(function (m) { return { n: d.n - 1, t: d.t + m[0], eleccion: m[0], nombre: m[1] }; });
+    });
+  }
+
+  // escalera(falta, camino): sube 1 o 2; el salto de 2 se poda si solo falta 1
+  function arbolEscalera(falta) {
+    return Arbol.armar({ f: falta, t: "" }, function (d) {
+      if (d.f <= 0 || d.podada) return [];
+      return [
+        { f: d.f - 1, t: d.t + "1", eleccion: "1" },
+        { f: d.f - 2, t: d.t + "2", eleccion: "2", podada: d.f < 2 }
+      ];
+    });
+  }
+
+  function textoNodo(nodo) { return nodo.t === "" ? '""' : nodo.t; }
+
+  /* Traza de un árbol de decisiones, llamada por llamada (pasos 3, 5 y 7).
+     c: líneas { programa, imprime, corte } y fin(nodo); titulo(nodo) y los textos */
+  function trazaDecisiones(arbol, c) {
+    var pasos = [];
+    var llamadas = 0, devueltos = 0, reales = 0, impresas = 0;
+    function paso(linea, nodo, texto, extra) {
+      var p = { linea: linea, texto: texto,
+        estado: { llamadas: llamadas, devueltos: devueltos, actual: nodo ? nodo.id : undefined, reales: reales } };
+      for (var k in extra) p[k] = extra[k];
+      pasos.push(p);
+    }
+    function visitar(nodo) {
+      llamadas++;
+      reales++;
+      if (!nodo.hijos.length) {
+        devueltos++;
+        impresas++;
+        paso(c.imprime, nodo, c.textoHoja(nodo), { salida: nodo.t, fase: "ida", flecha: true });
+        return;
+      }
+      if (!nodo.padre) paso(c.programa, nodo, c.textoRaiz(nodo));
+      else paso(0, nodo, c.textoLlamada(nodo), { fase: "ida" });
+      nodo.hijos.forEach(function (h) {
+        if (!h.podada) { visitar(h); return; }
+        llamadas++;   // la rama cortada aparece, apagada
+        paso(c.corte, nodo, c.textoCorte(h));
+      });
+      devueltos++;
+      paso(c.fin(nodo), nodo, c.textoFin(nodo), { flecha: true, fase: "vuelta" });
+    }
+    visitar(arbol.raiz);
+    paso(c.programa, null, c.textoFinal(reales, impresas), { flecha: true, fase: "vuelta" });
+    return pasos;
+  }
+
+  /* ---------- 1. Las monedas, a mano ---------- */
+  var mano = null;
+
+  function empezarMano() {
+    var raiz = arbolMonedas(3, false);
+    mano = { raiz: raiz, actual: raiz, vistos: {}, halladas: {}, orden: [], repetidas: 0 };
+    mano.vistos[raiz.id] = true;
+    mano.arbol = Arbol.crear($("p1-arbol"), raiz, {
+      etiqueta: "Árbol de las formas de lanzar 3 monedas. Se arma con lo que eliges.",
+      texto: function (nodo) { return nodo.padre ? nodo.t : "🪙"; },
+      clase: "arbol--imprime"
+    });
+    pintarMano(true);
+    pintarMonedas("", false);
+    $("p1-halladas").textContent = "";
+    $("p1-cuenta").textContent = "Encontradas: 0";
+    $("p1-explicacion").innerHTML = "Moneda 1: ¿cara o sello? Toca <strong>C</strong> o <strong>S</strong>.";
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  // Listas: las hojas encontradas y los círculos con todas sus hojas encontradas
+  function listosMano() {
+    var lista = [];
+    (function completo(nodo) {
+      var si = nodo.hijos.length ? nodo.hijos.map(completo).every(Boolean) : !!mano.halladas[nodo.id];
+      if (si) lista.push(nodo.id);
+      return si;
+    })(mano.raiz);
+    return lista;
+  }
+
+  function pintarMano(quieto) {
+    mano.arbol.pintar({ vistos: Object.keys(mano.vistos), listos: listosMano(), actual: mano.actual.id, quieto: !!quieto });
+  }
+
+  // tiros: lo que ya salió; gira la moneda que acaba de salir
+  function pintarMonedas(tiros, gira) {
+    var monedas = $("p1-monedas").querySelectorAll(".moneda");
+    monedas.forEach(function (m, k) {
+      var letra = tiros.charAt(k);
+      m.className = "moneda" + (letra ? " moneda--" + letra : "") + (k === tiros.length && tiros.length < 3 ? " moneda--siguiente" : "") +
+        (gira && k === tiros.length - 1 ? " moneda--gira" : "");
+      m.querySelector(".moneda__cara").textContent = letra || "?";
+      m.setAttribute("aria-label", "Moneda " + (k + 1) + ": " + (letra ? NOMBRE[letra] : "sin lanzar"));
+    });
+  }
+
+  function elegirMano(letra) {
+    if (!mano.actual.hijos.length) mano.actual = mano.raiz;   // una combinación nueva
+    var hijo = mano.actual.hijos[letra === "C" ? 0 : 1];
+    mano.actual = hijo;
+    mano.vistos[hijo.id] = true;
+    pintarMonedas(hijo.t, true);
+    if (hijo.hijos.length) {
+      pintarMano();
+      $("p1-explicacion").innerHTML = "Moneda " + hijo.t.length + ": " + NOMBRE[letra] + ". Ahora, la moneda " + (hijo.t.length + 1) + ".";
+      return;
+    }
+    if (mano.halladas[hijo.id]) {
+      mano.repetidas++;
+      pintarMano();
+      mano.arbol.sacudir(hijo);
+      $("p1-explicacion").innerHTML = '<span class="pista-suave">💡 <strong>' + hijo.t + "</strong> ya la tenías." +
+        (mano.repetidas >= 2 ? " Busca en el árbol un círculo con una sola rama: ahí falta un camino." : " Prueba otro camino.") + "</span>";
+      return;
+    }
+    mano.halladas[hijo.id] = true;
+    mano.orden.push(hijo.t);
+    pintarMano();
+    $("p1-halladas").appendChild(crear("li", "hallada", hijo.t));
+    var total = mano.orden.length;
+    $("p1-cuenta").textContent = "Encontradas: " + total;
+    if (total < 8) {
+      $("p1-explicacion").innerHTML = "¡<strong>" + hijo.t + "</strong>! Una forma nueva. Toca C o S para lanzar otra vez.";
+      return;
+    }
+    $("p1-explicacion").innerHTML = "¡<strong>" + hijo.t + "</strong>! Ya no quedan caminos sin recorrer.";
+    Pasos.feedback($("p1-fb"), "ok", "¡Las 8! Cada camino de arriba abajo es una combinación. La primera moneda parte el camino en 2, " +
+      "la segunda parte cada uno en 2 otra vez, y la tercera, otra vez: 2 × 2 × 2 = 8.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 2. lanzar con la pila ---------- */
+  var pila2 = Pila.crear($("p2-pila"), { codigo: $("p2-codigo"), rotulo: true });
+  var n2 = 2;
+
+  function tLanzar(k, t) { return "lanzar(" + k + ", " + q(t) + ")"; }
+
+  function trazaPila() {
+    var pasos = [
+      { linea: 0, texto: "Python recuerda la receta <strong>lanzar</strong>. Todavía no la ejecuta.", estado: { pila: [Pila.programa()] } },
+      { linea: 7, parada: true, texto: "El programa llama a <strong>" + tLanzar(n2, "") + "</strong>: " + (n2 === 1 ? "falta 1 moneda" : "faltan " + n2 + " monedas") +
+        " y todavía no salió ninguna: <code>tiros</code> está vacío.", estado: { pila: [Pila.programa()] } }
+    ];
+    var impresas = 0;
+
+    function programa(sigue) {
+      var p = Pila.programa();
+      p.linea = 7;
+      p.ficha = "programa";
+      p.falta = "";
+      if (sigue) p.sigue = true;
+      return p;
+    }
+
+    function tarjeta(k, t, extra) {
+      var c = Pila.llamada(tLanzar(k, t), [["n", k], ["tiros", q(t)]]);
+      c.ficha = "n=" + k;
+      for (var x in extra) c[x] = extra[x];
+      return c;
+    }
+
+    // Debajo de la línea de la llamada: n - 1 y tiros + "C" ya calculados, cada uno bajo lo suyo
+    function valores(k, linea, nuevo) {
+      var quien = "n=" + k;
+      var menos = String(k - 1);
+      return { linea: linea, partes: ["  ", [quien, "quien"], espacios(13 - quien.length), menos, espacios(7 - menos.length), [q(nuevo), "activa"]] };
+    }
+
+    function visitar(k, t, abajo) {
+      var nivel = abajo.length;
+      var base = k === 0;
+      pasos.push({ linea: 1, fase: "ida",
+        texto: (nivel === 1 ? "Nace la primera tarjeta" : "Otra tarjeta de <strong>lanzar</strong>") + ", con su propia <strong>n = " + k + "</strong> y su <strong>tiros = " + q(t) +
+          "</strong>. ¿n == 0? <code>" + k + " == 0</code> es " + chip(base) + (base ? ": no falta ninguna moneda." : ": todavía faltan, va por el else."),
+        estado: { pila: abajo.concat([tarjeta(k, t)]), leer: [nivel, "n"] } });
+      if (base) {
+        impresas++;
+        pasos.push({ linea: 2, salida: t,
+          texto: "<code>print(tiros)</code> muestra <strong>" + t + "</strong>: una combinación entera. Y la función termina.",
+          estado: { pila: abajo.concat([tarjeta(k, t, { termina: true })]), leer: [nivel, "tiros"] } });
+        return;
+      }
+      var c = t + "C", s = t + "S";
+      pasos.push({ linea: 4, parada: true,
+        texto: "Primero, <strong>cara</strong>: llama a <strong>" + tLanzar(k - 1, c) + "</strong>. Le pasa <code>tiros</code> con una C más.",
+        estado: { pila: abajo.concat([tarjeta(k, t)]), leer: [nivel, "tiros"], valores: valores(k, 4, c) } });
+      visitar(k - 1, c, abajo.concat([tarjeta(k, t, { linea: 4, falta: tLanzar(k - 1, s) })]));
+      pasos.push({ linea: 4, flecha: true, fase: "vuelta", parada: true,
+        texto: tLanzar(k - 1, c) + " terminó y su tarjeta se va. Aquí, <strong>tiros</strong> sigue siendo <strong>" + q(t) +
+          "</strong>: la C se agregó en la otra tarjeta, no en esta. Ahora le toca a sello.",
+        estado: { pila: abajo.concat([tarjeta(k, t, { linea: 4, sigue: true, falta: tLanzar(k - 1, s) })]), leer: [nivel, "tiros"] } });
+      pasos.push({ linea: 5, parada: true,
+        texto: "Llama a <strong>" + tLanzar(k - 1, s) + "</strong>: el mismo <code>tiros</code>, con una S más.",
+        estado: { pila: abajo.concat([tarjeta(k, t)]), leer: [nivel, "tiros"], valores: valores(k, 5, s) } });
+      visitar(k - 1, s, abajo.concat([tarjeta(k, t, { linea: 5, falta: "" })]));
+      pasos.push({ linea: 5, flecha: true, fase: "vuelta", parada: true,
+        texto: tLanzar(k - 1, s) + " terminó. " + tLanzar(k, t) + " ya probó cara y sello: no le falta nada y termina.",
+        estado: { pila: abajo.concat([tarjeta(k, t, { termina: true })]) } });
+    }
+
+    visitar(n2, "", [programa()]);
+    pasos.push({ linea: 7, flecha: true, fase: "vuelta", parada: true,
+      texto: tLanzar(n2, "") + " terminó, y el programa también. Imprimió <strong>" + impresas + "</strong> " + (impresas === 1 ? "combinación" : "combinaciones") + ".",
+      estado: { pila: [programa(true)] } });
+    return pasos;
+  }
+
+  function terminarPila() {
+    var total = Math.pow(2, n2);
+    Pasos.feedback($("p2-fb"), "ok", tLanzar(n2, "") + " imprimió " + total + " combinaciones. Cada tarjeta tiene su propio tiros: " +
+      "la de arriba recibe una letra más y la de abajo no cambia. Por eso, cuando vuelve la de cara, la de abajo todavía puede probar sello." +
+      (n2 < 3 ? " Prueba con 3 monedas." : ""));
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. El árbol de decisiones ---------- */
+  var arbol3 = null;
+
+  function trazaArbol3() {
+    var raiz = arbolMonedas(3, false);
+    arbol3 = Arbol.crear($("p3-arbol"), raiz, {
+      etiqueta: "Árbol de llamadas de lanzar(3, \"\"): una rama C y una rama S en cada llamada",
+      texto: textoNodo,
+      pisos: function (p) { return "n=" + (3 - p); },
+      clase: "arbol--imprime"
+    });
+    arbol3.pintar({ llamadas: 0, devueltos: 0 });
+    function titulo(nodo) { return tLanzar(nodo.n, nodo.t); }
+    function prueba(nodo) {
+      var p = nodo.padre;
+      return titulo(p) + (nodo.eleccion === "C" ? " prueba <strong>cara</strong>" : " ya probó cara. Ahora prueba <strong>sello</strong>");
+    }
+    return trazaDecisiones(arbol3, {
+      programa: 7, imprime: 2,
+      fin: function () { return 5; },
+      textoRaiz: function (nodo) { return "El programa llama a <strong>" + titulo(nodo) + "</strong>: el círculo de arriba, con <code>tiros</code> vacío."; },
+      textoLlamada: function (nodo) { return prueba(nodo) + ": llama a <strong>" + titulo(nodo) + "</strong>. Le sale una rama " + nodo.eleccion + "."; },
+      textoHoja: function (nodo) { return prueba(nodo) + ": " + titulo(nodo) + " ya no tiene monedas por lanzar. Imprime <strong>" + nodo.t + "</strong>."; },
+      textoFin: function (nodo) {
+        return titulo(nodo) + " ya probó cara y sello: termina y vuelve" + (nodo.padre ? " a " + titulo(nodo.padre) : " al programa") + ".";
+      },
+      textoFinal: function (reales, impresas) {
+        return "Fin: <strong>" + impresas + "</strong> combinaciones, una por hoja, en " + reales + " llamadas.";
+      }
+    });
+  }
+
+  function terminarArbol3() {
+    Pasos.feedback($("p3-fb"), "ok", "8 hojas, 8 combinaciones, en el mismo orden que la consola: Python termina toda la rama C antes de empezar la rama S. " +
+      "Cada camino de arriba abajo es un valor de tiros: CSC es bajar por C, luego por S y luego por C.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 4. ¿Cuántas salen? ---------- */
+  var PREGUNTAS = [
+    { n: 1, opciones: [1, 2, 3], pista: { 1: "Una moneda puede salir de dos formas: C o S.", 3: "Una moneda solo tiene dos lados: C o S." } },
+    { n: 2, opciones: [3, 4, 6], pista: { 3: "Cada una de las 2 de antes se parte en dos: CC, CS, SC y SS.", 6: "Cada una de las 2 de antes se parte en dos, no en tres." } },
+    { n: 3, opciones: [6, 8, 9], pista: { 6: "Lo viste en el árbol: cada una de las 4 de antes se parte en dos.", 9: "Lo viste en el árbol: cada una de las 4 de antes se parte en dos." } },
+    { n: 4, opciones: [10, 12, 16], pista: { 10: "No se suma 2: cada una de las 8 de antes se parte en dos.", 12: "No se suma 4: cada una de las 8 de antes se parte en dos." } }
+  ];
+  var cuantas = { k: 0 };
+
+  function monedas(n) { return n === 1 ? "1 moneda" : n + " monedas"; }
+
+  function pintarDobles(nueva) {
+    var cont = $("p4-dobles");
+    cont.textContent = "";
+    PREGUNTAS.forEach(function (p, k) {
+      var visto = k < cuantas.k;
+      var li = crear("li", "doble" + (visto ? "" : k === cuantas.k ? " doble--oculta doble--actual" : " doble--oculta") + (k === nueva ? " doble--nueva" : ""));
+      li.appendChild(crear("span", "doble__n", monedas(p.n)));
+      li.appendChild(crear("span", "doble__v", visto ? String(Math.pow(2, p.n)) : "?"));
+      cont.appendChild(li);
+    });
+  }
+
+  function pintarPregunta() {
+    var p = PREGUNTAS[cuantas.k];
+    var cont = $("p4-opciones");
+    cont.textContent = "";
+    if (!p) {
+      $("p4-pregunta").textContent = "Cada moneda más, el doble de hojas.";
+      cont.hidden = true;
+      return;
+    }
+    cont.hidden = false;
+    $("p4-pregunta").innerHTML = (cuantas.k === 0 ? "Con 1 moneda, ¿cuántas imprime " : "¿Y con " + monedas(p.n) + "? ¿Cuántas imprime ") + "<code>lanzar(" + p.n + ', "")</code>?';
+    p.opciones.forEach(function (v) {
+      var b = crear("button", "btn btn-secundario", String(v));
+      b.type = "button";
+      b.addEventListener("click", function () { responderCuantas(v, b); });
+      cont.appendChild(b);
+    });
+  }
+
+  function miniArbol(n) {
+    var chico = n === 4;
+    var a = Arbol.crear($("p4-arbol"), arbolMonedas(n, false), {
+      etiqueta: "Árbol de lanzar(" + n + ", \"\"): " + Math.pow(2, n) + " hojas",
+      texto: chico ? function () { return ""; } : textoNodo,
+      arista: chico ? function () { return null; } : undefined,
+      hoja: chico ? 20 : 36, radio: chico ? 7 : 13, piso: chico ? 42 : 58,
+      clase: "arbol--imprime"
+    });
+    a.pintar({ quieto: Pasos.reducirMovimiento });
+    $("p4-pie").innerHTML = "<code>lanzar(" + n + ', "")</code>: ' + Math.pow(2, n) + " hojas, " + Math.pow(2, n) + " combinaciones.";
+  }
+
+  function empezarCuantas() {
+    cuantas = { k: 0 };
+    pintarDobles();
+    pintarPregunta();
+    $("p4-arbol").textContent = "";
+    $("p4-pie").textContent = "";
+    Pasos.limpiarFeedback($("p4-fb"));
+  }
+
+  function responderCuantas(v, boton) {
+    var p = PREGUNTAS[cuantas.k];
+    var bien = Math.pow(2, p.n);
+    if (v !== bien) {
+      boton.classList.add("btn--mal");
+      Pasos.feedback($("p4-fb"), "pista", p.pista[v]);
+      return;
+    }
+    boton.classList.add("btn--bien");
+    cuantas.k++;
+    pintarDobles(cuantas.k - 1);
+    miniArbol(p.n);
+    if (cuantas.k < PREGUNTAS.length) {
+      Pasos.feedback($("p4-fb"), "ok", "¡Sí, " + bien + "! " + (p.n === 1 ? "C y S." : "El doble que con " + monedas(p.n - 1) + "."));
+      pintarPregunta();
+      $("p4-opciones").querySelector("button").focus();
+      return;
+    }
+    pintarPregunta();
+    Pasos.feedback($("p4-fb"), "ok", "¡Sí, 16! Cada moneda más parte cada hoja en dos: el doble de combinaciones. " +
+      "Con 10 monedas serían 1024, y la función sigue siendo igual de corta.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 5. Tres opciones por vuelta ---------- */
+  var arbol5 = null;
+  var prediccion5 = null;
+
+  function trazaArbol5() {
+    var raiz = arbolManos(2);
+    arbol5 = Arbol.crear($("p5-arbol"), raiz, {
+      etiqueta: "Árbol de llamadas de jugar(2, \"\"): tres ramas en cada llamada",
+      texto: textoNodo,
+      hoja: 36, radio: 16, piso: 70, letra: 13,
+      clase: "arbol--imprime"
+    });
+    arbol5.pintar({ llamadas: 0, devueltos: 0 });
+    function titulo(nodo) { return "jugar(" + nodo.n + ", " + q(nodo.t) + ")"; }
+    function prueba(nodo) { return titulo(nodo.padre) + " prueba <strong>" + nodo.nombre + "</strong> " + nodo.eleccion; }
+    return trazaDecisiones(arbol5, {
+      programa: 8, imprime: 2,
+      fin: function () { return 6; },
+      textoRaiz: function (nodo) { return "El programa llama a <strong>" + titulo(nodo) + "</strong>: faltan 2 rondas."; },
+      textoLlamada: function (nodo) { return prueba(nodo) + ": llama a <strong>" + titulo(nodo) + "</strong>."; },
+      textoHoja: function (nodo) { return prueba(nodo) + ": " + titulo(nodo) + " ya no tiene rondas. Imprime <strong>" + nodo.t + "</strong>."; },
+      textoFin: function (nodo) {
+        return titulo(nodo) + " ya probó piedra, papel y tijera: termina y vuelve" + (nodo.padre ? " a " + titulo(nodo.padre) : " al programa") + ".";
+      },
+      textoFinal: function (reales, impresas) {
+        return "Fin: <strong>" + impresas + "</strong> jugadas, en " + reales + " llamadas.";
+      }
+    });
+  }
+
+  function predecir5(valor) {
+    var primera = prediccion5 === null;
+    prediccion5 = valor;
+    $("p5-opciones").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+    if (!primera) return;
+    $("p5-controles").hidden = false;
+    trazaP5.reiniciar();
+    trazaP5.reproducir();
+  }
+
+  function terminarArbol5() {
+    Pasos.feedback($("p5-fb"), "ok", (prediccion5 === "9" ? "¡Bien predicho! " : "Son 9, no " + prediccion5 + ". ") +
+      "Cada llamada abre tres ramas: 3 en la primera ronda y 3 × 3 = 9 en la segunda. Con dos opciones el árbol se duplica en cada piso; con tres, se triplica.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 6. ¿Cuáles sobran? ---------- */
+  var arbol6 = null;
+  var tachadas = {};
+
+  function sobra(nodo) { return !nodo.hijos.length && nodo.t.indexOf("SS") !== -1; }
+
+  function empezarSobran() {
+    tachadas = {};
+    arbol6 = Arbol.crear($("p6-arbol"), arbolMonedas(3, false), {
+      etiqueta: "Árbol de lanzar(3, \"\"). Cada hoja se puede tocar.",
+      texto: textoNodo,
+      pisos: function (p) { return "n=" + (3 - p); },
+      tocar: tocarSobra,
+      titulo: function (nodo) { return nodo.hijos.length ? "llamada " + tLanzar(nodo.n, nodo.t) : "combinación " + nodo.t; }
+    });
+    arbol6.pintar({ devueltos: 0, quieto: true });
+    $("p6-cuenta").textContent = "Tachadas: 0";
+    Pasos.limpiarFeedback($("p6-fb"));
+  }
+
+  function tocarSobra(nodo) {
+    var total = arbol6.nodos.filter(sobra).length;
+    var hechas = Object.keys(tachadas).length;
+    if (hechas === total) return;
+    if (nodo.hijos.length) {
+      arbol6.sacudir(nodo);
+      Pasos.feedback($("p6-fb"), "pista", "Ese círculo es una llamada a medio camino. Toca las hojas, las de abajo: son las combinaciones.");
+      return;
+    }
+    if (!sobra(nodo)) {
+      arbol6.sacudir(nodo);
+      Pasos.feedback($("p6-fb"), "pista", nodo.t + (nodo.t.indexOf("S") !== nodo.t.lastIndexOf("S")
+        ? " tiene dos sellos, pero no seguidos: hay una C entre ellos. Esa sí vale."
+        : " no tiene dos sellos seguidos. Esa sí vale."));
+      return;
+    }
+    if (tachadas[nodo.id]) return;
+    tachadas[nodo.id] = true;
+    arbol6.clase(nodo, "nodo--tachado", true);
+    hechas++;
+    $("p6-cuenta").textContent = "Tachadas: " + hechas;
+    if (hechas < total) {
+      Pasos.limpiarFeedback($("p6-fb"));
+      return;
+    }
+    var ss = arbol6.nodos.filter(function (m) { return m.t === "SS"; })[0];
+    arbol6.marcar([ss], true);
+    Pasos.feedback($("p6-fb"), "ok", "¡Las 3! Quedan 5. Mira dónde está SS: SSC y SSS cuelgan del mismo círculo. Desde que salen dos sellos, " +
+      "toda esa rama sobra. Se puede cortar ahí, sin bajar hasta las hojas.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 7. Podar ramas ---------- */
+  var arbol7 = null;
+
+  function tPodar(nodo) { return "lanzar(" + nodo.n + ", " + q(nodo.t) + ", " + q(nodo.u) + ")"; }
+
+  function trazaArbol7() {
+    var raiz = arbolMonedas(3, true);
+    arbol7 = Arbol.crear($("p7-arbol"), raiz, {
+      etiqueta: "Árbol de llamadas de lanzar(3, \"\", \"\"): las ramas con dos sellos seguidos se cortan",
+      texto: textoNodo,
+      pisos: function (p) { return "n=" + (3 - p); },
+      clase: "arbol--imprime"
+    });
+    arbol7.pintar({ llamadas: 0, devueltos: 0 });
+    function prueba(nodo) {
+      var p = nodo.padre;
+      return nodo.eleccion === "C"
+        ? tPodar(p) + " prueba <strong>cara</strong>"
+        : "En " + tPodar(p) + ", ultima es " + q(p.u) + ": <code>" + q(p.u) + ' != "S"</code> es ' + chip(true) + ". Prueba <strong>sello</strong>";
+    }
+    return trazaDecisiones(arbol7, {
+      programa: 8, imprime: 2, corte: 5,
+      fin: function (nodo) { return nodo.hijos[1].podada ? 5 : 6; },
+      textoRaiz: function (nodo) { return "El programa llama a <strong>" + tPodar(nodo) + "</strong>: todavía no salió nada, ni siquiera una última."; },
+      textoLlamada: function (nodo) { return prueba(nodo) + ": llama a <strong>" + tPodar(nodo) + "</strong>."; },
+      textoHoja: function (nodo) { return prueba(nodo) + ": " + tPodar(nodo) + " ya no tiene monedas. Imprime <strong>" + nodo.t + "</strong>."; },
+      textoCorte: function (h) {
+        return "En " + tPodar(h.padre) + ', ultima es "S": <code>"S" != "S"</code> es ' + chip(false) +
+          ". No llama a " + tPodar(h) + ": <strong>la rama se corta</strong> y todo lo que colgaría de ella se apaga.";
+      },
+      textoFin: function (nodo) { return tPodar(nodo) + " terminó y vuelve" + (nodo.padre ? " a " + tPodar(nodo.padre) : " al programa") + "."; },
+      textoFinal: function (reales, impresas) {
+        return "Fin: <strong>" + impresas + "</strong> combinaciones, ninguna con SS, en " + reales + " llamadas. Sin podar eran 8, en 15 llamadas.";
+      }
+    });
+  }
+
+  function terminarArbol7() {
+    Pasos.feedback($("p7-fb"), "ok", "Salieron las 5 que valen. El if cortó dos ramas antes de empezarlas: la de SS (y con ella SSC y SSS) y la de CSS. " +
+      "Podar ahorra trabajo: 11 llamadas en vez de 15. Con más monedas, se ahorra mucho más.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 8. Reto: la escalera ---------- */
+  var BASES = { f0: function (f) { return f === 0; }, f1: function (f) { return f === 1; }, f4: function (f) { return f === 4; } };
+  var GUARDAS = { g2: function (f) { return f >= 2; }, g9: function (f) { return f === 2; }, g3: function (f) { return f > 2; } };
+  var PISTAS_RETO = {
+    f1: "Con falta == 1 imprime cuando todavía falta un escalón: 111, 12 y 21 no llegan arriba. Hay que imprimir cuando ya no falta ninguno.",
+    f4: "Con falta == 4 imprime una sola vez, al empezar, con camino vacío: todavía no subió nada. Hay que imprimir cuando ya no falta ningún escalón.",
+    g9: "Con falta == 2, solo salta 2 cuando faltan justo 2, y se pierden 121, 211 y 22, que saltan 2 antes. Un salto de 2 se puede dar siempre que falten 2 o más.",
+    g3: "Con falta > 2, cuando faltan justo 2 no salta 2, y se pierden caminos como 22 o 112. Si faltan 2, también se puede saltar 2."
+  };
+  var timerReto = null;
+
+  // Ejecuta la función con lo elegido: lo que imprime y si Python la corta (RecursionError)
+  function ejecutarEscalera(base, guarda) {
+    var salida = [], error = false, llamadas = 0;
+    (function subir(falta, camino, prof) {
+      if (error) return;
+      llamadas++;
+      if (prof > 60 || llamadas > 5000) { error = true; return; }
+      if (base(falta)) salida.push(camino);
+      if (falta >= 1) subir(falta - 1, camino + "1", prof + 1);
+      if (guarda(falta)) subir(falta - 2, camino + "2", prof + 1);
+    })(4, "", 0);
+    return { salida: salida, error: error };
+  }
+
+  function elegidosReto() { return { uno: $("reto-uno").value, dos: $("reto-dos").value, cuantos: $("reto-cuantos").value }; }
+
+  function pintarHuecosReto() {
+    [["uno", "▢ 1"], ["dos", "▢ 2"]].forEach(function (par) {
+      var sel = $("reto-" + par[0]);
+      var hueco = $("reto-hueco-" + par[0]);
+      hueco.classList.toggle("hueco--lleno", !!sel.value);
+      hueco.textContent = sel.value ? sel.options[sel.selectedIndex].textContent : par[1];
+    });
+    ["uno", "dos", "cuantos"].forEach(function (k) { $("reto-" + k).classList.toggle("elegir--lleno", !!$("reto-" + k).value); });
+  }
+
+  function limpiarReto() {
+    if (timerReto) clearTimeout(timerReto);
+    timerReto = null;
+    Codigo.consola($("reto-consola"), []);
+    $("reto-arbol-caja").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambioReto() {
+    var e = elegidosReto();
+    pintarHuecosReto();
+    limpiarReto();
+    leccion.listoParaComprobar(!!(e.uno && e.dos && e.cuantos));
+  }
+
+  function mostrarSalidaReto(r) {
+    var lineas = r.salida.slice(0, 12);
+    if (r.salida.length > 12) lineas.push("…");
+    Codigo.consola($("reto-consola"), lineas);
+    if (r.error) {
+      Codigo.agregar($("reto-consola"), "RecursionError: maximum recursion depth exceeded");
+      $("reto-consola").lastElementChild.classList.add("consola__linea--error");
+    }
+  }
+
+  // El árbol de escalera(4, ""), llamada a llamada
+  function mostrarArbolReto() {
+    $("reto-arbol-caja").hidden = false;
+    var a = Arbol.crear($("reto-arbol"), arbolEscalera(4), {
+      etiqueta: "Árbol de llamadas de escalera(4, \"\"): imprime 1111, 112, 121, 211 y 22",
+      texto: textoNodo,
+      hoja: 40, radio: 17, piso: 62,
+      clase: "arbol--imprime"
+    });
+    var k = 0;
+    var total = a.nodos.reduce(function (m, nodo) { return Math.max(m, nodo.pre); }, 0) + 1;
+    function tic() {
+      k++;
+      a.pintar({ llamadas: k, quieto: Pasos.reducirMovimiento });
+      if (k < total) timerReto = setTimeout(tic, Pasos.reducirMovimiento ? 0 : 260);
+      else timerReto = null;
+    }
+    tic();
+  }
+
+  function comprobarReto() {
+    var e = elegidosReto();
+    if (!e.uno || !e.dos || !e.cuantos) return false;
+    limpiarReto();
+    var r = ejecutarEscalera(BASES[e.uno], GUARDAS[e.dos]);
+    mostrarSalidaReto(r);
+    if (e.uno !== "f0") {
+      Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[e.uno]);
+      return false;
+    }
+    if (e.dos !== "g2") {
+      Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[e.dos]);
+      return false;
+    }
+    if (e.cuantos !== "5") {
+      Pasos.feedback($("reto-fb"), "pista", "Tu función está bien. Mira la salida: cada línea es una forma de subir. ¿Cuántas líneas hay?");
+      return false;
+    }
+    Pasos.feedback($("reto-fb"), "ok", "¡5 caminos! 1111, 112, 121, 211 y 22. Como con las monedas, cada llamada prueba sus opciones (subir 1 o subir 2) " +
+      "y lleva lo elegido en camino; los if podan los saltos que se pasarían del último escalón.");
+    mostrarArbolReto();
+    return true;
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("p1-cara").addEventListener("click", function () { elegirMano("C"); });
+  $("p1-sello").addEventListener("click", function () { elegirMano("S"); });
+  empezarMano();
+
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    saltar: $("p2-saltar"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaPila,
+    pila: pila2,
+    intervalo: 900,
+    alReiniciar: function () {
+      $("p2-explicacion").textContent = "Toca «Ejecutar línea» para ir paso a paso, o «Siguiente salto» para ir de una llamada (o una vuelta) a la siguiente.";
+      pila2.vaciar();
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) { pila2.pintar(paso.estado); },
+    alTerminar: terminarPila
+  });
+  $("p2-n").addEventListener("input", function () {
+    n2 = Number(this.value);
+    $("p2-n-valor").textContent = String(n2);
+    $("p2-codigo-n").textContent = String(n2);
+    trazaP2.reiniciar();
+  });
+
+  function trazaDeArbol(k, generar, alTerminar, arbol) {
+    return Traza.crear({
+      codigo: $("p" + k + "-codigo"),
+      explicacion: $("p" + k + "-explicacion"),
+      consola: $("p" + k + "-consola"),
+      ejecutar: $("p" + k + "-ejecutar"),
+      reproducir: $("p" + k + "-reproducir"),
+      reiniciar: $("p" + k + "-reiniciar"),
+      generar: generar,
+      intervalo: 800,
+      alReiniciar: function () {
+        $("p" + k + "-explicacion").textContent = "Toca «Siguiente llamada» para ir paso a paso, o «Ejecutar todo» para verlo seguido.";
+        contar($("p" + k + "-llamadas"), 0);
+        Pasos.limpiarFeedback($("p" + k + "-fb"));
+      },
+      alPaso: function (paso) {
+        arbol().pintar(paso.estado);
+        contar($("p" + k + "-llamadas"), paso.estado.reales);
+      },
+      alTerminar: alTerminar
+    });
+  }
+
+  var trazaP3 = trazaDeArbol(3, trazaArbol3, terminarArbol3, function () { return arbol3; });
+  var trazaP5 = trazaDeArbol(5, trazaArbol5, terminarArbol5, function () { return arbol5; });
+  var trazaP7 = trazaDeArbol(7, trazaArbol7, terminarArbol7, function () { return arbol7; });
+
+  empezarCuantas();
+
+  $("p5-opciones").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { predecir5(b.getAttribute("data-valor")); });
+  });
+
+  ["uno", "dos", "cuantos"].forEach(function (k) { $("reto-" + k).addEventListener("change", cambioReto); });
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() {
+    trazaP2.detener();
+    trazaP3.detener();
+    trazaP5.detener();
+    trazaP7.detener();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-mano": pausar,
+      "paso-funcion": pausar,
+      "paso-arbol": pausar,
+      "paso-cuantas": pausar,
+      "paso-tres": pausar,
+      "paso-sobran": function (paso, l, info) {
+        pausar();
+        if (info.primeraVez) empezarSobran();
+      },
+      "paso-podar": pausar,
+      "paso-reto": function () { pausar(); pintarHuecosReto(); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
