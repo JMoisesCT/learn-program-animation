@@ -28,10 +28,17 @@
                      («return 4 * 6»): sale volando del «↩ devuelve 6» de la tarjeta que se va.
                      Si falta tiene un ▢, el valor cae ahí («return ▢ + fibonacci(1)» con
                      recibe: "1", se ve «return 1 + fibonacci(1)»); si no, en su última aparición
+     espera: "…"     la llamada de falta que está esperando: se ve como una ficha con «↑» (la
+                     tarjeta de encima) y, con recibe, el valor cae en su lugar
+                     («return fibonacci(2) + fibonacci(1)» con espera: "fibonacci(2)" y
+                     recibe: "1" → «return 1 + fibonacci(1)»). Así se lee a quién espera.
    Con la opción codigo, cada tarjeta pausada pone además una ficha («n=3») al final de su
    línea en el código (Codigo.pausas): se ve cuántas llamadas esperan en esa misma línea,
    y al volver se va la ficha de la que retoma. ficha: "e=2" cambia el texto de la ficha
-   (por defecto, sus variables).
+   (por defecto, sus variables). columna: 15 la pone bajo esa columna de la línea, p. ej.
+   bajo la llamada de la izquierda o la de la derecha cuando una línea hace dos.
+   El estado puede traer además valores: { linea, partes } (ver Codigo.valores): la línea
+   con los valores de la llamada que la ejecuta, debajo de ella.
    Con rotulo: true (y codigo), encima del código se lee qué llamada lo está ejecutando:
    «Ahora corre: abrir(2) n 2», la tarjeta de arriba. Cambia al llamar y al volver.
 
@@ -83,23 +90,35 @@
   }
 
   // «le falta: …»: lo que la llamada hará cuando vuelva la de arriba
-  function pintarFalta(marco, falta, recibe) {
+  function pintarFalta(marco, falta, recibe, espera) {
     var el = marco.falta;
     el.hidden = falta === undefined;
-    var clave = falta + "|" + recibe;
+    var clave = falta + "|" + recibe + "|" + espera;
     if (falta === undefined || el.getAttribute("data-falta") === clave) return;
     el.setAttribute("data-falta", clave);
     el.textContent = "";
     if (falta === "") { el.textContent = "no le falta nada"; return; }
     el.appendChild(document.createTextNode("le falta: "));
     var code = el.appendChild(crear("code"));
-    var hueco = recibe === undefined ? -1 : falta.indexOf("▢");
-    var k = hueco !== -1 ? hueco : recibe === undefined ? -1 : falta.lastIndexOf(recibe);
+    // Dónde va la pieza: la llamada que espera, el ▢ o el valor recibido
+    var k = -1, largo = 0;
+    if (espera !== undefined && falta.indexOf(espera) !== -1) {
+      k = falta.indexOf(espera);
+      largo = espera.length;
+    } else if (recibe !== undefined) {
+      k = falta.indexOf("▢");
+      largo = 1;
+      if (k === -1) {
+        k = falta.lastIndexOf(recibe);
+        largo = recibe.length;
+      }
+    }
     if (k === -1) { code.textContent = falta; return; }
     // El valor recibido va aparte: es donde aterriza al volar
+    var pieza = recibe !== undefined ? crear("span", "marco__recibido", recibe) : crear("span", "marco__espera", espera);
     code.appendChild(document.createTextNode(falta.slice(0, k)));
-    code.appendChild(crear("span", "marco__recibido", recibe));
-    code.appendChild(document.createTextNode(falta.slice(k + (hueco !== -1 ? 1 : recibe.length))));
+    code.appendChild(pieza);
+    code.appendChild(document.createTextNode(falta.slice(k + largo)));
   }
 
   function pintarVars(marco, lista, leer) {
@@ -249,14 +268,17 @@
           m.raiz.classList.add("marco--sigue");
         } else if (!sigue) m.raiz.classList.remove("marco--sigue");
         pintarVars(m, datos.vars, e.leer && e.leer[0] === nivel ? e.leer[1] : null);
-        pintarFalta(m, pausada || sigue ? datos.falta : undefined, sigue ? datos.recibe : undefined);
+        pintarFalta(m, pausada || sigue ? datos.falta : undefined, sigue ? datos.recibe : undefined, datos.espera);
         pintarToca(m, arriba && e.tocable ? e.tocable : "");
         m.devuelve = datos.devuelve;
       });
       titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
       var recibido = marcos[pila.length - 1].falta.querySelector(".marco__recibido");
       if (baja && recibido && window.Codigo) Codigo.volar(baja.desde, recibido, String(baja.valor), "vuelo--salida");
-      if (codigo) Codigo.pausas(codigo, fichas(pila));
+      if (codigo) {
+        Codigo.pausas(codigo, fichas(pila));
+        Codigo.valores(codigo, e.valores || null);
+      }
       if (rotulo) pintarRotulo(rotulo, pila);
     }
 
@@ -298,7 +320,7 @@
       pila.forEach(function (datos, nivel) {
         if (nivel === pila.length - 1 || datos.linea === undefined) return;
         var texto = datos.ficha || datos.vars.map(function (par) { return par[0] + "=" + par[1]; }).join(" ");
-        lista.push({ linea: datos.linea, texto: texto, clave: String(nivel) });
+        lista.push({ linea: datos.linea, texto: texto, clave: String(nivel), columna: datos.columna });
       });
       return lista;
     }
@@ -313,8 +335,9 @@
     // El código (con sus fichas) y el rótulo guardan el alto que alcanzan en la traza
     function reservar(estados) {
       if (codigo) Codigo.reservarAlto(codigo, estados, function (copia, e) {
-        copia.querySelectorAll(".pausas, .codigo__salto").forEach(function (x) { x.remove(); });
+        copia.querySelectorAll(".pausas, .valores, .codigo__salto").forEach(function (x) { x.remove(); });
         Codigo.pausas(copia, fichas(e.pila));
+        Codigo.valores(copia, e.valores || null);
       });
       if (rotulo) Codigo.reservarAlto(rotulo.raiz, estados, function (copia, e) {
         llenarRotulo(copia.querySelector(".rotulo__cuerpo"), e.pila);

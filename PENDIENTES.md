@@ -21,6 +21,7 @@ Por orden de prioridad:
    **Probar con alumnos** las tijeras de Rebanadas en un móvil de verdad (arrastrar y tocar la cinta; usan `touch-action: none`, así que sobre la cinta la página no se desplaza) y si «los números van en los cortes» se entiende.
    **Detalle visto**: en móvil, las líneas largas se desplazan en vez de caber (la de `print(▢)` en el reto de Métodos, con la cadena elegida dentro; las opciones sí se parten en dos líneas).
    **Recursión, completa (4/4).**
+   **Probar con alumnos** el paso «Una función que se llama dos veces» (Árbol de llamadas) tras la mejora del 2026-10-28: si la fila de valores bajo la línea 5, las fichas bajo cada llamada y la llamada con «↑» en las tarjetas ayudan a seguir quién llama a quién, o si hay demasiado bajo la línea 5. Si funciona, llevar `espera` a Recursión que devuelve valores y a Funciones que usan funciones.
    **Probar con alumnos** si la vuelta se entiende ahora (tarjeta «pausada/sigue», fichas bajo la línea y rótulo «Ahora corre»), y si las fichas o el rótulo distraen.
    **Probar con alumnos** las Torres de Hanói en un móvil de verdad: tocar dos torres y arrastrar discos (el arrastre usa `touch-action: none` en los discos, así que sobre un disco la página no se desplaza).
 3. **Probar con alumnos las mejoras de la vuelta en Recursión** (ver el registro del 2026-10-27):
@@ -50,6 +51,14 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-28 · Árbol de llamadas: quién llama a quién en fibonacci
+
+En el paso «Una función que se llama dos veces» costaba seguir las llamadas: todas las tarjetas decían «pausada en la línea 5», las fichas se amontonaban bajo la misma línea y el `▢` no decía quién lo iba a llenar.
+- **La llamada pendiente con su nombre**: la tarjeta que espera muestra `return [fibonacci(3) ↑] + fibonacci(2)` (la de encima) y, al volver, el valor cae en su lugar (`return 2 + fibonacci(2)`). Lo mismo el programa: `print([fibonacci(4) ↑])`. En `pila.js`, `espera`.
+- **La línea 5 con los números puestos**: debajo de la línea, `n=4  return fibonacci(3)     + fibonacci(2)`, cada parte bajo su llamada, con la que se hace resaltada en verde y el valor que llega en azul (`Codigo.valores`, o `valores` en el estado de la pila).
+- **Fichas bajo su llamada**: la ficha `n=4` va bajo `fibonacci(n - 1)` o bajo `fibonacci(n - 2)`, según cuál espere (`columna` en `Codigo.pausas` y en la tarjeta).
+- **Menos pasos**: «nace n» y el `if` van en un solo paso, y la llamada se anuncia en la tarjeta que llama (la nueva aparece después). Con `fibonacci(4)`, de 46 a 37 pasos. Botón nuevo «Siguiente salto ▸▸» (`saltar` en `Traza`, pasos con `parada: true`): avanza deprisa hasta la siguiente llamada o vuelta (18 saltos con `fibonacci(4)`).
 
 ### 2026-10-27 · Listas: cómo se hizo
 

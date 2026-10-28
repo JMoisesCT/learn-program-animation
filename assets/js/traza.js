@@ -7,6 +7,8 @@
      consola: el,                (opcional) salida acumulada de print()
      ejecutar: btn,              "Ejecutar línea ▸": avanza un paso
      reproducir: btn,            (opcional) "▶ Ejecutar todo": avanza solo; se convierte en "⏸ Pausa"
+     saltar: btn,                (opcional) "Siguiente salto ▸▸": avanza deprisa hasta el siguiente
+                                 paso marcado con parada: true (p. ej. una llamada o una vuelta)
      reiniciar: btn,             (opcional) se oculta hasta que termina la primera ejecución
      generar: function () {      devuelve la lista de pasos que ejecuta Python
        return [{ linea: 0, texto: "…", salida: "…", estado: { … } }, …];
@@ -22,6 +24,7 @@
      alReiniciar: function () { … },
      alTerminar: function () { … },
      intervalo: 800,                      ms entre pasos al reproducir
+     intervaloSaltar: 300,                ms entre pasos con el botón saltar
      repetible: false                     true: al terminar, los botones siguen activos y
                                           vuelven a ejecutar el código sin borrar la consola
    });
@@ -84,6 +87,7 @@
       if (o.consola) Codigo.consola(o.consola, []);
       o.ejecutar.disabled = false;
       if (o.reproducir) o.reproducir.disabled = false;
+      if (o.saltar) o.saltar.disabled = false;
       if (o.reiniciar) o.reiniciar.hidden = true;
       if (o.alReiniciar) o.alReiniciar();
     }
@@ -121,6 +125,7 @@
         if (!o.repetible) {
           o.ejecutar.disabled = true;
           if (o.reproducir) o.reproducir.disabled = true;
+          if (o.saltar) o.saltar.disabled = true;
           if (o.reiniciar) o.reiniciar.focus();
         }
         if (o.alTerminar) o.alTerminar();
@@ -135,12 +140,24 @@
       if (!terminado()) timer = setInterval(avanzar, intervalo);
     }
 
+    // Pasos seguidos, deprisa, hasta uno con parada (incluido) o hasta el final
+    function saltar() {
+      detener();
+      function uno() {
+        if (!terminado()) avanzar();
+        if (terminado() || pasos[i - 1].parada) detener();
+      }
+      uno();
+      if (!terminado() && !pasos[i - 1].parada) timer = setInterval(uno, o.intervaloSaltar || 300);
+    }
+
     function reproducir() {
       if (o.reproducir && !timer && !o.reproducir.disabled) alternar();
     }
 
     o.ejecutar.addEventListener("click", function () { detener(); avanzar(); });
     if (o.reproducir) o.reproducir.addEventListener("click", alternar);
+    if (o.saltar) o.saltar.addEventListener("click", saltar);
     // El botón se oculta al reiniciar: el foco pasa a "Ejecutar línea"
     if (o.reiniciar) o.reiniciar.addEventListener("click", function () {
       reiniciar();
