@@ -5,6 +5,8 @@
      - si las opciones tienen varias líneas, atenúa las que son iguales en todas: lo que
        queda con color es lo que cambia. (Se marcan igual en todas las opciones, para
        no delatar cuál es la buena.)
+     - si todas tienen 3 líneas o más y ninguna es larga, marca el grupo con
+       .opciones--bloques: en escritorio van de dos en dos.
 
    No cambia el texto (textContent sigue igual), así que copiar una opción al
    hueco del código o compararla sigue funcionando. Las opciones que ya traen
@@ -63,6 +65,11 @@
         return '<code class="' + clase + '">' + colorear(l) + "</code>";
       }).join("\n");
     });
+
+    // Bloques de varias líneas cortas: en escritorio caben de dos en dos (base.css)
+    var bloques = lineas.every(function (ls) { return ls.length >= 3; }) &&
+      lineas.every(function (ls) { return ls.every(function (l) { return l.length <= 40; }); });
+    if (bloques && grupo.classList.contains("opciones--codigo")) grupo.classList.add("opciones--bloques");
 
     var antes = grupo.previousElementSibling;
     if (marcar && !(antes && antes.classList.contains("op-leyenda"))) {

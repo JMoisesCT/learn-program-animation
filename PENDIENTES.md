@@ -38,12 +38,13 @@ Por orden de prioridad:
 6. **Proyectos: armar el programa en vez de elegirlo.** Ideas que quedaron de la revisión, sin hacer:
    - arrastrar y soltar líneas para ordenarlas (CLAUDE.md lo pide en Pedagogía; hoy solo arrastran «Texto y números» y los discos de las Torres de Hanói);
    - un panel «Tu programa» que crece con cada parte resuelta y que al final se ejecuta.
-7. **Detalles menores vistos al probar:**
+7. **Escritorio en una pantalla** (ver el registro del 2026-10-29): revisar en una PC de verdad si el nuevo reparto se entiende (enunciado arriba a la izquierda, animación a la derecha) y seguir con lo que aún no cabe a 1366×657.
+8. **Detalles menores vistos al probar:**
    - en móvil, si una línea es más ancha que la pantalla, la flecha de salto pasa por encima del texto de esa línea;
    - la copia que vuela a la consola es pequeña (tamaño de código, escalada); podría salir algo más grande;
    - la portada no tiene animación (p. ej. el camino de sublecciones se podría ir rellenando).
 
-8. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
+9. **Español neutro: casos dudosos que quedaron sin tocar** (decidir con alumnos o con otra persona de Perú):
    - «bombilla» en Combinar condiciones (circuitos de `and`/`or`) → ¿«foco»? (es lo habitual en Perú y México, pero «foco» también significa otra cosa);
    - «Entradas del zoo» en Condiciones anidadas → ¿«zoológico»?;
    - «Ojo:» (6 veces, en Bucles, Salir antes, Recorrer un texto y Condicionales) → ¿«Cuidado:»?;
@@ -55,6 +56,24 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-29 · Escritorio: cada paso en una sola pantalla
+
+En una PC casi todos los pasos obligaban a bajar: el título y el enunciado empujaban la animación hacia abajo y los retos iban en una columna de 40rem con los lados vacíos. Medido con Playwright en todas las lecciones (344 pasos), pasos que caben sin bajar:
+
+| Pantalla (área visible) | Antes | Después |
+|---|---|---|
+| 1366×657 (laptop) | 51 | 177 |
+| 1536×730 (laptop con escala 125 %) | 119 | 251 |
+| 1920×960 (Full HD) | 295 | 328 |
+
+- **Paso con `.lab`**: el paso entero es la tarjeta, en dos columnas: enunciado y código a la izquierda; lo que se ve y la salida a la derecha, desde arriba. Si la derecha queda mucho más alta, la salida pasa bajo el código (`paso--salida-abajo`, lo decide `pasos.js` al entrar al paso y al cambiar el tamaño de la ventana).
+- **Paso con otra tarjeta** (retos, predicciones): el enunciado en una columna a la izquierda (fija al bajar) y la tarjeta a la derecha. Las opciones de código de varias líneas cortas van de dos en dos (`opciones--bloques`, desde 1280px).
+- **Más ancho y más alto**: hasta 90rem de ancho; cabecera y pie más bajos; títulos de paso algo más chicos en escritorio.
+- **Tras «Comprobar»**, si el mensaje queda bajo el pie, la página baja sola hasta él.
+- El móvil no cambia (capturas a 390 px comparadas píxel a píxel antes y después).
+
+**Lo que aún no cabe a 1366×657**: los programas completos de los proyectos (`paso-jugar`, hasta 48 líneas), la pila llena de Recursión (5 tarjetas), los resúmenes finales con código largo y algunos retos con objetivo + código + opciones. Ideas: que el código largo se desplace dentro de su caja siguiendo la línea activa, o que la columna derecha (tablero y consola) quede fija al bajar.
 
 ### 2026-10-28 · Recursión: más ejemplos para practicar y un proyecto nuevo
 
