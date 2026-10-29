@@ -41,6 +41,56 @@
   var reducirMovimiento = window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* Junta lo que va antes de la tarjeta (etiqueta, título, enunciado) en un
+     .paso__intro. En el móvil no cambia nada; en escritorio, base.css lo pone
+     junto a la tarjeta para que el paso quepa en una sola pantalla. */
+  function envolverIntro(paso) {
+    var tarjeta = paso.querySelector(":scope > .tarjeta");
+    if (!tarjeta || paso.querySelector(":scope > .celebracion, :scope > .paso__intro")) return;
+    var intro = document.createElement("div");
+    intro.className = "paso__intro";
+    paso.insertBefore(intro, paso.firstElementChild);
+    while (intro.nextElementSibling && intro.nextElementSibling !== tarjeta) {
+      intro.appendChild(intro.nextElementSibling);
+    }
+  }
+
+  /* En escritorio, la salida (.lab__resultado) va a la derecha, bajo lo que se ve.
+     Si esa columna queda mucho más alta que la del código, pasa a la izquierda,
+     bajo el código (clase paso--salida-abajo), para que el paso entre en la pantalla. */
+  var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
+
+  function equilibrar(paso) {
+    var lab = paso.querySelector(":scope > .lab");
+    paso.classList.remove("paso--salida-abajo");
+    if (!lab || !escritorio || !escritorio.matches) return;
+    var intro = paso.querySelector(":scope > .paso__intro");
+    var principal = lab.querySelector(":scope > .lab__principal");
+    var visual = lab.querySelector(":scope > .lab__visual");
+    var resultado = lab.querySelector(":scope > .lab__resultado");
+    if (!principal || !visual || !resultado) return;
+    var izquierda = (intro ? intro.offsetHeight : 0) + principal.offsetHeight;
+    var salida = resultado.offsetHeight + 16;
+    var aLaDerecha = Math.max(izquierda, visual.offsetHeight + salida);
+    var abajo = Math.max(izquierda + salida, visual.offsetHeight);
+    if (abajo + 24 < aLaDerecha) paso.classList.add("paso--salida-abajo");
+  }
+
+  /* Tras «Comprobar», si el mensaje quedó tapado por el pie o fuera de la
+     pantalla, la página baja lo justo para que se lea. */
+  function mostrarRespuesta(paso) {
+    var fb = paso.querySelector(".feedback:not(:empty)");
+    if (!fb) return;
+    requestAnimationFrame(function () {
+      var pie = document.querySelector(".leccion-pie");
+      var limite = window.innerHeight - (pie ? pie.offsetHeight : 0);
+      var caja = fb.getBoundingClientRect();
+      if (caja.bottom > limite) {
+        window.scrollBy({ top: caja.bottom - limite + 16, behavior: reducirMovimiento ? "auto" : "smooth" });
+      }
+    });
+  }
+
   function iniciar(opciones) {
     opciones = opciones || {};
     var alEntrar = opciones.alEntrar || {};
@@ -50,6 +100,7 @@
     var id = raiz.getAttribute("data-leccion");
     var pasos = Array.prototype.slice.call(raiz.querySelectorAll(".paso"));
     var total = pasos.length;
+    pasos.forEach(envolverIntro);
     var barra = raiz.querySelector(".barra-progreso");
     var relleno = raiz.querySelector(".barra-progreso__relleno");
     var contador = raiz.querySelector(".leccion-cabecera__contador");
@@ -176,6 +227,7 @@
       visitados[actual] = true;
       var fn = alEntrar[paso.id];
       if (fn) fn(paso, leccion, { primeraVez: primeraVez, desbloqueado: !!desbloqueados[actual] });
+      equilibrar(paso);
 
       // Fin de la lección: lluvia de confeti desde la celebración
       if (actual === total - 1 && !primeraCarga) {
@@ -198,6 +250,7 @@
       if (modoComprobar()) {
         var fn = comprobar[pasos[actual].id];
         var acierto = fn ? fn(pasos[actual], leccion) : true;
+        mostrarRespuesta(pasos[actual]);
         if (acierto) {
           listo = false;
           leccion.desbloquear();
@@ -229,6 +282,14 @@
       e.preventDefault();
       accionPrincipal();
     });
+
+    if (escritorio) {
+      var esperaEquilibrio;
+      window.addEventListener("resize", function () {
+        clearTimeout(esperaEquilibrio);
+        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual]); }, 150);
+      });
+    }
 
     pasos.forEach(function (p) { p.hidden = true; });
     ir(inicio, true);
