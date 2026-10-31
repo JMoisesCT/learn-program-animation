@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recorrer un diccionario · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: recorrer un diccionario en Python. for nombre in notas da las claves, notas[nombre] el valor, .items() los dos a la vez y .values() solo los valores; sum(), max(), el promedio, contar aprobados, buscar la mejor nota guardando su clave y filtrar en un diccionario nuevo.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .expresion { overflow-wrap: anywhere; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .consola__linea--error { color: var(--color-error); }
+    .cajas--dos { padding-top: var(--esp-3); gap: var(--esp-4) var(--esp-6); }
+    * + .dicc-segundo { margin-top: var(--esp-3); }
+    /* Una caja con un texto ("Rosa"): letra algo más chica para que quepa con sus comillas */
+    .caja--texto .caja__valor { font-size: var(--texto-lg); max-width: 7.25rem; }
+
+    /* Las claves enteras, resaltadas: max(notas) y sum(notas) miran las claves */
+    .dicc--claves .dicc__clave { border-color: var(--clave); box-shadow: 0 0 0 2px var(--clave-borde); }
+    .dicc--claves-error .dicc__clave { border: 1.5px dashed var(--color-error); background: #fdecea; color: var(--color-error); animation: sacudir 420ms ease; }
+
+    /* ---------- Predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .elegir--texto .btn { font-family: var(--fuente); }
+    .pregunta { margin: var(--esp-4) 0 0; text-align: center; font-weight: 600; }
+    .prediccion { margin-top: var(--esp-4); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; overflow-wrap: anywhere; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- 6. La mejor, a mano ---------- */
+    .decidir { display: grid; gap: var(--esp-2); justify-items: center; margin-top: var(--esp-4); }
+    .decidir__pregunta { margin: 0; min-height: 1.6em; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-lg); text-align: center; }
+    .decidir__pregunta .chip { padding: 0 0.35em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .decidir .elegir { margin-top: 0; }
+    .decidir .elegir .btn { font-family: var(--fuente); }
+
+    /* ---------- 4. Máquinas ---------- */
+    .maquinas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin-top: var(--esp-4); }
+    .maquinas .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .maquinas .btn--usada::after { content: " ✓"; color: var(--color-ok); }
+    .maquinas .btn { position: relative; }
+    /* En escritorio, de tres en tres: la marca de usada va en la esquina para no ensanchar el botón */
+    @media (min-width: 1024px) {
+      .maquinas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .maquinas .btn { padding: var(--esp-2) var(--esp-3); font-size: 0.875rem; }
+      .maquinas .btn--usada::after { content: "✓"; position: absolute; top: -0.55rem; right: 0.75rem; padding: 0 0.3em; border-radius: 999px; background: var(--color-superficie); font-size: 0.8rem; line-height: 1.3; }
+    }
+
+    /* ---------- Reto ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .prueba__error { color: var(--color-error); font-weight: 700; }
+
+    @media (max-width: 480px) {
+      .maquinas { grid-template-columns: minmax(0, 1fr); }
+      /* Cuatro claves de texto caben en una fila: la etiqueta, un poco más ceñida */
+      .dicc__clave { padding: 0.05em 0.35em 0.05em 1em; }
+      .dicc__clave::before { left: 0.33em; }
+      .opciones--codigo { grid-template-columns: minmax(0, 1fr); }
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .pruebas li { font-size: var(--texto-xs); padding: var(--esp-2) var(--esp-3); }
+      .cajas--dos { gap: var(--esp-4) var(--esp-5); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="estructuras-recorrer">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. for nombre in notas: las claves -->
+    <section class="paso" id="paso-claves" data-requiere aria-labelledby="t-claves">
+      <span class="paso__etiqueta">Otras estructuras 3/7 · Recorrer un diccionario</span>
+      <h1 class="paso__titulo" id="t-claves">Un for por el diccionario</h1>
+      <p>En una lista, el <code>for</code> da cada valor. Aquí cada casillero tiene dos cosas: clave y valor. ¿Qué crees que imprimirá?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">nombre</span>)</span></code></pre>
+          <div class="elegir elegir--texto" id="s1-elegir" role="group" aria-label="¿Qué imprimirá?">
+            <button type="button" class="btn btn-secundario" data-valor="claves" aria-pressed="false">Los nombres</button>
+            <button type="button" class="btn btn-secundario" data-valor="valores" aria-pressed="false">Las notas</button>
+            <button type="button" class="btn btn-secundario" data-valor="pares" aria-pressed="false">Nombre y nota</button>
+          </div>
+          <div id="s1-ejecucion" hidden>
+            <p class="explicacion" id="s1-explicacion" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s1-reiniciar" hidden>↺ Reiniciar</button>
+              <button type="button" class="btn btn-secundario" id="s1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+              <button type="button" class="btn btn-secundario" id="s1-ejecutar">Ejecutar línea ▸</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-dicc"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--texto" id="s1-nombre">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nombre</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. notas[nombre]: el valor -->
+    <section class="paso" id="paso-valor" data-requiere aria-labelledby="t-valor">
+      <h2 class="paso__titulo" id="t-valor">Con la clave, el valor</h2>
+      <p>El <code>for</code> te da la clave. Para la nota, haz lo que ya sabes: <code>notas[nombre]</code> busca esa clave y te da su valor.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">nombre</span>, <span class="tk-variable">notas</span>[<span class="tk-variable">nombre</span>])</span></code></pre>
+          <p class="explicacion" id="s2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-dicc"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--texto" id="s2-nombre">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nombre</code>
+            </div>
+          </div>
+          <div class="expresion" aria-live="polite">
+            <span id="s2-expr">notas[nombre]</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s2-valor">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. .items(): clave y valor a la vez -->
+    <section class="paso" id="paso-items" data-requiere aria-labelledby="t-items">
+      <h2 class="paso__titulo" id="t-items">Los dos a la vez: <code>.items()</code></h2>
+      <p><code>.items()</code> da cada par como una tupla. Como en <code>dia, mes, anio = fecha</code>, el <code>for</code> la desempaqueta en dos cajas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span>, <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>.<span class="tk-funcion">items</span>():</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">nombre</span>, <span class="tk-texto">"sacó"</span>, <span class="tk-variable">nota</span>)</span></code></pre>
+          <p class="explicacion" id="s3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s3-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-dicc"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s3-par">notas.items()</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final">nombre, nota</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--texto" id="s3-nombre">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nombre</code>
+            </div>
+            <div class="caja" id="s3-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nota</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. .values(), sum, max, len y el promedio -->
+    <section class="paso" id="paso-maquinas" data-requiere aria-labelledby="t-maquinas">
+      <h2 class="paso__titulo" id="t-maquinas">Solo los valores: <code>.values()</code></h2>
+      <p>Para sumar las notas no hacen falta los nombres. <code>.values()</code> da solo los valores, y con ellos <code>sum</code> y <code>max</code> funcionan como con una lista. Prueba las seis.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea" id="s4-linea"><span class="tk-funcion">print</span>(<span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>())</span></code></pre>
+          <div class="maquinas" id="s4-maquinas" role="group" aria-label="Funciones para probar">
+            <button type="button" class="btn btn-secundario" data-valor="values">notas.values()</button>
+            <button type="button" class="btn btn-secundario" data-valor="sum">sum(notas.values())</button>
+            <button type="button" class="btn btn-secundario" data-valor="max">max(notas.values())</button>
+            <button type="button" class="btn btn-secundario" data-valor="len">len(notas)</button>
+            <button type="button" class="btn btn-secundario" data-valor="maxClaves">max(notas)</button>
+            <button type="button" class="btn btn-secundario" data-valor="sumClaves">sum(notas)</button>
+          </div>
+          <div class="prediccion" id="s4-promedio" hidden>
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">sum(notas.values()) / len(notas)</code>
+              <div class="elegir" role="group" aria-label="¿Cuánto da el promedio?">
+                <button type="button" class="btn btn-secundario" data-valor="51" aria-pressed="false">51</button>
+                <button type="button" class="btn btn-secundario" data-valor="12.75" aria-pressed="false">12.75</button>
+                <button type="button" class="btn btn-secundario" data-valor="17" aria-pressed="false">17</button>
+              </div>
+            </div>
+            <div class="feedback" id="s4-promedio-fb" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s4-dicc"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s4-expr">notas.values()</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s4-valor">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Contar aprobados -->
+    <section class="paso" id="paso-contar" data-requiere aria-labelledby="t-contar">
+      <h2 class="paso__titulo" id="t-contar">¿Cuántos aprobaron?</h2>
+      <p>Para contar aprobados (11 o más) solo importan las notas: recorre <code>notas.values()</code>. Antes de ejecutarlo, ¿cuánto crees que imprimirá?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-variable">cuantos</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>():</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">cuantos</span> += <span class="tk-numero">1</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">cuantos</span>)</span></code></pre>
+          <div class="elegir" id="s5-elegir" role="group" aria-label="¿Cuánto imprimirá?">
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+            <button type="button" class="btn btn-secundario" data-valor="4" aria-pressed="false">4</button>
+          </div>
+          <div id="s5-ejecucion" hidden>
+            <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
+              <button type="button" class="btn btn-secundario" id="s5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+              <button type="button" class="btn btn-secundario" id="s5-ejecutar">Ejecutar línea ▸</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-dicc"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="s5-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nota</code>
+            </div>
+            <div class="caja caja--acento" id="s5-cuantos">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">cuantos</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. ¿Quién tiene la mejor nota? A mano -->
+    <section class="paso" id="paso-mejor" data-requiere aria-labelledby="t-mejor">
+      <h2 class="paso__titulo" id="t-mejor">¿Y de quién es la mejor?</h2>
+      <p><code>max</code> te da la nota, pero no el nombre. Busca la mayor a mano y guarda también su clave. <code>mayor</code> empieza en -1, más abajo que cualquier nota. Tú decides: ¿cambian en esta vuelta?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-variable">mayor</span> = -<span class="tk-numero">1</span></span><span class="linea"><span class="tk-variable">mejor</span> = <span class="tk-texto">""</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span>, <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>.<span class="tk-funcion">items</span>():</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt; <span class="tk-variable">mayor</span>:</span><span class="linea">        <span class="tk-variable">mayor</span> = <span class="tk-variable">nota</span></span><span class="linea">        <span class="tk-variable">mejor</span> = <span class="tk-variable">nombre</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">mejor</span>, <span class="tk-variable">mayor</span>)</span></code></pre>
+          <div class="decidir">
+            <p class="decidir__pregunta" id="s6-pregunta" aria-live="polite"></p>
+            <div class="elegir" id="s6-elegir" role="group" aria-label="¿Cambian mayor y mejor?">
+              <button type="button" class="btn btn-secundario" data-valor="si">Sí, cambian</button>
+              <button type="button" class="btn btn-secundario" data-valor="no">No, se quedan</button>
+            </div>
+            <div class="fila-botones" id="s6-otra" hidden>
+              <button type="button" class="btn btn-secundario" id="s6-otra-btn">↺ Otra vez</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s6-dicc"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--acento" id="s6-mayor">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mayor</code>
+            </div>
+            <div class="caja caja--acento caja--texto" id="s6-mejor">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mejor</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Filtrar en un diccionario nuevo -->
+    <section class="paso" id="paso-filtrar" data-requiere aria-labelledby="t-filtrar">
+      <h2 class="paso__titulo" id="t-filtrar">Un diccionario solo con los aprobados</h2>
+      <p>Empieza con un diccionario vacío y, en cada vuelta, copia el par solo si la nota aprueba: <code>aprobados[nombre] = nota</code> agrega la clave con su valor.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s7-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">9</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-variable">aprobados</span> = {}</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span>, <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>.<span class="tk-funcion">items</span>():</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">aprobados</span>[<span class="tk-variable">nombre</span>] = <span class="tk-variable">nota</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">aprobados</span>)</span></code></pre>
+          <p class="explicacion" id="s7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s7-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s7-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s7-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s7-notas"></div>
+          <div class="dicc-segundo" id="s7-aprobados"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto: el nombre del mejor alumno -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">El nombre del mejor alumno</h2>
+      <p>Ahora con una sola caja: <code>mejor</code> guarda la <strong>clave</strong> de la mejor nota hasta ahora, y <code>notas[mejor]</code> es esa nota. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = {<span class="tk-texto">"Ana"</span>: <span class="tk-numero">14</span>, <span class="tk-texto">"Luis"</span>: <span class="tk-numero">19</span>,</span><span class="linea">         <span class="tk-texto">"Eva"</span>: <span class="tk-numero">17</span>, <span class="tk-texto">"Rosa"</span>: <span class="tk-numero">11</span>}</span><span class="linea"><span class="tk-variable">mejor</span> = <span class="tk-texto">"Ana"</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">notas</span>[<span class="tk-variable">nombre</span>] &gt; <span class="tk-variable">notas</span>[<span class="tk-variable">mejor</span>]:</span><span class="linea">        <span class="hueco" id="reto-hueco">?</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">mejor</span>)</span></code></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="valor"><span>mejor = notas[nombre]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="clave"><span>mejor = nombre</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="nota"><span>mejor = nota</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="alreves"><span>nombre = mejor</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div id="reto-dicc"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja caja--acento caja--texto" id="reto-mejor">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mejor</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Un <code>for</code> por un diccionario da las claves; <code>.items()</code> da clave y valor, y <code>.values()</code>, solo los valores.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>:            <span class="tk-comentario"># las claves</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">nombre</span>, <span class="tk-variable">notas</span>[<span class="tk-variable">nombre</span>])</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span>, <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>.<span class="tk-funcion">items</span>():</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">nombre</span>, <span class="tk-variable">nota</span>)         <span class="tk-comentario"># clave y valor</span></span><span class="linea"><span class="tk-variable">promedio</span> = <span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>()) / <span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>)</span><span class="linea"><span class="tk-variable">aprobados</span> = {}</span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">nombre</span>, <span class="tk-variable">nota</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>.<span class="tk-funcion">items</span>():</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">nota</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">aprobados</span>[<span class="tk-variable">nombre</span>] = <span class="tk-variable">nota</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../contar/index.html">Siguiente: Contar con un diccionario →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/dicc.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function txt(v) { return Lista.texto(v); }
+
+  /* Lo que imprime print: la línea sale volando desde donde se indique */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  var NOTAS = [["Ana", 14], ["Luis", 9], ["Eva", 17], ["Rosa", 11]];
+  function aprueba(n) { return n >= 11; }
+  function colorNota(v) { return aprueba(v) ? "dicc__par--igual" : "dicc__par--distinta"; }
+  function crearNotas(id) { return Dicc.crear($(id), NOTAS, { nombres: ["notas"] }); }
+
+  /* El diccionario se escribe en dos líneas (0 y 1): se resaltan juntas */
+  function marcarDefinicion(pre, paso) {
+    if (paso.linea === 0) Codigo.marcar(pre, { activas: [0, 1] });
+  }
+
+  /* Apaga los pares de las vueltas que ya pasaron */
+  function apagarHasta(d, k) {
+    d.clases(function (clave) {
+      return indiceDe(clave) < k ? "dicc__par--apagada" : "";
+    });
+  }
+  function indiceDe(clave) {
+    for (var i = 0; i < NOTAS.length; i++) if (NOTAS[i][0] === clave) return i;
+    return -1;
+  }
+
+  /* Una predicción antes de ejecutar: marca el botón elegido y muestra la ejecución */
+  function prediccion(grupo, ejecucion, alElegir) {
+    $(grupo).querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $(grupo).querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+        $(ejecucion).hidden = false;
+        alElegir(b.getAttribute("data-valor"));
+      });
+    });
+  }
+
+  /* ---------- 1. for nombre in notas: las claves ---------- */
+  var dicc1 = crearNotas("s1-dicc");
+  var prediccion1 = null;
+
+  function trazaClaves() {
+    var pasos = [{ linea: 0, texto: "<code>notas</code> guarda 4 pares: cada nombre con su nota." }];
+    NOTAS.forEach(function (p, k) {
+      pasos.push({
+        linea: 2, k: k,
+        texto: (k === 0 ? "El <code>for</code> toma la primera clave" : "Otra vuelta: la clave siguiente") +
+          ". <code>nombre</code> vale <code>" + txt(p[0]) + "</code>: la clave, no la nota."
+      });
+      pasos.push({ linea: 3, k: k, salida: p[0], texto: "Imprime la clave: <code>" + p[0] + "</code>." });
+    });
+    pasos.push({ linea: 2, fin: true, texto: "Ya pasó por las 4 claves: el bucle termina." });
+    return pasos;
+  }
+
+  /* ---------- 2. notas[nombre]: el valor ---------- */
+  var dicc2 = crearNotas("s2-dicc");
+
+  function trazaValor() {
+    var pasos = [{ linea: 0, texto: "<code>notas</code> guarda 4 pares." }];
+    NOTAS.forEach(function (p, k) {
+      pasos.push({ linea: 2, k: k, texto: "<code>nombre</code> vale <code>" + txt(p[0]) + "</code>." });
+      pasos.push({
+        linea: 3, k: k, salida: p[0] + " " + p[1],
+        texto: "<code>notas[nombre]</code> es <code>notas[" + txt(p[0]) + "]</code>: busca esa clave y da su valor, <strong>" + p[1] + "</strong>."
+      });
+    });
+    pasos.push({ linea: 2, fin: true, texto: "No quedan claves: el bucle termina." });
+    return pasos;
+  }
+
+  /* ---------- 3. .items() ---------- */
+  var dicc3 = crearNotas("s3-dicc");
+
+  function trazaItems() {
+    var pasos = [{ linea: 0, texto: "<code>notas</code> guarda 4 pares." }];
+    NOTAS.forEach(function (p, k) {
+      var par = "(" + txt(p[0]) + ", " + p[1] + ")";
+      pasos.push({
+        linea: 2, k: k,
+        texto: k === 0
+          ? "<code>.items()</code> da el primer par, <code>" + par + "</code>. Se desempaqueta: la clave va a <code>nombre</code> y el valor, a <code>nota</code>."
+          : "Otro par, <code>" + par + "</code>: <code>nombre</code> vale <code>" + txt(p[0]) + "</code> y <code>nota</code>, <strong>" + p[1] + "</strong>."
+      });
+      pasos.push({ linea: 3, k: k, salida: p[0] + " sacó " + p[1], texto: "Imprime las dos cajas: <code>" + p[0] + " sacó " + p[1] + "</code>." });
+    });
+    pasos.push({ linea: 2, fin: true, texto: "No quedan pares: el bucle termina." });
+    return pasos;
+  }
+
+  /* ---------- 4. .values(), sum, max, len, el promedio ---------- */
+  var dicc4 = crearNotas("s4-dicc");
+  var usadas4 = {};
+  function todas(clase) { return function () { return clase; }; }
+  var FUNCIONES = {
+    values: {
+      linea: '<span class="tk-funcion">print</span>(<span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>())',
+      expr: "notas.values()", valor: "14, 9, 17, 11", salida: "dict_values([14, 9, 17, 11])",
+      dibujar: function () { dicc4.clases(todas("dicc__par--cambio")); },
+      texto: ".values() da solo las notas, sin los nombres. print las muestra como dict_values([…]): se usan como una lista."
+    },
+    sum: {
+      linea: '<span class="tk-funcion">print</span>(<span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>()))',
+      expr: "sum(notas.values())", valor: "51", salida: "51",
+      dibujar: function () { dicc4.clases(todas("dicc__par--cambio")); },
+      texto: "sum suma las notas: 14 + 9 + 17 + 11 = 51."
+    },
+    max: {
+      linea: '<span class="tk-funcion">print</span>(<span class="tk-funcion">max</span>(<span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>()))',
+      expr: "max(notas.values())", valor: "17", salida: "17",
+      dibujar: function () { dicc4.marcar("Eva", "valor"); },
+      texto: "max da la nota más alta: 17. Pero no dice de quién es: eso lo buscas más adelante."
+    },
+    len: {
+      linea: '<span class="tk-funcion">print</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>))',
+      expr: "len(notas)", valor: "4", salida: "4",
+      dibujar: function () { dicc4.clases(todas("dicc__par--igual")); },
+      texto: "len(notas) cuenta los pares: 4. Aquí no hace falta .values(): hay tantos pares como notas."
+    },
+    maxClaves: {
+      linea: '<span class="tk-funcion">print</span>(<span class="tk-funcion">max</span>(<span class="tk-variable">notas</span>))',
+      expr: "max(notas)", valor: "'Rosa'", salida: "Rosa", claves: "dicc--claves",
+      dibujar: function () { dicc4.marcar("Rosa", "clave"); },
+      texto: "¡Ojo! Sin .values(), max mira las claves: 'Rosa' es la última en orden alfabético. No es la mejor nota."
+    },
+    sumClaves: {
+      linea: '<span class="tk-funcion">print</span>(<span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>))',
+      expr: "sum(notas)", valor: "TypeError", salida: "TypeError: unsupported operand type(s) for +: 'int' and 'str'", error: true, claves: "dicc--claves-error",
+      dibujar: function () {},
+      texto: "sum(notas) intenta sumar las claves, que son textos: TypeError. Para sumar las notas, sum(notas.values())."
+    }
+  };
+
+  function limpiar4() {
+    dicc4.marcar(null);
+    dicc4.clases(null);
+    dicc4.el.classList.remove("dicc--claves", "dicc--claves-error");
+  }
+
+  function usarFuncion(nombre) {
+    var f = FUNCIONES[nombre];
+    limpiar4();
+    $("s4-linea").innerHTML = f.linea;
+    Codigo.marcar($("s4-codigo"), { activas: [2] });
+    $("s4-expr").textContent = f.expr;
+    $("s4-valor").textContent = f.valor;
+    if (f.claves) {
+      void dicc4.el.offsetWidth;
+      dicc4.el.classList.add(f.claves);
+    }
+    f.dibujar();
+    Codigo.consola($("s4-consola"), []);
+    imprimir($("s4-consola"), f.salida, dicc4.el, f.error);
+    usadas4[nombre] = true;
+    $("s4-maquinas").querySelector('[data-valor="' + nombre + '"]').classList.add("btn--usada");
+    var faltan = Object.keys(FUNCIONES).filter(function (k) { return !usadas4[k]; });
+    var tipo = f.error || f.claves ? "pista" : "ok";
+    if (faltan.length) {
+      Pasos.feedback($("s4-fb"), tipo, f.texto + " Te " + (faltan.length === 1 ? "falta " : "faltan ") + faltan.length + ".");
+      return;
+    }
+    Pasos.feedback($("s4-fb"), tipo, f.texto + " Con sum y len sale el promedio: ¿cuánto da?");
+    $("s4-promedio").hidden = false;
+  }
+
+  var pistasPromedio = {
+    "51": "51 es la suma de las notas. Falta dividir entre cuántas hay: len(notas).",
+    "17": "17 es la nota más alta, max(notas.values()). El promedio reparte la suma entre las 4 notas."
+  };
+
+  function responderPromedio(btn, leccion) {
+    var valor = btn.getAttribute("data-valor");
+    var caja = $("s4-promedio");
+    caja.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+    if (valor !== "12.75") {
+      Pasos.feedback($("s4-promedio-fb"), "pista", pistasPromedio[valor]);
+      return;
+    }
+    caja.classList.add("prediccion--ok");
+    caja.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    $("s4-linea").innerHTML = '<span class="tk-funcion">print</span>(<span class="tk-funcion">sum</span>(<span class="tk-variable">notas</span>.<span class="tk-funcion">values</span>()) / <span class="tk-funcion">len</span>(<span class="tk-variable">notas</span>))';
+    $("s4-expr").textContent = "51 / 4";
+    $("s4-valor").textContent = "12.75";
+    limpiar4();
+    dicc4.clases(todas("dicc__par--cambio"));
+    Codigo.consola($("s4-consola"), []);
+    imprimir($("s4-consola"), "12.75", dicc4.el);
+    Pasos.feedback($("s4-promedio-fb"), "ok", "51 / 4 = 12.75. Igual que con una lista, pero con .values() para sumar.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 5. Contar aprobados ---------- */
+  var dicc5 = crearNotas("s5-dicc");
+  var prediccion5 = null;
+
+  function trazaContar() {
+    var pasos = [
+      { linea: 0, texto: "<code>notas</code> guarda 4 pares." },
+      { linea: 2, cuantos: 0, texto: "<code>cuantos</code> empieza en <strong>0</strong>." }
+    ];
+    var cuantos = 0;
+    NOTAS.forEach(function (p, k) {
+      var n = p[1];
+      pasos.push({ linea: 3, k: k, texto: "<code>.values()</code> da la nota de " + p[0] + ": <code>nota</code> vale <strong>" + n + "</strong>." });
+      pasos.push({
+        linea: 4, k: k, pinta: true,
+        texto: "¿" + n + " &gt;= 11? " + (aprueba(n) ? "<strong>Sí</strong>: aprueba." : "<strong>No</strong>: no se cuenta.")
+      });
+      if (aprueba(n)) {
+        cuantos++;
+        pasos.push({ linea: 5, k: k, cuantos: cuantos, texto: "<code>cuantos += 1</code>: ahora vale <strong>" + cuantos + "</strong>." });
+      }
+    });
+    pasos.push({ linea: 3, fin: true, texto: "No quedan notas: el bucle termina." });
+    pasos.push({ linea: 6, salida: String(cuantos), texto: "Imprime <code>" + cuantos + "</code>: aprobaron Ana, Eva y Rosa." });
+    return pasos;
+  }
+
+  /* ---------- 6. La mejor nota, a mano ---------- */
+  var dicc6 = crearNotas("s6-dicc");
+  var vuelta6 = 0;
+  var mayor6 = -1;
+  var cambios6 = [];
+  var ocupado6 = false;
+  var tiempo6 = null;
+
+  function botones6(activos) {
+    $("s6-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = !activos; });
+  }
+
+  function pintar6() {
+    dicc6.clases(function (clave) {
+      var k = indiceDe(clave);
+      if (cambios6.indexOf(k) !== -1) return "dicc__par--cambio";
+      return k < vuelta6 ? "dicc__par--apagada" : "";
+    });
+  }
+
+  function preguntar6() {
+    var n = NOTAS[vuelta6][1];
+    dicc6.marcar(NOTAS[vuelta6][0]);
+    pintar6();
+    Codigo.marcar($("s6-codigo"), { activas: [5] });
+    $("s6-pregunta").innerHTML = "¿<span class=\"chip\">" + n + "</span> &gt; <span class=\"chip\">" + mayor6 + "</span>?";
+    botones6(true);
+  }
+
+  function empezar6() {
+    if (tiempo6) clearTimeout(tiempo6);
+    tiempo6 = null;
+    vuelta6 = 0;
+    mayor6 = -1;
+    cambios6 = [];
+    ocupado6 = false;
+    Caja.vaciar($("s6-mayor"));
+    Caja.vaciar($("s6-mejor"));
+    Caja.poner($("s6-mayor"), -1, null);
+    Caja.poner($("s6-mejor"), '""', null);
+    Codigo.consola($("s6-consola"), []);
+    Pasos.limpiarFeedback($("s6-fb"));
+    $("s6-otra").hidden = true;
+    $("s6-elegir").hidden = false;
+    preguntar6();
+  }
+
+  function responder6(valor, leccion) {
+    if (ocupado6) return;
+    var clave = NOTAS[vuelta6][0];
+    var n = NOTAS[vuelta6][1];
+    var cambia = n > mayor6;
+    var dijo = valor === "si";
+    var fb = $("s6-fb");
+    if (dijo !== cambia) {
+      if (mayor6 === -1) Pasos.feedback(fb, "pista", n + " es más grande que -1: cualquier nota de 0 a 20 lo es. Por eso mayor empieza en -1: la primera nota siempre entra.");
+      else if (cambia) Pasos.feedback(fb, "pista", n + " es más grande que " + mayor6 + ": la condición nota > mayor da True, así que las dos cajas cambian.");
+      else Pasos.feedback(fb, "pista", n + " es más pequeño que " + mayor6 + ": la condición da False y las dos cajas se quedan como están.");
+      return;
+    }
+    ocupado6 = true;
+    botones6(false);
+    if (cambia) {
+      Codigo.marcar($("s6-codigo"), { activas: [6, 7] });
+      Caja.poner($("s6-mayor"), n, dicc6.valor(clave));
+      Caja.poner($("s6-mejor"), txt(clave), dicc6.clave(clave));
+      mayor6 = n;
+      cambios6.push(vuelta6);
+      Pasos.feedback(fb, "ok", "¡Sí! " + n + " es la mayor hasta ahora: mayor guarda la nota y mejor, su clave, \"" + clave + "\".");
+    } else {
+      Codigo.marcar($("s6-codigo"), { activas: [5], saltadas: [6, 7] });
+      Pasos.feedback(fb, "ok", "¡Bien! " + n + " no supera a " + mayor6 + ": las dos cajas se quedan.");
+    }
+    vuelta6++;
+    tiempo6 = setTimeout(function () {
+      tiempo6 = null;
+      ocupado6 = false;
+      if (vuelta6 < NOTAS.length) { preguntar6(); return; }
+      // Fin del bucle: imprime el nombre y la nota
+      dicc6.marcar(null);
+      pintar6();
+      Codigo.marcar($("s6-codigo"), { activas: [8] });
+      $("s6-pregunta").textContent = "";
+      $("s6-elegir").hidden = true;
+      var ganador = NOTAS[cambios6[cambios6.length - 1]][0];
+      imprimir($("s6-consola"), ganador + " " + mayor6, $("s6-mejor").querySelector(".caja__valor:not(.caja__valor--saliendo)"));
+      Pasos.feedback(fb, "ok", "mejor cambió junto con mayor: con Ana y con Eva. Al final guarda la clave de la mejor nota: " + ganador + ", con " + mayor6 + ".");
+      $("s6-otra").hidden = false;
+      leccion.desbloquear();
+    }, espera(1100));
+  }
+
+  /* ---------- 7. Filtrar en un diccionario nuevo ---------- */
+  var notas7 = crearNotas("s7-notas");
+  var aprobados7 = Dicc.crear($("s7-aprobados"), [], { nombres: ["aprobados"], capacidad: 4 });
+
+  function trazaFiltrar() {
+    var pasos = [
+      { linea: 0, texto: "<code>notas</code> guarda 4 pares." },
+      { linea: 2, texto: "<code>aprobados</code> empieza como un diccionario <strong>vacío</strong>: <code>{}</code>." }
+    ];
+    var hay = [];
+    NOTAS.forEach(function (p, k) {
+      var n = p[1];
+      pasos.push({ linea: 3, k: k, texto: "<code>nombre</code> vale <code>" + txt(p[0]) + "</code> y <code>nota</code>, <strong>" + n + "</strong>." });
+      pasos.push({
+        linea: 4, k: k, pinta: true,
+        texto: "¿" + n + " &gt;= 11? " + (aprueba(n) ? "<strong>Sí</strong>." : "<strong>No</strong>: no se copia.")
+      });
+      if (aprueba(n)) {
+        hay.push([p[0], n]);
+        pasos.push({ linea: 5, k: k, agrega: true, texto: "<code>aprobados[" + txt(p[0]) + "] = " + n + "</code>: la clave no estaba, así que nace un par nuevo." });
+      }
+    });
+    pasos.push({ linea: 3, fin: true, texto: "No quedan pares: el bucle termina." });
+    pasos.push({ linea: 6, salida: Dicc.python(hay), texto: "<code>aprobados</code> tiene " + hay.length + " pares, cada nota con su nombre." });
+    return pasos;
+  }
+
+  /* ---------- 8. Reto: el nombre del mejor alumno ---------- */
+  var RETO = [["Ana", 14], ["Luis", 19], ["Eva", 17], ["Rosa", 11]];
+  var retoDicc = Dicc.crear($("reto-dicc"), RETO, { nombres: ["notas"] });
+  var animacionReto = [];
+  var CASOS = [
+    { notas: RETO, espera: "Luis" },
+    { notas: [["Ana", 18], ["Luis", 9], ["Eva", 12], ["Rosa", 11]], espera: "Ana" },
+    { notas: [["Ana", 12], ["Luis", 18], ["Eva", 9], ["Rosa", 20]], espera: "Rosa" }
+  ];
+  var pistasReto = {
+    valor: "mejor = notas[nombre] guarda la nota (19), no la clave. En la vuelta siguiente, notas[mejor] busca la clave 19, que no existe: KeyError.",
+    nota: "Aquí no hay ninguna caja nota: for nombre in notas solo da la clave. Python no la conoce: NameError.",
+    alreves: "nombre = mejor cambia la caja del for, pero mejor nunca cambia: siempre queda \"Ana\". Hay que guardar en mejor."
+  };
+
+  /* Ejecuta el programa del reto con la opción elegida: el nombre impreso o el error */
+  function correrReto(opcion, pares) {
+    var d = {};
+    pares.forEach(function (p) { d[p[0]] = p[1]; });
+    var mejor = "Ana";
+    for (var i = 0; i < pares.length; i++) {
+      var nombre = pares[i][0];
+      if (!(mejor in d)) return "KeyError: " + txt(mejor);
+      if (d[nombre] > d[mejor]) {
+        if (opcion === "clave") mejor = nombre;
+        else if (opcion === "valor") mejor = d[nombre];
+        else if (opcion === "nota") return "NameError: name 'nota' is not defined";
+        // "alreves": nombre = mejor no cambia mejor
+      }
+    }
+    return mejor;
+  }
+
+  function limpiarReto() {
+    animacionReto.forEach(clearTimeout);
+    animacionReto = [];
+    retoDicc.marcar(null);
+    retoDicc.clases(null);
+    Caja.vaciar($("reto-mejor"));
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  /* Con la respuesta correcta, recorre la primera prueba: mejor salta a cada clave con nota más alta */
+  function animarReto() {
+    Caja.poner($("reto-mejor"), txt("Ana"), null);
+    var mejor = 0;
+    RETO.forEach(function (p, i) {
+      animacionReto.push(setTimeout(function () {
+        retoDicc.marcar(p[0]);
+        if (p[1] > RETO[mejor][1]) {
+          mejor = i;
+          Caja.poner($("reto-mejor"), txt(p[0]), retoDicc.clave(p[0]));
+        }
+      }, espera(700 * (i + 1))));
+    });
+    animacionReto.push(setTimeout(function () {
+      retoDicc.marcar(null);
+      retoDicc.clases(function (clave) { return clave === RETO[mejor][0] ? "dicc__par--igual" : "dicc__par--apagada"; });
+    }, espera(700 * (RETO.length + 1))));
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto();
+
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var todas = true;
+    CASOS.forEach(function (c) {
+      var r = correrReto(marcada.value, c.notas);
+      var error = /Error/.test(r);
+      var bien = r === c.espera;
+      if (!bien) todas = false;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      var a = document.createElement("span");
+      a.textContent = Dicc.python(c.notas);
+      var b = document.createElement("span");
+      b.className = error ? "prueba__error" : "prueba__res";
+      b.textContent = r + (bien ? " ✓" : " ✗ (debería ser " + c.espera + ")");
+      li.appendChild(a);
+      li.appendChild(b);
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+
+    if (todas) {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Exacto! mejor guarda la clave; notas[mejor] es su nota. Al final, print(mejor) da el nombre: Luis.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      animarReto();
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Conexiones ---------- */
+  function boton(n, nombre) { return $("s" + n + "-" + nombre); }
+  function traza(n, generar, opciones) {
+    var o = {
+      codigo: boton(n, "codigo"),
+      explicacion: boton(n, "explicacion"),
+      consola: boton(n, "consola"),
+      ejecutar: boton(n, "ejecutar"),
+      reproducir: boton(n, "reproducir"),
+      reiniciar: boton(n, "reiniciar"),
+      generar: generar,
+      intervalo: 900
+    };
+    for (var k in opciones) o[k] = opciones[k];
+    return Traza.crear(o);
+  }
+
+  var traza1 = traza(1, trazaClaves, {
+    alReiniciar: function () {
+      Caja.vaciar($("s1-nombre"));
+      dicc1.marcar(null);
+      dicc1.clases(null);
+      Pasos.limpiarFeedback($("s1-fb"));
+    },
+    alPaso: function (paso) {
+      marcarDefinicion($("s1-codigo"), paso);
+      if (paso.fin) { dicc1.marcar(null); dicc1.clases(null); return; }
+      if (paso.k === undefined) return;
+      var clave = NOTAS[paso.k][0];
+      dicc1.marcar(clave, "clave");
+      apagarHasta(dicc1, paso.k);
+      if (paso.linea === 2) Caja.poner($("s1-nombre"), txt(clave), dicc1.clave(clave));
+    },
+    alTerminar: function () {
+      var fb = $("s1-fb");
+      var base = "El for recorre las claves, en el orden en que se escribieron.";
+      if (prediccion1 === "claves") Pasos.feedback(fb, "ok", "¡Lo predijiste! " + base);
+      else if (prediccion1 === "valores") Pasos.feedback(fb, "ok", base + " Las notas no salen solas.");
+      else Pasos.feedback(fb, "ok", base + " Solo la clave, sin la nota.");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza2 = traza(2, trazaValor, {
+    alReiniciar: function () {
+      Caja.vaciar($("s2-nombre"));
+      dicc2.marcar(null);
+      dicc2.clases(null);
+      $("s2-expr").textContent = "notas[nombre]";
+      $("s2-valor").textContent = "?";
+      Pasos.limpiarFeedback($("s2-fb"));
+    },
+    alPaso: function (paso) {
+      marcarDefinicion($("s2-codigo"), paso);
+      if (paso.fin) { dicc2.marcar(null); dicc2.clases(null); return; }
+      if (paso.k === undefined) return;
+      var p = NOTAS[paso.k];
+      apagarHasta(dicc2, paso.k);
+      if (paso.linea === 2) {
+        dicc2.marcar(p[0], "clave");
+        Caja.poner($("s2-nombre"), txt(p[0]), dicc2.clave(p[0]));
+        $("s2-expr").textContent = "notas[nombre]";
+        $("s2-valor").textContent = "?";
+      } else {
+        dicc2.marcar(p[0]);
+        $("s2-expr").textContent = "notas[" + txt(p[0]) + "]";
+        $("s2-valor").textContent = String(p[1]);
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s2-fb"), "ok", "nombre recorrió las claves y notas[nombre] buscó el valor de cada una: el par completo.");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza3 = traza(3, trazaItems, {
+    alReiniciar: function () {
+      Caja.vaciar($("s3-nombre"));
+      Caja.vaciar($("s3-nota"));
+      dicc3.marcar(null);
+      dicc3.clases(null);
+      $("s3-par").textContent = "notas.items()";
+      Pasos.limpiarFeedback($("s3-fb"));
+    },
+    alPaso: function (paso) {
+      marcarDefinicion($("s3-codigo"), paso);
+      if (paso.fin) { dicc3.marcar(null); dicc3.clases(null); $("s3-par").textContent = "notas.items()"; return; }
+      if (paso.k === undefined) return;
+      var p = NOTAS[paso.k];
+      dicc3.marcar(p[0]);
+      apagarHasta(dicc3, paso.k);
+      if (paso.linea === 2) {
+        $("s3-par").textContent = "(" + txt(p[0]) + ", " + p[1] + ")";
+        Caja.poner($("s3-nombre"), txt(p[0]), dicc3.clave(p[0]));
+        Caja.poner($("s3-nota"), p[1], dicc3.valor(p[0]));
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s3-fb"), "ok", "Con .items() cada vuelta trae clave y valor, ya en dos cajas: no hace falta notas[nombre].");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza5 = traza(5, trazaContar, {
+    intervalo: 850,
+    alReiniciar: function () {
+      Caja.vaciar($("s5-nota"));
+      Caja.vaciar($("s5-cuantos"));
+      dicc5.marcar(null);
+      dicc5.clases(null);
+      Pasos.limpiarFeedback($("s5-fb"));
+    },
+    alPaso: function (paso) {
+      marcarDefinicion($("s5-codigo"), paso);
+      if (paso.fin) { dicc5.marcar(null); return; }
+      if (paso.k !== undefined) {
+        var p = NOTAS[paso.k];
+        dicc5.marcar(p[0], "valor");
+        var hasta = paso.pinta || paso.linea === 5 ? paso.k : paso.k - 1;
+        dicc5.clases(function (clave, v) { return indiceDe(clave) <= hasta ? colorNota(v) : ""; });
+        if (paso.linea === 3) Caja.poner($("s5-nota"), p[1], dicc5.valor(p[0]));
+      }
+      if (paso.cuantos !== undefined) Caja.poner($("s5-cuantos"), paso.cuantos);
+    },
+    alTerminar: function () {
+      var fb = $("s5-fb");
+      var base = "cuantos solo creció con las notas en verde: 14, 17 y 11. Imprime 3.";
+      if (prediccion5 === "3") Pasos.feedback(fb, "ok", "¡Lo predijiste! " + base);
+      else if (prediccion5 === "2") Pasos.feedback(fb, "ok", base + " Ojo con el 11: 11 >= 11 es True, así que también cuenta.");
+      else Pasos.feedback(fb, "ok", base + " 4 serían todas las notas: el if hace que solo cuenten las que aprueban.");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza7 = traza(7, trazaFiltrar, {
+    intervalo: 850,
+    alReiniciar: function () {
+      notas7.marcar(null);
+      notas7.clases(null);
+      aprobados7.valores([]);
+      Pasos.limpiarFeedback($("s7-fb"));
+    },
+    alPaso: function (paso) {
+      marcarDefinicion($("s7-codigo"), paso);
+      if (paso.fin) { notas7.marcar(null); return; }
+      if (paso.k === undefined) return;
+      var p = NOTAS[paso.k];
+      notas7.marcar(p[0]);
+      var hasta = paso.pinta || paso.linea === 5 ? paso.k : paso.k - 1;
+      notas7.clases(function (clave, v) { return indiceDe(clave) <= hasta ? colorNota(v) : ""; });
+      if (paso.agrega) aprobados7.poner(p[0], p[1], notas7.valor(p[0]), notas7.clave(p[0]));
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s7-fb"), "ok", "notas sigue igual; aprobados es un diccionario nuevo con los pares en que el if dio True.");
+      leccion.desbloquear();
+    }
+  });
+
+  prediccion("s1-elegir", "s1-ejecucion", function (v) { prediccion1 = v; traza1.reiniciar(); });
+  prediccion("s5-elegir", "s5-ejecucion", function (v) { prediccion5 = v; traza5.reiniciar(); });
+
+  $("s4-maquinas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { usarFuncion(b.getAttribute("data-valor")); });
+  });
+  $("s4-promedio").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { responderPromedio(b, leccion); });
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { responder6(b.getAttribute("data-valor"), leccion); });
+  });
+  $("s6-otra-btn").addEventListener("click", function () {
+    empezar6();
+    $("s6-elegir").querySelector("button").focus();
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Estado inicial
+  empezar6();
+  Pasos.limpiarFeedback($("s6-fb"));
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-claves": function () { traza1.detener(); },
+      "paso-valor": function () { traza2.detener(); },
+      "paso-items": function () { traza3.detener(); },
+      "paso-contar": function () { traza5.detener(); },
+      "paso-mejor": function () { if (tiempo6 === null && !ocupado6 && vuelta6 === 0) empezar6(); },
+      "paso-filtrar": function () { traza7.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

@@ -9,7 +9,15 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Ordenar, completo (7/7)** (ver el registro del 2026-10-31, «Ordenar»). Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: la tabla de posiciones y pasar su tarjeta «Próximamente» de la portada a lección.
+2. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
+   **Probar con alumnos** en un móvil de verdad, sobre todo:
+   - si la clave colgada encima del casillero (en vez del número) se entiende como «buscar por nombre»;
+   - si la bolsa de fichas sueltas transmite «sin orden» y el rebote de un repetido se ve;
+   - en el proyecto, el programa completo (37 líneas) con dos preguntas por vuelta.
+   **Para unificar** (cada lección lo resolvió dentro de su página): una caja para textos con comillas (`.caja__valor` corta `"Luis"` a `"Lu…`; Recorrer, Contar y Tuplas usan cajas más chicas o anchas), `marcar` de `dicc.js` sin error para `.get()` (Diccionarios pinta el casillero gris a mano) e iluminar todas las claves («`in` mira las claves»), un diccionario vacío que no se vea igual que un conjunto vacío (los dos muestran `{ vacío }`), una lista de diccionarios vertical (Estructuras juntas la arma con `.ldicc*`), `indices: false` en `lista.js` que aún guarda el alto de los índices (Contar lo arregla en la página), y las zonas «Programa / Dentro de la función», las predicciones y los retos de dos espacios en blanco, copiados otra vez.
+   **`pasos.js`**: decide si la salida va bajo el código solo al entrar al paso; cuando la salida crece después (al terminar una ejecución o al comprobar), varios pasos se pasan de la pantalla. Recalcularlo entonces ayudaría a todas las lecciones.
+   **No cabe a 1366×657**: casi todos los pasos piden bajar entre 50 y 250 px (el programa completo del proyecto, más), como en Listas.
+   **Ordenar, completo (7/7)** (ver el registro del 2026-10-31, «Ordenar»). Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: la tabla de posiciones y pasar su tarjeta «Próximamente» de la portada a lección.
    **Probar con alumnos** Ordenar en un móvil de verdad, sobre todo:
    - si la lista que se parte en pedazos (`particion.js`) se sigue en quicksort y mergesort, y si las rayas y los estados (trabaja ahora / espera / ya ordenada) ayudan;
    - el código de burbuja en móvil va a 0,68rem para que el segundo `for` quepa: ver si se lee;
@@ -72,6 +80,19 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-31 · Otras estructuras: 7 lecciones
+
+Tema nuevo después de Listas y antes de Búsquedas: tuplas, diccionarios y conjuntos (el plan está en CLAUDE.md). Primero se hicieron las piezas visuales, hermanas de los casilleros: la tupla en `lista.js` (`tupla: true`: paréntesis y candado; `rechazar(i)` sacude lo que no se puede cambiar; `Lista.tupla` y los objetos simples se imprimen como tupla y diccionario), el diccionario en `assets/js/dicc.js` (casilleros con una clave colgada encima; `poner`, `quitar`, `marcar` con `KeyError`, vista vertical) y el conjunto en `assets/js/conjunto.js` (una bolsa con fichas sueltas; un repetido rebota; `Conjunto.venn` con dos bolsas que se cruzan y la zona del resultado iluminada). Luego las siete lecciones se escribieron en paralelo, una por agente.
+- **1/7 · Una lista que no cambia** (`estructuras`, 10 pasos): tuplas, se leen como una lista, el `TypeError` del candado, `.append()` no existe, desempaquetar (y el `ValueError` si no coincide), `a, b = b, a`, `return menor, mayor` y un reto de minutos a horas.
+- **2/7 · Cada valor con su nombre** (`estructuras-diccionarios`, 10 pasos): de dos listas en el mismo orden a un diccionario, pedir por clave, `KeyError`, `len` e `in`, agregar y cambiar, `del`, `.get()` y el total de una compra.
+- **3/7 · Recorrer un diccionario** (`estructuras-recorrer`, 9 pasos): `for` sobre las claves, `.items()`, `.values()` (y las trampas `max(notas)` y `sum(notas)`), aprobados, la mejor nota con su nombre y un diccionario nuevo.
+- **4/7 · Contar con un diccionario** (`estructuras-contar`, 9 pasos): palitos a mano, `if x in conteo`, letras de «banana», el `KeyError` sin revisar, `.get(x, 0) + 1`, palabras de una frase y quién ganó.
+- **5/7 · Conjuntos** (`estructuras-conjuntos`, 9 pasos): `.add()` con repetidos, `remove` y `discard`, sin índices ni orden, `set(lista)`, `{}` frente a `set()`, `|`, `&` y `-` con las dos bolsas, y las letras en común.
+- **6/7 · Estructuras juntas** (`estructuras-juntas`, 10 pasos): diccionario de listas, lista de diccionarios, lista de tuplas y cuál conviene en cinco situaciones.
+- **7/7 · Proyecto: la votación del salón** (`estructuras-proyecto`, 9 pasos): jugar sin código, cinco partes (¿es candidato?, nadie vota dos veces, contar, `ganador` que devuelve dos valores, empates), el programa completo con `BucleInput` y misiones, y quiénes faltan votar.
+
+Portada con la tarjeta del tema; el tres en raya enlaza ahora a Otras estructuras. Probado con Playwright a 1280×800, 1366×657 y 390×844 (también con movimiento reducido): sin errores de JavaScript ni desborde horizontal.
 
 ### 2026-10-31 · Ordenar: 7 lecciones
 
