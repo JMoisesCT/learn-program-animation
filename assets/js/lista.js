@@ -37,7 +37,8 @@
                              valor (p. ej. [2, 0, 1]); cada casillero viaja a su lugar nuevo
    l.nombres([…])            cambia las etiquetas: las nuevas aparecen con un salto
    l.tapar(true | false | fn) tapa los casilleros (se ve «?» en vez del valor): true, todos;
-                             false, ninguno; fn(i, valor) dice cuáles. Para buscar a ciegas
+                             false, ninguno; fn(i, valor) dice cuáles (en la cuadrícula, cada
+                             casilla: fn([f, c], valor)). Para buscar a ciegas
    l.destapar(i)             el casillero i se da vuelta y muestra su valor
    l.punteros({ inicio: 0, medio: 3, fin: 7 })
                              fichas con un nombre bajo los casilleros (búsqueda binaria), que se
@@ -294,10 +295,15 @@
 
     /* ---------- Tapar y destapar ---------- */
     function tapar(fn) {
-      casillas().forEach(function (c, i) {
-        var t = typeof fn === "function" ? !!fn(i, valores[i]) : !!fn;
+      function aplicar(c, clave, v) {
+        var t = typeof fn === "function" ? !!fn(clave, v) : !!fn;
         c.classList.toggle("lista__casilla--tapada", t);
         c.classList.remove("lista__casilla--destapa");
+      }
+      casillas().forEach(function (c, i) {
+        if (!cuadricula) { aplicar(c, i, valores[i]); return; }
+        // En la cuadrícula se tapa cada casilla, no la fila: fn([f, c], valor)
+        c.querySelectorAll(".lista__interna > .lista__casilla").forEach(function (d, j) { aplicar(d, [i, j], valores[i][j]); });
       });
     }
 
