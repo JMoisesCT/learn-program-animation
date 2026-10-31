@@ -115,8 +115,9 @@
       var cs = lugares();
       // Un par largo («Valentina» o [14, 17, 12]) cuenta por más de uno: así se achican a tiempo
       var peso = pares.reduce(function (t, p) {
-        var largo = Math.max(texto(p[0]).length * 0.8, texto(p[1]).length);
-        return t + Math.max(1, 0.26 * largo + 0.3);
+        // La etiqueta de la clave lleva su agujero y su margen: unos 1.7 caracteres más
+        var clave = 0.21 * (texto(p[0]).length + 1.7) + 0.1;
+        return t + Math.max(1, clave, 0.26 * texto(p[1]).length + 0.3);
       }, 0);
       el.style.setProperty("--dicc-n", String(Math.round(Math.max(peso + 1, opciones.capacidad || 4) * 10) / 10));
       var vacia = fila.querySelector(".dicc__vacia");
