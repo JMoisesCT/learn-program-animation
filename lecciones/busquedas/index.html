@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buscar uno por uno · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: la búsqueda lineal en Python. Buscar un valor en una lista mirando casillero por casillero, la función buscar(lista, x) con return i y return -1, el mejor y el peor caso, y cómo trabajan por dentro in y .index().">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .fila-botones:empty, .fila-botones:not(:has(> :not([hidden]))) { display: none; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .consola__linea--error { color: var(--color-error); }
+    .cajas--chicas { padding-top: var(--esp-4); gap: var(--esp-4) var(--esp-6); align-items: center; }
+    .cajas--chicas .caja__cuerpo { width: 5.5rem; height: 4rem; padding-bottom: var(--esp-2); }
+    .cajas--chicas .caja__cuerpo::before { left: -0.8rem; }
+    .cajas--chicas .caja__cuerpo::after { right: -0.8rem; }
+    .cajas--chicas .caja__valor { font-size: var(--texto-lg); min-width: 2.4rem; padding: 0 var(--esp-2); }
+    .cajas--chicas .caja__nombre { font-size: var(--texto-xs); padding: var(--esp-1) var(--esp-2); }
+    .cajas--chicas .caja--ancha .caja__cuerpo { width: 8.5rem; }
+    .cajas--chicas .caja--ancha .caja__valor { max-width: 8rem; }
+    .expresion { overflow-wrap: anywhere; margin-top: var(--esp-3); }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .expresion__final--error { background: #fde8e6; color: var(--color-error); }
+
+    /* ---------- Lo que se busca y las comparaciones ---------- */
+    .marcador { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-3) var(--esp-4); margin: 0 0 var(--esp-4); }
+    .lab__principal > .marcador { margin: var(--esp-4) 0 0; }
+    .busca { display: inline-flex; align-items: center; gap: var(--esp-2); margin: 0; font-weight: 700; }
+    .busca__valor { min-width: 2.2em; padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-acento-suave); color: var(--color-acento); font-family: var(--fuente-codigo); font-size: var(--texto-xl); text-align: center; }
+    .comparaciones { display: inline-flex; align-items: center; gap: var(--esp-2); margin: 0; padding: var(--esp-1) var(--esp-3) var(--esp-1) var(--esp-4); border-radius: 999px; background: var(--color-pista-suave); color: var(--color-pista); font-weight: 700; }
+    .comparaciones strong { display: inline-block; min-width: 1.3em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); text-align: center; }
+    .comparaciones--sube strong { animation: cuenta-sube 380ms var(--curva-rebote); }
+    @keyframes cuenta-sube { 40% { transform: scale(1.4); } }
+
+    /* ---------- 1. Casilleros que se tocan ---------- */
+    .lista--tocable .lista__casilla--tapada { cursor: pointer; }
+    .lista--tocable .lista__casilla--tapada > .lista__valor { transition: transform var(--dur-rapida) var(--curva-rebote), border-color var(--dur-rapida); }
+    .lista--tocable .lista__casilla--tapada:hover > .lista__valor { transform: translateY(-3px); border-color: var(--color-azul); }
+    .lista--tocable .lista__casilla:focus { outline: none; }
+    .lista--tocable .lista__casilla:focus-visible > .lista__valor { box-shadow: var(--foco); }
+
+    /* ---------- Decidir y predecir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .elegir__rotulo { align-self: center; margin-right: var(--esp-1); font-family: var(--fuente-codigo); font-weight: 700; }
+    .elegir .btn--usada::after { content: " ✓"; color: var(--color-ok); }
+    .pregunta { margin: var(--esp-4) 0 0; min-height: 1.6em; text-align: center; font-weight: 600; }
+    .pregunta code { font-size: var(--texto-md); }
+    .pregunta .chip { padding: 0 0.35em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); font-family: var(--fuente-codigo); }
+    .prediccion { margin-top: var(--esp-4); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__texto { margin: 0; font-weight: 600; }
+    .prediccion .elegir { justify-content: flex-start; margin-top: var(--esp-2); }
+    .prediccion .btn { min-width: 3.5rem; }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- 4. Tabla de casos ---------- */
+    .casos { width: 100%; border-collapse: collapse; font-size: var(--texto-sm); }
+    .casos th, .casos td { padding: var(--esp-1) var(--esp-2); border-bottom: 1px solid var(--color-borde); text-align: center; }
+    .casos th { font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .casos td { font-family: var(--fuente-codigo); font-weight: 700; }
+    .casos td:empty::before { content: "—"; color: var(--color-borde); }
+    .casos tr.casos__fila--nueva td { animation: aparecer var(--dur) ease both; }
+    .casos .casos__tipo { font-family: var(--fuente); font-weight: 600; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .casos .casos__tipo--mejor { color: var(--color-ok); }
+    .casos .casos__tipo--peor { color: var(--color-pista); }
+
+    /* ---------- Reto ---------- */
+    .huecos { display: grid; gap: var(--esp-3); margin-top: var(--esp-4); }
+    .huecos .opciones { grid-template-columns: 5.5rem repeat(3, minmax(0, 1fr)); align-items: center; gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .huecos legend { float: left; margin: 0; padding: 0; font-size: var(--texto-xs); font-weight: 700; line-height: 1.25; color: var(--color-texto-suave); }
+    .huecos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .buscar-campo { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin-top: var(--esp-4); }
+    .buscar-campo label { font-family: var(--fuente-codigo); font-weight: 700; }
+    .buscar-campo input { width: 4.5rem; font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); text-align: center; }
+    .buscar-campo input:focus-visible { border-color: var(--color-azul); }
+    .buscar-campo .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .metas { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; padding: 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .metas li::before { content: "○"; margin-right: 0.4em; }
+    .metas .meta--lista { color: var(--color-ok); font-weight: 700; }
+    .metas .meta--lista::before { content: "✓"; }
+    .pruebas { list-style: none; margin: var(--esp-3) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-ok-suave); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual { margin-top: var(--esp-4); }
+    }
+    @media (max-width: 480px) {
+      .huecos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .huecos .opciones { display: flex; flex-wrap: wrap; }
+      .huecos .opcion { flex: 1 1 auto; }
+      .huecos legend { width: 100%; }
+      .pruebas li { font-size: var(--texto-xs); padding: var(--esp-2) var(--esp-3); }
+      .cajas--chicas { gap: var(--esp-4) var(--esp-5); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: casilleros tapados -->
+    <section class="paso" id="paso-tapados" data-requiere aria-labelledby="t-tapados">
+      <span class="paso__etiqueta">Búsquedas 1/7 · Buscar uno por uno</span>
+      <h1 class="paso__titulo" id="t-tapados">¿Dónde está el 17?</h1>
+      <p>Así ve la PC una lista: no sabe qué hay en un casillero hasta mirarlo. Toca los casilleros para destaparlos y encuentra la nota. Cada casillero que miras es una <strong>comparación</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="marcador">
+            <p class="busca">Buscas <span class="busca__valor" id="s1-objetivo">17</span></p>
+            <p class="comparaciones">Comparaciones <strong id="s1-cuenta">0</strong></p>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-siguiente" hidden>Ahora busca el 15 ▸</button>
+            <button type="button" class="btn btn-secundario" id="s1-otra" hidden>↺ Mezclar y otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-lista" role="group" aria-label="Casilleros de la lista notas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. La PC busca: buscar(lista, x) línea a línea -->
+    <section class="paso" id="paso-pc" data-requiere aria-labelledby="t-pc">
+      <h2 class="paso__titulo" id="t-pc">Así busca la PC</h2>
+      <p>La función <code>buscar</code> hace lo mismo que tú, pero en orden: destapa el casillero <code>i</code>, lo compara con <code>x</code> y, si es igual, devuelve su índice. Ejecútala.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>)):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">i</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">i</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span></span><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">12</span>, <span class="tk-numero">5</span>, <span class="tk-numero">19</span>, <span class="tk-numero">8</span>, <span class="tk-numero">17</span>, <span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">20</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">buscar</span>(<span class="tk-variable">notas</span>, <span class="tk-numero">17</span>))</span></code></pre>
+          <p class="explicacion" id="s2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="s2-x">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">x</code>
+            </div>
+            <div class="caja caja--acento" id="s2-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+            <p class="comparaciones">Comparaciones <strong id="s2-cuenta">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Tú eres la PC: un nombre que no está -->
+    <section class="paso" id="paso-tu" data-requiere aria-labelledby="t-tu">
+      <h2 class="paso__titulo" id="t-tu">Ahora la PC eres tú</h2>
+      <p>Buscamos a <code>"Pedro"</code> entre los nombres. En cada vuelta, la PC destapa un casillero: tú dices qué da la comparación. ¿Y qué pasa si no aparece?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>)):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">i</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">i</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span></span><span class="linea"><span class="tk-variable">nombres</span> = [<span class="tk-texto">"Ana"</span>, <span class="tk-texto">"Luis"</span>, <span class="tk-texto">"Eva"</span>, <span class="tk-texto">"Iván"</span>, <span class="tk-texto">"Rosa"</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">buscar</span>(<span class="tk-variable">nombres</span>, <span class="tk-texto">"Pedro"</span>))</span></code></pre>
+          <p class="pregunta" id="s3-pregunta" aria-live="polite"></p>
+          <div class="elegir" id="s3-comparar" role="group" aria-label="¿Qué da la comparación?">
+            <button type="button" class="btn btn-secundario" data-valor="True">True</button>
+            <button type="button" class="btn btn-secundario" data-valor="False">False</button>
+          </div>
+          <div class="elegir" id="s3-devuelve" role="group" aria-label="¿Qué devuelve buscar?" hidden>
+            <button type="button" class="btn btn-secundario" data-valor="4">4</button>
+            <button type="button" class="btn btn-secundario" data-valor="-1">-1</button>
+            <button type="button" class="btn btn-secundario" data-valor="Pedro">"Pedro"</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-otra" hidden>↺ Otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja caja--ancha" id="s3-x">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">x</code>
+            </div>
+            <div class="caja caja--acento" id="s3-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+            <p class="comparaciones">Comparaciones <strong id="s3-cuenta">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Mejor y peor caso -->
+    <section class="paso" id="paso-casos" data-requiere aria-labelledby="t-casos">
+      <h2 class="paso__titulo" id="t-casos">¿Cuántas comparaciones?</h2>
+      <p>Depende de dónde esté lo que buscas. Busca cada nota: ¿cuándo tiene suerte <code>buscar</code> y cuándo le toca mirarlos todos?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>)):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">i</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">i</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span></span><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">12</span>, <span class="tk-numero">5</span>, <span class="tk-numero">19</span>, <span class="tk-numero">8</span>, <span class="tk-numero">17</span>, <span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">20</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">buscar</span>(<span class="tk-variable">notas</span>, <span class="tk-numero" id="s4-x">12</span>))</span></code></pre>
+          <div class="elegir" id="s4-elegir" role="group" aria-label="Nota que buscas">
+            <span class="elegir__rotulo">Busca x =</span>
+            <button type="button" class="btn btn-secundario" data-valor="12">12</button>
+            <button type="button" class="btn btn-secundario" data-valor="17">17</button>
+            <button type="button" class="btn btn-secundario" data-valor="20">20</button>
+            <button type="button" class="btn btn-secundario" data-valor="15">15</button>
+          </div>
+          <div class="prediccion" id="s4-mil" hidden>
+            <p class="prediccion__texto">En una lista de <strong>1000</strong> notas buscas una que <strong>no</strong> está. ¿Cuántas comparaciones hace <code>buscar</code>?</p>
+            <div class="elegir" role="group" aria-label="¿Cuántas comparaciones?">
+              <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">1</button>
+              <button type="button" class="btn btn-secundario" data-valor="500" aria-pressed="false">500</button>
+              <button type="button" class="btn btn-secundario" data-valor="1000" aria-pressed="false">1000</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="marcador">
+            <p class="comparaciones">Comparaciones <strong id="s4-cuenta">0</strong></p>
+          </div>
+          <div id="s4-lista"></div>
+          <table class="casos" aria-label="Lo que devolvió cada búsqueda">
+            <thead><tr><th scope="col">x</th><th scope="col">devuelve</th><th scope="col">comparaciones</th><th scope="col"><span class="visualmente-oculto">caso</span></th></tr></thead>
+            <tbody id="s4-tabla"></tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. La trampa: return -1 dentro del for -->
+    <section class="paso" id="paso-trampa" data-requiere aria-labelledby="t-trampa">
+      <h2 class="paso__titulo" id="t-trampa">¿Y si el <code>-1</code> va en un <code>else</code>?</h2>
+      <p>Alguien escribió <code>buscar</code> así: si es igual, devuelve <code>i</code>; si no, <code>-1</code>. Parece lo mismo. Antes de ejecutarla, ¿qué imprime?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>)):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">i</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">i</span></span><span class="linea">        <span class="tk-palabra">else</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-numero">-1</span></span><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">12</span>, <span class="tk-numero">5</span>, <span class="tk-numero">19</span>, <span class="tk-numero">8</span>, <span class="tk-numero">17</span>, <span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">20</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">buscar</span>(<span class="tk-variable">notas</span>, <span class="tk-numero">17</span>))</span></code></pre>
+          <div class="elegir" id="s5-elegir" role="group" aria-label="¿Qué imprime?">
+            <button type="button" class="btn btn-secundario" data-valor="4" aria-pressed="false">4</button>
+            <button type="button" class="btn btn-secundario" data-valor="-1" aria-pressed="false">-1</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">Da error</button>
+          </div>
+          <div id="s5-ejecucion" hidden>
+            <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
+              <button type="button" class="btn btn-secundario" id="s5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+              <button type="button" class="btn btn-secundario" id="s5-ejecutar">Ejecutar línea ▸</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="s5-x">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">x</code>
+            </div>
+            <div class="caja caja--acento" id="s5-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+            <p class="comparaciones">Comparaciones <strong id="s5-cuenta">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. in y .index() buscan igual -->
+    <section class="paso" id="paso-in" data-requiere aria-labelledby="t-in">
+      <h2 class="paso__titulo" id="t-in"><code>in</code> e <code>.index()</code> por dentro</h2>
+      <p>Ya conoces <code>in</code> y <code>.index()</code>. Se escriben en una palabra, pero por dentro buscan igual que <code>buscar</code>. Prueba los cuatro y cuenta las comparaciones.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">12</span>, <span class="tk-numero">5</span>, <span class="tk-numero">19</span>, <span class="tk-numero">8</span>, <span class="tk-numero">17</span>, <span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">20</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-numero">17</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>)</span></code></pre>
+          <div class="elegir" id="s6-elegir" role="group" aria-label="Qué probar">
+            <button type="button" class="btn btn-secundario" data-valor="in-17">17 in notas</button>
+            <button type="button" class="btn btn-secundario" data-valor="in-15">15 in notas</button>
+            <button type="button" class="btn btn-secundario" data-valor="index-17">notas.index(17)</button>
+            <button type="button" class="btn btn-secundario" data-valor="index-15">notas.index(15)</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="marcador">
+            <p class="comparaciones">Comparaciones <strong id="s6-cuenta">0</strong></p>
+          </div>
+          <div id="s6-lista"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="s6-expr">17 in notas</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s6-res">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: completar buscar y probarla -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Completa <code>buscar</code></h2>
+      <p>Llena los dos espacios en blanco y prueba <code>buscar</code> con una nota que <strong>esté</strong> en la lista y con una que <strong>no</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>)):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="hueco" id="reto-h1">?</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="hueco" id="reto-h2">?</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span></span><span class="linea"><span class="tk-variable">notas</span> = [<span class="tk-numero">12</span>, <span class="tk-numero">5</span>, <span class="tk-numero">19</span>, <span class="tk-numero">8</span>, <span class="tk-numero">17</span>, <span class="tk-numero">14</span>, <span class="tk-numero">9</span>, <span class="tk-numero">20</span>]</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">buscar</span>(<span class="tk-variable">notas</span>, <span class="tk-numero" id="reto-x-codigo">?</span>))</span></code></pre>
+          <div class="huecos">
+            <fieldset class="opciones opciones--codigo" id="reto-condicion">
+              <legend>Espacio 1: la condición</legend>
+              <label class="opcion"><input type="radio" name="reto-h1" value="idx"><span>i == x</span></label>
+              <label class="opcion"><input type="radio" name="reto-h1" value="eq"><span>lista[i] == x</span></label>
+              <label class="opcion"><input type="radio" name="reto-h1" value="ne"><span>lista[i] != x</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo" id="reto-devuelve">
+              <legend>Espacio 2: lo que devuelve</legend>
+              <label class="opcion"><input type="radio" name="reto-h2" value="x"><span>x</span></label>
+              <label class="opcion"><input type="radio" name="reto-h2" value="i1"><span>i + 1</span></label>
+              <label class="opcion"><input type="radio" name="reto-h2" value="i"><span>i</span></label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="marcador">
+            <p class="comparaciones">Comparaciones <strong id="reto-cuenta">0</strong></p>
+          </div>
+          <div id="reto-lista"></div>
+          <div class="buscar-campo">
+            <label for="reto-x">x =</label>
+            <input type="text" id="reto-x" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="?">
+            <button type="button" class="btn btn-secundario" id="reto-probar" disabled>▶ Probar</button>
+          </div>
+          <ul class="metas" aria-label="Pruebas que faltan">
+            <li id="reto-meta-esta">una nota que está</li>
+            <li id="reto-meta-no">una que no está</li>
+          </ul>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" aria-label="Pruebas" aria-live="polite"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Buscar uno por uno es mirar casillero por casillero hasta encontrarlo; para decir que no está, hay que mirarlos todos.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>)):</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">i</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">i</span>   <span class="tk-comentario"># lo encontró</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span>          <span class="tk-comentario"># después del for</span></span><span class="linea"><span class="tk-comentario"># comparaciones: 1 a len(lista)</span></span><span class="linea"><span class="tk-numero">17</span> <span class="tk-palabra">in</span> <span class="tk-variable">notas</span>            <span class="tk-comentario"># True o False</span></span><span class="linea"><span class="tk-variable">notas</span>.<span class="tk-funcion">index</span>(<span class="tk-numero">17</span>)        <span class="tk-comentario"># posición o ValueError</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="condiciones/index.html">Siguiente: Buscar con condiciones →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/caja.js"></script>
+<script src="../../assets/js/traza.js"></script>
+<script src="../../assets/js/lista.js"></script>
+<script src="../../assets/js/opciones-codigo.js"></script>
+<script src="../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function lineaDe(pre, n) { return pre.querySelectorAll(".linea")[n]; }
+  function plural(n, uno, varios) { return n + " " + (n === 1 ? uno : varios); }
+
+  /* Temporizadores de un paso: se cancelan todos juntos al empezar de nuevo */
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) {
+        var id = setTimeout(function () {
+          ids = ids.filter(function (otro) { return otro !== id; });
+          fn();
+        }, espera(ms));
+        ids.push(id);
+      },
+      cancelar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  /* El contador de comparaciones: cada casillero que se mira suma uno */
+  function contar(el, n) {
+    el.textContent = String(n);
+    var p = el.parentNode;
+    p.classList.remove("comparaciones--sube");
+    if (n > 0 && !Pasos.reducirMovimiento) {
+      void p.offsetWidth;
+      p.classList.add("comparaciones--sube");
+    }
+  }
+
+  /* Lo que imprime print: sale volando desde `desde` o desde la línea activa */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+    else Codigo.volarDesdeLinea(consola, linea, texto, "vuelo--salida");
+  }
+
+  /* Los casilleros ya comparados: en rojo los que no sirven y en verde el que sí */
+  function pintarComparados(lista, hasta, igual) {
+    lista.clases(function (j) {
+      if (j < hasta) return "lista__casilla--distinta";
+      if (j === hasta) return igual ? "lista__casilla--igual" : "lista__casilla--distinta";
+      return "";
+    });
+  }
+
+  /* Una búsqueda lineal animada: mira un casillero por vez, de izquierda a derecha.
+     o: { lista, valores, x, reloj, cuenta, ms, tapada, puntero, codigo, lineas: { compara,
+     encontrado, noEsta }, cumple(i, v) (opcional, si no es lista[i] == x), alFin(k, comparaciones) }
+     alFin recibe el índice donde la condición dio True, o -1 si se acabó la lista. */
+  function animarBusqueda(o) {
+    var k = 0;
+    function uno() {
+      if (k >= o.valores.length) {
+        o.lista.marcar(null);
+        if (o.codigo) Codigo.marcar(o.codigo, { activas: [o.lineas.noEsta] });
+        o.alFin(-1, k);
+        return;
+      }
+      if (o.puntero) o.lista.punteros({ i: k });
+      if (o.codigo) Codigo.marcar(o.codigo, { activas: [o.lineas.compara] });
+      if (o.tapada) o.lista.destapar(k);
+      o.lista.marcar(k);
+      var cumple = o.cumple ? o.cumple(k, o.valores[k]) : o.valores[k] === o.x;
+      pintarComparados(o.lista, k, cumple);
+      contar(o.cuenta, k + 1);
+      if (cumple) {
+        var hallado = k;
+        o.reloj.luego(function () {
+          if (o.codigo) Codigo.marcar(o.codigo, { activas: [o.lineas.encontrado] });
+          o.alFin(hallado, hallado + 1);
+        }, o.ms);
+        return;
+      }
+      k++;
+      o.reloj.luego(uno, o.ms);
+    }
+    uno();
+  }
+
+  var NOTAS = [12, 5, 19, 8, 17, 14, 9, 20];
+
+  /* ---------- 1. Casilleros tapados: buscar a mano ---------- */
+  var el1 = $("s1-lista");
+  var lista1 = Lista.crear(el1, NOTAS, { nombres: ["notas"] });
+  el1.removeAttribute("aria-hidden");
+  el1.classList.add("lista--tocable");
+  var valores1 = NOTAS.slice();
+  var ronda1 = 0;        // 0: busca el 17; 1: busca el 15, que no está
+  var x1 = 17;
+  var mirados1 = [];
+  var listo1 = false;
+
+  function casillas1() {
+    return Array.prototype.slice.call(el1.querySelectorAll(".lista__fila > .lista__casilla"));
+  }
+
+  // Cada casillero tapado es un botón (también con el teclado)
+  function etiquetar1() {
+    casillas1().forEach(function (c, i) {
+      var tapada = c.classList.contains("lista__casilla--tapada");
+      c.setAttribute("role", "button");
+      c.setAttribute("tabindex", tapada && !listo1 ? "0" : "-1");
+      c.setAttribute("aria-label", "Casillero " + i + (tapada ? ", tapado" : ": " + valores1[i]));
+      if (tapada && !listo1) c.removeAttribute("aria-disabled");
+      else c.setAttribute("aria-disabled", "true");
+    });
+    el1.querySelectorAll(".lista__corchete, .lista__nombres").forEach(function (e) { e.setAttribute("aria-hidden", "true"); });
+  }
+
+  function empezar1(ronda) {
+    ronda1 = ronda;
+    x1 = ronda === 0 ? 17 : 15;
+    mirados1 = [];
+    listo1 = false;
+    $("s1-objetivo").textContent = String(x1);
+    contar($("s1-cuenta"), 0);
+    lista1.tapar(true);
+    lista1.clases(null);
+    lista1.marcar(null);
+    $("s1-siguiente").hidden = true;
+    $("s1-otra").hidden = true;
+    Pasos.limpiarFeedback($("s1-fb"));
+    etiquetar1();
+  }
+
+  function tocar1(i) {
+    if (listo1 || i < 0 || mirados1.indexOf(i) !== -1) return;
+    mirados1.push(i);
+    lista1.destapar(i);
+    var n = mirados1.length;
+    contar($("s1-cuenta"), n);
+    lista1.clases(function (j, v) {
+      if (mirados1.indexOf(j) === -1) return "";
+      return v === x1 ? "lista__casilla--igual" : "lista__casilla--distinta";
+    });
+    var fb = $("s1-fb");
+    if (valores1[i] === x1) {
+      listo1 = true;
+      var suerte = n === 1 ? "¡Al primer intento! Pero fue suerte: podía estar en cualquiera."
+        : n <= 3 ? "Tuviste suerte: estaba entre los primeros que miraste."
+        : "Sin ver los valores no hay atajo: hay que mirar uno por uno.";
+      Pasos.feedback(fb, "ok", "¡Ahí está, en el casillero " + i + "! Lo encontraste con " + plural(n, "comparación", "comparaciones") + ". " + suerte);
+      $("s1-siguiente").hidden = false;
+      etiquetar1();
+      $("s1-siguiente").focus({ preventScroll: true });
+      return;
+    }
+    if (n === valores1.length) {
+      listo1 = true;
+      Pasos.feedback(fb, "ok", "Destapaste los 8 y ninguno es " + x1 + ": no está. Para estar seguro, tuviste que mirarlos todos: 8 comparaciones.");
+      $("s1-otra").hidden = false;
+      etiquetar1();
+      $("s1-otra").focus({ preventScroll: true });
+      leccion.desbloquear();
+      return;
+    }
+    if (ronda1 === 1 && n === 4) {
+      Pasos.feedback(fb, "pista", "Van 4 y ningún 15. ¿Ya puedes decir que no está? Todavía no: podría estar en uno de los tapados.");
+    }
+    etiquetar1();
+  }
+
+  el1.addEventListener("click", function (e) {
+    var c = e.target.closest(".lista__casilla");
+    if (c) tocar1(casillas1().indexOf(c));
+  });
+  el1.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var c = e.target.closest(".lista__casilla");
+    if (!c) return;
+    e.preventDefault();
+    tocar1(casillas1().indexOf(c));
+  });
+
+  function enfocarPrimera1() {
+    var c = casillas1()[0];
+    if (c) c.focus({ preventScroll: true });
+  }
+
+  $("s1-siguiente").addEventListener("click", function () {
+    empezar1(1);
+    enfocarPrimera1();
+  });
+  $("s1-otra").addEventListener("click", function () {
+    // Otro orden: el 17 puede caer en cualquier casillero
+    for (var k = valores1.length - 1; k > 0; k--) {
+      var j = Math.floor(Math.random() * (k + 1));
+      var t = valores1[k]; valores1[k] = valores1[j]; valores1[j] = t;
+    }
+    lista1.valores(valores1);
+    empezar1(0);
+    enfocarPrimera1();
+  });
+
+  /* ---------- Pasos de buscar(lista, x), para Traza ---------- */
+  // malo: la versión con else: return -1 dentro del for
+  function pasosBuscar(valores, x, malo) {
+    var L = malo ? { cmp: 2, ret: 3, sino: 4, menos: 5, def: 6, llamar: 7 }
+                 : { cmp: 2, ret: 3, menos: 4, def: 5, llamar: 6 };
+    var pasos = [
+      { linea: L.def, texto: "<code>notas</code> guarda 8 notas. La PC no sabe qué hay en cada casillero hasta mirarlo." },
+      { linea: L.llamar, texto: "Para imprimir, primero llama a <code>buscar(notas, " + x + ")</code>." },
+      { linea: 0, llamada: true, parada: true, texto: "Empieza <code>buscar</code>: <code>lista</code> es la lista de notas y <code>x</code> vale <strong>" + x + "</strong>." }
+    ];
+    for (var k = 0; k < valores.length; k++) {
+      var v = valores[k];
+      var igual = v === x;
+      pasos.push({
+        linea: 1, k: k,
+        texto: k === 0
+          ? "<code>range(len(lista))</code> es <code>range(8)</code>: <code>i</code> empieza en <strong>0</strong>."
+          : "Otra vuelta: <code>i</code> vale <strong>" + k + "</strong>."
+      });
+      pasos.push({
+        linea: L.cmp, k: k, compara: true, igual: igual, parada: true,
+        texto: "Destapa <code>lista[" + k + "]</code>: ¿" + v + " == " + x + "? <strong>" + (igual ? "True" : "False") + "</strong>."
+      });
+      if (igual) {
+        var resto = valores.length - k - 1;
+        pasos.push({ linea: L.ret, k: k, texto: "<code>return " + k + "</code>: la función termina aquí mismo." + (resto ? " Los " + resto + " casilleros de la derecha ni se miran." : "") });
+        pasos.push({ linea: L.llamar, flecha: true, salida: String(k), fin: true, texto: "<code>buscar</code> devolvió <strong>" + k + "</strong> y <code>print</code> lo muestra." });
+        return pasos;
+      }
+      if (malo) {
+        pasos.push({ linea: L.sino, k: k, texto: "Como dio False, entra al <code>else</code>…" });
+        pasos.push({ linea: L.menos, k: k, texto: "<code>return -1</code>: la función termina aquí, ¡en la primera vuelta! Los otros 7 casilleros ni se miran." });
+        pasos.push({ linea: L.llamar, flecha: true, salida: "-1", fin: true, texto: "<code>buscar</code> devolvió <strong>-1</strong>: dice que el " + x + " no está… y sí estaba." });
+        return pasos;
+      }
+    }
+    pasos.push({ linea: L.menos, texto: "El <code>for</code> se quedó sin casilleros: ninguno era igual. <code>return -1</code>." });
+    pasos.push({ linea: L.llamar, flecha: true, salida: "-1", fin: true, texto: "<code>buscar</code> devolvió <strong>-1</strong>: no está." });
+    return pasos;
+  }
+
+  // Une una Traza de buscar con su lista tapada, sus cajas x e i y su contador
+  function trazaBuscar(n, malo, generar, alTerminar) {
+    var lista = Lista.crear($(n + "-lista"), NOTAS);
+    var pre = $(n + "-codigo");
+    lista.tapar(true);
+    var traza = Traza.crear({
+      codigo: pre,
+      explicacion: $(n + "-explicacion"),
+      consola: $(n + "-consola"),
+      ejecutar: $(n + "-ejecutar"),
+      reproducir: $(n + "-reproducir"),
+      reiniciar: $(n + "-reiniciar"),
+      generar: generar,
+      intervalo: 900,
+      alReiniciar: function () {
+        lista.tapar(true);
+        lista.marcar(null);
+        lista.clases(null);
+        lista.punteros(null);
+        Caja.vaciar($(n + "-x"));
+        Caja.vaciar($(n + "-i"));
+        contar($(n + "-cuenta"), 0);
+        Pasos.limpiarFeedback($(n + "-fb"));
+      },
+      alPaso: function (p) {
+        if (p.llamada) Caja.poner($(n + "-x"), 17, Codigo.piezaEnLinea(lineaDe(pre, malo ? 7 : 6), ["17"]));
+        if (p.k !== undefined) {
+          lista.punteros({ i: p.k });
+          if (p.linea === 1) Caja.poner($(n + "-i"), p.k);
+          if (p.compara) {
+            lista.destapar(p.k);
+            lista.marcar(p.k);
+            pintarComparados(lista, p.k, p.igual);
+            contar($(n + "-cuenta"), p.k + 1);
+          }
+        }
+        if (p.fin) lista.marcar(null);
+      },
+      alTerminar: alTerminar
+    });
+    return traza;
+  }
+
+  /* ---------- 2. Así busca la PC ---------- */
+  var traza2 = trazaBuscar("s2", false, function () { return pasosBuscar(NOTAS, 17, false); }, function () {
+    Pasos.feedback($("s2-fb"), "ok", "La PC miró 5 casilleros, de izquierda a derecha, hasta dar con el 17. Como revisa uno tras otro, en fila, se llama búsqueda lineal.");
+    leccion.desbloquear();
+  });
+
+  /* ---------- 3. Ahora la PC eres tú ---------- */
+  var NOMBRES = ["Ana", "Luis", "Eva", "Iván", "Rosa"];
+  var lista3 = Lista.crear($("s3-lista"), NOMBRES);
+  var pre3 = $("s3-codigo");
+  var r3 = reloj();
+  var k3 = 0;
+  var estado3 = "nuevo";   // nuevo, jugando, fin
+  var ocupado3 = true;
+
+  function empezar3() {
+    r3.cancelar();
+    k3 = 0;
+    estado3 = "jugando";
+    ocupado3 = true;
+    lista3.tapar(true);
+    lista3.clases(null);
+    lista3.marcar(null);
+    lista3.punteros(null);
+    Caja.vaciar($("s3-x"));
+    Caja.vaciar($("s3-i"));
+    Codigo.limpiar(pre3);
+    Codigo.consola($("s3-consola"), []);
+    contar($("s3-cuenta"), 0);
+    Pasos.limpiarFeedback($("s3-fb"));
+    $("s3-comparar").hidden = false;
+    $("s3-devuelve").hidden = true;
+    $("s3-otra").hidden = true;
+    Codigo.marcar(pre3, { activas: [6] });
+    $("s3-pregunta").textContent = "Llama a buscar(nombres, \"Pedro\")…";
+    r3.luego(function () {
+      Codigo.marcar(pre3, { activas: [0] });
+      Codigo.salto(pre3, 6, 0);
+      Caja.poner($("s3-x"), "\"Pedro\"", Codigo.piezaEnLinea(lineaDe(pre3, 6), ["\"Pedro\""]));
+      r3.luego(preguntar3, 800);
+    }, 700);
+  }
+
+  function preguntar3() {
+    var k = k3;
+    Codigo.marcar(pre3, { activas: [1] });
+    if (k > 0) Codigo.salto(pre3, 2, 1);
+    else Codigo.quitarSalto(pre3);
+    lista3.punteros({ i: k });
+    Caja.poner($("s3-i"), k);
+    r3.luego(function () {
+      Codigo.marcar(pre3, { activas: [2] });
+      Codigo.quitarSalto(pre3);
+      lista3.destapar(k);
+      lista3.marcar(k);
+      contar($("s3-cuenta"), k + 1);
+      $("s3-pregunta").innerHTML = "¿<span class=\"chip\">\"" + NOMBRES[k] + "\"</span> == <span class=\"chip\">\"Pedro\"</span>?";
+      ocupado3 = false;
+    }, 600);
+  }
+
+  function comparar3(valor) {
+    if (ocupado3 || estado3 !== "jugando" || !$("s3-devuelve").hidden) return;
+    var fb = $("s3-fb");
+    if (valor === "True") {
+      Pasos.feedback(fb, "pista", "\"" + NOMBRES[k3] + "\" y \"Pedro\" no son el mismo texto: == da False.");
+      return;
+    }
+    ocupado3 = true;
+    Pasos.limpiarFeedback(fb);
+    pintarComparados(lista3, k3, false);
+    lista3.marcar(null);
+    k3++;
+    if (k3 < NOMBRES.length) {
+      r3.luego(preguntar3, 350);
+      return;
+    }
+    // Se acabaron los casilleros: el for termina
+    r3.luego(function () {
+      Codigo.marcar(pre3, { activas: [1] });
+      Codigo.salto(pre3, 2, 1);
+      $("s3-pregunta").textContent = "No quedan casilleros: el for termina. ¿Qué devuelve buscar?";
+      $("s3-comparar").hidden = true;
+      $("s3-devuelve").hidden = false;
+      $("s3-devuelve").querySelector("button").focus({ preventScroll: true });
+      ocupado3 = false;
+    }, 450);
+  }
+
+  var pistas3 = {
+    "4": "4 es el último valor de i, pero return i está dentro del if, y el if nunca dio True: esa línea no se ejecutó.",
+    "Pedro": "\"Pedro\" es x, lo que buscabas. buscar dice dónde está, no qué buscabas. Mira qué línea queda después del for."
+  };
+
+  function devuelve3(valor) {
+    if (ocupado3 || estado3 !== "jugando") return;
+    var fb = $("s3-fb");
+    if (valor !== "-1") {
+      Pasos.feedback(fb, "pista", pistas3[valor]);
+      return;
+    }
+    ocupado3 = true;
+    estado3 = "fin";
+    Codigo.marcar(pre3, { activas: [4] });
+    Codigo.quitarSalto(pre3);
+    lista3.punteros(null);
+    $("s3-pregunta").textContent = "return -1: después del for, buscar devuelve -1.";
+    r3.luego(function () {
+      Codigo.marcar(pre3, { activas: [6] });
+      Codigo.salto(pre3, 4, 6);
+      imprimir($("s3-consola"), "-1");
+      Pasos.feedback(fb, "ok", "-1 quiere decir «no está». buscar solo devuelve índices de 0 en adelante, así que -1 no se confunde con un lugar donde lo encontró (como .find() en los textos). Para llegar ahí, miró los 5 casilleros.");
+      $("s3-devuelve").hidden = true;
+      $("s3-otra").hidden = false;
+      $("s3-otra").focus({ preventScroll: true });
+      leccion.desbloquear();
+    }, 700);
+  }
+
+  $("s3-comparar").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { comparar3(b.getAttribute("data-valor")); });
+  });
+  $("s3-devuelve").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { devuelve3(b.getAttribute("data-valor")); });
+  });
+  $("s3-otra").addEventListener("click", function () {
+    empezar3();
+    $("s3-comparar").querySelector('[data-valor="False"]').focus({ preventScroll: true });
+  });
+  Codigo.consola($("s3-consola"), []);
+  lista3.tapar(true);
+
+  /* ---------- 4. Mejor y peor caso ---------- */
+  var lista4 = Lista.crear($("s4-lista"), NOTAS);
+  var pre4 = $("s4-codigo");
+  var r4 = reloj();
+  var CASOS4 = [12, 17, 20, 15];
+  var hechos4 = {};
+  var textos4 = {
+    12: "El 12 está en el primer casillero: 1 comparación y listo. Es el mejor caso: no se puede buscar con menos.",
+    17: "El 17 está en el casillero 4: 5 comparaciones.",
+    20: "El 20 está en el último casillero: 8 comparaciones, todas. Es el peor caso.",
+    15: "El 15 no está: 8 comparaciones. Para devolver -1 tuvo que mirarlos todos: también es el peor caso."
+  };
+
+  CASOS4.forEach(function (x) {
+    var tr = document.createElement("tr");
+    tr.id = "s4-fila-" + x;
+    tr.innerHTML = "<td>" + x + "</td><td></td><td></td><td class=\"casos__tipo\"></td>";
+    $("s4-tabla").appendChild(tr);
+  });
+
+  function anotar4(x, res, comps) {
+    var tr = $("s4-fila-" + x);
+    var celdas = tr.children;
+    celdas[1].textContent = String(res);
+    celdas[2].textContent = String(comps);
+    var tipo = comps === 1 ? "mejor caso" : comps === NOTAS.length ? "peor caso" : "";
+    celdas[3].textContent = tipo;
+    celdas[3].className = "casos__tipo" + (tipo ? " casos__tipo--" + tipo.split(" ")[0] : "");
+    tr.classList.remove("casos__fila--nueva");
+    void tr.offsetWidth;
+    tr.classList.add("casos__fila--nueva");
+    hechos4[x] = true;
+    $("s4-elegir").querySelector('[data-valor="' + x + '"]').classList.add("btn--usada");
+    var faltan = [12, 20, 15].filter(function (v) { return !hechos4[v]; });
+    var texto = textos4[x];
+    if (faltan.length) {
+      texto += " Te falta buscar: " + faltan.join(", ") + ".";
+    } else if ($("s4-mil").hidden) {
+      texto += " Mejor caso: 1 comparación. Peor caso: todas. Ahora responde la pregunta bajo el código.";
+      $("s4-mil").hidden = false;
+    }
+    Pasos.feedback($("s4-fb"), "ok", texto);
+  }
+
+  function buscar4(x) {
+    r4.cancelar();
+    $("s4-x").textContent = String(x);
+    lista4.clases(null);
+    lista4.marcar(null);
+    lista4.punteros(null);
+    Codigo.marcar(pre4, { activas: [6] });
+    contar($("s4-cuenta"), 0);
+    r4.luego(function () {
+      animarBusqueda({
+        lista: lista4, valores: NOTAS, x: x, reloj: r4, cuenta: $("s4-cuenta"), ms: 420, puntero: true,
+        codigo: pre4, lineas: { compara: 2, encontrado: 3, noEsta: 4 },
+        alFin: function (res, comps) {
+          r4.luego(function () {
+            Codigo.marcar(pre4, { activas: [6] });
+            anotar4(x, res, comps);
+          }, 450);
+        }
+      });
+    }, 300);
+  }
+
+  $("s4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { buscar4(Number(b.getAttribute("data-valor"))); });
+  });
+
+  var pistasMil = {
+    "1": "1 es el mejor caso: cuando está en el primer casillero. Si no está, ¿puede parar antes de mirarlos todos?",
+    "500": "500 es la mitad. Pero buscar no se salta ninguno: si no mira un casillero, no puede saber si estaba justo ahí."
+  };
+  $("s4-mil").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var valor = b.getAttribute("data-valor");
+      var caja = $("s4-mil");
+      caja.querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (valor !== "1000") {
+        Pasos.feedback($("s4-fb"), "pista", pistasMil[valor]);
+        return;
+      }
+      caja.classList.add("prediccion--ok");
+      caja.querySelectorAll("button").forEach(function (o) { o.disabled = true; });
+      Pasos.feedback($("s4-fb"), "ok", "1000: una comparación por casillero. En el peor caso, la búsqueda lineal mira la lista entera: con el doble de notas, el doble de trabajo.");
+      leccion.desbloquear();
+    });
+  });
+
+  /* ---------- 5. La trampa del else ---------- */
+  var prediccion5 = null;
+  var traza5 = trazaBuscar("s5", true, function () { return pasosBuscar(NOTAS, 17, true); }, function () {
+    var base = "En la primera vuelta, 12 == 17 da False y el else hace return -1: la función termina sin mirar los demás. Para decir «no está» hay que mirarlos todos, así que return -1 va después del for, fuera del bucle.";
+    var fb = $("s5-fb");
+    if (prediccion5 === "-1") Pasos.feedback(fb, "ok", "¡Lo predijiste! " + base);
+    else if (prediccion5 === "4") Pasos.feedback(fb, "ok", "Nunca llega al casillero 4. " + base);
+    else Pasos.feedback(fb, "ok", "No da error: Python la ejecuta sin quejarse, pero la respuesta está mal. " + base);
+    leccion.desbloquear();
+  });
+
+  $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion5 = b.getAttribute("data-valor");
+      $("s5-elegir").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      $("s5-ejecucion").hidden = false;
+      traza5.reiniciar();
+    });
+  });
+
+  /* ---------- 6. in y .index() por dentro ---------- */
+  var lista6 = Lista.crear($("s6-lista"), NOTAS);
+  var pre6 = $("s6-codigo");
+  var r6 = reloj();
+  var usados6 = {};
+  function n6(v) { return "<span class=\"tk-numero\">" + v + "</span>"; }
+  var NOTAS6 = "<span class=\"tk-variable\">notas</span>";
+  var PRINT6 = "<span class=\"tk-funcion\">print</span>(";
+  var DATOS6 = {
+    "in-17": {
+      x: 17, expr: "17 in notas", res: "True",
+      linea: PRINT6 + n6(17) + " <span class=\"tk-palabra\">in</span> " + NOTAS6 + ")",
+      texto: "in también mira uno por uno. Al encontrar el 17 responde True y para: 5 comparaciones, igual que buscar."
+    },
+    "in-15": {
+      x: 15, expr: "15 in notas", res: "False",
+      linea: PRINT6 + n6(15) + " <span class=\"tk-palabra\">in</span> " + NOTAS6 + ")",
+      texto: "Para responder False, in tuvo que mirar los 8 casilleros."
+    },
+    "index-17": {
+      x: 17, expr: "notas.index(17)", res: "4",
+      linea: PRINT6 + NOTAS6 + ".<span class=\"tk-funcion\">index</span>(" + n6(17) + "))",
+      texto: ".index() hace lo mismo que buscar: devuelve la posición, 4, después de 5 comparaciones."
+    },
+    "index-15": {
+      x: 15, expr: "notas.index(15)", error: true,
+      linea: PRINT6 + NOTAS6 + ".<span class=\"tk-funcion\">index</span>(" + n6(15) + "))",
+      texto: "Miró los 8 y, en vez de devolver -1 como buscar, se detiene con ValueError. Revisar antes con in recorre la lista dos veces; buscar lo resuelve en una sola pasada."
+    }
+  };
+
+  function probar6(clave) {
+    var d = DATOS6[clave];
+    r6.cancelar();
+    lineaDe(pre6, 1).innerHTML = d.linea;
+    Codigo.marcar(pre6, { activas: [1] });
+    lista6.tapar(true);
+    lista6.clases(null);
+    lista6.marcar(null);
+    contar($("s6-cuenta"), 0);
+    $("s6-expr").textContent = d.expr;
+    $("s6-res").textContent = "?";
+    $("s6-res").classList.remove("expresion__final--error");
+    Codigo.consola($("s6-consola"), []);
+    Pasos.limpiarFeedback($("s6-fb"));
+    r6.luego(function () {
+      animarBusqueda({
+        lista: lista6, valores: NOTAS, x: d.x, reloj: r6, cuenta: $("s6-cuenta"), ms: 380, tapada: true,
+        alFin: function () {
+          lista6.marcar(null);
+          $("s6-res").textContent = d.error ? "💥 ValueError" : d.res;
+          $("s6-res").classList.toggle("expresion__final--error", !!d.error);
+          imprimir($("s6-consola"), d.error ? "ValueError: " + d.x + " is not in list" : d.res, null, d.error);
+          usados6[clave] = true;
+          $("s6-elegir").querySelector('[data-valor="' + clave + '"]').classList.add("btn--usada");
+          var faltan = Object.keys(DATOS6).filter(function (c) { return !usados6[c]; });
+          if (faltan.length) {
+            Pasos.feedback($("s6-fb"), "ok", d.texto + " Te " + (faltan.length === 1 ? "falta: " : "faltan: ") + faltan.map(function (c) { return DATOS6[c].expr; }).join(", ") + ".");
+            return;
+          }
+          Pasos.feedback($("s6-fb"), "ok", d.texto + " in y .index() son cortos de escribir, pero la PC igual mira uno por uno.");
+          leccion.desbloquear();
+        }
+      });
+    }, 250);
+  }
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { probar6(b.getAttribute("data-valor")); });
+  });
+  lista6.tapar(true);
+  Codigo.consola($("s6-consola"), []);
+
+  /* ---------- 7. Reto: completar buscar ---------- */
+  var listaR = Lista.crear($("reto-lista"), NOTAS);
+  var preR = $("reto-codigo");
+  var rR = reloj();
+  var metas = { esta: false, no: false };
+  var CONDICIONES = {
+    eq: function (i, v, x) { return v === x; },
+    idx: function (i, v, x) { return i === x; },
+    ne: function (i, v, x) { return v !== x; }
+  };
+  var DEVUELVE = {
+    i: function (i) { return i; },
+    x: function (i, x) { return x; },
+    i1: function (i) { return i + 1; }
+  };
+  var pistasReto = {
+    idx: "i == x compara la posición con la nota que buscas. Hay que comparar lo que hay en el casillero: lista[i].",
+    ne: "Con != la condición da True en el primer casillero que no es x, y devuelve ese. Queremos el que sí es igual.",
+    x: "return x devuelve la nota que buscabas, y esa ya la sabías. buscar debe decir dónde está: su índice.",
+    i1: "i + 1 cuenta desde 1, como las personas. En Python el primer casillero es el 0: hay que devolver i tal cual."
+  };
+
+  function elegido(nombre) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    return r ? r.value : null;
+  }
+
+  function pintarMetas() {
+    $("reto-meta-esta").classList.toggle("meta--lista", metas.esta);
+    $("reto-meta-no").classList.toggle("meta--lista", metas.no);
+  }
+
+  function limpiarReto() {
+    rR.cancelar();
+    listaR.clases(null);
+    listaR.marcar(null);
+    listaR.punteros(null);
+    Codigo.limpiar(preR);
+    contar($("reto-cuenta"), 0);
+  }
+
+  function cambiarReto(e) {
+    var r = e.target;
+    $(r.name).textContent = r.nextElementSibling.textContent;
+    document.querySelectorAll("#paso-reto .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    metas = { esta: false, no: false };
+    pintarMetas();
+    $("reto-pruebas").textContent = "";
+    Pasos.limpiarFeedback($("reto-fb"));
+    limpiarReto();
+    $("reto-probar").disabled = !(elegido("reto-h1") && elegido("reto-h2"));
+  }
+
+  function probarReto() {
+    var h1 = elegido("reto-h1");
+    var h2 = elegido("reto-h2");
+    var fb = $("reto-fb");
+    if (!h1 || !h2) {
+      Pasos.feedback(fb, "pista", "Primero elige qué va en los dos espacios en blanco.");
+      return;
+    }
+    var txt = $("reto-x").value.trim();
+    if (!/^-?\d{1,2}$/.test(txt)) {
+      Pasos.feedback(fb, "pista", "Escribe una nota entera en x, por ejemplo 9 o 15.");
+      $("reto-x").focus();
+      return;
+    }
+    var x = parseInt(txt, 10);
+    $("reto-x-codigo").textContent = String(x);
+    limpiarReto();
+    Pasos.limpiarFeedback(fb);
+    Codigo.marcar(preR, { activas: [6] });
+    rR.luego(function () {
+      animarBusqueda({
+        lista: listaR, valores: NOTAS, reloj: rR, cuenta: $("reto-cuenta"), ms: 360, puntero: true,
+        codigo: preR, lineas: { compara: 2, encontrado: 3, noEsta: 4 },
+        cumple: function (i, v) { return CONDICIONES[h1](i, v, x); },
+        alFin: function (k, comps) {
+          var res = k === -1 ? -1 : DEVUELVE[h2](k, x);
+          rR.luego(function () {
+            Codigo.marcar(preR, { activas: [6] });
+            resultadoReto(x, res, h1, h2);
+          }, 380);
+        }
+      });
+    }, 250);
+  }
+
+  function resultadoReto(x, res, h1, h2) {
+    var fb = $("reto-fb");
+    var esperado = NOTAS.indexOf(x);
+    var bien = res === esperado;
+    var lista = $("reto-pruebas");
+    var li = document.createElement("li");
+    if (!bien) li.className = "prueba--mal";
+    li.innerHTML = "<span>buscar(notas, " + x + ")</span><span class=\"prueba__res\">" + res +
+      (bien ? " ✓" : " ✗ (debería ser " + esperado + ")") + "</span>";
+    lista.insertBefore(li, lista.firstChild);
+    while (lista.children.length > 3) lista.lastChild.remove();
+
+    if (!bien) {
+      var culpa = h1 !== "eq" ? h1 : h2;
+      var nombre = h1 !== "eq" ? "reto-h1" : "reto-h2";
+      var opcion = document.querySelector('input[name="' + nombre + '"]:checked').closest(".opcion");
+      opcion.classList.remove("opcion--incorrecta");
+      void opcion.offsetWidth;
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", pistasReto[culpa]);
+      return;
+    }
+    metas[esperado === -1 ? "no" : "esta"] = true;
+    pintarMetas();
+    var correcto = h1 === "eq" && h2 === "i";
+    if (metas.esta && metas.no && correcto) {
+      document.querySelectorAll("#paso-reto input:checked").forEach(function (r) { r.closest(".opcion").classList.add("opcion--correcta"); });
+      Pasos.feedback(fb, "ok", "¡Funciona! Si la nota está, devuelve su índice; si no, mira todos y devuelve -1. Así se prueba una búsqueda: con un valor que está y con uno que no.");
+      leccion.desbloquear();
+      return;
+    }
+    var hecho = esperado === -1 ? "No está y devolvió -1." : "Devolvió " + res + ", su índice.";
+    var falta = metas.esta && metas.no ? "" : metas.esta ? " Ahora prueba con una nota que no esté." : " Ahora prueba con una nota que sí esté.";
+    Pasos.feedback(fb, "ok", hecho + falta);
+  }
+
+  document.querySelectorAll("#paso-reto input[type=radio]").forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-probar").addEventListener("click", probarReto);
+  $("reto-x").addEventListener("input", function () {
+    var txt = $("reto-x").value.trim();
+    $("reto-x-codigo").textContent = /^-?\d{1,2}$/.test(txt) ? String(parseInt(txt, 10)) : "?";
+  });
+  $("reto-x").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); if (!$("reto-probar").disabled) probarReto(); }
+  });
+
+  /* ---------- Estado inicial ---------- */
+  empezar1(0);
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-pc": function () { traza2.detener(); },
+      "paso-tu": function () { if (estado3 === "nuevo") empezar3(); },
+      "paso-trampa": function () { traza5.detener(); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
