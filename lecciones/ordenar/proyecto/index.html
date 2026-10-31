@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: la tabla de posiciones · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Ordenar: leer en Python los nombres y notas de un salón con input().split(), ordenarlos de mayor a menor con burbuja intercambiando en dos listas a la vez, desempatar por orden alfabético e imprimir la tabla de posiciones con el podio.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.9rem; }
+    .lab .codigo { margin-top: var(--esp-4); }
+    .contador { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { color: var(--color-texto); font-family: var(--fuente-codigo); }
+
+    /* ---------- La tabla de posiciones: una fila por alumno (nombre y nota juntos) ---------- */
+    .tabla-pos { --fila: 2.9rem; --hueco: 0.5rem; --boton: 2.4rem; max-width: 30rem; margin: 0 auto; }
+    .tabla-pos__cabeza, .tabla-pos__fila {
+      display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) 3rem minmax(0, auto);
+      align-items: center; column-gap: var(--esp-3); padding: 0 var(--esp-3);
+    }
+    .tabla-pos--botones .tabla-pos__cabeza, .tabla-pos--botones .tabla-pos__fila { margin-right: calc(var(--boton) + var(--esp-2)); }
+    .tabla-pos__cabeza { margin-bottom: var(--esp-1); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .tabla-pos__cabeza > :nth-child(3) { text-align: right; }
+    .tabla-pos__cuerpo { position: relative; }
+    .tabla-pos__fila {
+      position: relative; height: var(--fila);
+      border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie);
+      font-weight: 700; transition: border-color var(--dur-rapida), background-color var(--dur-rapida), box-shadow var(--dur-rapida);
+    }
+    .tabla-pos__puesto { font-family: var(--fuente-codigo); color: var(--color-azul); white-space: nowrap; }
+    .tabla-pos__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tabla-pos__nota { font-family: var(--fuente-codigo); font-size: var(--texto-md); text-align: right; }
+    .tabla-pos__marca { font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); white-space: nowrap; }
+    .medalla { font-size: 1.1em; }
+    .tabla-pos__fila--entra { animation: lista-entra 420ms var(--curva-rebote) both; }
+    .tabla-pos__fila--compara { border-color: var(--color-azul); background: var(--color-azul-suave); box-shadow: 0 3px 0 var(--color-azul); }
+    .tabla-pos__fila--imprime { border-color: var(--color-acento); box-shadow: 0 3px 0 var(--color-acento); }
+    .tabla-pos__fila--desaprobado { background: var(--color-pista-suave); }
+    .tabla-pos__fila--error .tabla-pos__nota { color: var(--color-error); }
+    .tabla-pos__fila--podio { border-color: #e2b23c; }
+    .tabla-pos--ordenada .tabla-pos__fila { border-color: var(--color-ok); }
+    .tabla-pos__entre { position: relative; height: var(--hueco); }
+    .tabla-pos__cambiar {
+      position: absolute; z-index: 2; right: 0; top: 50%; transform: translateY(-50%);
+      width: var(--boton); height: var(--boton); padding: 0; border-radius: 50%;
+      border: 2px solid var(--color-azul); background: var(--color-superficie); color: var(--color-azul);
+      font: inherit; font-size: 1.15rem; font-weight: 700; line-height: 1; cursor: pointer;
+      box-shadow: 0 2px 0 var(--color-azul); transition: background-color var(--dur-rapida), transform var(--dur-rapida);
+    }
+    .tabla-pos__cambiar:hover:not(:disabled) { background: var(--color-azul-suave); }
+    .tabla-pos__cambiar:active:not(:disabled) { transform: translateY(-50%) scale(0.92); }
+    .tabla-pos__cambiar:focus-visible { box-shadow: var(--foco); }
+    .tabla-pos__cambiar:disabled { opacity: 0.35; cursor: default; }
+    .tabla-pos__vacia { margin: 0; padding: var(--esp-3); border: 2px dashed var(--color-borde); border-radius: var(--radio-sm); text-align: center; font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); }
+    .tabla-pos--compacta { --fila: 2.4rem; --hueco: 0.3rem; }
+    .tabla-pos--compacta .tabla-pos__nota { font-size: var(--texto-sm); }
+
+    /* ---------- Dos listas paralelas, con los casilleros del mismo ancho: cada columna, un alumno ---------- */
+    .par-listas { display: grid; gap: var(--esp-1); }
+    .par-listas .lista { padding: var(--esp-1) 0; }
+    .par-listas .lista__fila { --c: clamp(1.7rem, calc(100cqi / 13), 2.4rem); }
+    .par-listas .lista__valor { min-width: calc(var(--c) * 2); }
+    .par-listas .lista__nombres { margin-bottom: var(--esp-2); }
+    .estado-listas { min-height: 3em; margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .estado-listas strong, .estado-listas code { color: var(--color-texto); }
+    .estado-listas--mal strong { color: var(--color-pista); }
+    .estado-listas--bien strong { color: var(--color-ok); }
+
+    /* ---------- Consola que espera un alumno por línea ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 9rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .atajos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); width: 100%; font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .atajos .btn { min-height: 2.25rem; padding: 0 var(--esp-3); font-family: var(--fuente-codigo); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: #a8480a; }
+    .consola .consola__linea { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .consola .consola__linea--error { color: var(--color-error); }
+    .registro { max-height: 12rem; overflow-y: auto; overscroll-behavior: contain; }
+    .vuelta-actual { margin: 0 0 var(--esp-3); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Opciones y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__etiqueta { font-family: var(--fuente-codigo); overflow-wrap: anywhere; }
+    .prueba__salida { grid-column: 1; grid-row: 2; font-family: var(--fuente-codigo); font-weight: 700; overflow-wrap: anywhere; }
+    .prueba__marca { grid-column: 2; grid-row: 1 / span 2; font-weight: 700; font-size: var(--texto-md); }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+    .consola-prueba { margin-top: var(--esp-4); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo.codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.78rem; }
+      .registro { max-height: 10rem; }
+      .entrada input { width: 7.5rem; }
+      .tabla-pos { --fila: 2.6rem; --boton: 2.25rem; }
+      .tabla-pos__cabeza, .tabla-pos__fila { grid-template-columns: 3rem minmax(0, 1fr) 2.4rem minmax(0, auto); column-gap: var(--esp-2); padding: 0 var(--esp-2); }
+      .tabla-pos--compacta { --fila: 2.3rem; }
+    }
+    /* En escritorio, la consola más baja deja ver la explicación */
+    @media (min-width: 1024px) {
+      #paso-jugar .registro { max-height: 8.5rem; }
+      /* El programa completo tiene una línea de 66 caracteres: así cabe sin desplazarse */
+      #t-codigo, #r-codigo { font-size: 0.8rem; }
+    }
+    /* Opciones cortas de dos en dos, para que el paso quepa en la pantalla */
+    @media (min-width: 1280px) {
+      #paso-leer .opciones, #paso-mayor .opciones, #paso-dos .opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    /* En el móvil, la tabla y las misiones van antes que el programa, que es largo */
+    @media (max-width: 1023.98px) {
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { display: contents; }
+      #paso-jugar .consola, #paso-jugar .fila-botones, #paso-jugar .explicacion { order: 0; }
+      #paso-jugar .lab__visual { order: 1; margin-top: var(--esp-4); }
+      #paso-jugar .lab__resultado { order: 2; margin-top: var(--esp-4); }
+      #paso-jugar .reto-codigo { order: 3; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Ordenar a mano -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="h-demo">
+      <span class="paso__etiqueta">Ordenar 7/7 · Proyecto</span>
+      <h1 class="paso__titulo" id="h-demo">Proyecto: la tabla de posiciones</h1>
+      <p>Cinco alumnos y sus notas. Ordena la tabla de <strong>mayor a menor nota</strong>: toca <strong>⇅</strong> entre dos vecinos para cambiarlos de puesto. Mira también las listas <code>nombres</code> y <code>notas</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div id="d-tabla"></div>
+          <p class="contador" id="d-contador" aria-live="polite"></p>
+          <div class="fila-botones" id="d-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="d-desordenar">↺ Desordenar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par-listas">
+            <div id="d-nombres"></div>
+            <div id="d-notas"></div>
+          </div>
+          <p class="estado-listas" id="d-estado" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: leer los datos -->
+    <section class="paso" id="paso-leer" data-comprobar aria-labelledby="h-leer">
+      <span class="paso__etiqueta">Parte 1 de 5</span>
+      <h2 class="paso__titulo" id="h-leer">Leer los datos</h2>
+      <p>Cada línea trae un alumno: <code>Ana 17</code>. <code>.split()</code> la corta en <code>['Ana', '17']</code>. ¿Qué va en el espacio en blanco? Lo probamos con Ana 17, Luis 14 y Rosa 9.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" id="p1-codigo" aria-label="Tu programa"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="sin-int"><span>nombres.append(partes[0])
+notas.append(partes[1])</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="reves"><span>nombres.append(partes[1])
+notas.append(int(partes[0]))</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>nombres.append(partes[0])
+notas.append(int(partes[1]))</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="uno-dos"><span>nombres.append(partes[1])
+notas.append(int(partes[2]))</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: de mayor a menor -->
+    <section class="paso" id="paso-mayor" data-comprobar aria-labelledby="h-mayor">
+      <span class="paso__etiqueta">Parte 2 de 5</span>
+      <h2 class="paso__titulo" id="h-mayor">De mayor a menor</h2>
+      <p>Esta es la burbuja que ya conoces: con <code>&gt;</code> ordena de menor a mayor. La tabla va al revés: la nota más alta, primero. ¿Qué condición va en el <code>if</code>?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" id="p2-codigo" aria-label="Tu programa"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">¿Qué condición va en el if?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="disfraz"><span>notas[j + 1] &lt; notas[j]</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>notas[j] &lt; notas[j + 1]</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="i"><span>notas[j] &lt; notas[i]</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="igual"><span>notas[j] &gt; notas[j + 1]</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: mover las dos listas -->
+    <section class="paso" id="paso-dos" data-comprobar aria-labelledby="h-dos">
+      <span class="paso__etiqueta">Parte 3 de 5</span>
+      <h2 class="paso__titulo" id="h-dos">Mover las dos listas</h2>
+      <p>Ahora <code>ordenar</code> recibe las dos listas, pero solo intercambia las notas. Toca <strong>▶ Ordenar</strong> y mira qué les pasa a los nombres. ¿Qué falta en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p3-codigo" aria-label="Tu programa"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">¿Qué falta en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="p3" value="sin-aux"><span>nombres[j] = nombres[j + 1]
+nombres[j + 1] = nombres[j]</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="sort"><span>nombres.sort()</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="mismo-aux"><span>nombres[j] = nombres[j + 1]
+nombres[j + 1] = aux</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="bien"><span>aux = nombres[j]
+nombres[j] = nombres[j + 1]
+nombres[j + 1] = aux</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="par-listas">
+            <div id="p3-nombres"></div>
+            <div id="p3-notas"></div>
+          </div>
+          <p class="estado-listas" id="p3-estado" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-ordenar">▶ Ordenar</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: empates -->
+    <section class="paso" id="paso-empate" data-comprobar aria-labelledby="h-empate">
+      <span class="paso__etiqueta">Parte 4 de 5</span>
+      <h2 class="paso__titulo" id="h-empate">Empates</h2>
+      <p>Luis y Ana sacaron 17. Si empatan, va primero quien va antes en el abecedario (<code>"Ana" &lt; "Luis"</code>). <code>menor</code> y <code>empate</code> guardan dos comparaciones. ¿Cuándo hay que intercambiar?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--compacto" id="p4-codigo" aria-label="Tu programa"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">¿Cuándo hay que intercambiar?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="sin-empate"><span>menor or nombres[j] &gt; nombres[j + 1]</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="reves"><span>menor or (empate and nombres[j] &lt; nombres[j + 1])</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="and"><span>menor and nombres[j] &gt; nombres[j + 1]</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>menor or (empate and nombres[j] &gt; nombres[j + 1])</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Parte 5: imprimir los puestos -->
+    <section class="paso" id="paso-puestos" data-comprobar aria-labelledby="h-puestos">
+      <span class="paso__etiqueta">Parte 5 de 5</span>
+      <h2 class="paso__titulo" id="h-puestos">Imprimir los puestos</h2>
+      <p>Las listas ya están ordenadas. Cada vuelta imprime un puesto: <code>1 Hugo 20</code>, <code>2 Ana 17</code>… ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--compacto" id="p5-codigo" aria-label="Tu programa"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p5" value="cero"><span>print(i, nombres[i], notas[i])</span></label>
+          <label class="opcion"><input type="radio" name="p5" value="listas"><span>print(i + 1, nombres, notas)</span></label>
+          <label class="opcion"><input type="radio" name="p5" value="bien"><span>print(i + 1, nombres[i], notas[i])</span></label>
+          <label class="opcion"><input type="radio" name="p5" value="mas-uno"><span>print(i + 1, nombres[i + 1], notas[i + 1])</span></label>
+        </fieldset>
+        <div class="consola consola-prueba" id="p5-consola" hidden><span class="consola__titulo">Consola</span></div>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: el programa completo -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="h-jugar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-jugar">¡Tu tabla de posiciones funciona!</h2>
+      <p>Tu programa completo, con un detalle más: quien saca menos de 11 sale <strong>desaprobado</strong>. Escribe un alumno por línea y <code>fin</code> para terminar. Cumple las <strong>cuatro misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="registro" id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo" id="t-etiqueta">Alumno:</label>
+              <input type="text" id="t-campo" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+              <div class="atajos" role="group" aria-label="Escribir por ti">
+                <span>o toca:</span>
+                <button type="button" class="btn btn-secundario" id="t-azar">🎲 Un alumno al azar</button>
+                <button type="button" class="btn btn-secundario" id="t-fin">fin</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Ejecutar otra vez</button>
+          </div>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="reto-codigo">
+            <pre class="codigo codigo--compacto" id="t-codigo" aria-label="Tu programa completo"><code></code></pre>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div id="t-tabla"></div>
+          <p class="contador" id="t-contador" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="veinte">Alguien con 20 queda primero</li>
+            <li data-mision="empate">Un empate que se resuelve por el abecedario</li>
+            <li data-mision="cinco">Un salón de 5 alumnos o más</li>
+            <li data-mision="desaprobado">Alguien sale desaprobado (menos de 11)</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Dos listas paralelas se ordenan juntas: cada intercambio de notas se repite en los nombres, y un empate se decide por el abecedario.</p>
+        <ul class="usado" aria-label="Lo que usaste">
+          <li>linea.split()</li><li>int(partes[1])</li><li>.append()</li><li>notas[j] &lt; notas[j + 1]</li><li>aux</li><li>menor or (empate and …)</li><li>i + 1</li><li>", ".join(nombres[:3])</li>
+        </ul>
+        <pre class="codigo codigo--compacto resumen-codigo" id="r-codigo" aria-label="Tu programa completo"><code></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir el proyecto</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  var MEDALLAS = ["🥇", "🥈", "🥉"];
+  // Como Pasos.feedback, pero el mensaje admite <code> y <strong> (textos de la página, nunca lo que escribe el alumno)
+  function avisar(el, tipo, html) {
+    Pasos.feedback(el, tipo, "");
+    el.lastChild.innerHTML = html;
+  }
+
+  /* ---------- Colorear Python ----------
+     Cada línea es texto plano; @@id@@ deja un espacio en blanco (.hueco) con ese id.
+     Un comentario con ✓ es una parte ya resuelta (se ve atenuada). */
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not)$/;
+  function tk(clase, t) { return '<span class="tk-' + clase + '">' + esc(t) + "</span>"; }
+  function py(src) {
+    var html = "", m;
+    var re = /(@@[\w-]+@@)|("[^"]*")|(#.*)|(\d+)|([A-Za-z_]\w*)|([\s\S])/g;
+    while ((m = re.exec(src))) {
+      if (m[1]) html += '<span class="hueco" id="' + m[1].slice(2, -2) + '">?</span>';
+      else if (m[2]) html += tk("texto", m[2]);
+      else if (m[3]) html += tk("comentario", m[3]);
+      else if (m[4]) html += tk("numero", m[4]);
+      else if (m[5]) {
+        var clase = PALABRAS.test(m[5]) ? "palabra" : src.charAt(re.lastIndex) === "(" ? "funcion" : "variable";
+        html += tk(clase, m[5]);
+      }
+      else html += esc(m[6]);
+    }
+    return html;
+  }
+  function pintarCodigo(pre, lineas) {
+    pre.querySelector("code").innerHTML = lineas.map(function (l) {
+      var hecha = /^\s*#.*✓/.test(l);
+      return '<span class="linea' + (hecha ? " linea--hecha" : "") + '">' + (l === "" ? " " : py(l)) + "</span>";
+    }).join("");
+  }
+
+  /* ---------- Python simulado ---------- */
+  // linea.split(): corta en los espacios (varios seguidos cuentan como uno)
+  function partir(t) { return t.split(/\s+/).filter(function (x) { return x !== ""; }); }
+  // int(texto): solo dígitos, con signo opcional (y guiones bajos entre dígitos, como Python)
+  function pyInt(t) {
+    if (typeof t !== "string" || !/^[+-]?\d+(_\d+)*$/.test(t)) return null;
+    return parseInt(t.replace(/_/g, ""), 10);
+  }
+  function errorInt(t) { return "ValueError: invalid literal for int() with base 10: " + Lista.python(t); }
+  var INDEX_ERROR = "IndexError: list index out of range";
+
+  /* La burbuja de dos listas. cond(nombres, notas, j, i) dice si se intercambia; las notas
+     se intercambian siempre con aux; mover(nombres, notas, j, aux) hace lo de los nombres.
+     Devuelve { nombres, notas, ev: [{ j, cambia, nombres, notas }], comparaciones, intercambios } */
+  function burbuja(nombres, notas, cond, mover) {
+    var nom = nombres.slice(), not = notas.slice(), ev = [], c = 0, s = 0;
+    for (var i = 0; i < not.length - 1; i++) {
+      for (var j = 0; j < not.length - 1 - i; j++) {
+        c++;
+        var cambia = !!cond(nom, not, j, i);
+        if (cambia) {
+          s++;
+          var aux = not[j];
+          not[j] = not[j + 1];
+          not[j + 1] = aux;
+          if (mover) mover(nom, not, j, aux);
+        }
+        ev.push({ j: j, cambia: cambia, nombres: nom.slice(), notas: not.slice() });
+      }
+    }
+    return { nombres: nom, notas: not, ev: ev, comparaciones: c, intercambios: s };
+  }
+  function moverBien(nom, not, j) { var aux = nom[j]; nom[j] = nom[j + 1]; nom[j + 1] = aux; }
+  // La condición del programa completo: menor or (empate and nombres[j] > nombres[j + 1])
+  function condFinal(nom, not, j) {
+    var menor = not[j] < not[j + 1];
+    var empate = not[j] === not[j + 1];
+    return menor || (empate && nom[j] > nom[j + 1]);
+  }
+  function enOrden(nom, not) {
+    for (var k = 0; k < not.length - 1; k++) if (condFinal(nom, not, k)) return false;
+    return true;
+  }
+  function iguales(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+  /* ---------- La tabla de posiciones ----------
+     crearTabla(el, { botones: fn(k), indice, compacta, vacio, cabecera })
+       botones: un ⇅ entre cada par de filas vecinas; tocarlo llama fn(k) (filas k y k + 1)
+       indice: la primera columna muestra i (desde 0) en vez del puesto
+     t.poner([{ nombre, nota }]), t.agregar(nombre, nota, error), t.intercambiar(j),
+     t.comparar(j | null), t.imprime(k | null), t.puestos({ desaprobado } | null),
+     t.bloquear(bool), t.cabecera([…]), t.ordenada(bool), t.filas */
+  function crearTabla(el, cfg) {
+    el.classList.add("tabla-pos");
+    if (cfg.botones) el.classList.add("tabla-pos--botones");
+    if (cfg.compacta) el.classList.add("tabla-pos--compacta");
+    el.innerHTML = '<div class="tabla-pos__cabeza" aria-hidden="true"><span></span><span></span><span></span><span></span></div><div class="tabla-pos__cuerpo"></div>';
+    var cabeza = el.firstChild;
+    var cuerpo = el.lastChild;
+    var filas = [];
+    var entres = [];
+    var conPuestos = null;
+    var bloqueada = false;
+
+    function cabecera(textos) { textos.forEach(function (t, k) { cabeza.children[k].innerHTML = t; }); }
+    cabecera(cfg.cabecera || ["Puesto", "Alumno", "Nota", ""]);
+
+    function entre(k) {
+      if (entres[k]) return entres[k];
+      var d = document.createElement("div");
+      d.className = "tabla-pos__entre";
+      if (cfg.botones) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "tabla-pos__cambiar";
+        b.textContent = "⇅";
+        b.addEventListener("click", function () { cfg.botones(k); });
+        d.appendChild(b);
+      }
+      entres[k] = d;
+      return d;
+    }
+
+    function nuevaFila(f) {
+      var d = document.createElement("div");
+      d.className = "tabla-pos__fila";
+      d.innerHTML = '<span class="tabla-pos__puesto"></span><span class="tabla-pos__nombre"></span><span class="tabla-pos__nota"></span><span class="tabla-pos__marca"></span>';
+      d.children[1].textContent = f.nombre;
+      d.children[2].textContent = f.error ? "✗" : String(f.nota);
+      if (f.error) d.classList.add("tabla-pos__fila--error");
+      f.el = d;
+      return f;
+    }
+
+    function renumerar() {
+      filas.forEach(function (f, k) {
+        var p = f.el.children[0];
+        var podio = !!conPuestos && k < 3;
+        var mal = !!conPuestos && conPuestos.desaprobado && !f.error && f.nota < 11;
+        if (conPuestos) p.innerHTML = String(k + 1) + (podio ? ' <span class="medalla" aria-hidden="true">' + MEDALLAS[k] + "</span>" : "");
+        else p.textContent = cfg.indice ? String(k) : String(k + 1);
+        f.el.classList.toggle("tabla-pos__fila--podio", podio);
+        f.el.classList.toggle("tabla-pos__fila--desaprobado", mal);
+        f.el.children[3].textContent = mal ? "desaprobado" : "";
+      });
+      entres.forEach(function (d, k) {
+        var b = d.firstChild;
+        if (!b || k >= filas.length - 1) return;
+        b.disabled = bloqueada;
+        b.setAttribute("aria-label", "Intercambiar los puestos " + (k + 1) + " y " + (k + 2) + ": " + filas[k].nombre + " y " + filas[k + 1].nombre);
+      });
+    }
+
+    function construir() {
+      var activo = document.activeElement;
+      cuerpo.textContent = "";
+      filas.forEach(function (f, k) {
+        cuerpo.appendChild(f.el);
+        if (k < filas.length - 1) cuerpo.appendChild(entre(k));
+      });
+      if (!filas.length && cfg.vacio) {
+        var v = document.createElement("p");
+        v.className = "tabla-pos__vacia";
+        v.textContent = cfg.vacio;
+        cuerpo.appendChild(v);
+      }
+      renumerar();
+      if (activo && cuerpo.contains(activo)) activo.focus();
+    }
+
+    function poner(lista) {
+      filas = lista.map(function (a) { return nuevaFila({ nombre: a.nombre, nota: a.nota, error: !!a.error }); });
+      conPuestos = null;
+      el.classList.remove("tabla-pos--ordenada");
+      construir();
+    }
+
+    function agregar(nombre, nota, error) {
+      var f = nuevaFila({ nombre: nombre, nota: nota, error: !!error });
+      filas.push(f);
+      construir();
+      if (!Pasos.reducirMovimiento) f.el.classList.add("tabla-pos__fila--entra");
+    }
+
+    // Las filas j y j + 1 cambian de lugar: cada una se desliza desde donde estaba
+    function intercambiar(j) {
+      var antes = [filas[j].el.getBoundingClientRect().top, filas[j + 1].el.getBoundingClientRect().top];
+      var a = filas[j];
+      filas[j] = filas[j + 1];
+      filas[j + 1] = a;
+      construir();
+      if (Pasos.reducirMovimiento || !document.body.animate) return;
+      [[filas[j], antes[1]], [filas[j + 1], antes[0]]].forEach(function (par, k) {
+        var dy = par[1] - par[0].el.getBoundingClientRect().top;
+        par[0].el.style.zIndex = k === 0 ? "1" : "";
+        var an = par[0].el.animate([{ transform: "translateY(" + dy + "px)" }, { transform: "none" }],
+          { duration: 420, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)" });
+        an.onfinish = an.oncancel = function () { par[0].el.style.zIndex = ""; };
+      });
+    }
+
+    function resaltar(clase, ks) {
+      filas.forEach(function (f, k) { f.el.classList.toggle(clase, ks.indexOf(k) !== -1); });
+    }
+
+    return {
+      poner: poner,
+      agregar: agregar,
+      intercambiar: intercambiar,
+      comparar: function (j) { resaltar("tabla-pos__fila--compara", j === null ? [] : [j, j + 1]); },
+      imprime: function (k) { resaltar("tabla-pos__fila--imprime", k === null ? [] : [k]); },
+      puestos: function (op) { conPuestos = op; renumerar(); },
+      bloquear: function (si) { bloqueada = si; renumerar(); },
+      cabecera: cabecera,
+      ordenada: function (si) { el.classList.toggle("tabla-pos--ordenada", si); },
+      get filas() { return filas.map(function (f) { return { nombre: f.nombre, nota: f.nota, error: f.error }; }); }
+    };
+  }
+
+  /* ---------- Dos listas que se mueven paso a paso ----------
+     aplicar(lista, viejos, nuevos): si nuevos son los mismos valores en otro orden, los
+     casilleros viajan (reordenar); si no, los que cambian reciben su valor nuevo volando
+     desde otro casillero que ya lo tenía. */
+  function aplicar(l, viejos, nuevos, otras) {
+    if (iguales(viejos, nuevos)) return;
+    var usados = [], orden = [];
+    var permutacion = viejos.length === nuevos.length && nuevos.every(function (v) {
+      for (var k = 0; k < viejos.length; k++) {
+        if (!usados[k] && viejos[k] === v) { usados[k] = true; orden.push(k); return true; }
+      }
+      return false;
+    });
+    if (permutacion) { l.reordenar(orden); return; }
+    nuevos.forEach(function (v, k) {
+      if (viejos[k] === v) return;
+      var origen = null;
+      [[l, viejos]].concat(otras || []).some(function (par) {
+        var i = par[1].indexOf(v);
+        if (i !== -1 && !(par[0] === l && i === k)) { origen = par[0].valor(i); return true; }
+        return false;
+      });
+      l.cambiar(k, v, origen || undefined);
+    });
+  }
+
+  function marcarParejas(lNom, lNot, nom, not, deQuien) {
+    function clase(k) { return deQuien[nom[k]] === not[k] ? "lista__casilla--igual" : "lista__casilla--distinta"; }
+    lNom.clases(function (k) { return clase(k); });
+    lNot.clases(function (k) { return clase(k); });
+  }
+
+  /* ---------- 1. Ordenar la tabla a mano ---------- */
+  var D_ALUMNOS = [{ nombre: "Luis", nota: 14 }, { nombre: "Ana", nota: 17 }, { nombre: "Rosa", nota: 9 }, { nombre: "Hugo", nota: 20 }, { nombre: "Eva", nota: 11 }];
+  var D_MINIMO = 5;   // cuántos pares están al revés: lo justo de intercambios
+  var demo = {};
+  var dTabla = crearTabla($("d-tabla"), { botones: tocarDemo });
+  var dNombres = Lista.crear($("d-nombres"), [], { nombres: ["nombres"], capacidad: 5 });
+  var dNotas = Lista.crear($("d-notas"), [], { nombres: ["notas"], capacidad: 5 });
+
+  function contadorDemo() {
+    $("d-contador").innerHTML = "Intercambios: <strong>" + demo.intercambios + "</strong>";
+  }
+
+  function empezarDemo() {
+    demo = { intercambios: 0, hecho: false };
+    dTabla.poner(D_ALUMNOS);
+    dTabla.bloquear(false);
+    dNombres.valores(D_ALUMNOS.map(function (a) { return a.nombre; }));
+    dNotas.valores(D_ALUMNOS.map(function (a) { return a.nota; }));
+    dNombres.clases(null);
+    dNotas.clases(null);
+    $("d-estado").innerHTML = "Cada alumno ocupa el <strong>mismo casillero</strong> en las dos listas: Luis y su 14 están en el 0.";
+    $("d-otra").hidden = true;
+    Pasos.limpiarFeedback($("d-fb"));
+    contadorDemo();
+  }
+
+  function tocarDemo(k) {
+    if (demo.hecho) return;
+    var f = dTabla.filas;
+    var a = f[k], b = f[k + 1];
+    dTabla.intercambiar(k);
+    var orden = f.map(function (x, i) { return i === k ? k + 1 : i === k + 1 ? k : i; });
+    dNombres.reordenar(orden);
+    dNotas.reordenar(orden);
+    var marca = function (i) { return i === k || i === k + 1 ? "lista__casilla--cambio" : ""; };
+    dNombres.clases(marca);
+    dNotas.clases(marca);
+    demo.intercambios++;
+    contadorDemo();
+    $("d-estado").innerHTML = "<strong>" + esc(b.nombre) + "</strong> y su " + b.nota + " pasaron al casillero " + k +
+      "; <strong>" + esc(a.nombre) + "</strong> y su " + a.nota + ", al " + (k + 1) + ". En las dos listas se movió lo mismo.";
+    var ahora = dTabla.filas;
+    if (!enOrden(ahora.map(function (x) { return x.nombre; }), ahora.map(function (x) { return x.nota; }))) return;
+    demo.hecho = true;
+    dTabla.bloquear(true);
+    dTabla.puestos({ desaprobado: false });
+    dTabla.ordenada(true);
+    dNombres.clases(function () { return "lista__casilla--igual"; });
+    dNotas.clases(function () { return "lista__casilla--igual"; });
+    $("d-estado").innerHTML = "Hugo sigue con su 20, Ana con su 17…: <strong>cada nombre con su nota</strong>.";
+    $("d-otra").hidden = false;
+    avisar($("d-fb"), "ok", "¡Tabla ordenada en " + demo.intercambios + " intercambios!" +
+      (demo.intercambios > D_MINIMO ? " (Se podía en " + D_MINIMO + ".)" : "") +
+      " Cada vez que dos alumnos cambiaron de puesto, su nombre y su nota viajaron juntos: en <code>nombres</code> y en <code>notas</code> se movió el mismo casillero. Eso hará tu programa, en cinco partes.");
+    leccion.desbloquear();
+  }
+
+  $("d-desordenar").addEventListener("click", function () {
+    empezarDemo();
+    var b = $("d-tabla").querySelector(".tabla-pos__cambiar");
+    if (b) b.focus();
+  });
+
+  /* ---------- Pruebas y pasos de elegir una opción ---------- */
+  /* Pinta una lista de pruebas: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = p.etiqueta;
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* cfg: { id, nombre, correcta, hueco, sangria, probar(valor) → filas de pruebas,
+            mostrar(valor) (en vez de probar), limpiar(), ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiar() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      if (lista) lista.hidden = true;
+      if (cfg.limpiar) cfg.limpiar();
+      Pasos.limpiarFeedback(fb);
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiar();
+      $(cfg.hueco).textContent = "?";
+      if (cfg.alEntrar) cfg.alEntrar();
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      if (cfg.probar) pintarPruebas(lista, cfg.probar(marcada.value));
+      if (cfg.mostrar) cfg.mostrar(marcada.value);
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        avisar(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      avisar(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        // El espacio en blanco es un bloque: las líneas de una opción larga quedan alineadas con la primera
+        $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return {
+      entrar: entrar,
+      comprobar: comprobar,
+      elegida: function () {
+        var m = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+        return m ? m.value : null;
+      }
+    };
+  }
+
+  /* ---------- 2. Parte 1: leer los datos ---------- */
+  pintarCodigo($("p1-codigo"), [
+    "nombres = []",
+    "notas = []",
+    "while True:",
+    '    linea = input("Alumno: ")',
+    '    if linea == "fin":',
+    "        break",
+    "    partes = linea.split()",
+    "    @@p1-hueco@@"
+  ]);
+  var LINEAS_P1 = ["Ana 17", "Luis 14", "Rosa 9"];
+
+  // Lo que hace cada opción con las tres líneas: { nombres, notas, error, linea }
+  function leerP1(valor) {
+    var nom = [], not = [];
+    for (var k = 0; k < LINEAS_P1.length; k++) {
+      var p = partir(LINEAS_P1[k]);
+      var n;
+      if (valor === "bien") { nom.push(p[0]); not.push(pyInt(p[1])); }
+      else if (valor === "sin-int") { nom.push(p[0]); not.push(p[1]); }
+      else if (valor === "reves") {
+        nom.push(p[1]);
+        n = pyInt(p[0]);
+        if (n === null) return { error: errorInt(p[0]), linea: LINEAS_P1[k] };
+        not.push(n);
+      } else {
+        nom.push(p[1]);
+        if (p[2] === undefined) return { error: INDEX_ERROR, linea: LINEAS_P1[k] };
+        not.push(pyInt(p[2]));
+      }
+    }
+    return { nombres: nom, notas: not };
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-leer",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) {
+      var r = leerP1(valor);
+      if (r.error) return [{ etiqueta: "Alumno: " + r.linea, salida: r.error, ok: false }];
+      var mas = r.notas[0] > r.notas[2];
+      return [
+        { etiqueta: "nombres", salida: Lista.python(r.nombres), ok: iguales(r.nombres, ["Ana", "Luis", "Rosa"]) },
+        { etiqueta: "notas", salida: Lista.python(r.notas), ok: iguales(r.notas, [17, 14, 9]) },
+        { etiqueta: "¿Ana sacó más que Rosa? notas[0] > notas[2]", salida: mas ? "True" : "False", ok: mas }
+      ];
+    },
+    ok: "¡Eso es! <code>.split()</code> corta «Ana 17» en <code>['Ana', '17']</code>: el nombre va a <code>nombres</code> y la nota, pasada a número con <code>int()</code>, a <code>notas</code>. Mismo índice, mismo alumno.",
+    pistas: {
+      "sin-int": "Las notas quedaron como textos (con comillas). Entre textos, <code>'17' &gt; '9'</code> es <code>False</code>: se compara letra por letra y el 1 va antes que el 9. Al ordenar, Rosa quedaría primera. Falta <code>int()</code>.",
+      reves: "Al revés: <code>partes[0]</code> es el nombre y <code>partes[1]</code> la nota. <code>int('Ana')</code> no puede volver número a Ana: <code>ValueError</code>.",
+      "uno-dos": "Los índices empiezan en 0: <code>partes</code> tiene dos casilleros, <code>partes[0]</code> y <code>partes[1]</code>. <code>partes[2]</code> no existe: <code>IndexError</code>."
+    }
+  });
+
+  /* ---------- 3. Parte 2: de mayor a menor ---------- */
+  pintarCodigo($("p2-codigo"), [
+    "def ordenar(notas):",
+    "    for i in range(len(notas) - 1):",
+    "        for j in range(len(notas) - 1 - i):",
+    "            if @@p2-hueco@@:",
+    "                aux = notas[j]",
+    "                notas[j] = notas[j + 1]",
+    "                notas[j + 1] = aux"
+  ]);
+  var COND_P2 = {
+    bien: function (nom, n, j) { return n[j] < n[j + 1]; },
+    igual: function (nom, n, j) { return n[j] > n[j + 1]; },
+    disfraz: function (nom, n, j) { return n[j + 1] < n[j]; },
+    i: function (nom, n, j, i) { return n[j] < n[i]; }
+  };
+  var LISTAS_P2 = [[14, 17, 9, 20, 11], [6, 11, 15, 18], [13, 20, 13, 5]];
+
+  var parte2 = crearEleccion({
+    id: "paso-mayor",
+    nombre: "p2",
+    correcta: "bien",
+    hueco: "p2-hueco",
+    probar: function (valor) {
+      return LISTAS_P2.map(function (l) {
+        var r = burbuja([], l, COND_P2[valor]);
+        var debe = l.slice().sort(function (a, b) { return b - a; });
+        return { etiqueta: "notas = " + Lista.python(l), salida: "queda " + Lista.python(r.notas), ok: iguales(r.notas, debe) };
+      });
+    },
+    ok: "¡Bien! Ahora intercambia cuando el de la izquierda es <strong>menor</strong>: los menores se van a la derecha y el mayor queda primero. Solo cambió <code>&gt;</code> por <code>&lt;</code>.",
+    pistas: {
+      igual: "Esa es la burbuja de siempre: intercambia cuando el de la izquierda es mayor, así que los mayores se van al final. Ordena de menor a mayor, y en la tabla el mayor va primero.",
+      disfraz: "Tiene un <code>&lt;</code>, pero <code>notas[j + 1] &lt; notas[j]</code> dice lo mismo que <code>notas[j] &gt; notas[j + 1]</code>: el de la izquierda es mayor. Sigue ordenando de menor a mayor.",
+      i: "<code>notas[i]</code> no es el vecino: <code>i</code> cuenta las pasadas. La burbuja compara siempre dos vecinos, <code>j</code> y <code>j + 1</code>."
+    }
+  });
+
+  /* ---------- 4. Parte 3: mover las dos listas ---------- */
+  pintarCodigo($("p3-codigo"), [
+    "def ordenar(nombres, notas):",
+    "    for i in range(len(notas) - 1):",
+    "        for j in range(len(notas) - 1 - i):",
+    "            if notas[j] < notas[j + 1]:",
+    "                aux = notas[j]",
+    "                notas[j] = notas[j + 1]",
+    "                notas[j + 1] = aux",
+    "                @@p3-hueco@@"
+  ]);
+  var P3_NOMBRES = D_ALUMNOS.map(function (a) { return a.nombre; });
+  var P3_NOTAS = D_ALUMNOS.map(function (a) { return a.nota; });
+  var P3_DE = {};
+  D_ALUMNOS.forEach(function (a) { P3_DE[a.nombre] = a.nota; });
+  var MOVER_P3 = {
+    ninguno: null,
+    bien: moverBien,
+    "sin-aux": function (nom, not, j) { nom[j] = nom[j + 1]; nom[j + 1] = nom[j]; },
+    "mismo-aux": function (nom, not, j, aux) { nom[j] = nom[j + 1]; nom[j + 1] = aux; },
+    sort: function (nom) { nom.sort(); }
+  };
+  var p3Codigo = $("p3-codigo");
+  var p3Nombres = Lista.crear($("p3-nombres"), P3_NOMBRES, { nombres: ["nombres"], capacidad: 5 });
+  var p3Notas = Lista.crear($("p3-notas"), P3_NOTAS, { nombres: ["notas"], capacidad: 5 });
+  var p3 = { token: 0 };
+
+  function reiniciarP3() {
+    p3.token++;
+    p3Nombres.valores(P3_NOMBRES);
+    p3Notas.valores(P3_NOTAS);
+    Codigo.limpiar(p3Codigo);
+    var e = $("p3-estado");
+    e.className = "estado-listas";
+    e.innerHTML = "Luis sacó 14, Ana 17, Rosa 9, Hugo 20 y Eva 11. Toca <strong>▶ Ordenar</strong>.";
+  }
+
+  function estadoP3(nom, not) {
+    var e = $("p3-estado");
+    var mal = [];
+    nom.forEach(function (x, k) { if (P3_DE[x] !== not[k]) mal.push(k); });
+    var perdidos = P3_NOMBRES.filter(function (x) { return nom.indexOf(x) === -1; });
+    if (!mal.length) {
+      e.className = "estado-listas estado-listas--bien";
+      e.innerHTML = "<strong>Cada alumno con su nota</strong>: Hugo primero con su 20, Rosa última con su 9.";
+      return;
+    }
+    e.className = "estado-listas estado-listas--mal";
+    var k = mal[0];
+    var quien = typeof nom[k] === "string" ? esc(nom[k]) : "el número " + nom[k];
+    var detalle = typeof nom[k] === "string"
+      ? "<strong>" + quien + "</strong> quedó con " + not[k] + ", pero sacó " + P3_DE[nom[k]] + "."
+      : "En <code>nombres</code> quedó <strong>" + quien + "</strong>: ¡no es un nombre!";
+    if (perdidos.length) detalle += " Y <strong>" + perdidos.map(esc).join(", ") + "</strong> " + (perdidos.length === 1 ? "desapareció" : "desaparecieron") + ".";
+    e.innerHTML = "<strong>" + mal.length + " de 5</strong> con una nota que no es suya. " + detalle;
+  }
+
+  function ordenarP3(variante) {
+    reiniciarP3();
+    var token = p3.token;
+    var r = burbuja(P3_NOMBRES, P3_NOTAS, COND_P2.bien, MOVER_P3[variante]);
+    var swaps = r.ev.filter(function (e) { return e.cambia; });
+    var nom = P3_NOMBRES.slice(), not = P3_NOTAS.slice();
+    var k = 0;
+    $("p3-estado").textContent = "Ordenando…";
+    function paso() {
+      if (token !== p3.token) return;
+      if (k >= swaps.length) {
+        Codigo.limpiar(p3Codigo);
+        marcarParejas(p3Nombres, p3Notas, nom, not, P3_DE);
+        estadoP3(nom, not);
+        return;
+      }
+      var e = swaps[k++];
+      var marca = function (i) { return i === e.j || i === e.j + 1 ? "lista__casilla--cambio" : ""; };
+      Codigo.marcar(p3Codigo, { activas: variante === "ninguno" ? [3, 4, 5, 6] : [3, 4, 5, 6, 7] });
+      aplicar(p3Notas, not, e.notas);
+      aplicar(p3Nombres, nom, e.nombres, [[p3Notas, e.notas]]);
+      nom = e.nombres;
+      not = e.notas;
+      p3Nombres.clases(marca);
+      p3Notas.clases(marca);
+      setTimeout(paso, espera(700));
+    }
+    setTimeout(paso, espera(250));
+  }
+
+  $("p3-ordenar").addEventListener("click", function () { ordenarP3(parte3.elegida() || "ninguno"); });
+
+  var parte3 = crearEleccion({
+    id: "paso-dos",
+    nombre: "p3",
+    correcta: "bien",
+    hueco: "p3-hueco",
+    alEntrar: reiniciarP3,
+    limpiar: function () { if (p3.token) reiniciarP3(); },
+    mostrar: function (valor) { ordenarP3(valor); },
+    ok: "¡Eso es! Cada vez que se intercambian dos notas, se intercambian también sus nombres, en los mismos lugares <code>j</code> y <code>j + 1</code>. Así cada alumno viaja con su nota.",
+    pistas: {
+      "sin-aux": "Sin <code>aux</code>, <code>nombres[j] = nombres[j + 1]</code> borra el nombre de la izquierda antes de copiarlo: quedan dos iguales y uno se pierde. Como con las notas, hace falta una caja extra.",
+      "mismo-aux": "<code>aux</code> todavía guarda la nota (<code>aux = notas[j]</code>), no el nombre: un número terminó en <code>nombres</code>. Los nombres necesitan su propio <code>aux = nombres[j]</code>.",
+      sort: "<code>nombres.sort()</code> ordena los nombres por el abecedario, sin mirar las notas: cada uno queda con la nota de otro. A los nombres hay que hacerles el mismo intercambio que a las notas."
+    }
+  });
+
+  /* ---------- 5. Parte 4: empates ---------- */
+  pintarCodigo($("p4-codigo"), [
+    "def ordenar(nombres, notas):",
+    "    for i in range(len(notas) - 1):",
+    "        for j in range(len(notas) - 1 - i):",
+    "            menor = notas[j] < notas[j + 1]",
+    "            empate = notas[j] == notas[j + 1]",
+    "            if @@p4-hueco@@:",
+    "                # intercambiar notas y nombres ✓"
+  ]);
+  var COND_P4 = {
+    bien: condFinal,
+    reves: function (nom, n, j) { return n[j] < n[j + 1] || (n[j] === n[j + 1] && nom[j] < nom[j + 1]); },
+    "sin-empate": function (nom, n, j) { return n[j] < n[j + 1] || nom[j] > nom[j + 1]; },
+    and: function (nom, n, j) { return n[j] < n[j + 1] && nom[j] > nom[j + 1]; }
+  };
+  var SALONES_P4 = [
+    [["Luis", 17], ["Rosa", 12], ["Ana", 17], ["Eva", 9]],
+    [["Ana", 15], ["Luis", 15], ["Hugo", 20]],
+    [["Teo", 11], ["Eva", 18], ["Bea", 11], ["Rosa", 11]]
+  ];
+  function salonTexto(nom, not) { return nom.map(function (x, k) { return x + " " + not[k]; }).join(" · "); }
+
+  var parte4 = crearEleccion({
+    id: "paso-empate",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      return SALONES_P4.map(function (s) {
+        var nom = s.map(function (a) { return a[0]; }), not = s.map(function (a) { return a[1]; });
+        var r = burbuja(nom, not, COND_P4[valor], moverBien);
+        var bien = burbuja(nom, not, condFinal, moverBien);
+        return { etiqueta: salonTexto(nom, not).replace(/ · /g, ", "), salida: salonTexto(r.nombres, r.notas), ok: iguales(r.nombres, bien.nombres) && iguales(r.notas, bien.notas) };
+      });
+    },
+    ok: "¡Perfecto! Se intercambia si el de la izquierda tiene menos nota, <strong>o</strong> si empatan <strong>y</strong> su nombre va después en el abecedario (<code>\"Luis\" &gt; \"Ana\"</code>). Los paréntesis juntan las dos condiciones del empate.",
+    pistas: {
+      reves: "Desempata al revés: con <code>nombres[j] &lt; nombres[j + 1]</code> intercambia cuando el de la izquierda va antes en el abecedario, y Luis queda antes que Ana. Debe intercambiar si va después: <code>&gt;</code>.",
+      "sin-empate": "Sin <code>empate</code>, mira los nombres aunque las notas sean distintas: Eva, con 9, subió sobre Luis y Rosa solo por su nombre. El nombre decide solo cuando las notas empatan.",
+      and: "Con <code>and</code> intercambia solo si el de la izquierda tiene menos nota <strong>y además</strong> su nombre va después. Ana (15) se quedó sobre Hugo (20) porque «Ana» va antes que «Hugo». Basta una de las dos razones: <code>or</code>."
+    }
+  });
+
+  /* ---------- 6. Parte 5: imprimir los puestos ---------- */
+  pintarCodigo($("p5-codigo"), [
+    'nombres = ["Hugo", "Ana", "Luis", "Eva", "Rosa"]',
+    "notas = [20, 17, 14, 11, 9]",
+    "for i in range(len(notas)):",
+    "    @@p5-hueco@@",
+    'print("Podio:", ", ".join(nombres[:3]))'
+  ]);
+  var P5_NOMBRES = ["Hugo", "Ana", "Luis", "Eva", "Rosa"];
+  var P5_NOTAS = [20, 17, 14, 11, 9];
+  function podio(nom) { return "Podio: " + nom.slice(0, 3).join(", "); }
+
+  // Lo que imprime cada opción: { lineas, error }
+  function imprimirP5(valor) {
+    var ls = [];
+    for (var i = 0; i < P5_NOTAS.length; i++) {
+      if (valor === "bien") ls.push((i + 1) + " " + P5_NOMBRES[i] + " " + P5_NOTAS[i]);
+      else if (valor === "cero") ls.push(i + " " + P5_NOMBRES[i] + " " + P5_NOTAS[i]);
+      else if (valor === "listas") ls.push((i + 1) + " " + Lista.python(P5_NOMBRES) + " " + Lista.python(P5_NOTAS));
+      else {
+        if (i + 1 >= P5_NOTAS.length) return { lineas: ls, error: INDEX_ERROR };
+        ls.push((i + 1) + " " + P5_NOMBRES[i + 1] + " " + P5_NOTAS[i + 1]);
+      }
+    }
+    ls.push(podio(P5_NOMBRES));
+    return { lineas: ls };
+  }
+
+  var parte5 = crearEleccion({
+    id: "paso-puestos",
+    nombre: "p5",
+    correcta: "bien",
+    hueco: "p5-hueco",
+    mostrar: function (valor) {
+      var r = imprimirP5(valor);
+      var c = $("p5-consola");
+      Codigo.consola(c, r.lineas.concat(r.error ? [r.error] : []));
+      if (r.error) c.lastElementChild.classList.add("consola__linea--error");
+      c.hidden = false;
+    },
+    limpiar: function () { $("p5-consola").hidden = true; },
+    ok: "¡Listo! <code>i</code> recorre los casilleros 0, 1, 2…; el puesto es <code>i + 1</code> y el alumno, <code>nombres[i]</code> con <code>notas[i]</code>. Y <code>\", \".join(nombres[:3])</code> junta a los tres primeros: el podio.",
+    pistas: {
+      cero: "Los puestos empiezan en 0: <code>i</code> cuenta desde 0, como los índices. Para el puesto se suma 1: <code>i + 1</code>.",
+      listas: "<code>nombres</code> y <code>notas</code> son las listas enteras: cada vuelta imprime todo. Para un alumno, un casillero: <code>nombres[i]</code> y <code>notas[i]</code>.",
+      "mas-uno": "<code>nombres[i + 1]</code> se salta a Hugo, y en la última vuelta se pasa del final: <code>IndexError</code>, y el podio ni se imprime. El puesto es <code>i + 1</code>, pero el casillero es <code>i</code>."
+    }
+  });
+
+  /* ---------- 7. El programa completo ---------- */
+  var RETO = [
+    "def ordenar(nombres, notas):",                                   // 0
+    "    for i in range(len(notas) - 1):",
+    "        for j in range(len(notas) - 1 - i):",
+    "            menor = notas[j] < notas[j + 1]",                      // 3
+    "            empate = notas[j] == notas[j + 1]",
+    "            if menor or (empate and nombres[j] > nombres[j + 1]):",
+    "                aux = notas[j]",                                   // 6
+    "                notas[j] = notas[j + 1]",
+    "                notas[j + 1] = aux",
+    "                aux = nombres[j]",                                 // 9
+    "                nombres[j] = nombres[j + 1]",
+    "                nombres[j + 1] = aux",
+    "",                                                               // 12
+    "nombres = []",
+    "notas = []",
+    "while True:",                                                    // 15
+    '    linea = input("Alumno: ")',
+    '    if linea == "fin":',
+    "        break",                                                  // 18
+    "    partes = linea.split()",
+    "    nombres.append(partes[0])",
+    "    notas.append(int(partes[1]))",                                 // 21
+    "ordenar(nombres, notas)",
+    "for i in range(len(notas)):",
+    "    if notas[i] >= 11:",                                           // 24
+    "        print(i + 1, nombres[i], notas[i])",
+    "    else:",
+    '        print(i + 1, nombres[i], notas[i], "desaprobado")',        // 27
+    'print("Podio:", ", ".join(nombres[:3]))'
+  ];
+  var MAX_ALUMNOS = 8;
+  pintarCodigo($("t-codigo"), RETO);
+  pintarCodigo($("r-codigo"), RETO);
+
+  var tCodigo = $("t-codigo");
+  var registro = $("t-registro");
+  var tTabla = crearTabla($("t-tabla"), { indice: true, compacta: true, vacio: "Aún no hay alumnos.", cabecera: ["i", "nombres[i]", "notas[i]", ""] });
+  var reto = { alumnos: [], filas: 0, final: null, token: 0 };
+  var misiones = {};
+
+  function bajarConsola() {
+    setTimeout(function () { registro.scrollTop = registro.scrollHeight; }, 0);
+  }
+  function cumplir(m) {
+    if (misiones[m]) return;
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+  function contadorReto(c, s) {
+    $("t-contador").innerHTML = c === null ? "" : "Comparaciones: <strong>" + c + "</strong> · Intercambios: <strong>" + s + "</strong>";
+  }
+  function q(t) { return "<code>" + esc(Lista.python(t)) + "</code>"; }
+
+  var config = {
+    prefijo: "t",
+    vueltas: null,
+    rotulo: "Alumno",
+    pregunta: "Alumno:",
+    lineaInput: 16,
+    siguiente: "Escribe otro alumno, o <code>fin</code>.",
+    validar: function (texto) {
+      if (texto !== "fin" && reto.filas >= MAX_ALUMNOS) return "La tabla de la simulación tiene lugar para " + MAX_ALUMNOS + " alumnos: escribe fin para ordenarlos.";
+      return null;
+    },
+    alEmpezar: function () {
+      reto.token++;
+      reto.alumnos = [];
+      reto.filas = 0;
+      reto.final = null;
+      tTabla.poner([]);
+      tTabla.cabecera(["i", "nombres[i]", "notas[i]", ""]);
+      contadorReto(null);
+      return "Escribe nombre y nota con un espacio, como <code>Ana 17</code>.";
+    },
+    alDato: function (texto) {
+      bajarConsola();
+      if (texto === "fin") {
+        reto.final = "fin";
+        return {
+          texto: "<code>linea == \"fin\"</code>: <code>break</code> sale del bucle. <code>ordenar(nombres, notas)</code> compara vecinos y, si hay que intercambiar, mueve la nota y el nombre.",
+          camino: { activas: [16, 17, 18, 22], saltadas: [19, 20, 21] },
+          fin: true
+        };
+      }
+      var partes = partir(texto);
+      var antes = texto === "Fin" || texto === "FIN" ? "«" + esc(texto) + "» no es igual a «fin»: para Python, mayúsculas y minúsculas son distintas. " : "";
+      if (!partes.length) {
+        reto.final = "error";
+        return {
+          texto: "<code>\"\".split()</code> da <code>[]</code>: no hay <code>partes[0]</code>. Python se detiene con <code>IndexError</code> y no llega a imprimir la tabla.",
+          camino: { activas: [16, 17, 19, 20], saltadas: [18] },
+          salida: [INDEX_ERROR],
+          fin: true
+        };
+      }
+      reto.filas++;
+      reto.alumnos.push({ nombre: partes[0], nota: null });
+      if (partes.length < 2) {
+        tTabla.agregar(partes[0], null, true);
+        reto.final = "error";
+        return {
+          texto: antes + q(texto) + ".split() da <code>" + esc(Lista.python(partes)) + "</code>: el nombre entró a <code>nombres</code>, pero no hay <code>partes[1]</code>. Python se detiene con <code>IndexError</code>.",
+          camino: { activas: [16, 17, 19, 20, 21], saltadas: [18] },
+          salida: [INDEX_ERROR],
+          fin: true
+        };
+      }
+      var nota = pyInt(partes[1]);
+      if (nota === null) {
+        tTabla.agregar(partes[0], null, true);
+        reto.final = "error";
+        var porque = /^[+-]?\d+[.,]\d+$/.test(partes[1]) ? " <code>int()</code> no acepta decimales."
+          : partes.length > 2 && /^[+-]?\d+$/.test(partes[partes.length - 1]) ? " <code>.split()</code> corta en cada espacio: con dos nombres, <code>partes[1]</code> es el segundo nombre."
+          : "";
+        return {
+          texto: "<code>int(" + esc(Lista.python(partes[1])) + ")</code> no puede volverlo número: <code>ValueError</code>, y Python se detiene." + porque,
+          camino: { activas: [16, 17, 19, 20, 21], saltadas: [18] },
+          salida: [errorInt(partes[1])],
+          fin: true
+        };
+      }
+      reto.alumnos[reto.alumnos.length - 1].nota = nota;
+      tTabla.agregar(partes[0], nota, false);
+      var i = reto.alumnos.length - 1;
+      var fuera = nota < 0 || nota > 20 ? " Las notas van de 0 a 20, pero el programa no lo revisa." : "";
+      return {
+        texto: "<code>.split()</code> dio <code>" + esc(Lista.python(partes.slice(0, 2))) + "</code>" + (partes.length > 2 ? " (y algo más, que no se usa)" : "") +
+          ": " + esc(partes[0]) + " va a <code>nombres</code> y " + nota + " a <code>notas</code>, los dos en el casillero " + i + "." + fuera,
+        camino: { activas: [16, 17, 19, 20, 21, 15], saltadas: [18] }
+      };
+    },
+    alTerminar: function () {
+      bajarConsola();
+      if (reto.final === "error") {
+        registro.lastElementChild.classList.add("consola__linea--error");
+        $("t-vuelta").textContent = "El programa se detuvo";
+        avisar($("t-fb"), "pista", "Un error detiene todo el programa (más adelante aprenderás a atraparlos). Toca «Ejecutar otra vez» y escribe cada alumno así: nombre, un espacio y la nota.");
+        return;
+      }
+      $("t-vuelta").textContent = "Ordenando…";
+      animarOrden();
+    }
+  };
+  var bucle = BucleInput.crear(config);
+
+  /* fin: la burbuja mueve las filas de la tabla (nombre y nota juntos) y luego imprime */
+  function animarOrden() {
+    var token = ++reto.token;
+    var nom = reto.alumnos.map(function (a) { return a.nombre; });
+    var not = reto.alumnos.map(function (a) { return a.nota; });
+    var r = burbuja(nom, not, condFinal, moverBien);
+    var d = Math.max(espera(160), Math.min(espera(520), espera(Math.round(3600 / Math.max(1, r.ev.length)))));
+    var k = 0, c = 0, s = 0;
+    contadorReto(0, 0);
+    function siguiente() {
+      if (token !== reto.token) return;
+      if (k >= r.ev.length) {
+        tTabla.comparar(null);
+        imprimir(token, r);
+        return;
+      }
+      var e = r.ev[k++];
+      c++;
+      tTabla.comparar(e.j);
+      Codigo.marcar(tCodigo, { activas: [3, 4, 5] });
+      contadorReto(c, s);
+      if (!e.cambia) { setTimeout(siguiente, d); return; }
+      setTimeout(function () {
+        if (token !== reto.token) return;
+        s++;
+        tTabla.intercambiar(e.j);
+        Codigo.marcar(tCodigo, { activas: [6, 7, 8, 9, 10, 11] });
+        contadorReto(c, s);
+        setTimeout(siguiente, Math.max(d, espera(460)));
+      }, d);
+    }
+    setTimeout(siguiente, espera(300));
+  }
+
+  function imprimir(token, r) {
+    tTabla.cabecera(["Puesto", "Alumno", "Nota", ""]);
+    tTabla.puestos({ desaprobado: true });
+    $("t-vuelta").textContent = "Imprimiendo la tabla";
+    var k = 0;
+    function linea() {
+      if (token !== reto.token) return;
+      if (k < r.notas.length) {
+        var ok = r.notas[k] >= 11;
+        Codigo.agregar(registro, (k + 1) + " " + r.nombres[k] + " " + r.notas[k] + (ok ? "" : " desaprobado"));
+        Codigo.marcar(tCodigo, ok ? { activas: [23, 24, 25], saltadas: [26, 27] } : { activas: [23, 24, 26, 27], saltadas: [25] });
+        tTabla.imprime(k);
+        bajarConsola();
+        k++;
+        setTimeout(linea, espera(320));
+        return;
+      }
+      tTabla.imprime(null);
+      Codigo.agregar(registro, podio(r.nombres));
+      Codigo.marcar(tCodigo, { activas: [28] });
+      bajarConsola();
+      $("t-vuelta").textContent = "Fin del programa";
+      $("t-explicacion").innerHTML = r.notas.length
+        ? "<code>ordenar</code> hizo <strong>" + r.comparaciones + "</strong> comparaciones y <strong>" + r.intercambios + "</strong> intercambios. Cada puesto es <code>i + 1</code>; el podio, <code>nombres[:3]</code>."
+        : "No escribiste ningún alumno: las listas quedaron vacías y el podio sale en blanco.";
+      evaluar(r);
+    }
+    setTimeout(linea, espera(250));
+  }
+
+  function evaluar(r) {
+    var al = reto.alumnos;
+    if (r.notas.length && r.notas[0] === 20) cumplir("veinte");
+    var empateResuelto = false, empateEnOrden = false;
+    for (var a = 0; a < al.length; a++) {
+      for (var b = a + 1; b < al.length; b++) {
+        if (al[a].nota !== al[b].nota || al[a].nombre === al[b].nombre) continue;
+        if (al[a].nombre > al[b].nombre) empateResuelto = true;
+        else empateEnOrden = true;
+      }
+    }
+    if (empateResuelto) cumplir("empate");
+    if (al.length >= 5) cumplir("cinco");
+    if (r.notas.some(function (n) { return n < 11; })) cumplir("desaprobado");
+
+    var faltan = ["veinte", "empate", "cinco", "desaprobado"].filter(function (m) { return !misiones[m]; });
+    // Si hubo un empate que ya venía en orden, esa pista va primero: es lo que acaba de pasar
+    if (empateEnOrden && !misiones.empate) faltan.unshift("empate");
+    if (!faltan.length) {
+      avisar($("t-fb"), "ok", "¡Misiones cumplidas! Tu programa lee un salón, lo ordena moviendo cada nombre con su nota, desempata por el abecedario e imprime la tabla con el podio.");
+      leccion.desbloquear();
+      return;
+    }
+    var pistas = {
+      veinte: "Para la primera misión, escribe a alguien con 20 (no al primero: así lo ves subir).",
+      empate: empateEnOrden
+        ? "Hubo un empate, pero ya venían en orden alfabético: el programa no tuvo que cambiarlos. Escribe primero al que va después en el abecedario: Luis 15 y luego Ana 15."
+        : "Para el empate, escribe dos con la misma nota, y primero al que va después en el abecedario: Luis 15 y luego Ana 15.",
+      cinco: "Escribe al menos 5 alumnos antes de fin (🎲 te ayuda).",
+      desaprobado: "Incluye a alguien con menos de 11: saldrá como desaprobado."
+    };
+    avisar($("t-fb"), "pista", pistas[faltan[0]] + " Toca «Ejecutar otra vez».");
+  }
+
+  /* Atajos que escriben por ti */
+  var NOMBRES_AZAR = ["Ana", "Luis", "Rosa", "Hugo", "Eva", "Teo", "Bea", "Sara", "Mateo", "Pablo", "Nora", "Diego", "Clara", "Bruno"];
+  function escribir(t, boton) {
+    $("t-campo").value = t;
+    $("t-enviar").click();
+    if (!$("t-fila").hidden) boton.focus();
+  }
+  $("t-azar").addEventListener("click", function () {
+    var usados = reto.alumnos.map(function (a) { return a.nombre; });
+    var libres = NOMBRES_AZAR.filter(function (n) { return usados.indexOf(n) === -1; });
+    var nombre = libres[Math.floor(Math.random() * libres.length)] || "Alumno";
+    escribir(nombre + " " + (4 + Math.floor(Math.random() * 17)), $("t-azar"));
+  });
+  $("t-fin").addEventListener("click", function () { escribir("fin", $("t-fin")); });
+  $("t-otra").addEventListener("click", function () { Pasos.limpiarFeedback($("t-fb")); });
+
+  empezarDemo();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-leer": parte1.entrar,
+      "paso-mayor": parte2.entrar,
+      "paso-dos": parte3.entrar,
+      "paso-empate": parte4.entrar,
+      "paso-puestos": parte5.entrar
+    },
+    comprobar: {
+      "paso-leer": parte1.comprobar,
+      "paso-mayor": parte2.comprobar,
+      "paso-dos": parte3.comprobar,
+      "paso-empate": parte4.comprobar,
+      "paso-puestos": parte5.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
