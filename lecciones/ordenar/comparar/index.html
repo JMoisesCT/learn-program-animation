@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Cuál ordena más rápido? · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: burbuja, quicksort y mergesort en Python. Una carrera contando comparaciones, listas que se duplican, un millón de valores, listas ya ordenadas o al revés, y por qué en la vida real se usa sorted().">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .nota-pie { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .codigo--compacto { font-size: 0.95rem; line-height: 1.55; }
+    .codigo--compacto .linea { min-height: 1.55em; }
+    @media (min-width: 1024px) { .lab .codigo--compacto { font-size: 0.95rem; } }
+
+    /* ---------- Elegir (casos, tamaños, predicciones) ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--codigo .btn { font-family: var(--fuente-codigo); }
+    .grupo-titulo { margin: var(--esp-4) 0 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); text-align: center; }
+    .grupo-titulo + .elegir { margin-top: var(--esp-2); }
+
+    /* ---------- Colores de cada algoritmo ---------- */
+    .alg-b { --alg: var(--color-pista); }
+    .alg-q { --alg: var(--color-azul); }
+    .alg-m { --alg: #7a3fb0; }
+
+    /* ---------- Carriles de la carrera ---------- */
+    .carril { padding: var(--esp-1) 0; }
+    .carril + .carril { margin-top: var(--esp-1); border-top: 2px dashed var(--color-borde); padding-top: var(--esp-2); }
+    .carril__cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--esp-1) var(--esp-3); margin-bottom: var(--esp-1); }
+    .carril__nombre { font-family: var(--fuente-codigo); font-weight: 700; color: var(--alg); }
+    .carril__puesto { margin-left: 0.3em; }
+    .cuenta { font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .cuenta strong { display: inline-block; min-width: 1.4em; text-align: right; font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-texto); }
+    .cuenta--pulso strong { animation: valor-pulso 260ms ease-out; }
+    .cuenta--gana strong { color: var(--color-ok); }
+    .carril__dice { min-height: 1.5em; margin: var(--esp-1) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .carril__dice code { color: var(--color-texto); }
+    .carril__dice strong { color: var(--color-texto); }
+    .carril .lista { --lista-max: 2.5rem; }
+    /* En la carrera no hacen falta los índices: los carriles quedan más bajos */
+    .carril .lista__indice { display: none; }
+
+    /* ---------- Barras: una por valor (la lista mientras se ordena) ---------- */
+    .barras { display: flex; align-items: flex-end; gap: 0; height: 2.5rem; padding: 2px; border-radius: 6px; background: var(--color-superficie); box-shadow: inset 0 0 0 1px #b8c0ca; }
+    .barras--pocas { gap: 3px; }
+    .barras--medias { gap: 1px; }
+    .barras__b { flex: 1 1 0; min-width: 0; border-radius: 2px 2px 0 0; background: var(--alg); opacity: 0.75; }
+    .barras--listo .barras__b { background: var(--color-ok); opacity: 0.85; }
+
+    /* ---------- Tablas ---------- */
+    .tabla { width: 100%; border-collapse: collapse; font-family: var(--fuente-codigo); text-align: center; font-size: var(--texto-sm); }
+    .tabla caption { margin-bottom: var(--esp-2); font-family: var(--fuente); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tabla th { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; font-size: var(--texto-xs); text-align: left; white-space: nowrap; border-bottom: 1px solid var(--color-borde); color: var(--alg, var(--color-texto-suave)); }
+    .tabla thead th { text-align: center; font-family: var(--fuente); color: var(--color-texto-suave); }
+    .tabla td { padding: var(--esp-1) 0.15rem; border-bottom: 1px solid var(--color-borde); vertical-align: top; line-height: 1.25; white-space: nowrap; }
+    .tabla tr.tabla__tam td { font-weight: 700; }
+    .tabla td.tabla__nueva { animation: aparecer var(--dur) ease both; background: var(--color-azul-suave); }
+    .tabla small { display: block; font-size: 0.75rem; font-weight: 700; color: var(--alg); }
+    .tabla td.tabla__vacia { color: #9aa4b2; }
+    .tabla--debajo { margin-top: var(--esp-4); }
+    @media (max-width: 480px) {
+      .tabla { font-size: 0.72rem; }
+      .tabla th { padding-right: 0.3rem; font-size: 0.72rem; }
+      .tabla td { padding-inline: 0.1rem; }
+      .tabla small { font-size: 0.66rem; }
+    }
+
+    /* ---------- Barras de comparaciones ---------- */
+    .barra { margin-top: var(--esp-3); }
+    .barra:first-of-type { margin-top: var(--esp-2); }
+    .barra__cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 var(--esp-3); }
+    .barra__nombre { font-family: var(--fuente-codigo); font-weight: 700; color: var(--alg); }
+    .barra__num { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); }
+    .barra__pista { display: flex; height: 1.4rem; margin-top: var(--esp-1); border-radius: 999px; overflow: hidden; background: var(--color-superficie); box-shadow: inset 0 0 0 1px #b8c0ca; }
+    .barra__relleno { height: 100%; width: 0; min-width: 3px; background: var(--alg); transition: width 600ms var(--curva-rebote, ease); }
+    .barra__tiempo { margin: var(--esp-1) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .barra__tiempo:empty { display: none; }
+    .barra--gana .barra__num { color: var(--color-ok); }
+    .barra--gana .barra__nombre::after { content: " 🏆"; }
+    .veredicto { margin: 0; text-align: center; font-weight: 700; min-height: 1.5em; }
+
+    /* ---------- Quicksort partido en pisos ---------- */
+    /* El trozo es la referencia de sus casilleros: así las rayas salen del lugar justo */
+    .particion__trozo { position: relative; }
+    #s5-particion .particion__rejilla { row-gap: calc(var(--c) * 0.45 + 0.35rem); }
+    #s5-codigo { font-size: 0.85rem; }
+    .suma { margin: var(--esp-2) 0 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; min-height: 1.5em; overflow-wrap: anywhere; }
+    .suma span { color: var(--color-texto-suave); font-family: var(--fuente); font-weight: 400; font-size: var(--texto-sm); }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-4); margin: var(--esp-2) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border-radius: 3px; border: 2px solid; }
+    .leyenda .ley-pivote::before { border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .leyenda .ley-menor::before { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .leyenda .ley-mayor::before { border-color: #7a3fb0; background: #f2eafa; }
+    .leyenda .ley-tramo1::before { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .leyenda .ley-tramo2::before { border-color: var(--color-pista); background: var(--color-pista-suave); }
+
+    /* ---------- Reto: los casos ---------- */
+    .casos { display: grid; gap: var(--esp-3); margin: 0; padding: 0; list-style: none; }
+    .caso { padding: var(--esp-2) var(--esp-4); border: 2px solid transparent; border-radius: var(--radio-sm); background: var(--color-superficie-2); }
+    .caso--bien { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .caso--mal { border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .caso__texto { margin: 0 0 var(--esp-2); font-weight: 600; }
+    .caso__fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2) var(--esp-4); }
+    .caso fieldset { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+    .chip { position: relative; }
+    .chip input { position: absolute; opacity: 0; pointer-events: none; }
+    .chip span { display: inline-block; padding: 0.3em 0.75em; border: 2px solid var(--color-borde); border-radius: 999px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; cursor: pointer; }
+    .chip span:hover { border-color: #b8c0ca; }
+    .chip input:checked + span { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .chip input:focus-visible + span { box-shadow: var(--foco); }
+    .caso__num { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); font-size: var(--texto-sm); }
+    .caso__num input { width: 6rem; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); text-align: center; }
+    .caso__num input:focus-visible { border-color: var(--color-azul); }
+    .caso__pista { margin: var(--esp-2) 0 0; font-size: var(--texto-sm); }
+    .caso__pista:empty { display: none; }
+    .caso--bien .caso__pista { color: var(--color-ok); }
+    .caso--mal .caso__pista { color: var(--color-pista); }
+
+    @media (max-width: 480px) {
+      .codigo--compacto { font-size: 0.85rem; }
+      .elegir .btn { padding: var(--esp-2) var(--esp-3); }
+      .caso { padding: var(--esp-3); }
+    }
+    @media (min-width: 1024px) {
+      /* Lo que se ve es alto (tres carriles): el mensaje va bajo el código */
+      .paso.paso--salida-izq {
+        grid-template-rows: auto auto 1fr;
+        grid-template-areas: "intro visual" "principal visual" "resultado visual";
+      }
+      .paso--salida-izq .lab__visual ~ .lab__resultado { margin-top: var(--esp-3); }
+      .caso__texto { margin-bottom: var(--esp-1); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar-comparar">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. La carrera -->
+    <section class="paso paso--salida-izq" id="paso-carrera" data-requiere aria-labelledby="h-carrera">
+      <span class="paso__etiqueta">Ordenar 6/7 · ¿Cuál ordena más rápido?</span>
+      <h1 class="paso__titulo" id="h-carrera">Una carrera</h1>
+      <p>Los tres ordenan las mismas 8 notas. Cada vez que comparan dos valores, cuentan una <strong>comparación</strong>. ¿Quién termina con menos?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"></pre>
+          <p class="grupo-titulo" id="s1-t-elegir">¿Quién gana? Toca uno para empezar</p>
+          <div class="elegir elegir--codigo" id="s1-elegir" role="group" aria-labelledby="s1-t-elegir">
+            <button type="button" class="btn btn-secundario" data-valor="b" aria-pressed="false">burbuja</button>
+            <button type="button" class="btn btn-secundario" data-valor="q" aria-pressed="false">quicksort</button>
+            <button type="button" class="btn btn-secundario" data-valor="m" aria-pressed="false">mergesort</button>
+          </div>
+        </div>
+        <div class="lab__visual" id="s1-carriles"></div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. El doble de largo -->
+    <section class="paso paso--salida-izq" id="paso-doble" data-requiere aria-labelledby="h-doble">
+      <h2 class="paso__titulo" id="h-doble">El doble de largo</h2>
+      <p>Ahora cada barra es un valor: más alta, más grande. Ordena y luego <strong>duplica</strong> la lista varias veces. ¿Cuánto crece cada cuenta?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s2-codigo" aria-label="Código"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-volver" hidden>↺ Volver a 8</button>
+            <button type="button" class="btn btn-secundario" id="s2-ordenar">▶ Ordenar</button>
+            <button type="button" class="btn btn-secundario" id="s2-duplicar" disabled>×2 Duplicar la lista</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s2-rotulo"></p>
+          <div id="s2-carriles"></div>
+          <table class="tabla tabla--debajo" id="s2-tabla" hidden>
+            <caption class="visualmente-oculto">Comparaciones</caption>
+            <tbody>
+              <tr class="tabla__tam"><th scope="row">valores</th></tr>
+              <tr class="alg-b"><th scope="row">burbuja</th></tr>
+              <tr class="alg-q"><th scope="row">quicksort</th></tr>
+              <tr class="alg-m"><th scope="row">mergesort</th></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Un millón -->
+    <section class="paso" id="paso-millon" data-requiere aria-labelledby="h-millon">
+      <h2 class="paso__titulo" id="h-millon">Un millón de valores</h2>
+      <p>La PC hace muchas comparaciones por segundo; digamos <strong>un millón</strong>. Prueba los tamaños y luego adivina: ¿cuánto tardaría burbuja con un millón de valores?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s3-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="s3-tamano" role="group" aria-label="Tamaño de la lista">
+            <button type="button" class="btn btn-secundario" data-valor="100" aria-pressed="true">100</button>
+            <button type="button" class="btn btn-secundario" data-valor="1000" aria-pressed="false">1000</button>
+            <button type="button" class="btn btn-secundario" data-valor="10000" aria-pressed="false">10&nbsp;000</button>
+          </div>
+          <p class="grupo-titulo" id="s3-t-adivina">¿Y con 1&nbsp;000&nbsp;000? Burbuja tardaría…</p>
+          <div class="elegir" id="s3-adivina" role="group" aria-labelledby="s3-t-adivina">
+            <button type="button" class="btn btn-secundario" data-valor="segundos" aria-pressed="false">unos segundos</button>
+            <button type="button" class="btn btn-secundario" data-valor="horas" aria-pressed="false">unas horas</button>
+            <button type="button" class="btn btn-secundario" data-valor="dias" aria-pressed="false">unos días</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s3-rotulo"></p>
+          <div id="s3-barras"></div>
+          <p class="nota-pie">El tiempo, si la PC hiciera un millón de comparaciones por segundo.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Una lista ya ordenada -->
+    <section class="paso" id="paso-ordenada"data-requiere aria-labelledby="h-ordenada">
+      <h2 class="paso__titulo" id="h-ordenada">¿Y si ya está ordenada?</h2>
+      <p>Las mismas 8 notas, pero ahora llegan ordenadas, o al revés. Esta es la burbuja que corre: mira la línea del <code>break</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s4-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="s4-elegir" role="group" aria-label="¿Cómo llegan las notas?">
+            <button type="button" class="btn btn-secundario" data-valor="mezclada" aria-pressed="false">▶ mezcladas</button>
+            <button type="button" class="btn btn-secundario" data-valor="ordenada" aria-pressed="false">▶ ya ordenadas</button>
+            <button type="button" class="btn btn-secundario" data-valor="reves" aria-pressed="false">▶ al revés</button>
+          </div>
+        </div>
+        <div class="lab__visual" id="s4-carriles"></div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Quicksort se atasca -->
+    <section class="paso paso--salida-izq" id="paso-atasca"data-requiere aria-labelledby="h-atasca">
+      <h2 class="paso__titulo" id="h-atasca">¿Por qué se atascó quicksort?</h2>
+      <p>Mira cómo se parte la lista, piso por piso: primero mezclada, después ordenada. Cada trozo compara sus valores con el pivote.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s5-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="s5-elegir" role="group" aria-label="¿Qué lista ordenas?">
+            <button type="button" class="btn btn-secundario" data-valor="mezclada" aria-pressed="false">▶ mezclada</button>
+            <button type="button" class="btn btn-secundario" data-valor="ordenada" aria-pressed="false">▶ ordenada</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s5-llamada"></p>
+          <div id="s5-particion"></div>
+          <p class="leyenda"><span class="ley-pivote">pivote</span><span class="ley-menor">menores</span><span class="ley-mayor">mayores</span></p>
+          <p class="suma" id="s5-suma"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Mil valores, cuatro casos -->
+    <section class="paso paso--salida-izq" id="paso-casos" data-requiere aria-labelledby="h-casos">
+      <h2 class="paso__titulo" id="h-casos">Mil valores, cuatro casos</h2>
+      <p>Ahora con 1000 valores. Prueba los cuatro casos y mira qué cuenta cambia poco.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s6-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="s6-elegir" role="group" aria-label="¿Cómo llega la lista?">
+            <button type="button" class="btn btn-secundario" data-valor="mezclada" aria-pressed="false">mezclada</button>
+            <button type="button" class="btn btn-secundario" data-valor="ordenada" aria-pressed="false">ya ordenada</button>
+            <button type="button" class="btn btn-secundario" data-valor="reves" aria-pressed="false">al revés</button>
+            <button type="button" class="btn btn-secundario" data-valor="repetidas" aria-pressed="false">notas repetidas</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s6-rotulo">Toca un caso</p>
+          <div id="s6-barras"></div>
+          <table class="tabla tabla--debajo" id="s6-tabla">
+            <caption>Comparaciones con 1000 valores</caption>
+            <thead><tr><td></td><th scope="col">mezclada</th><th scope="col">ordenada</th><th scope="col">al revés</th><th scope="col">repetidas</th></tr></thead>
+            <tbody>
+              <tr class="alg-b"><th scope="row">burbuja</th><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td></tr>
+              <tr class="alg-q"><th scope="row">quicksort</th><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td></tr>
+              <tr class="alg-m"><th scope="row">mergesort</th><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td><td class="tabla__vacia">?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. sorted() -->
+    <section class="paso" id="paso-sorted" data-requiere aria-labelledby="h-sorted">
+      <h2 class="paso__titulo" id="h-sorted">¿Y <code>sorted()</code>?</h2>
+      <p><code>sorted()</code> mezcla como mergesort, con un truco: primero busca <strong>tramos</strong> que ya vienen ordenados. Prueba con las dos listas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s7-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="s7-elegir" role="group" aria-label="¿Qué lista ordenas?">
+            <button type="button" class="btn btn-secundario" data-valor="casi" aria-pressed="false">▶ casi ordenada</button>
+            <button type="button" class="btn btn-secundario" data-valor="ordenada" aria-pressed="false">▶ ya ordenada</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s7-lista"></div>
+          <p class="leyenda"><span class="ley-tramo1">un tramo</span><span class="ley-tramo2">el siguiente</span></p>
+          <p class="carril__dice" id="s7-dice"></p>
+          <p class="carril__dice"><span class="cuenta" id="s7-cuenta"><strong>0</strong> <span>comparaciones</span></span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">¿Cuál conviene?</h2>
+      <p>En cada caso, elige el que hace <strong>menos comparaciones</strong>. Donde se pide, escribe cuántas hace.</p>
+
+      <div class="tarjeta">
+        <ol class="casos" id="reto-casos"></ol>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Al duplicar la lista, burbuja hace unas cuatro veces más comparaciones; quicksort y mergesort, poco más del doble. En la vida real, usa <code>sorted()</code>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../proyecto/index.html">Siguiente: Proyecto: la tabla de posiciones →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/particion.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Temporizadores de una animación, para poder cortarla */
+  function relojes() {
+    var lista = [];
+    return {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+  }
+
+  /* Recuerda qué casos vio el alumno en cada paso */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      cuantos: function () { return Object.keys(s).length; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* 1000000 → "1 000 000" (con espacios que no se cortan) */
+  function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function rango(a, b) { var r = []; for (var i = a; i < b; i++) r.push(i); return r; }
+
+  /* 4.13 → "×4,1" */
+  function veces(r) { return "×" + r.toFixed(1).replace(".", ","); }
+
+  /* Si la PC hiciera un millón de comparaciones por segundo, ¿cuánto tardaría? */
+  function tiempo(c) {
+    var s = c / 1e6;
+    if (s < 1) return "menos de un segundo";
+    if (s < 1.5) return "un segundo";
+    if (s < 90) return "unos " + Math.round(s) + " segundos";
+    if (s < 5400) return "unos " + Math.round(s / 60) + " minutos";
+    if (s < 129600) return "unas " + Math.round(s / 3600) + " horas";
+    return "unos " + Math.round(s / 86400) + " días";
+  }
+
+  /* En el móvil, lo que se anima queda debajo de los botones: la página baja hasta ahí */
+  function mostrar(el) {
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
+    var r = el.getBoundingClientRect();
+    var pie = document.querySelector(".leccion-pie").getBoundingClientRect().top;
+    if (r.top >= 0 && r.bottom <= pie) return;
+    window.scrollBy({ top: r.top - 64, behavior: Pasos.reducirMovimiento ? "auto" : "smooth" });
+  }
+
+  var NOMBRE = { b: "burbuja", q: "quicksort", m: "mergesort" };
+  var CLAVES = ["b", "q", "m"];
+
+  /* ---------- Colorear Python ---------- */
+  var PALABRAS = ["def", "for", "in", "if", "elif", "else", "return", "while", "not", "and", "or", "True", "False", "None", "break"];
+
+  function escapar(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function py(linea) {
+    var re = /(#.*$)|("[^"]*")|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?|([^#"\w]+|.)/g;
+    var html = "";
+    var m;
+    while ((m = re.exec(linea))) {
+      if (m[0] === "") { re.lastIndex++; continue; }
+      if (m[1]) html += '<span class="tk-comentario">' + escapar(m[1]) + "</span>";
+      else if (m[2]) html += '<span class="tk-texto">' + escapar(m[2]) + "</span>";
+      else if (m[3]) html += '<span class="tk-numero">' + m[3] + "</span>";
+      else if (m[4]) {
+        var clase = PALABRAS.indexOf(m[4]) !== -1 ? "tk-palabra" : m[5] ? "tk-funcion" : "tk-variable";
+        html += '<span class="' + clase + '">' + m[4] + "</span>" + (m[5] ? escapar(m[5]) : "");
+      } else html += escapar(m[0]);
+    }
+    return html;
+  }
+
+  function pintarCodigo(pre, lineas) {
+    pre.innerHTML = "<code>" + lineas.map(function (l) {
+      return '<span class="linea">' + py(l) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function ponerCuenta(el, n, pulso) {
+    el.querySelector("strong").textContent = miles(n);
+    var etiqueta = el.querySelector("span");
+    if (etiqueta) etiqueta.textContent = n === 1 ? "comparación" : "comparaciones";
+    if (!pulso) return;
+    el.classList.remove("cuenta--pulso");
+    void el.offsetWidth;
+    if (n > 0) el.classList.add("cuenta--pulso");
+  }
+
+  function presionar(grupo, valor) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === String(valor)));
+    });
+  }
+
+  /* ---------- Listas de prueba (siempre las mismas: azar con semilla) ---------- */
+  function azar(semilla) {
+    var a = semilla;
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  /* Los números del 1 al n, mezclados */
+  function mezclada(n, semilla) {
+    var r = azar(semilla);
+    var a = new Array(n);
+    for (var i = 0; i < n; i++) a[i] = i + 1;
+    for (i = n - 1; i > 0; i--) {
+      var j = Math.floor(r() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* n notas de 0 a 20 (como random.randint(0, 20)) */
+  function notasAzar(n, semilla) {
+    var r = azar(semilla);
+    var a = new Array(n);
+    for (var i = 0; i < n; i++) a[i] = Math.floor(r() * 21);
+    return a;
+  }
+
+  /* ---------- Los tres algoritmos, comparación por comparación ----------
+     Hacen lo mismo que el código de Python (mismas comparaciones, en el mismo orden),
+     pero sobre una fila fija de lugares: así se pueden animar. Eventos:
+       { cmp: [i, j], a, b, si }  una comparación entre los lugares i y j
+       { swap: j }                burbuja intercambia los lugares j y j + 1
+       { orden: [...] }           un trozo queda reordenado (como Lista.reordenar)
+       { fijos: [...] }           lugares que ya no cambian (verde)                    */
+  function eventosBurbuja(valores) {
+    var v = valores.slice();
+    var n = v.length;
+    var ev = [];
+    for (var i = 0; i < n - 1; i++) {
+      var huboCambio = false;
+      for (var j = 0; j < n - 1 - i; j++) {
+        var si = v[j] > v[j + 1];
+        ev.push({ cmp: [j, j + 1], a: v[j], b: v[j + 1], si: si });
+        if (si) {
+          var aux = v[j]; v[j] = v[j + 1]; v[j + 1] = aux;
+          ev.push({ swap: j });
+          huboCambio = true;
+        }
+      }
+      if (!huboCambio) { ev.push({ fijos: rango(0, n), sinCambio: true }); return ev; }
+      ev.push({ fijos: [n - 1 - i] });
+    }
+    ev.push({ fijos: rango(0, n) });
+    return ev;
+  }
+
+  function eventosQuick(valores) {
+    var v = valores.slice();
+    var n = v.length;
+    var ev = [];
+    function q(lo, hi) {
+      var largo = hi - lo;
+      if (largo <= 0) return;
+      if (largo === 1) { ev.push({ fijos: [lo] }); return; }
+      var pivote = v[lo];
+      var menores = [];
+      var mayores = [];
+      for (var k = lo + 1; k < hi; k++) {
+        var si = v[k] < pivote;
+        ev.push({ cmp: [lo, k], a: v[k], b: pivote, si: si });
+        (si ? menores : mayores).push(k);
+      }
+      var trozo = menores.concat([lo], mayores);
+      var orden = rango(0, n);
+      trozo.forEach(function (viejo, t) { orden[lo + t] = viejo; });
+      var copia = v.slice();
+      trozo.forEach(function (viejo, t) { v[lo + t] = copia[viejo]; });
+      ev.push({ orden: orden, fijos: [lo + menores.length] });
+      q(lo, lo + menores.length);
+      q(lo + menores.length + 1, hi);
+    }
+    q(0, n);
+    ev.push({ fijos: rango(0, n) });
+    return ev;
+  }
+
+  function eventosMerge(valores) {
+    var v = valores.slice();
+    var n = v.length;
+    var ev = [];
+    function ms(lo, hi) {
+      if (hi - lo <= 1) return;
+      var medio = lo + Math.floor((hi - lo) / 2);
+      ms(lo, medio);
+      ms(medio, hi);
+      var i = lo, j = medio, res = [];
+      while (i < medio && j < hi) {
+        var si = v[i] <= v[j];
+        ev.push({ cmp: [i, j], a: v[i], b: v[j], si: si });
+        if (si) res.push(i++); else res.push(j++);
+      }
+      while (i < medio) res.push(i++);
+      while (j < hi) res.push(j++);
+      var orden = rango(0, n);
+      res.forEach(function (viejo, t) { orden[lo + t] = viejo; });
+      var copia = v.slice();
+      res.forEach(function (viejo, t) { v[lo + t] = copia[viejo]; });
+      ev.push({ orden: orden });
+    }
+    ms(0, n);
+    ev.push({ fijos: rango(0, n) });
+    return ev;
+  }
+
+  var EVENTOS = { b: eventosBurbuja, q: eventosQuick, m: eventosMerge };
+  function cuantas(ev) { var c = 0; ev.forEach(function (e) { if (e.cmp) c++; }); return c; }
+
+  /* ---------- Solo contar (para listas grandes, sin animar) ---------- */
+  /* Burbuja con hubo_cambio, sin hacer las pasadas: un valor con k mayores a su
+     izquierda necesita k pasadas para llegar a su lugar (cada pasada lo corre uno). */
+  function contarBurbuja(l) {
+    var n = l.length;
+    if (n < 2) return 0;
+    var max = 0;
+    for (var i = 0; i < n; i++) if (l[i] > max) max = l[i];
+    var arbol = new Int32Array(max + 2);
+    var peor = 0;
+    for (i = 0; i < n; i++) {
+      var r = l[i] + 1;
+      var noMayores = 0;
+      for (var k = r; k > 0; k -= k & -k) noMayores += arbol[k];
+      if (i - noMayores > peor) peor = i - noMayores;
+      for (k = r; k < arbol.length; k += k & -k) arbol[k]++;
+    }
+    var pasadas = Math.min(n - 1, peor + 1);
+    return pasadas * (n - 1) - pasadas * (pasadas - 1) / 2;
+  }
+
+  function contarQuick(l) {
+    var a = Int32Array.from(l);
+    var tmp = new Int32Array(l.length);
+    var c = 0;
+    var pila = [0, l.length];
+    while (pila.length) {
+      var hi = pila.pop(), lo = pila.pop();
+      if (hi - lo <= 1) continue;
+      var p = a[lo], m = 0, k;
+      for (k = lo + 1; k < hi; k++) { c++; if (a[k] < p) tmp[m++] = a[k]; }
+      var M = m + 1;
+      for (k = lo + 1; k < hi; k++) if (!(a[k] < p)) tmp[M++] = a[k];
+      tmp[m] = p;
+      for (k = 0; k < hi - lo; k++) a[lo + k] = tmp[k];
+      pila.push(lo + m + 1, hi, lo, lo + m);
+    }
+    return c;
+  }
+
+  function contarMerge(l) {
+    var a = Int32Array.from(l);
+    var tmp = new Int32Array(l.length);
+    var c = 0;
+    function ms(lo, hi) {
+      if (hi - lo <= 1) return;
+      var medio = lo + Math.floor((hi - lo) / 2);
+      ms(lo, medio);
+      ms(medio, hi);
+      var i = lo, j = medio, k = 0;
+      while (i < medio && j < hi) { c++; if (a[i] <= a[j]) tmp[k++] = a[i++]; else tmp[k++] = a[j++]; }
+      while (i < medio) tmp[k++] = a[i++];
+      while (j < hi) tmp[k++] = a[j++];
+      for (k = 0; k < hi - lo; k++) a[lo + k] = tmp[k];
+    }
+    ms(0, l.length);
+    return c;
+  }
+
+  function contarTodos(l) { return { b: contarBurbuja(l), q: contarQuick(l), m: contarMerge(l) }; }
+
+  /* ---------- Carriles con casilleros (pasos 1 y 4) ---------- */
+  function armarCarril(contenedor, prefijo, k) {
+    var div = document.createElement("div");
+    div.className = "carril alg-" + k;
+    div.innerHTML =
+      '<div class="carril__cab">' +
+        '<span class="carril__nombre">' + NOMBRE[k] + '<span class="carril__puesto" id="' + prefijo + "-puesto-" + k + '"></span></span>' +
+        '<span class="cuenta" id="' + prefijo + "-cuenta-" + k + '"><strong>0</strong> <span>comparaciones</span></span>' +
+      "</div>" +
+      '<div id="' + prefijo + "-" + k + '"></div>' +
+      '<p class="carril__dice" id="' + prefijo + "-dice-" + k + '"></p>';
+    contenedor.appendChild(div);
+  }
+
+  var MEDALLAS = ["🥇", "🥈", "🥉"];
+
+  function decir(k, e) {
+    if (k === "b") return "<code>" + e.a + " &gt; " + e.b + "</code> " + (e.si ? "sí: <strong>se cambian</strong>" : "no");
+    if (k === "q") return "<code>" + e.a + " &lt; " + e.b + "</code> " + (e.si ? "sí: a menores" : "no: a mayores");
+    return "<code>" + e.a + " &lt;= " + e.b + "</code>: toma el " + (e.si ? e.a : e.b);
+  }
+
+  function carrilFila(prefijo, k) {
+    var lista = Lista.crear($(prefijo + "-" + k), [], { corchetes: false });
+    var cuenta = $(prefijo + "-cuenta-" + k);
+    var dice = $(prefijo + "-dice-" + k);
+    var puesto = $(prefijo + "-puesto-" + k);
+    var fijos = {};
+    var hechas = 0;
+    var ultima = null;
+
+    function pintar(cmp) {
+      lista.clases(function (i) {
+        if (cmp) {
+          if (k === "q" && i === cmp[0]) return "lista__casilla--distinta";
+          if (i === cmp[0] || i === cmp[1]) return "lista__casilla--cambio";
+        }
+        return fijos[i] ? "lista__casilla--igual" : "";
+      });
+    }
+
+    return {
+      preparar: function (valores) {
+        fijos = {};
+        hechas = 0;
+        ultima = null;
+        lista.valores(valores);
+        pintar(null);
+        ponerCuenta(cuenta, 0, false);
+        cuenta.classList.remove("cuenta--gana");
+        dice.textContent = "";
+        puesto.textContent = "";
+      },
+      aplicar: function (e) {
+        if (e.cmp) {
+          hechas++;
+          ultima = e.cmp;
+          ponerCuenta(cuenta, hechas, true);
+          dice.innerHTML = decir(k, e);
+          pintar(e.cmp);
+          return;
+        }
+        if (e.swap !== undefined) {
+          var orden = rango(0, lista.largo);
+          orden[e.swap] = e.swap + 1;
+          orden[e.swap + 1] = e.swap;
+          lista.reordenar(orden);
+          pintar(ultima);
+          return;
+        }
+        if (e.orden) lista.reordenar(e.orden);
+        if (e.fijos) e.fijos.forEach(function (i) { fijos[i] = true; });
+        if (e.sinCambio) dice.innerHTML = "Una pasada sin cambios: <strong>break</strong>";
+        pintar(null);
+      },
+      terminar: function (lugar, gana) {
+        pintar(null);
+        puesto.textContent = " " + MEDALLAS[lugar];
+        if (gana) cuenta.classList.add("cuenta--gana");
+        dice.innerHTML = "¡Ordenada! " + hechas + (hechas === 1 ? " comparación" : " comparaciones");
+      }
+    };
+  }
+
+  function crearCarrera(prefijo) {
+    var cont = $(prefijo + "-carriles");
+    CLAVES.forEach(function (k) { armarCarril(cont, prefijo, k); });
+    var carriles = {};
+    CLAVES.forEach(function (k) { carriles[k] = carrilFila(prefijo, k); });
+    var reloj = relojes();
+
+    return {
+      parar: function () { reloj.cortar(); },
+      preparar: function (valores) {
+        reloj.cortar();
+        CLAVES.forEach(function (k) { carriles[k].preparar(valores); });
+      },
+      /* Cada comparación tarda un tic en todos los carriles: gana el que hace menos */
+      correr: function (valores, tic, alTerminar) {
+        this.preparar(valores);
+        var total = {};
+        var fines = [];
+        CLAVES.forEach(function (k) {
+          var ev = EVENTOS[k](valores);
+          var hechas = 0;
+          ev.forEach(function (e) {
+            if (e.cmp) hechas++;
+            var cuando = e.cmp ? hechas * tic : hechas * tic + tic / 2;
+            reloj.luego(function () { carriles[k].aplicar(e); }, cuando);
+          });
+          total[k] = hechas;
+          fines.push((hechas + 1) * tic);
+        });
+        var orden = CLAVES.slice().sort(function (a, b) { return total[a] - total[b]; });
+        CLAVES.forEach(function (k) {
+          var lugar = CLAVES.filter(function (o) { return total[o] < total[k]; }).length;
+          reloj.luego(function () { carriles[k].terminar(lugar, lugar === 0); }, (total[k] + 1) * tic);
+        });
+        reloj.luego(function () { alTerminar(total, orden); }, Math.max.apply(null, fines) + 300);
+        return total;
+      }
+    };
+  }
+
+  /* ---------- 1. La carrera ---------- */
+  var NOTAS = [14, 9, 17, 11, 6, 19, 3, 12];
+  var TIC = 340;
+  var carrera1 = crearCarrera("s1");
+  var prediccion1 = null;
+
+  pintarCodigo($("s1-codigo"), [
+    "notas = [" + NOTAS.join(", ") + "]",
+    "burbuja(notas.copy())  # lista[j] > lista[j + 1]",
+    "quicksort(notas)       # x < pivote",
+    "mergesort(notas)       # a[i] <= b[j]"
+  ]);
+
+  function preparar1() {
+    carrera1.preparar(NOTAS);
+    presionar($("s1-elegir"), prediccion1);
+    Codigo.limpiar($("s1-codigo"));
+  }
+
+  function correr1() {
+    presionar($("s1-elegir"), prediccion1);
+    Pasos.limpiarFeedback($("s1-fb"));
+    Codigo.marcar($("s1-codigo"), { activas: [1, 2, 3] });
+    mostrar($("s1-carriles"));
+    carrera1.correr(NOTAS, TIC, function (total, orden) {
+      Codigo.limpiar($("s1-codigo"));
+      var gano = orden[0];
+      var texto = (prediccion1 === gano ? "¡Bien dicho! " : "Dijiste " + NOMBRE[prediccion1] + ". ") +
+        "Ganó " + NOMBRE[gano] + " con " + total[gano] + " comparaciones; mergesort hizo " + total.m +
+        " y burbuja, " + total.b + ": compara cada par de vecinos en cada pasada.";
+      Pasos.feedback($("s1-fb"), "ok", texto + " ¿Pasará lo mismo con listas más largas?");
+      leccion.desbloquear();
+    });
+  }
+
+  /* ---------- 2. El doble de largo: barras ---------- */
+  var MAX2 = 256;
+  var n2 = 8;
+  var filas2 = {};
+  var anim2 = null;
+  var carriles2 = {};
+
+  function lista2(n) { return mezclada(n, n + 14000); }
+
+  (function () {
+    var cont = $("s2-carriles");
+    CLAVES.forEach(function (k) {
+      var div = document.createElement("div");
+      div.className = "carril alg-" + k;
+      div.innerHTML =
+        '<div class="carril__cab">' +
+          '<span class="carril__nombre">' + NOMBRE[k] + '<span class="carril__puesto" id="s2-puesto-' + k + '"></span></span>' +
+          '<span class="cuenta" id="s2-cuenta-' + k + '"><strong>0</strong> <span>comparaciones</span></span>' +
+        "</div>" +
+        '<div class="barras" id="s2-barras-' + k + '" aria-hidden="true"></div>';
+      cont.appendChild(div);
+      carriles2[k] = carrilBarras(k);
+    });
+  })();
+
+  function carrilBarras(k) {
+    var caja = $("s2-barras-" + k);
+    var cuenta = $("s2-cuenta-" + k);
+    var puesto = $("s2-puesto-" + k);
+    var a = [], ev = [], idx = 0, hechas = 0, n = 0, barras = [];
+
+    function pintar() {
+      for (var i = 0; i < n; i++) barras[i].style.height = (a[i] / n * 100) + "%";
+    }
+
+    return {
+      listo: true,
+      preparar: function (valores, eventos) {
+        a = valores.slice();
+        ev = eventos || [];
+        idx = 0;
+        hechas = 0;
+        n = a.length;
+        caja.textContent = "";
+        caja.classList.toggle("barras--pocas", n <= 32);
+        caja.classList.toggle("barras--medias", n > 32 && n <= 64);
+        caja.classList.remove("barras--listo");
+        barras = a.map(function () {
+          var b = document.createElement("span");
+          b.className = "barras__b";
+          caja.appendChild(b);
+          return b;
+        });
+        pintar();
+        ponerCuenta(cuenta, 0, false);
+        cuenta.classList.remove("cuenta--gana");
+        puesto.textContent = "";
+        this.listo = !eventos;
+      },
+      avanzar: function (objetivo) {
+        var cambio = false;
+        var antes = hechas;
+        while (idx < ev.length) {
+          var e = ev[idx];
+          if (e.cmp) {
+            if (hechas >= objetivo) break;
+            hechas++;
+          } else if (e.swap !== undefined) {
+            var t = a[e.swap]; a[e.swap] = a[e.swap + 1]; a[e.swap + 1] = t;
+            cambio = true;
+          } else if (e.orden) {
+            var copia = a.slice();
+            a = e.orden.map(function (j) { return copia[j]; });
+            cambio = true;
+          }
+          idx++;
+        }
+        if (cambio) pintar();
+        if (hechas !== antes) ponerCuenta(cuenta, hechas, false);
+        if (idx >= ev.length && !this.listo) {
+          this.listo = true;
+          caja.classList.add("barras--listo");
+        }
+      },
+      terminar: function (lugar, gana) {
+        puesto.textContent = " " + MEDALLAS[lugar];
+        if (gana) cuenta.classList.add("cuenta--gana");
+      }
+    };
+  }
+
+  function codigo2() {
+    var v = lista2(n2);
+    var muestra = n2 <= 8 ? v.join(", ") + "]" : v.slice(0, 4).join(", ") + ", …]  # " + n2 + " valores";
+    pintarCodigo($("s2-codigo"), [
+      "lista = [" + muestra,
+      "burbuja(lista.copy())",
+      "quicksort(lista)",
+      "mergesort(lista)"
+    ]);
+  }
+
+  function preparar2() {
+    anim2 = null;
+    codigo2();
+    $("s2-rotulo").textContent = "los números del 1 al " + n2 + ", mezclados";
+    var v = lista2(n2);
+    CLAVES.forEach(function (k) { carriles2[k].preparar(v, null); });
+    $("s2-ordenar").disabled = false;
+    $("s2-duplicar").disabled = !filas2[n2] || n2 >= MAX2;
+    $("s2-volver").hidden = n2 === 8;
+  }
+
+  function pintarTabla2(nueva) {
+    var filas = $("s2-tabla").querySelectorAll("tr");
+    filas.forEach(function (tr) { while (tr.cells.length > 1) tr.deleteCell(1); });
+    Object.keys(filas2).map(Number).sort(function (a, b) { return a - b; }).forEach(function (n) {
+      var f = filas2[n];
+      var antes = filas2[n / 2];
+      var celdas = [miles(n)];
+      CLAVES.forEach(function (k) {
+        celdas.push(miles(f[k]) + (antes ? "<small>" + veces(f[k] / antes[k]) + "</small>" : ""));
+      });
+      celdas.forEach(function (html, i) {
+        var td = filas[i].insertCell(-1);
+        td.innerHTML = html;
+        if (n === nueva) td.className = "tabla__nueva";
+      });
+    });
+    $("s2-tabla").hidden = false;
+  }
+
+  function ordenar2() {
+    preparar2();
+    $("s2-ordenar").disabled = true;
+    $("s2-duplicar").disabled = true;
+    Pasos.limpiarFeedback($("s2-fb"));
+    Codigo.marcar($("s2-codigo"), { activas: [1, 2, 3] });
+    mostrar($("s2-carriles"));
+    var n = n2;
+    var v = lista2(n);
+    var total = {};
+    var max = 0;
+    CLAVES.forEach(function (k) {
+      var ev = EVENTOS[k](v);
+      total[k] = cuantas(ev);
+      max = Math.max(max, total[k]);
+      carriles2[k].preparar(v, ev);
+    });
+    // Todos a la misma velocidad: el más lento tarda entre 1,5 y 5 segundos
+    var dur = Math.min(5000, Math.max(1500, max * 50));
+    var velocidad = max / dur;
+    var token = {};
+    anim2 = token;
+    var inicio = null;
+    function cuadro(ts) {
+      if (anim2 !== token) return;
+      if (inicio === null) inicio = ts;
+      var objetivo = Pasos.reducirMovimiento ? Infinity : Math.floor((ts - inicio) * velocidad);
+      var todos = true;
+      CLAVES.forEach(function (k) {
+        var c = carriles2[k];
+        var estaba = c.listo;
+        c.avanzar(objetivo);
+        if (c.listo && !estaba) {
+          var lugar = CLAVES.filter(function (o) { return total[o] < total[k]; }).length;
+          c.terminar(lugar, lugar === 0);
+        }
+        if (!c.listo) todos = false;
+      });
+      if (todos) terminar2(n, total);
+      else requestAnimationFrame(cuadro);
+    }
+    requestAnimationFrame(cuadro);
+  }
+
+  function terminar2(n, total) {
+    anim2 = null;
+    Codigo.limpiar($("s2-codigo"));
+    var antes = filas2[n / 2];
+    filas2[n] = total;
+    pintarTabla2(n);
+    $("s2-ordenar").disabled = false;
+    $("s2-duplicar").disabled = n >= MAX2;
+    var texto;
+    if (antes) {
+      texto = "De " + miles(n / 2) + " a " + miles(n) + " valores: burbuja hizo " + veces(total.b / antes.b) +
+        ", quicksort " + veces(total.q / antes.q) + " y mergesort " + veces(total.m / antes.m) + ".";
+    } else {
+      texto = "Con " + n + " valores: burbuja " + total.b + ", quicksort " + total.q + " y mergesort " + total.m + ".";
+    }
+    if (filas2[8] && filas2[16] && filas2[32] && filas2[64]) {
+      Pasos.feedback($("s2-fb"), "ok", texto + " Al duplicar, burbuja hace unas cuatro veces más (el doble de pasadas, cada una el doble de larga); quicksort y mergesort, poco más del doble.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("s2-fb"), "ok", texto + (Object.keys(filas2).length === 1 ? " Ahora duplica la lista." : " Duplícala otra vez."));
+    }
+  }
+
+  /* ---------- 3. Un millón ---------- */
+  var n3 = 100;
+  var cuentas3 = {};
+  var adivina3 = null;
+  var calculando3 = false;
+  var visto3 = false;
+
+  (function () {
+    var cont = $("s3-barras");
+    CLAVES.forEach(function (k) {
+      var div = document.createElement("div");
+      div.className = "barra alg-" + k;
+      div.id = "s3-barra-" + k;
+      div.innerHTML =
+        '<div class="barra__cab"><span class="barra__nombre">' + NOMBRE[k] + '</span><span class="barra__num" id="s3-num-' + k + '">0</span></div>' +
+        '<div class="barra__pista" aria-hidden="true"><span class="barra__relleno" id="s3-relleno-' + k + '"></span></div>' +
+        '<p class="barra__tiempo" id="s3-tiempo-' + k + '"></p>';
+      cont.appendChild(div);
+    });
+  })();
+
+  function cuentas3de(n) {
+    if (!cuentas3[n]) cuentas3[n] = contarTodos(mezclada(n, n));
+    return cuentas3[n];
+  }
+
+  function codigo3() {
+    pintarCodigo($("s3-codigo"), [
+      "# " + miles(n3).replace(/ /g, " ") + " números distintos, mezclados",
+      "lista = [...]",
+      "burbuja(lista.copy())",
+      "quicksort(lista)",
+      "mergesort(lista)"
+    ]);
+  }
+
+  function actualizar3(l) {
+    presionar($("s3-tamano"), n3);
+    presionar($("s3-adivina"), n3 === 1000000 ? adivina3 : null);
+    codigo3();
+    $("s3-rotulo").textContent = miles(n3) + " valores";
+    if (!cuentas3[n3]) {
+      // Contar con un millón tarda un momento: primero se avisa, luego se cuenta
+      if (calculando3) return;
+      calculando3 = true;
+      $("s3-rotulo").textContent = "Contando con " + miles(n3) + " valores…";
+      setTimeout(function () {
+        cuentas3de(n3);
+        calculando3 = false;
+        actualizar3(l);
+      }, 60);
+      return;
+    }
+    var c = cuentas3[n3];
+    var max = Math.max(c.b, c.q, c.m);
+    var menor = Math.min(c.b, c.q, c.m);
+    CLAVES.forEach(function (k) {
+      $("s3-num-" + k).textContent = miles(c[k]);
+      $("s3-relleno-" + k).style.width = (c[k] / max * 100) + "%";
+      $("s3-tiempo-" + k).textContent = tiempo(c[k]);
+      $("s3-barra-" + k).classList.toggle("barra--gana", c[k] === menor);
+    });
+    if (!l) return;
+    var fb = $("s3-fb");
+    if (n3 === 1000000) {
+      visto3 = true;
+      var bien = adivina3 === "dias";
+      Pasos.feedback(fb, bien ? "ok" : "pista",
+        (bien ? "¡Exacto! " : "¡Mucho más! ") + "Burbuja tardaría " + tiempo(c.b) + ": casi 500 000 millones de comparaciones. Mergesort, " +
+        tiempo(c.m) + ", y quicksort, " + tiempo(c.q) + ". Con listas grandes, la forma de ordenar importa más que la PC.");
+      l.desbloquear();
+    } else if (!visto3) {
+      Pasos.feedback(fb, "ok", "Con " + miles(n3) + " valores: burbuja " + miles(c.b) + ", mergesort " + miles(c.m) + "." +
+        (n3 < 10000 ? " Prueba más grande." : " Ahora adivina: ¿y con un millón?"));
+    }
+  }
+
+  /* ---------- 4. Ya ordenada o al revés ---------- */
+  var ORDENADAS = NOTAS.slice().sort(function (a, b) { return a - b; });
+  var CASOS4 = { mezclada: NOTAS, ordenada: ORDENADAS, reves: ORDENADAS.slice().reverse() };
+  var caso4 = null;
+  var carrera4 = crearCarrera("s4");
+  var s4 = vistos();
+  var BURBUJA = [
+    "def burbuja(lista):",
+    "    for i in range(len(lista) - 1):",
+    "        hubo_cambio = False",
+    "        for j in range(len(lista) - 1 - i):",
+    "            if lista[j] > lista[j + 1]:",
+    "                aux = lista[j]",
+    "                lista[j] = lista[j + 1]",
+    "                lista[j + 1] = aux",
+    "                hubo_cambio = True",
+    "        if not hubo_cambio:",
+    "            break"
+  ];
+  pintarCodigo($("s4-codigo"), BURBUJA);
+
+  function preparar4() {
+    carrera4.preparar(caso4 ? CASOS4[caso4] : NOTAS);
+    presionar($("s4-elegir"), caso4);
+    Codigo.marcar($("s4-codigo"), { activas: [9, 10] });
+  }
+
+  function correr4() {
+    var caso = caso4;
+    presionar($("s4-elegir"), caso);
+    Pasos.limpiarFeedback($("s4-fb"));
+    mostrar($("s4-carriles"));
+    carrera4.correr(CASOS4[caso], TIC, function (total) {
+      s4.marcar(caso);
+      var texto;
+      if (caso === "ordenada") {
+        texto = "Ya ordenadas: burbuja hizo una sola pasada sin cambios y el break la cortó: " + total.b +
+          ". Mergesort, " + total.m + ". Quicksort, " + total.q + ": ¡tanto como burbuja sin hubo_cambio!";
+      } else if (caso === "reves") {
+        texto = "Al revés: burbuja y quicksort, " + total.b + " cada uno. Mergesort, " + total.m + ", como con las ordenadas.";
+      } else {
+        texto = "Mezcladas, como en la carrera: burbuja " + total.b + ", quicksort " + total.q + " y mergesort " + total.m + ".";
+      }
+      if (s4.todos(["ordenada", "reves"])) {
+        Pasos.feedback($("s4-fb"), "ok", texto + " Burbuja gana si ya está ordenada, quicksort se atasca y mergesort casi no cambia.");
+        leccion.desbloquear();
+      } else {
+        var falta = !s4.tiene("ordenada") ? "▶ ya ordenadas" : "▶ al revés";
+        Pasos.feedback($("s4-fb"), "ok", texto + " Ahora toca " + falta + ".");
+      }
+    });
+  }
+
+  /* ---------- 5. Quicksort piso por piso ---------- */
+  var CASOS5 = { mezclada: [12, 6, 17, 9, 19, 14], ordenada: [6, 9, 12, 14, 17, 19] };
+  var caso5 = null;
+  var reloj5 = relojes();
+  var s5 = vistos();
+  var part5 = Particion.crear($("s5-particion"), { n: 6, max: 1.9,etiqueta: "Cómo quicksort parte la lista en trozos" });
+  var QUICK = [
+    "def quicksort(lista):",
+    "    if len(lista) <= 1:",
+    "        return lista",
+    "    pivote = lista[0]",
+    "    menores = []",
+    "    mayores = []",
+    "    for x in lista[1:]:",
+    "        if x < pivote:",
+    "            menores.append(x)",
+    "        else:",
+    "            mayores.append(x)",
+    "    return quicksort(menores) + [pivote] + quicksort(mayores)"
+  ];
+  pintarCodigo($("s5-codigo"), QUICK);
+
+  /* Los pasos de la animación: repartir un trozo, bajar sus hijos, volver armado */
+  function pasos5(valores) {
+    var pasos = [];
+    var id = 0;
+    function q(vals, piso, desde, miId) {
+      if (vals.length <= 1) return vals.slice();
+      var pivote = vals[0];
+      var menores = [];
+      var mayores = [];
+      vals.slice(1).forEach(function (x) { (x < pivote ? menores : mayores).push(x); });
+      pasos.push({ reparte: miId, vals: vals, pivote: pivote, cuenta: vals.length - 1 });
+      var idMen = "t" + (++id);
+      var idMay = "t" + (++id);
+      var m = menores.length;
+      pasos.push({
+        espera: miId,
+        hijos: [
+          { id: idMen, piso: piso + 1, desde: desde, valores: menores, padre: miId },
+          // Si mayores queda vacía, su [ ] va en la columna del pivote
+          { id: idMay, piso: piso + 1, desde: mayores.length ? desde + m + 1 : desde + m, valores: mayores, padre: miId }
+        ]
+      });
+      var rMen = q(menores, piso + 1, desde, idMen);
+      var rMay = q(mayores, piso + 1, mayores.length ? desde + m + 1 : desde + m, idMay);
+      var armada = rMen.concat([pivote], rMay);
+      pasos.push({ arma: miId, valores: armada });
+      return armada;
+    }
+    q(valores, 0, 0, "t0");
+    return pasos;
+  }
+
+  function preparar5() {
+    reloj5.cortar();
+    presionar($("s5-elegir"), caso5);
+    Codigo.limpiar($("s5-codigo"));
+    part5.vaciar();
+    var v = caso5 ? CASOS5[caso5] : CASOS5.mezclada;
+    part5.trozo({ id: "t0", piso: 0, desde: 0, valores: v });
+    $("s5-llamada").textContent = "quicksort([" + v.join(", ") + "])";
+    $("s5-suma").textContent = "";
+  }
+
+  function correr5() {
+    var caso = caso5;
+    preparar5();
+    Pasos.limpiarFeedback($("s5-fb"));
+    mostrar($("s5-llamada"));
+    var pasos = pasos5(CASOS5[caso]);
+    var pre = $("s5-codigo");
+    var sumandos = [];
+    var t = 400;
+    pasos.forEach(function (p) {
+      var cuando = t;
+      reloj5.luego(function () {
+        if (p.reparte) {
+          part5.estado(p.reparte, "activo");
+          part5.clases(p.reparte, function (i, v) {
+            if (i === 0) return "particion__celda--pivote";
+            return v < p.pivote ? "particion__celda--menor" : "particion__celda--mayor";
+          });
+          Codigo.marcar(pre, { activas: [3, 6, 7] });
+          sumandos.push(p.cuenta);
+          var total = sumandos.reduce(function (a, b) { return a + b; }, 0);
+          $("s5-suma").innerHTML = (sumandos.length > 1 ? sumandos.join(" + ") + " = " : "") + total + " <span>" + (total === 1 ? "comparación" : "comparaciones") + "</span>";
+          $("s5-llamada").textContent = "pivote = " + p.pivote + ": " + p.cuenta + (p.cuenta === 1 ? " comparación" : " comparaciones");
+        } else if (p.hijos) {
+          part5.estado(p.espera, "espera");
+          Codigo.marcar(pre, { activas: [11] });
+          p.hijos.forEach(function (h) {
+            part5.trozo({ id: h.id, piso: h.piso, desde: h.desde, valores: h.valores, padre: h.padre });
+            if (h.valores.length <= 1) part5.estado(h.id, "listo");
+          });
+        } else if (p.arma) {
+          part5.valores(p.arma, p.valores);
+          part5.clases(p.arma, null);
+          part5.estado(p.arma, "listo");
+          Codigo.marcar(pre, { activas: [11] });
+          $("s5-llamada").textContent = "vuelve armada: [" + p.valores.join(", ") + "]";
+        }
+      }, cuando);
+      t += p.arma ? 450 : 750;
+    });
+    reloj5.luego(function () {
+      Codigo.limpiar(pre);
+      s5.marcar(caso);
+      var total = sumandos.reduce(function (a, b) { return a + b; }, 0);
+      var texto;
+      if (caso === "ordenada") {
+        texto = "Ya ordenada: el pivote siempre es el menor, menores queda vacía y mayores pierde un solo valor: " +
+          sumandos.join(" + ") + " = " + total + ", como burbuja sin hubo_cambio.";
+      } else {
+        texto = "Mezclada: el pivote parte la lista en dos y los trozos se achican rápido: " + total + " comparaciones.";
+      }
+      if (s5.todos(["mezclada", "ordenada"])) {
+        Pasos.feedback($("s5-fb"), "ok", texto + " Quicksort es rápido si el pivote cae cerca del medio.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s5-fb"), "ok", texto + " Ahora toca la otra lista.");
+      }
+    }, t + 200);
+  }
+
+  /* ---------- 6. Mil valores, cuatro casos ---------- */
+  var N6 = 1000;
+  var NOMBRES6 = { mezclada: "mezclada", ordenada: "ordenada", reves: "al revés", repetidas: "repetidas" };
+  var ORDEN6 = ["mezclada", "ordenada", "reves", "repetidas"];
+  var caso6 = null;
+  var cuentas6 = {};
+  var s6 = vistos();
+
+  (function () {
+    var cont = $("s6-barras");
+    CLAVES.forEach(function (k) {
+      var div = document.createElement("div");
+      div.className = "barra alg-" + k;
+      div.id = "s6-barra-" + k;
+      div.innerHTML =
+        '<div class="barra__cab"><span class="barra__nombre">' + NOMBRE[k] + '</span><span class="barra__num" id="s6-num-' + k + '">?</span></div>' +
+        '<div class="barra__pista" aria-hidden="true"><span class="barra__relleno" id="s6-relleno-' + k + '"></span></div>';
+      cont.appendChild(div);
+    });
+  })();
+
+  function lista6(caso) {
+    if (caso === "mezclada") return mezclada(N6, N6);
+    if (caso === "ordenada") return rango(1, N6 + 1);
+    if (caso === "reves") return rango(1, N6 + 1).reverse();
+    return notasAzar(N6, 7);
+  }
+
+  function codigo6() {
+    var lineas;
+    if (caso6 === "ordenada") lineas = ["lista = []", "for k in range(1000):", "    lista.append(k + 1)      # 1, 2, …, 1000"];
+    else if (caso6 === "reves") lineas = ["lista = []", "for k in range(1000):", "    lista.append(1000 - k)   # 1000, 999, …, 1"];
+    else if (caso6 === "repetidas") lineas = ["lista = []", "for k in range(1000):", "    lista.append(random.randint(0, 20))"];
+    else lineas = ["# del 1 al 1000, mezclados", "lista = [...]"];
+    pintarCodigo($("s6-codigo"), lineas.concat(["burbuja(lista.copy())", "quicksort(lista)", "mergesort(lista)"]));
+  }
+
+  function actualizar6(l) {
+    presionar($("s6-elegir"), caso6);
+    codigo6();
+    if (!caso6) return;
+    if (!cuentas6[caso6]) cuentas6[caso6] = contarTodos(lista6(caso6));
+    var c = cuentas6[caso6];
+    var max = Math.max(c.b, c.q, c.m);
+    var menor = Math.min(c.b, c.q, c.m);
+    $("s6-rotulo").textContent = "1000 valores · " + NOMBRES6[caso6];
+    CLAVES.forEach(function (k) {
+      $("s6-num-" + k).textContent = miles(c[k]);
+      $("s6-relleno-" + k).style.width = (c[k] / max * 100) + "%";
+      $("s6-barra-" + k).classList.toggle("barra--gana", c[k] === menor);
+    });
+    // La tabla: una columna por caso
+    var col = ORDEN6.indexOf(caso6) + 1;
+    $("s6-tabla").querySelectorAll("tbody tr").forEach(function (tr, i) {
+      var td = tr.cells[col];
+      var nuevo = td.classList.contains("tabla__vacia");
+      td.textContent = miles(c[CLAVES[i]]);
+      td.className = nuevo ? "tabla__nueva" : "";
+    });
+    if (!l) return;
+    s6.marcar(caso6);
+    var texto = {
+      mezclada: "Mezclada: burbuja casi 500 000; quicksort y mergesort, unas 10 000 y 9000.",
+      ordenada: "Ya ordenada: burbuja, " + miles(c.b) + " (una pasada y break). Quicksort, " + miles(c.q) + ": se atasca. Mergesort, " + miles(c.m) + ".",
+      reves: "Al revés: burbuja y quicksort, " + miles(c.b) + " cada uno. Mergesort, " + miles(c.m) + ".",
+      repetidas: "Notas de 0 a 20: cada una se repite unas 50 veces. Los iguales al pivote van todos a mayores y quicksort se frena: " + miles(c.q) + ". Mergesort, " + miles(c.m) + "."
+    }[caso6];
+    if (s6.todos(ORDEN6)) {
+      var ms = ORDEN6.map(function (k) { return cuentas6[k].m; });
+      Pasos.feedback($("s6-fb"), "ok", texto + " Mergesort hizo entre " + miles(Math.min.apply(null, ms)) + " y " + miles(Math.max.apply(null, ms)) +
+        " en los cuatro casos: siempre parecido. Burbuja y quicksort dependen de cómo llegue la lista.");
+      l.desbloquear();
+    } else {
+      Pasos.feedback($("s6-fb"), "ok", texto + " Prueba otro caso.");
+    }
+  }
+
+  /* ---------- 7. sorted(): tramos ordenados y mezclar ---------- */
+  var CASOS7 = { casi: [3, 6, 11, 14, 9, 12, 17, 19], ordenada: [3, 6, 9, 11, 12, 14, 17, 19] };
+  var caso7 = null;
+  var reloj7 = relojes();
+  var s7 = vistos();
+  var lista7 = Lista.crear($("s7-lista"), CASOS7.casi);
+
+  function codigo7() {
+    var v = CASOS7[caso7 || "casi"];
+    pintarCodigo($("s7-codigo"), [
+      "notas = [" + v.join(", ") + "]",
+      "notas = sorted(notas)",
+      "print(notas)"
+    ]);
+  }
+
+  /* Como sorted (la idea): recorrer una vez buscando tramos, y mezclarlos de a dos */
+  function eventosTramos(valores) {
+    var v = valores.slice();
+    var n = v.length;
+    var ev = [];
+    var tramos = [[0, 1]];
+    for (var i = 0; i < n - 1; i++) {
+      var sigue = v[i] <= v[i + 1];
+      if (sigue) tramos[tramos.length - 1][1] = i + 2;
+      else tramos.push([i + 1, i + 2]);
+      ev.push({ cmp: [i, i + 1], a: v[i], b: v[i + 1], sigue: sigue, tramos: tramos.map(function (t) { return t.slice(); }) });
+    }
+    while (tramos.length > 1) {
+      var nuevos = [];
+      for (var t = 0; t < tramos.length; t += 2) {
+        if (t + 1 >= tramos.length) { nuevos.push(tramos[t]); continue; }
+        var lo = tramos[t][0], medio = tramos[t][1], hi = tramos[t + 1][1];
+        var a = lo, b = medio, res = [];
+        while (a < medio && b < hi) {
+          var si = v[a] <= v[b];
+          ev.push({ cmp: [a, b], a: v[a], b: v[b], si: si, mezcla: true });
+          if (si) res.push(a++); else res.push(b++);
+        }
+        while (a < medio) res.push(a++);
+        while (b < hi) res.push(b++);
+        var orden = rango(0, n);
+        res.forEach(function (viejo, k) { orden[lo + k] = viejo; });
+        var copia = v.slice();
+        res.forEach(function (viejo, k) { v[lo + k] = copia[viejo]; });
+        nuevos.push([lo, hi]);
+        ev.push({ orden: orden, tramos: null });
+      }
+      tramos = nuevos;
+    }
+    return ev;
+  }
+
+  function preparar7() {
+    reloj7.cortar();
+    presionar($("s7-elegir"), caso7);
+    codigo7();
+    lista7.valores(CASOS7[caso7 || "casi"]);
+    lista7.clases(null);
+    lista7.punteros(null);
+    ponerCuenta($("s7-cuenta"), 0, false);
+    $("s7-dice").textContent = "";
+    Codigo.consola($("s7-consola"), []);
+  }
+
+  function correr7() {
+    var caso = caso7;
+    preparar7();
+    Pasos.limpiarFeedback($("s7-fb"));
+    mostrar($("s7-lista"));
+    var pre = $("s7-codigo");
+    var ev = eventosTramos(CASOS7[caso]);
+    var hechas = 0;
+    var tramos = null;
+    var enTramos = 0;
+    var mezcla = 0;
+    var t = 300;
+    var TIC7 = 520;
+    Codigo.marcar(pre, { activas: [1] });
+
+    function claseTramo(i) {
+      if (!tramos) return "";
+      for (var k = 0; k < tramos.length; k++) {
+        if (i >= tramos[k][0] && i < tramos[k][1]) return k % 2 === 0 ? "lista__casilla--cambio" : "lista__casilla--distinta";
+      }
+      return "";
+    }
+
+    ev.forEach(function (e) {
+      reloj7.luego(function () {
+        if (e.cmp) {
+          hechas++;
+          ponerCuenta($("s7-cuenta"), hechas, true);
+          if (e.tramos) {
+            tramos = e.tramos;
+            enTramos = hechas;
+            lista7.clases(function (i) { return i === e.cmp[0] || i === e.cmp[1] ? "lista__casilla--marcada" : claseTramo(i); });
+            $("s7-dice").innerHTML = "<code>" + e.a + " &lt;= " + e.b + "</code> " + (e.sigue ? "sí: sigue el tramo" : "no: <strong>empieza otro tramo</strong>");
+          } else {
+            mezcla++;
+            lista7.clases(claseTramo);
+            lista7.punteros({ i: e.cmp[0], j: e.cmp[1] });
+            $("s7-dice").innerHTML = "Mezclar: <code>" + e.a + " &lt;= " + e.b + "</code>, toma el " + (e.si ? e.a : e.b);
+          }
+        } else if (e.orden) {
+          lista7.punteros(null);
+          lista7.reordenar(e.orden);
+          tramos = null;
+          lista7.clases(function () { return "lista__casilla--igual"; });
+        }
+      }, t);
+      t += TIC7;
+    });
+    reloj7.luego(function () {
+      lista7.punteros(null);
+      lista7.clases(function () { return "lista__casilla--igual"; });
+      var cuantosTramos = tramos ? tramos.length : 2;
+      if (caso === "ordenada") $("s7-dice").innerHTML = "Un solo tramo: <strong>no hay nada que mezclar</strong>";
+      else $("s7-dice").innerHTML = cuantosTramos + " tramos y una mezcla: <strong>¡ordenada!</strong>";
+      Codigo.marcar(pre, { activas: [2] });
+      Codigo.agregar($("s7-consola"), Lista.python(lista7.lista));
+      Codigo.volar(pre.querySelectorAll(".linea")[2], $("s7-consola").lastElementChild, Lista.python(lista7.lista), "vuelo--salida");
+      s7.marcar(caso);
+      var otros = contarTodos(CASOS7[caso]);
+      var texto;
+      if (caso === "ordenada") {
+        texto = "Un solo tramo: " + hechas + " comparaciones y listo, como burbuja con hubo_cambio. Mergesort habría hecho " + otros.m + " y quicksort, " + otros.q + ".";
+      } else {
+        texto = "Dos tramos ya ordenados: " + enTramos + " comparaciones para encontrarlos y " + mezcla + " para mezclarlos, " + hechas +
+          " en total. Burbuja hace " + otros.b + ", quicksort " + otros.q + " y mergesort " + otros.m + ".";
+      }
+      if (s7.todos(["casi", "ordenada"])) {
+        Pasos.feedback($("s7-fb"), "ok", texto + " Por eso, en la vida real, usa sorted(): aprovecha lo que ya viene ordenado y, si no hay tramos, mezcla como mergesort. Y ya está escrito y probado.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s7-fb"), "ok", texto + " Ahora toca " + (caso === "casi" ? "▶ ya ordenada." : "▶ casi ordenada."));
+      }
+    }, t + 200);
+  }
+
+  /* ---------- 8. Reto ---------- */
+  var METODOS = ["burbuja", "quicksort", "mergesort"];
+  var CASOS = [
+    { texto: "8 notas que ya están ordenadas.", bien: "burbuja", num: 7, numTexto: "¿Cuántas comparaciones hace?",
+      pistas: {
+        quicksort: "Con la lista ordenada, quicksort deja menores vacía cada vez: 7 + 6 + … + 1 = 28.",
+        mergesort: "Mergesort hace 12: no aprovecha que ya está ordenada.",
+        num: "Burbuja hace una pasada: compara cada par de vecinos una vez, no cambia nada y el break la corta."
+      } },
+    { texto: "1000 valores ordenados, menos los dos primeros, que están al revés.", bien: "burbuja", num: null,
+      pistas: {
+        quicksort: "El pivote es casi el menor: quicksort se atasca como con la lista ordenada (casi 500 000).",
+        mergesort: "Mergesort hace unas 4900. Burbuja arregla los dos primeros en la primera pasada y en la segunda ya no cambia nada."
+      } },
+    { texto: "Un millón de valores mezclados.", bien: "mergesort", num: null,
+      pistas: {
+        burbuja: "Burbuja tardaría días: casi 500 000 millones de comparaciones.",
+        quicksort: "Quicksort también es rápido (unos 25 millones), pero mergesort hizo menos: unos 19 millones."
+      } },
+    { texto: "1000 valores ordenados de mayor a menor.", bien: "mergesort", num: null,
+      pistas: {
+        burbuja: "Al revés, burbuja hace todas las pasadas: 499 500.",
+        quicksort: "El pivote siempre es el mayor: mayores queda vacía y quicksort se atasca (499 500)."
+      } },
+    { texto: "100 valores ya ordenados, con quicksort (el primero de pivote).", fijo: "quicksort", num: 4950, numTexto: "¿Cuántas comparaciones hace?",
+      pistas: {
+        num: "La lista menores queda vacía cada vez: 99 + 98 + … + 1. Con 6 valores eran 5 + 4 + 3 + 2 + 1 = 15. Pista: 100 × 99 / 2."
+      } }
+  ];
+
+  function armarReto() {
+    var ol = $("reto-casos");
+    ol.textContent = "";
+    CASOS.forEach(function (c, i) {
+      var li = document.createElement("li");
+      li.className = "caso";
+      li.id = "caso-" + i;
+      var html = '<p class="caso__texto" id="caso-' + i + '-texto">' + (i + 1) + ". " + c.texto + "</p><div class=\"caso__fila\">";
+      if (!c.fijo) {
+        html += '<fieldset aria-labelledby="caso-' + i + '-texto"><legend class="visualmente-oculto">¿Cuál hace menos comparaciones?</legend>';
+        METODOS.forEach(function (m) {
+          html += '<label class="chip"><input type="radio" name="caso-' + i + '" value="' + m + '"><span>' + m + "</span></label>";
+        });
+        html += "</fieldset>";
+      }
+      if (c.num !== null) {
+        html += '<label class="caso__num">' + c.numTexto + ' <input type="text" inputmode="numeric" maxlength="9" autocomplete="off" id="caso-' + i + '-num"></label>';
+      }
+      html += '</div><p class="caso__pista" id="caso-' + i + '-pista" aria-live="polite"></p>';
+      li.innerHTML = html;
+      ol.appendChild(li);
+    });
+    ol.addEventListener("change", cambiarReto);
+    ol.addEventListener("input", cambiarReto);
+  }
+
+  function leerCaso(i) {
+    var c = CASOS[i];
+    var marcada = document.querySelector('input[name="caso-' + i + '"]:checked');
+    var campo = $("caso-" + i + "-num");
+    var texto = campo ? campo.value.replace(/[\s.,]/g, "") : "";
+    return {
+      metodo: c.fijo || (marcada ? marcada.value : null),
+      num: campo ? (/^\d+$/.test(texto) ? Number(texto) : null) : undefined
+    };
+  }
+
+  function retoCompleto() {
+    return CASOS.every(function (c, i) {
+      var r = leerCaso(i);
+      return r.metodo && (c.num === null || r.num !== null);
+    });
+  }
+
+  function cambiarReto(e) {
+    var li = e.target.closest(".caso");
+    if (li) {
+      li.classList.remove("caso--bien", "caso--mal");
+      li.querySelector(".caso__pista").textContent = "";
+    }
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(retoCompleto());
+  }
+
+  function entrarReto(paso, l, info) {
+    if (!info.desbloqueado) l.listoParaComprobar(retoCompleto());
+  }
+
+  function comprobarReto() {
+    var bien = 0;
+    CASOS.forEach(function (c, i) {
+      var r = leerCaso(i);
+      var li = $("caso-" + i);
+      var pista = $("caso-" + i + "-pista");
+      var ok = r.metodo === (c.fijo || c.bien) && (c.num === null || r.num === c.num);
+      li.classList.toggle("caso--bien", ok);
+      li.classList.toggle("caso--mal", !ok);
+      if (ok) {
+        bien++;
+        pista.textContent = "";
+      } else if (!c.fijo && r.metodo !== c.bien) {
+        pista.textContent = "💡 " + c.pistas[r.metodo];
+      } else {
+        pista.textContent = "💡 " + c.pistas.num;
+      }
+    });
+    if (bien === CASOS.length) {
+      Pasos.feedback($("reto-fb"), "ok", "¡Todo bien! Ya ordenada o casi: burbuja con hubo_cambio. Grande y mezclada, o al revés: mergesort. Y quicksort con el primero de pivote, nunca con una lista ordenada.");
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", (bien === 0 ? "Ninguno está bien todavía." : bien + " de " + CASOS.length + (bien === 1 ? " está bien." : " están bien.")) + " Revisa los que tienen 💡 y comprueba otra vez.");
+    return false;
+  }
+
+  /* ---------- Resumen ---------- */
+  pintarCodigo($("resumen-codigo"), [
+    "burbuja(lista)     # 1000 → casi 500 000; ordenada: 999",
+    "quicksort(lista)   # 1000 → unas 10 000; ordenada: 499 500",
+    "mergesort(lista)   # 1000 → unas 9000, siempre",
+    "lista = sorted(lista)   # la que conviene usar"
+  ]);
+
+  /* ---------- Conexiones ---------- */
+  $("s1-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { prediccion1 = b.getAttribute("data-valor"); correr1(); });
+  });
+
+  $("s2-ordenar").addEventListener("click", ordenar2);
+  $("s2-duplicar").addEventListener("click", function () {
+    if (n2 >= MAX2) return;
+    n2 *= 2;
+    ordenar2();
+  });
+  $("s2-volver").addEventListener("click", function () { n2 = 8; preparar2(); });
+
+  $("s3-tamano").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { n3 = Number(b.getAttribute("data-valor")); actualizar3(leccion); });
+  });
+  $("s3-adivina").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { adivina3 = b.getAttribute("data-valor"); n3 = 1000000; actualizar3(leccion); });
+  });
+
+  $("s4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { caso4 = b.getAttribute("data-valor"); correr4(); });
+  });
+
+  $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { caso5 = b.getAttribute("data-valor"); correr5(); });
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { caso6 = b.getAttribute("data-valor"); actualizar6(leccion); });
+  });
+
+  $("s7-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { caso7 = b.getAttribute("data-valor"); correr7(); });
+  });
+
+  armarReto();
+
+  // Estado inicial de cada paso
+  preparar1();
+  preparar2();
+  actualizar3(null);
+  preparar4();
+  preparar5();
+  actualizar6(null);
+  preparar7();
+
+  /* Al cambiar de paso se cortan las animaciones de los otros (no desbloquean el nuevo) */
+  function pararTodo() {
+    carrera1.parar();
+    anim2 = null;
+    carrera4.parar();
+    reloj5.cortar();
+    reloj7.cortar();
+  }
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-carrera": function () { pararTodo(); preparar1(); },
+      "paso-doble": function () { pararTodo(); preparar2(); },
+      "paso-millon": function () { pararTodo(); actualizar3(null); },
+      "paso-ordenada": function () { pararTodo(); preparar4(); },
+      "paso-atasca": function () { pararTodo(); preparar5(); },
+      "paso-casos": function () { pararTodo(); actualizar6(null); },
+      "paso-sorted": function () { pararTodo(); preparar7(); },
+      "paso-reto": function (paso, l, info) { pararTodo(); entrarReto(paso, l, info); },
+      "paso-resumen": function () { pararTodo(); }
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
