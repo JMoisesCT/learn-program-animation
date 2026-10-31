@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Partir a la mitad · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: la idea de la búsqueda binaria sin código. Adivinar un número del 1 al 100 preguntando el del medio, buscar en un diccionario de papel y destapar casilleros ordenados apagando la mitad que ya no puede tenerlo.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* ---------- Contador: preguntas, páginas, comparaciones ---------- */
+    .cuenta { margin: 0 0 var(--esp-3); text-align: center; font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+    .cuenta strong { display: inline-block; min-width: 1.6em; font-family: var(--fuente-codigo); font-size: var(--texto-xl); line-height: 1.1; color: var(--color-texto); vertical-align: -0.12em; }
+    .cuenta strong.cuenta--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- El juego: el campo y las preguntas hechas ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 5.5rem; font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); text-align: center; }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .historial { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); min-height: 2rem; margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .historial:empty::before { content: "Aún no preguntaste nada."; font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); }
+    .historial li { display: inline-flex; align-items: center; gap: 0.35em; padding: 0.15em 0.65em; border-radius: 999px; font-size: var(--texto-sm); font-weight: 600; color: var(--color-azul); background: var(--color-azul-suave); animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .historial li b { font-family: var(--fuente-codigo); }
+    .historial li.h--menor { color: #7a3fb0; background: #f2eafa; }
+    .historial li.h--si { color: var(--color-ok); background: var(--color-ok-suave); }
+    .historial li.h--inutil { box-shadow: inset 0 0 0 2px var(--color-pista); }
+    .calculo { margin: 0 0 var(--esp-3); text-align: center; color: var(--color-texto-suave); }
+    .calculo code { color: var(--color-texto); }
+
+    /* ---------- Dónde puede estar: la zona verde se achica ---------- */
+    .marcador { padding: var(--esp-6) var(--esp-2) 0; }
+    .marcador .regla { margin: 0; }
+    .regla__zona { transition: left var(--dur) ease, width var(--dur) ease; }
+    .regla__raya { position: absolute; top: -0.3rem; bottom: -0.3rem; width: 2px; margin-left: -1px; background: #8a929c; border-radius: 1px; }
+    .regla__punto { transition: left var(--dur) ease, background-color var(--dur); }
+    .regla__punto--acierto { background: var(--color-acento); }
+    .regla__valor { position: absolute; bottom: calc(100% + 0.7rem); transform: translateX(-50%); font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); white-space: nowrap; transition: left var(--dur) ease; }
+    .regla__valor--acierto { color: var(--color-acento); }
+    .marcador__extremos { display: flex; justify-content: space-between; margin-top: var(--esp-2); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .rango { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rango strong { color: var(--color-acento); font-family: var(--fuente-codigo); }
+
+    /* ---------- El diccionario: la página abierta ---------- */
+    .pagina { position: relative; max-width: 17rem; margin: 0 auto; padding: var(--esp-4) var(--esp-5) var(--esp-5); border: 1px solid #d9cfb8; border-radius: 4px var(--radio-sm) var(--radio-sm) 4px; background: linear-gradient(90deg, #efe6d2 0, #fffaf0 0.7rem); box-shadow: var(--sombra); text-align: center; }
+    .pagina__numero { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7b6a45; }
+    .pagina__palabra { margin: var(--esp-2) 0 0; font-family: Georgia, "Times New Roman", serif; font-size: var(--texto-2xl); font-weight: 700; color: #3b2f16; }
+    .pagina__nota { margin: var(--esp-1) 0 0; font-size: var(--texto-xs); color: #7b6a45; }
+    .pagina--abre { animation: pagina-abre 420ms ease-out; }
+    .pagina--hallada { border-color: var(--color-ok); box-shadow: 0 0 0 3px var(--color-ok-suave), var(--sombra); }
+    @keyframes pagina-abre { from { transform: perspective(40rem) rotateY(-70deg); transform-origin: left center; opacity: 0.3; } }
+    .objetivo { margin: 0 0 var(--esp-3); text-align: center; font-weight: 700; }
+    .objetivo strong { display: inline-block; padding: 0.05em 0.6em; border-radius: 999px; font-family: var(--fuente-codigo); color: var(--color-ok); background: var(--color-ok-suave); }
+
+    /* ---------- Casilleros que se tocan ---------- */
+    .lista--tocable .lista__casilla { cursor: pointer; }
+    .lista--tocable .lista__casilla--apagada, .lista--tocable.lista--quieta .lista__casilla { cursor: default; }
+    .lista--tocable:not(.lista--quieta) .lista__casilla--tapada:not(.lista__casilla--apagada):hover > .lista__valor { border-color: var(--color-azul); transform: translateY(-3px); }
+    .indices { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .indices .btn { min-width: 2.5rem; min-height: 2.5rem; padding: 0 var(--esp-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+
+    /* ---------- Escalera: cuántos quedan tras cada pregunta ---------- */
+    .escalera { display: grid; gap: 0.2rem; margin: 0; padding: 0; list-style: none; font-size: var(--texto-sm); }
+    .escalera li { line-height: 1.3; display: grid; grid-template-columns: 6.2rem minmax(0, 1fr) 3.2rem; align-items: center; gap: var(--esp-2); animation: aparecer var(--dur) ease both; animation-delay: var(--retraso, 0ms); }
+    .escalera__rotulo { font-weight: 600; color: var(--color-texto-suave); white-space: nowrap; }
+    .escalera__pista { height: 0.9rem; border-radius: 999px; background: var(--color-superficie); box-shadow: inset 0 0 0 1px var(--color-borde); overflow: hidden; }
+    .escalera__barra { display: block; height: 100%; width: var(--ancho); min-width: 0.35rem; border-radius: 999px; background: var(--color-azul); animation: barra-crece 500ms ease-out both; animation-delay: var(--retraso, 0ms); }
+    .escalera__n { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; }
+    .escalera li.escalera--fin .escalera__barra { background: var(--color-acento); }
+    .escalera li.escalera--fin .escalera__n, .escalera li.escalera--fin .escalera__rotulo { color: var(--color-acento); }
+    @keyframes barra-crece { from { width: 0; } }
+
+    /* ---------- Opciones ---------- */
+    .opciones--secuencia { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--secuencia .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+
+    /* ---------- El código que viene ---------- */
+    @media (min-width: 1024px) {
+      .lab .codigo.codigo--chico { padding-block: var(--esp-3); font-size: 0.95rem; line-height: 1.5; }
+      .codigo--chico .linea { min-height: 1.5em; }
+    }
+    @media (min-width: 1024px) and (max-height: 720px) {
+      .lab .codigo.codigo--chico { font-size: 0.9rem; line-height: 1.4; }
+      .codigo--chico .linea { min-height: 1.4em; }
+    }
+    .codigo--chico + .fila-botones { margin-top: var(--esp-3); }
+    #b-explicacion { margin-top: var(--esp-2); min-height: 0; }
+    #b-consola { min-height: 0; }
+    .arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-5); margin: 0 0 var(--esp-2); }
+    .arriba .elegir, .arriba .cuenta { margin: 0; }
+    .elegir { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); margin: 0 0 var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-family: var(--fuente-codigo); }
+    .tabla-resumen { margin: var(--esp-5) auto 0; border-collapse: collapse; font-size: var(--texto-md); }
+    .tabla-resumen th, .tabla-resumen td { padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--color-borde); text-align: center; }
+    .tabla-resumen th { font-size: var(--texto-xs); letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tabla-resumen caption { padding-bottom: var(--esp-2); font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+    .tabla-resumen td { font-family: var(--fuente-codigo); font-weight: 700; }
+    .tabla-resumen td.tabla--rapida { color: var(--color-acento); }
+
+    @media (max-width: 1023.98px) {
+      .lab__visual > .cuenta:first-child, .lab__visual > .arriba:first-child { margin-top: var(--esp-5); }
+    }
+    @media (max-width: 480px) {
+      #d-botones { gap: var(--esp-2); }
+      #d-botones .btn { padding-inline: var(--esp-3); font-size: var(--texto-sm); }
+      .escalera li { grid-template-columns: 5.4rem minmax(0, 1fr) 2.8rem; }
+      .escalera { font-size: var(--texto-xs); }
+      .pagina__palabra { font-size: var(--texto-xl); }
+      .opciones--secuencia .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .tabla-resumen th, .tabla-resumen td { padding: var(--esp-2); }
+      .codigo.codigo--chico { font-size: 0.8rem; }
+      .codigo--chico .linea { padding-right: var(--esp-2); }
+      .indices > span { flex-basis: 100%; text-align: center; }
+      .indices { gap: var(--esp-1) 0.35rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas-mitad">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Adivina el número: el alumno juega -->
+    <section class="paso" id="paso-juego" data-requiere aria-labelledby="t-juego">
+      <span class="paso__etiqueta">Búsquedas 3/7 · Partir a la mitad</span>
+      <h1 class="paso__titulo" id="t-juego">Adivina el número</h1>
+      <p>Como en el proyecto de Bucles, la computadora pensó un número, ahora del <strong>1 al 100</strong>. Tú preguntas y ella responde «es mayor» o «es menor». Adivínalo y fíjate en <strong>cuántas preguntas</strong> usas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="entrada" id="j1-fila">
+            <label for="j1-campo">Tu número:</label>
+            <input type="text" id="j1-campo" inputmode="numeric" maxlength="3" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn btn-secundario" id="j1-enviar">Preguntar ⏎</button>
+          </div>
+          <ol class="historial" id="j1-historial" aria-label="Tus preguntas" aria-live="polite"></ol>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="j1-otra" hidden>↺ Otra partida</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Preguntas: <strong id="j1-cuenta">0</strong></p>
+          <div class="marcador" aria-hidden="true">
+            <div class="regla" id="j1-regla"></div>
+            <div class="marcador__extremos"><span>1</span><span>100</span></div>
+          </div>
+          <p class="rango" id="j1-rango" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="j1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. La estrategia: preguntar siempre el del medio -->
+    <section class="paso" id="paso-medio" data-requiere aria-labelledby="t-medio">
+      <h2 class="paso__titulo" id="t-medio">Siempre el del medio</h2>
+      <p>Otro número secreto. Esta vez pregunta siempre el número <strong>del medio</strong> de lo que queda: sea cual sea la respuesta, descartas la mitad.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="calculo" id="j2-calculo" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-primario" id="j2-preguntar">Preguntar 50</button>
+          </div>
+          <ol class="historial" id="j2-historial" aria-label="Preguntas hechas" aria-live="polite"></ol>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="j2-otra" hidden>↺ Otro número secreto</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Preguntas: <strong id="j2-cuenta">0</strong></p>
+          <div class="marcador" aria-hidden="true">
+            <div class="regla" id="j2-regla"></div>
+            <div class="marcador__extremos"><span>1</span><span>100</span></div>
+          </div>
+          <p class="rango" id="j2-rango" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="j2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Predicción: cuántas preguntas bastan del 1 al 100 -->
+    <section class="paso" id="paso-cuantas" data-comprobar aria-labelledby="t-cuantas">
+      <h2 class="paso__titulo" id="t-cuantas">¿Cuántas preguntas bastan?</h2>
+      <p>Partiendo a la mitad, ¿cuántas preguntas bastan <strong>siempre</strong>, aunque tengas mala suerte, para un número del 1 al 100?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones" id="c-opciones">
+            <legend class="visualmente-oculto">¿Cuántas preguntas bastan del 1 al 100?</legend>
+            <label class="opcion"><input type="radio" name="cuantas" value="7"><span>7</span></label>
+            <label class="opcion"><input type="radio" name="cuantas" value="10"><span>10</span></label>
+            <label class="opcion"><input type="radio" name="cuantas" value="25"><span>25</span></label>
+            <label class="opcion"><input type="radio" name="cuantas" value="50"><span>50</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Cuántos números pueden quedar</p>
+          <ol class="escalera" id="c-escalera" aria-label="Cuántos números quedan tras cada pregunta"></ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="c-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Un diccionario de papel -->
+    <section class="paso" id="paso-diccionario" data-requiere aria-labelledby="t-diccionario">
+      <h2 class="paso__titulo" id="t-diccionario">Un diccionario de papel</h2>
+      <p>Para buscar una palabra en un diccionario de 1000 páginas nadie empieza por la «a»: lo abres por la mitad y miras la primera palabra de la página. ¿Sigues hacia atrás o hacia adelante?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="objetivo">Buscas: <strong id="d-objetivo">mango</strong></p>
+          <div class="pagina" id="d-pagina" aria-live="polite">
+            <p class="pagina__numero" id="d-numero">Página 500</p>
+            <p class="pagina__palabra" id="d-palabra">lago</p>
+            <p class="pagina__nota">primera palabra de la página</p>
+          </div>
+          <div class="fila-botones" id="d-botones" role="group" aria-label="¿Hacia dónde sigues?">
+            <button type="button" class="btn btn-secundario" id="d-atras">← Más atrás</button>
+            <button type="button" class="btn btn-secundario" id="d-adelante">Más adelante →</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Buscar otra palabra</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Páginas abiertas: <strong id="d-cuenta">1</strong></p>
+          <div class="marcador" aria-hidden="true">
+            <div class="regla" id="d-regla"></div>
+            <div class="marcador__extremos"><span>pág. 1</span><span>pág. 1000</span></div>
+          </div>
+          <p class="rango" id="d-rango" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Casilleros tapados, pero ordenados -->
+    <section class="paso" id="paso-ordenados" data-requiere aria-labelledby="t-ordenados">
+      <h2 class="paso__titulo" id="t-ordenados">Casilleros tapados, pero ordenados</h2>
+      <p>Las notas están <strong>ordenadas</strong> de menor a mayor, pero la computadora no ve ninguna: destapa una por comparación. Toca un casillero para destaparlo y mira qué parte se apaga.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="objetivo">Buscas la nota <strong id="o-objetivo">14</strong></p>
+          <div id="o-lista" class="lista--tocable"></div>
+          <div class="indices" id="o-indices" role="group" aria-label="Destapar el casillero">
+            <span>Destapar:</span>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="o-otra" hidden>↺ Buscar otra nota</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Comparaciones: <strong id="o-cuenta">0</strong></p>
+          <p class="explicacion" id="o-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="o-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Si no está ordenada, falla -->
+    <section class="paso" id="paso-desordenada" data-requiere aria-labelledby="t-desordenada">
+      <h2 class="paso__titulo" id="t-desordenada">¿Y si no está ordenada?</h2>
+      <p>El mismo truco con notas <strong>desordenadas</strong>. Buscas el <strong>20</strong>, que sí está. Destapa el del medio y apaga la mitad que, según el truco, no puede tenerlo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="objetivo">Buscas la nota <strong>20</strong></p>
+          <div id="u-lista"></div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-primario" id="u-accion">Destapar el del medio ▸</button>
+            <button type="button" class="btn btn-secundario" id="u-reiniciar" hidden>↺ Empezar de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Comparaciones: <strong id="u-cuenta">0</strong></p>
+          <p class="explicacion" id="u-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="u-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: del 1 al 1000 -->
+    <section class="paso" id="paso-mil" data-comprobar aria-labelledby="t-mil">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-mil">Del 1 al 1000</h2>
+      <p>Del 1 al 100 bastaban 7 preguntas. Ahora el número secreto va del <strong>1 al 1000</strong>, diez veces más. Partiendo a la mitad, ¿cuántas preguntas bastan siempre?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones" id="m-opciones">
+            <legend class="visualmente-oculto">¿Cuántas preguntas bastan del 1 al 1000?</legend>
+            <label class="opcion"><input type="radio" name="mil" value="10"><span>10</span></label>
+            <label class="opcion"><input type="radio" name="mil" value="70"><span>70</span></label>
+            <label class="opcion"><input type="radio" name="mil" value="100"><span>100</span></label>
+            <label class="opcion"><input type="radio" name="mil" value="500"><span>500</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Cuántos números pueden quedar</p>
+          <ol class="escalera" id="m-escalera" aria-label="Cuántos números quedan tras cada pregunta"></ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="m-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto: qué casilleros se destapan -->
+    <section class="paso" id="paso-orden" data-comprobar aria-labelledby="t-orden">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-orden">¿Qué casilleros mira?</h2>
+      <p>Tú ves las notas, pero la computadora no. Busca el <strong>13</strong> destapando siempre el del medio de lo que queda. ¿Qué notas va viendo, en orden?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--secuencia" id="r-opciones">
+            <legend class="visualmente-oculto">¿Qué notas destapa, en orden?</legend>
+            <label class="opcion"><input type="radio" name="orden" value="bien"><span>11 → 16 → 13</span></label>
+            <label class="opcion"><input type="radio" name="orden" value="corto"><span>11 → 13</span></label>
+            <label class="opcion"><input type="radio" name="orden" value="directo"><span>13</span></label>
+            <label class="opcion"><input type="radio" name="orden" value="lineal"><span>2 → 5 → 8 → 11 → 13</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="cuenta">Comparaciones: <strong id="r-cuenta">0</strong></p>
+          <div id="r-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="r-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Un adelanto del código -->
+    <section class="paso" id="paso-codigo" data-requiere aria-labelledby="t-codigo">
+      <h2 class="paso__titulo" id="t-codigo">Un adelanto: así se escribe</h2>
+      <p>Lo armas en la próxima lección. Por ahora, mira a <code>inicio</code>, <code>medio</code> y <code>fin</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--chico" id="b-codigo" aria-label="Código"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="b-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="b-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="b-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="arriba">
+            <div class="elegir" id="b-elegir" role="group" aria-label="¿Qué nota se busca?">
+              <span>Buscar:</span>
+              <button type="button" class="btn btn-secundario" data-valor="17" aria-pressed="true">17</button>
+              <button type="button" class="btn btn-secundario" data-valor="6" aria-pressed="false">6</button>
+              <button type="button" class="btn btn-secundario" data-valor="15" aria-pressed="false">15</button>
+            </div>
+            <p class="cuenta">Comparaciones: <strong id="b-cuenta">0</strong></p>
+          </div>
+          <div id="b-lista"></div>
+          <p class="explicacion" id="b-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="b-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Si la lista está ordenada, mira el del medio y descarta la mitad que ya no puede tenerlo: cada comparación parte lo que queda en dos.</p>
+        <table class="tabla-resumen">
+          <caption>Casilleros que se miran, como mucho</caption>
+          <thead><tr><th>Valores</th><th>Uno por uno</th><th>Partiendo a la mitad</th></tr></thead>
+          <tbody>
+            <tr><td>7</td><td>7</td><td class="tabla--rapida">3</td></tr>
+            <tr><td>100</td><td>100</td><td class="tabla--rapida">7</td></tr>
+            <tr><td>1000</td><td>1000</td><td class="tabla--rapida">10</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../binaria/index.html">Siguiente: Búsqueda binaria →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Temporizadores de una animación, para poder cortarla */
+  function relojes() {
+    var lista = [];
+    return {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+  }
+
+  /* Cambia un contador con un pulso */
+  function contar(el, n) {
+    el.textContent = String(n);
+    el.classList.remove("cuenta--cambio");
+    void el.offsetWidth;
+    el.classList.add("cuenta--cambio");
+  }
+
+  function medio(a, b) { return Math.floor((a + b) / 2); }
+
+  /* Cuántas preguntas hacen falta, partiendo a la mitad, para llegar a x entre a y b */
+  function preguntasHasta(x, a, b) {
+    var n = 0;
+    while (a <= b) {
+      var m = medio(a, b);
+      n++;
+      if (m === x) return n;
+      if (m < x) a = m + 1; else b = m - 1;
+    }
+    return n;
+  }
+
+  /* ---------- La regla de 1 a max: la zona verde es donde aún puede estar ----------
+     d: { desde, hasta, vistos: [números ya preguntados], ultimo, acierto } */
+  function pintarRegla(regla, max, d) {
+    function centro(x) { return ((x - 0.5) / max) * 100; }
+    regla.textContent = "";
+    var zona = document.createElement("div");
+    zona.className = "regla__zona";
+    var ancho = d.hasta >= d.desde ? d.hasta - d.desde + 1 : 0;
+    zona.style.left = ((d.desde - 1) / max) * 100 + "%";
+    zona.style.width = (ancho / max) * 100 + "%";
+    regla.appendChild(zona);
+    d.vistos.forEach(function (x) {
+      if (x === d.ultimo) return;
+      var raya = document.createElement("span");
+      raya.className = "regla__raya";
+      raya.style.left = centro(x) + "%";
+      regla.appendChild(raya);
+    });
+    if (d.ultimo) {
+      var punto = document.createElement("span");
+      punto.className = "regla__punto" + (d.acierto ? " regla__punto--acierto" : "");
+      punto.style.left = centro(d.ultimo) + "%";
+      var valor = document.createElement("span");
+      valor.className = "regla__valor" + (d.acierto ? " regla__valor--acierto" : "");
+      valor.style.left = Math.max(4, Math.min(96, centro(d.ultimo))) + "%";
+      valor.textContent = d.etiqueta || String(d.ultimo);
+      regla.appendChild(punto);
+      regla.appendChild(valor);
+    }
+  }
+
+  function chip(lista, x, tipo, inutil) {
+    var li = document.createElement("li");
+    li.className = "h--" + tipo + (inutil ? " h--inutil" : "");
+    var b = document.createElement("b");
+    b.textContent = String(x);
+    li.appendChild(b);
+    li.appendChild(document.createTextNode(tipo === "mayor" ? " es mayor ↑" : tipo === "menor" ? " es menor ↓" : " ¡sí!"));
+    lista.appendChild(li);
+  }
+
+  /* ---------- El juego: la computadora piensa un número del 1 al 100 ---------- */
+  function crearJuego(p, elegirSecreto) {
+    var j = {};
+    function rango() {
+      var quedan = j.hasta - j.desde + 1;
+      $(p + "-rango").innerHTML = j.acierto
+        ? "¡El número secreto era el <strong>" + j.secreto + "</strong>!"
+        : "Puede estar entre <strong>" + j.desde + "</strong> y <strong>" + j.hasta + "</strong>: " +
+          (quedan === 1 ? "queda <strong>1</strong> número." : "quedan <strong>" + quedan + "</strong> números.");
+    }
+    function pintar() {
+      pintarRegla($(p + "-regla"), 100, { desde: j.desde, hasta: j.hasta, vistos: j.vistos, ultimo: j.ultimo, acierto: j.acierto });
+      rango();
+    }
+    function empezar() {
+      j = { secreto: elegirSecreto(), desde: 1, hasta: 100, preguntas: 0, vistos: [], ultimo: null, acierto: false };
+      $(p + "-historial").textContent = "";
+      $(p + "-cuenta").textContent = "0";
+      $(p + "-otra").hidden = true;
+      Pasos.limpiarFeedback($(p + "-fb"));
+      pintar();
+    }
+    // Devuelve "mayor", "menor" o "si"; inutil: el número ya estaba descartado
+    function preguntar(x) {
+      var inutil = x < j.desde || x > j.hasta;
+      j.preguntas++;
+      j.vistos.push(x);
+      j.ultimo = x;
+      var tipo = x < j.secreto ? "mayor" : x > j.secreto ? "menor" : "si";
+      if (tipo === "mayor") j.desde = Math.max(j.desde, x + 1);
+      if (tipo === "menor") j.hasta = Math.min(j.hasta, x - 1);
+      if (tipo === "si") { j.acierto = true; j.desde = j.hasta = x; }
+      chip($(p + "-historial"), x, tipo, inutil);
+      contar($(p + "-cuenta"), j.preguntas);
+      pintar();
+      if (tipo === "si") $(p + "-otra").hidden = false;
+      return { tipo: tipo, inutil: inutil };
+    }
+    return { empezar: empezar, preguntar: preguntar, get estado() { return j; } };
+  }
+
+  /* ---------- 1. Adivina el número ---------- */
+  var misPreguntas = null;
+  var juego1 = crearJuego("j1", function () { return 1 + Math.floor(Math.random() * 100); });
+
+  function enviar1() {
+    var campo = $("j1-campo");
+    var t = campo.value.trim();
+    var fb = $("j1-fb");
+    if (juego1.estado.acierto) return;
+    if (!/^\d{1,3}$/.test(t) || Number(t) < 1 || Number(t) > 100) {
+      Pasos.feedback(fb, "pista", "Escribe un número entero del 1 al 100.");
+      campo.focus();
+      return;
+    }
+    var x = Number(t);
+    var antes = juego1.estado;
+    var desde = antes.desde, hasta = antes.hasta;
+    var r = juego1.preguntar(x);
+    campo.value = "";
+    if (r.tipo === "si") {
+      var n = juego1.estado.preguntas;
+      if (misPreguntas === null) misPreguntas = n;
+      $("j1-fila").hidden = true;
+      Pasos.feedback(fb, "ok", "¡Lo adivinaste en " + n + (n === 1 ? " pregunta" : " preguntas") + "! " +
+        (n <= 7 ? "Muy pocas: ¿tenías un truco? En el siguiente paso lo vemos." : "Bien. ¿Se podrá con menos? En el siguiente paso, un truco."));
+      $("j1-otra").focus();
+      leccion.desbloquear();
+      return;
+    }
+    if (r.inutil) {
+      Pasos.feedback(fb, "pista", "Esa pregunta no te sirvió: ya sabías que estaba entre " + desde + " y " + hasta + ". Pregunta dentro de la zona verde.");
+    } else {
+      Pasos.limpiarFeedback(fb);
+    }
+    campo.focus();
+  }
+
+  /* ---------- 2. Siempre el del medio ---------- */
+  // Un secreto que no salga a la primera: así se ve cómo se parte varias veces
+  var juego2 = crearJuego("j2", function () {
+    var x;
+    do { x = 1 + Math.floor(Math.random() * 100); } while (preguntasHasta(x, 1, 100) < 5);
+    return x;
+  });
+  var partidas2 = 0;
+
+  function calculo2() {
+    var j = juego2.estado;
+    var boton = $("j2-preguntar");
+    if (j.acierto) {
+      boton.hidden = true;
+      $("j2-calculo").innerHTML = "Lo encontraste preguntando <strong>" + j.preguntas + "</strong> veces.";
+      return;
+    }
+    boton.hidden = false;
+    var m = medio(j.desde, j.hasta);
+    boton.textContent = "Preguntar " + m;
+    $("j2-calculo").innerHTML = "Queda del <strong>" + j.desde + "</strong> al <strong>" + j.hasta + "</strong>. El del medio: <code>(" + j.desde + " + " + j.hasta + ") // 2</code> = <strong>" + m + "</strong>";
+  }
+
+  function empezar2() {
+    juego2.empezar();
+    calculo2();
+  }
+
+  function preguntar2() {
+    var j = juego2.estado;
+    if (j.acierto) return;
+    var r = juego2.preguntar(medio(j.desde, j.hasta));
+    calculo2();
+    var fb = $("j2-fb");
+    if (r.tipo !== "si") {
+      Pasos.limpiarFeedback(fb);
+      $("j2-preguntar").focus();
+      return;
+    }
+    partidas2++;
+    var n = juego2.estado.preguntas;
+    var comparar = misPreguntas === null ? ""
+      : misPreguntas > n ? " Tú usaste " + misPreguntas + " al adivinar a tu manera."
+      : misPreguntas === n ? " Igual que tú en tu partida: ¿ya partías a la mitad?"
+      : " Tú usaste " + misPreguntas + ": ¡tuviste suerte!";
+    Pasos.feedback(fb, "ok", "¡Lo encontraste en " + n + " preguntas!" + comparar + " Cada respuesta dejó como mucho la mitad. " +
+      (partidas2 < 2 ? "Prueba con otro número secreto." : "Se parte tan rápido que nunca hacen falta muchas."));
+    $("j2-otra").focus();
+    leccion.desbloquear();
+  }
+
+  /* ---------- Escalera: 100 → 50 → 25 → … ---------- */
+  function filasEscalera(n) {
+    var filas = [{ rotulo: "Al empezar", n: n }];
+    var k = 0;
+    var queda = n;
+    while (queda > 1) {
+      queda = Math.floor(queda / 2);
+      k++;
+      filas.push({ rotulo: "Pregunta " + k, n: queda });
+    }
+    filas.push({ rotulo: "Pregunta " + (k + 1), n: "✓", fin: true });
+    return filas;
+  }
+
+  function pintarEscalera(el, n, completa) {
+    el.textContent = "";
+    var filas = filasEscalera(n);
+    if (!completa) filas = filas.slice(0, 1);
+    filas.forEach(function (f, i) {
+      var li = document.createElement("li");
+      if (f.fin) li.className = "escalera--fin";
+      li.style.setProperty("--retraso", (completa ? i * 220 : 0) + "ms");
+      var ancho = f.fin ? 100 / n : f.n / n * 100;
+      li.innerHTML = '<span class="escalera__rotulo"></span><span class="escalera__pista"><span class="escalera__barra"></span></span><span class="escalera__n"></span>';
+      li.children[0].textContent = f.rotulo;
+      li.querySelector(".escalera__barra").style.setProperty("--ancho", ancho + "%");
+      li.children[2].textContent = f.fin ? "✓" : String(f.n);
+      li.setAttribute("aria-label", f.fin ? f.rotulo + ": acierta" : f.rotulo + ": quedan " + f.n);
+      el.appendChild(li);
+    });
+  }
+
+  /* Un paso de opciones con Comprobar */
+  function crearPrediccion(o) {
+    function limpiar() {
+      o.paso.querySelectorAll(".opcion").forEach(function (op) { op.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback(o.fb);
+      if (o.limpiar) o.limpiar();
+    }
+    function entrar(paso, lec, info) {
+      if (info && info.desbloqueado) {
+        if (o.mostrar && !paso.querySelector("input[type=radio]:checked")) o.mostrar();
+        return;
+      }
+      paso.querySelectorAll("input[type=radio]").forEach(function (r) { r.checked = false; });
+      limpiar();
+    }
+    function comprobar(paso) {
+      var marcada = paso.querySelector("input[type=radio]:checked");
+      if (!marcada) return false;
+      limpiar();
+      var opcion = marcada.closest(".opcion");
+      if (marcada.value === o.bien) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(o.fb, "ok", o.acierto);
+        if (o.alAcertar) o.alAcertar();
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(o.fb, "pista", o.pistas[marcada.value]);
+      if (o.alFallar) o.alFallar(marcada.value);
+      return false;
+    }
+    o.paso.querySelectorAll("input[type=radio]").forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        leccion.listoParaComprobar(true);
+      });
+    });
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- 4. El diccionario ---------- */
+  var PALABRAS = ["abeja", "agua", "ancla", "barco", "boca", "burro", "cama", "casa", "cielo", "dado", "dedo",
+    "elefante", "faro", "foca", "gato", "globo", "hada", "hielo", "isla", "jirafa", "kiwi", "lago", "leche",
+    "luna", "mango", "mesa", "nido", "nube", "oso", "oveja", "pato", "perro", "queso", "rana", "rosa", "sapo",
+    "sol", "taza", "tigre", "uva", "vaca", "yate", "zorro"];
+  var BUSCADAS = ["mango", "sapo", "abeja", "zorro"];
+  var PAGINAS = 1000;
+  function palabraDe(pagina) { return PALABRAS[Math.floor((pagina - 1) * PALABRAS.length / PAGINAS)]; }
+
+  var dic = {};
+  var buscada = 0;
+
+  function pintarDic(abre) {
+    var hallada = dic.hallada;
+    $("d-numero").textContent = "Página " + dic.pagina;
+    $("d-palabra").textContent = palabraDe(dic.pagina);
+    var hoja = $("d-pagina");
+    hoja.classList.toggle("pagina--hallada", hallada);
+    if (abre && !Pasos.reducirMovimiento) {
+      hoja.classList.remove("pagina--abre");
+      void hoja.offsetWidth;
+      hoja.classList.add("pagina--abre");
+    }
+    contar($("d-cuenta"), dic.abiertas);
+    pintarRegla($("d-regla"), PAGINAS, {
+      desde: dic.desde, hasta: dic.hasta, vistos: dic.vistas, ultimo: dic.pagina, acierto: hallada, etiqueta: "pág. " + dic.pagina
+    });
+    $("d-rango").innerHTML = hallada
+      ? "Abriste <strong>" + dic.abiertas + "</strong> páginas de 1000."
+      : "«" + dic.objetivo + "» está entre la página <strong>" + dic.desde + "</strong> y la <strong>" + dic.hasta + "</strong>.";
+  }
+
+  function empezarDic(objetivo) {
+    dic = { objetivo: objetivo, desde: 1, hasta: PAGINAS, abiertas: 1, vistas: [], hallada: false };
+    dic.pagina = medio(dic.desde, dic.hasta);
+    dic.vistas.push(dic.pagina);
+    $("d-objetivo").textContent = objetivo;
+    $("d-botones").hidden = false;
+    $("d-otra").hidden = true;
+    Pasos.limpiarFeedback($("d-fb"));
+    pintarDic(false);
+  }
+
+  function seguirDic(haciaAdelante) {
+    if (dic.hallada) return;
+    var palabra = palabraDe(dic.pagina);
+    var bien = palabra < dic.objetivo;
+    if (haciaAdelante !== bien) {
+      Pasos.feedback($("d-fb"), "pista", "Mira la primera letra en que se diferencian: «" + dic.objetivo + "» va " +
+        (bien ? "después" : "antes") + " de «" + palabra + "» en el abecedario. Sigue " + (bien ? "más adelante." : "más atrás."));
+      return;
+    }
+    Pasos.limpiarFeedback($("d-fb"));
+    if (bien) dic.desde = dic.pagina + 1; else dic.hasta = dic.pagina - 1;
+    dic.pagina = medio(dic.desde, dic.hasta);
+    dic.vistas.push(dic.pagina);
+    dic.abiertas++;
+    dic.hallada = palabraDe(dic.pagina) === dic.objetivo;
+    pintarDic(true);
+    if (dic.hallada) {
+      $("d-botones").hidden = true;
+      $("d-otra").hidden = false;
+      Pasos.feedback($("d-fb"), "ok", "¡Ahí está «" + dic.objetivo + "», en la página " + dic.pagina + "! Abriste solo " + dic.abiertas +
+        " páginas de 1000. Funciona porque el diccionario está en orden alfabético: cada página te dice de qué lado seguir.");
+      $("d-otra").focus();
+      leccion.desbloquear();
+    } else {
+      (haciaAdelante ? $("d-adelante") : $("d-atras")).focus();
+    }
+  }
+
+  /* ---------- Casilleros que se destapan: lo común a los pasos 5, 6, 8 y 9 ---------- */
+  function apagarFuera(l, desde, hasta, hallado) {
+    l.clases(function (i) {
+      if (i === hallado) return "lista__casilla--igual";
+      return i < desde || i > hasta ? "lista__casilla--apagada" : "";
+    });
+  }
+
+  /* ---------- 5. Ordenados: el alumno elige ---------- */
+  var NOTAS = [3, 6, 9, 11, 14, 17, 20];
+  var OBJETIVOS5 = [14, 6, 20, 9, 17, 3, 11];
+  var lista5 = Lista.crear($("o-lista"), NOTAS, { nombres: ["notas"] });
+  var o5 = {};
+  var objetivo5 = 0;
+
+  NOTAS.forEach(function (v, i) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-secundario";
+    b.textContent = String(i);
+    b.setAttribute("aria-label", "Destapar el casillero " + i);
+    b.addEventListener("click", function () { tocar5(i); });
+    $("o-indices").appendChild(b);
+  });
+
+  function botones5() {
+    $("o-indices").querySelectorAll("button").forEach(function (b, i) {
+      b.disabled = o5.hecho || i < o5.desde || i > o5.hasta;
+    });
+    $("o-lista").classList.toggle("lista--quieta", o5.hecho);
+  }
+
+  function empezar5() {
+    o5 = { x: OBJETIVOS5[objetivo5 % OBJETIVOS5.length], desde: 0, hasta: NOTAS.length - 1, comps: 0, alMedio: true, hecho: false };
+    $("o-objetivo").textContent = String(o5.x);
+    lista5.tapar(true);
+    lista5.clases(null);
+    lista5.marcar(null);
+    $("o-cuenta").textContent = "0";
+    $("o-explicacion").innerHTML = "Puede estar en cualquiera de los 7. ¿Cuál destapas primero?";
+    $("o-otra").hidden = true;
+    Pasos.limpiarFeedback($("o-fb"));
+    botones5();
+  }
+
+  function tocar5(i) {
+    if (o5.hecho) return;
+    if (i < o5.desde || i > o5.hasta) {
+      Pasos.feedback($("o-fb"), "pista", "Ese casillero está apagado: ya sabes que el " + o5.x + " no puede estar ahí. Toca uno de los que siguen encendidos.");
+      return;
+    }
+    var m1 = medio(o5.desde, o5.hasta);
+    var m2 = Math.ceil((o5.desde + o5.hasta) / 2);
+    if (i !== m1 && i !== m2) o5.alMedio = false;
+    o5.comps++;
+    contar($("o-cuenta"), o5.comps);
+    lista5.destapar(i);
+    var v = NOTAS[i];
+    var x = o5.x;
+    var fb = $("o-fb");
+    if (v === x) {
+      o5.hecho = true;
+      apagarFuera(lista5, i, i, i);
+      $("o-explicacion").innerHTML = "¡Salió el <strong>" + x + "</strong>!";
+      var texto = "Lo encontraste mirando " + o5.comps + (o5.comps === 1 ? " casillero" : " casilleros") + " de 7. ";
+      texto += o5.comps <= 3 && o5.alMedio
+        ? "Destapaste siempre el del medio: así nunca hacen falta más de 3."
+        : o5.comps <= 3 ? "¡Muy bien! Prueba otra nota destapando siempre el del medio: con 7 casilleros, nunca hacen falta más de 3."
+        : "Prueba otra nota, pero destapa siempre el del medio: con 7 casilleros, nunca hacen falta más de 3.";
+      Pasos.feedback(fb, "ok", texto);
+      $("o-otra").hidden = false;
+      botones5();
+      $("o-otra").focus();
+      leccion.desbloquear();
+      return;
+    }
+    Pasos.limpiarFeedback(fb);
+    var cuantos;
+    if (v < x) {
+      cuantos = i - o5.desde + 1;
+      o5.desde = i + 1;
+      $("o-explicacion").innerHTML = "Salió el <strong>" + v + "</strong>, menor que " + x + ". Como están ordenadas, a su izquierda hay notas aún más chicas: " +
+        (cuantos === 1 ? "se apaga ese casillero." : "se apagan " + cuantos + " casilleros de una vez.");
+    } else {
+      cuantos = o5.hasta - i + 1;
+      o5.hasta = i - 1;
+      $("o-explicacion").innerHTML = "Salió el <strong>" + v + "</strong>, mayor que " + x + ". A su derecha hay notas aún más grandes: " +
+        (cuantos === 1 ? "se apaga ese casillero." : "se apagan " + cuantos + " casilleros de una vez.");
+    }
+    apagarFuera(lista5, o5.desde, o5.hasta, null);
+    botones5();
+  }
+
+  $("o-lista").addEventListener("click", function (e) {
+    var c = e.target.closest(".lista__casilla");
+    if (!c) return;
+    for (var i = 0; i < NOTAS.length; i++) {
+      if (lista5.casilla(i) === c) { tocar5(i); return; }
+    }
+  });
+
+  /* ---------- 6. Desordenada: el truco falla ---------- */
+  var DESORDEN = [14, 3, 20, 9, 17, 6, 11];
+  var lista6 = Lista.crear($("u-lista"), DESORDEN, { nombres: ["notas"] });
+  var u6 = {};
+
+  function empezar6() {
+    lista6.valores(DESORDEN);
+    lista6.tapar(true);
+    lista6.clases(null);
+    lista6.punteros(null);
+    u6 = { fase: "buscar", valores: DESORDEN.slice(), desde: 0, hasta: DESORDEN.length - 1, comps: 0 };
+    $("u-cuenta").textContent = "0";
+    $("u-accion").hidden = false;
+    $("u-accion").disabled = false;
+    $("u-accion").textContent = "Destapar el del medio ▸";
+    $("u-reiniciar").hidden = true;
+    $("u-explicacion").innerHTML = "Las notas están en el orden en que llegaron. Empieza por el del medio, como antes.";
+    Pasos.limpiarFeedback($("u-fb"));
+  }
+
+  // Un paso de la búsqueda partiendo a la mitad; devuelve true si ya terminó
+  function pasoMitad6() {
+    var m = medio(u6.desde, u6.hasta);
+    var v = u6.valores[m];
+    u6.comps++;
+    contar($("u-cuenta"), u6.comps);
+    lista6.destapar(m);
+    lista6.punteros({ medio: { i: m, color: "morado" } });
+    if (v === 20) {
+      apagarFuera(lista6, m, m, m);
+      return { fin: true, hallado: true, texto: "¡Salió el <strong>20</strong> en el casillero " + m + "! Con la lista ordenada, el truco sí funciona." };
+    }
+    var texto;
+    if (v < 20) {
+      u6.desde = m + 1;
+      texto = "Salió el <strong>" + v + "</strong>. 20 es mayor, así que el truco apaga el " + v + " y todo lo de su izquierda.";
+    } else {
+      u6.hasta = m - 1;
+      texto = "Salió el <strong>" + v + "</strong>. 20 es menor, así que el truco apaga el " + v + " y todo lo de su derecha.";
+    }
+    apagarFuera(lista6, u6.desde, u6.hasta, null);
+    if (u6.desde > u6.hasta) {
+      return { fin: true, hallado: false, texto: texto + " No queda ningún casillero encendido: la búsqueda dice que el 20 <strong>no está</strong>. ¿Seguro?" };
+    }
+    return { fin: false, texto: texto };
+  }
+
+  function accion6() {
+    var boton = $("u-accion");
+    var fb = $("u-fb");
+    if (u6.fase === "buscar" || u6.fase === "buscar2") {
+      var r = pasoMitad6();
+      $("u-explicacion").innerHTML = r.texto;
+      if (!r.fin) return;
+      if (u6.fase === "buscar") {
+        u6.fase = "revelar";
+        boton.textContent = "Destapar todos 👀";
+        return;
+      }
+      // Encontrado en la lista ordenada
+      lista6.punteros(null);
+      boton.hidden = true;
+      $("u-reiniciar").hidden = false;
+      $("u-reiniciar").focus();
+      Pasos.feedback(fb, "ok", "Ahora sí: " + u6.comps + " comparaciones. Partir a la mitad solo sirve si la lista está ordenada; si no lo está, primero hay que ordenarla.");
+      leccion.desbloquear();
+      return;
+    }
+    if (u6.fase === "revelar") {
+      lista6.punteros(null);
+      for (var i = 0; i < u6.valores.length; i++) lista6.destapar(i);
+      var donde = u6.valores.indexOf(20);
+      lista6.clases(function (k) {
+        if (k === donde) return "lista__casilla--distinta";
+        return k < u6.desde || k > u6.hasta ? "lista__casilla--apagada" : "";
+      });
+      $("u-explicacion").innerHTML = "¡El 20 estaba en el casillero " + donde + ", en la parte apagada! En una lista desordenada, ver un 9 no dice nada de lo que hay a su izquierda.";
+      Pasos.feedback(fb, "pista", "El truco se equivocó: apagó una mitad que sí lo tenía. Ordena la lista y vuelve a buscar.");
+      u6.fase = "ordenar";
+      boton.textContent = "Ordenar: notas.sort() ▸";
+      return;
+    }
+    if (u6.fase === "ordenar") {
+      Pasos.limpiarFeedback(fb);
+      boton.disabled = true;
+      lista6.clases(null);
+      var orden = DESORDEN.map(function (v, k) { return k; }).sort(function (a, b) { return DESORDEN[a] - DESORDEN[b]; });
+      lista6.reordenar(orden);
+      u6.valores = orden.map(function (k) { return DESORDEN[k]; });
+      $("u-explicacion").innerHTML = "<code>notas.sort()</code> las ordenó de menor a mayor. Ahora se tapan otra vez y se busca desde cero.";
+      setTimeout(function () {
+        lista6.tapar(true);
+        u6 = { fase: "buscar2", valores: u6.valores, desde: 0, hasta: u6.valores.length - 1, comps: 0 };
+        $("u-cuenta").textContent = "0";
+        boton.disabled = false;
+        boton.textContent = "Destapar el del medio ▸";
+        boton.focus();
+      }, espera(900));
+    }
+  }
+
+  /* ---------- 7. Reto: del 1 al 1000 ---------- */
+  var pred3 = null;
+  var pred7 = null;
+
+  /* ---------- 8. Reto: qué casilleros se destapan ---------- */
+  var NOTAS8 = [2, 5, 8, 11, 13, 16, 19];
+  var lista8 = Lista.crear($("r-lista"), NOTAS8, { nombres: ["notas"] });
+  var reloj8 = relojes();
+
+  function limpiar8() {
+    reloj8.cortar();
+    lista8.tapar(false);
+    lista8.clases(null);
+    lista8.punteros(null);
+    $("r-cuenta").textContent = "0";
+  }
+
+  function animar8() {
+    limpiar8();
+    lista8.tapar(true);
+    var desde = 0, hasta = NOTAS8.length - 1, comps = 0, t = 300;
+    while (desde <= hasta) {
+      (function (m, d, h) {
+        var v = NOTAS8[m];
+        var hallado = v === 13;
+        var nd = v < 13 ? m + 1 : d;
+        var nh = v > 13 ? m - 1 : h;
+        comps++;
+        var c = comps;
+        reloj8.luego(function () {
+          lista8.punteros({ medio: { i: m, color: "morado" } });
+          lista8.destapar(m);
+          contar($("r-cuenta"), c);
+        }, t);
+        reloj8.luego(function () {
+          if (hallado) { apagarFuera(lista8, m, m, m); lista8.punteros(null); }
+          else apagarFuera(lista8, nd, nh, null);
+        }, t + 450);
+      })(medio(desde, hasta), desde, hasta);
+      var m = medio(desde, hasta);
+      if (NOTAS8[m] === 13) break;
+      if (NOTAS8[m] < 13) desde = m + 1; else hasta = m - 1;
+      t += 1100;
+    }
+  }
+
+  /* ---------- 9. El código que viene ---------- */
+  function tk(clase, s) { return '<span class="tk-' + clase + '">' + s + "</span>"; }
+  var v = function (s) { return tk("variable", s); };
+  var n = function (s) { return tk("numero", s); };
+  var k = function (s) { return tk("palabra", s); };
+  var f = function (s) { return tk("funcion", s); };
+  var LINEAS9 = [
+    v("notas") + " = [" + NOTAS.map(n).join(", ") + "]",
+    k("def") + " " + f("buscar") + "(" + v("lista") + ", " + v("x") + "):",
+    "    " + v("inicio") + " = " + n("0"),
+    "    " + v("fin") + " = " + f("len") + "(" + v("lista") + ") - " + n("1"),
+    "    " + k("while") + " " + v("inicio") + " &lt;= " + v("fin") + ":",
+    "        " + v("medio") + " = (" + v("inicio") + " + " + v("fin") + ") // " + n("2"),
+    "        " + k("if") + " " + v("lista") + "[" + v("medio") + "] == " + v("x") + ":",
+    "            " + k("return") + " " + v("medio"),
+    "        " + k("elif") + " " + v("lista") + "[" + v("medio") + "] &lt; " + v("x") + ":",
+    "            " + v("inicio") + " = " + v("medio") + " + " + n("1"),
+    "        " + k("else") + ":",
+    "            " + v("fin") + " = " + v("medio") + " - " + n("1"),
+    "    " + k("return") + " -" + n("1"),
+    f("print") + "(" + f("buscar") + "(" + v("notas") + ", " + n('<span id="b-x">17</span>') + "))"
+  ];
+  $("b-codigo").innerHTML = "<code>" + LINEAS9.map(function (l) { return '<span class="linea">' + l + "</span>"; }).join("") + "</code>";
+  var lista9 = Lista.crear($("b-lista"), NOTAS, { nombres: ["notas", "lista"] });
+  var x9 = 17;
+
+  function traza9() {
+    var x = x9;
+    var pasos = [];
+    var st = { inicio: null, fin: null, medio: null, vistos: [], comps: 0, hallado: null };
+    function paso(linea, texto, cambios, extra) {
+      for (var c in cambios) st[c] = cambios[c];
+      var p = { linea: linea, texto: texto, estado: JSON.parse(JSON.stringify(st)) };
+      for (var e in extra) p[e] = extra[e];
+      pasos.push(p);
+    }
+    paso(0, "<code>notas</code> está ordenada, de menor a mayor.", {});
+    paso(13, "Se llama a <code>buscar(notas, " + x + ")</code>: <code>lista</code> es otro nombre para la misma fila.", {});
+    paso(2, "<code>inicio = 0</code>: el primer casillero donde puede estar.", { inicio: 0 });
+    paso(3, "<code>fin = 6</code>: el último. Puede estar de <code>inicio</code> a <code>fin</code>.", { fin: NOTAS.length - 1 });
+    var a = 0, b = NOTAS.length - 1;
+    while (true) {
+      if (a > b) {
+        paso(4, "<code>" + a + " &lt;= " + b + "</code> es False: <code>inicio</code> pasó a <code>fin</code>, no queda ningún casillero.", {});
+        paso(12, "El " + x + " no está: devuelve <code>-1</code>.", { medio: null });
+        paso(13, "Devuelve <code>-1</code>: no está. Miró " + st.comps + " casilleros de 7 para saberlo.", {}, { salida: "-1", flecha: true });
+        break;
+      }
+      paso(4, "<code>" + a + " &lt;= " + b + "</code> es True: quedan casilleros.", {});
+      var m = medio(a, b);
+      paso(5, "<code>medio = (" + a + " + " + b + ") // 2</code> = " + m + ": el del medio.", { medio: m });
+      var val = NOTAS[m];
+      var vistos = st.vistos.concat([m]);
+      if (val === x) {
+        paso(6, "Destapa <code>lista[" + m + "]</code>: es " + val + ". ¡Es el " + x + "!", { vistos: vistos, comps: st.comps + 1, hallado: m }, { mira: m });
+        paso(7, "Devuelve <code>" + m + "</code>, el casillero donde está.", {});
+        paso(13, "Devuelve <code>" + m + "</code>: el " + x + " está en el casillero " + m + ". Lo encontró mirando " + st.comps + (st.comps === 1 ? " casillero" : " casilleros") + " de 7.", {}, { salida: String(m), flecha: true });
+        break;
+      }
+      paso(6, "Destapa <code>lista[" + m + "]</code>: es " + val + ". No es el " + x + ".", { vistos: vistos, comps: st.comps + 1 }, { mira: m });
+      if (val < x) {
+        paso(8, "<code>" + val + " &lt; " + x + "</code> es True: el " + x + " está más a la derecha.", {});
+        a = m + 1;
+        paso(9, "<code>inicio = " + a + "</code>: se apaga la mitad izquierda.", { inicio: a, medio: null });
+      } else {
+        paso(8, "<code>" + val + " &lt; " + x + "</code> es False.", {});
+        paso(10, "Entonces el " + x + " está más a la izquierda.", {});
+        b = m - 1;
+        paso(11, "<code>fin = " + b + "</code>: se apaga la mitad derecha.", { fin: b, medio: null });
+      }
+    }
+    return pasos;
+  }
+
+  function pintar9(paso) {
+    var st = paso.estado;
+    lista9.tapar(function (i) { return st.vistos.indexOf(i) < 0 || i === paso.mira; });
+    if (paso.mira !== undefined) lista9.destapar(paso.mira);
+    var hayRango = st.inicio !== null && st.fin !== null;
+    lista9.clases(function (i) {
+      if (i === st.hallado) return "lista__casilla--igual";
+      return hayRango && (i < st.inicio || i > st.fin) ? "lista__casilla--apagada" : "";
+    });
+    lista9.punteros({
+      inicio: st.inicio === null ? null : { i: st.inicio, color: "azul" },
+      medio: st.medio === null ? null : { i: st.medio, color: "morado" },
+      fin: st.fin === null ? null : { i: st.fin, color: "naranja" }
+    });
+    if ($("b-cuenta").textContent !== String(st.comps)) contar($("b-cuenta"), st.comps);
+  }
+
+  function limpiar9() {
+    lista9.tapar(true);
+    lista9.clases(null);
+    lista9.punteros(null);
+    $("b-cuenta").textContent = "0";
+  }
+
+  var traza = Traza.crear({
+    codigo: $("b-codigo"),
+    explicacion: $("b-explicacion"),
+    consola: $("b-consola"),
+    ejecutar: $("b-ejecutar"),
+    reproducir: $("b-reproducir"),
+    reiniciar: $("b-reiniciar"),
+    generar: traza9,
+    intervalo: 1100,
+    alReiniciar: limpiar9,
+    alPaso: pintar9,
+    alTerminar: function () { leccion.desbloquear(); }
+  });
+
+  function elegir9(btn) {
+    x9 = Number(btn.getAttribute("data-valor"));
+    $("b-elegir").querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+    $("b-x").textContent = String(x9);
+    traza.reiniciar();
+  }
+
+  /* ---------- Conexiones ---------- */
+  $("j1-enviar").addEventListener("click", enviar1);
+  $("j1-campo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    enviar1();
+  });
+  $("j1-otra").addEventListener("click", function () {
+    juego1.empezar();
+    $("j1-fila").hidden = false;
+    $("j1-campo").focus();
+  });
+
+  $("j2-preguntar").addEventListener("click", preguntar2);
+  $("j2-otra").addEventListener("click", function () {
+    empezar2();
+    $("j2-preguntar").focus();
+  });
+
+  $("d-atras").addEventListener("click", function () { seguirDic(false); });
+  $("d-adelante").addEventListener("click", function () { seguirDic(true); });
+  $("d-otra").addEventListener("click", function () {
+    buscada++;
+    empezarDic(BUSCADAS[buscada % BUSCADAS.length]);
+    $("d-atras").focus();
+  });
+
+  $("o-otra").addEventListener("click", function () {
+    objetivo5++;
+    empezar5();
+    var b = $("o-indices").querySelector("button");
+    if (b) b.focus();
+  });
+
+  $("u-accion").addEventListener("click", accion6);
+  $("u-reiniciar").addEventListener("click", function () {
+    empezar6();
+    $("u-accion").focus();
+  });
+
+  $("b-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegir9(b); });
+  });
+
+  // Estado inicial de cada paso
+  juego1.empezar();
+  empezar2();
+  pintarEscalera($("c-escalera"), 100, false);
+  pintarEscalera($("m-escalera"), 1000, false);
+  empezarDic(BUSCADAS[0]);
+  empezar5();
+  empezar6();
+  limpiar8();
+
+  pred3 = crearPrediccion({
+    paso: $("paso-cuantas"),
+    fb: $("c-fb"),
+    bien: "7",
+    acierto: "¡Sí, 7! Cada pregunta deja como mucho la mitad: con 6 queda un solo número, y la 7.ª lo acierta.",
+    pistas: {
+      "10": "Te sobran. Mira la escalera: cada pregunta deja como mucho la mitad. ¿Cuántas veces puedes partir 100 a la mitad hasta quedarte con uno?",
+      "25": "Son muchas menos: 25 sería si cada pregunta descartara solo 4 números. Partiendo a la mitad, 100 → 50 → 25 → …",
+      "50": "Eso sería preguntar casi uno por uno. Partiendo a la mitad, la primera pregunta ya descarta 50: 100 → 50 → 25 → …"
+    },
+    limpiar: function () { pintarEscalera($("c-escalera"), 100, false); },
+    alAcertar: function () { pintarEscalera($("c-escalera"), 100, true); },
+    mostrar: function () { pintarEscalera($("c-escalera"), 100, true); }
+  });
+
+  pred7 = crearPrediccion({
+    paso: $("paso-mil"),
+    fb: $("m-fb"),
+    bien: "10",
+    acierto: "¡10! Diez veces más números y solo 3 preguntas más. Uno por uno, podían hacer falta 1000.",
+    pistas: {
+      "70": "Diez veces más números no son diez veces más preguntas: cada pregunta parte lo que queda en dos. Empieza: 1000 → 500 → 250 → …",
+      "100": "Muchas menos. La primera pregunta ya deja 500; la segunda, 250. ¿Cuántas mitades hasta quedarte con uno?",
+      "500": "500 sería ir casi uno por uno. Partiendo a la mitad, ¡la primera pregunta ya descarta 500 números!"
+    },
+    limpiar: function () { pintarEscalera($("m-escalera"), 1000, false); },
+    alAcertar: function () { pintarEscalera($("m-escalera"), 1000, true); },
+    mostrar: function () { pintarEscalera($("m-escalera"), 1000, true); }
+  });
+
+  var pred8 = crearPrediccion({
+    paso: $("paso-orden"),
+    fb: $("r-fb"),
+    bien: "bien",
+    acierto: "¡Exacto! Primero el del medio de los 7: el 11. Quedan 13, 16 y 19, y su medio es el 16. Queda solo el 13. Tres comparaciones.",
+    pistas: {
+      corto: "Después del 11 quedan tres casilleros: 13, 16 y 19. ¿Cuál está en el medio de esos tres?",
+      directo: "Tú ves dónde está el 13, pero la computadora no: tiene que destapar para saber. ¿Cuál es el del medio de los 7?",
+      lineal: "Eso es buscar uno por uno, desde el principio: lo encuentra, pero con 5 comparaciones. Empieza por el del medio."
+    },
+    limpiar: limpiar8,
+    alAcertar: animar8
+  });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cuantas": pred3.entrar,
+      "paso-diccionario": function () { if (!dic.hallada) pintarDic(false); },
+      "paso-mil": pred7.entrar,
+      "paso-orden": pred8.entrar,
+      "paso-codigo": function () { traza.detener(); }
+    },
+    comprobar: {
+      "paso-cuantas": pred3.comprobar,
+      "paso-mil": pred7.comprobar,
+      "paso-orden": pred8.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
