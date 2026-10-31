@@ -469,25 +469,43 @@
   var bolsa2 = Conjunto.crear($("s2-bolsa"), BASE2, { nombres: ["colores"] });
   var s2 = vistos();
   var anim2 = animacion();
+  var DEF2 = 'colores = {"rojo", "azul", "verde"}';
+  var hechas2 = [];   // las líneas que ya se ejecutaron sin error, bajo la definición
+  var MAX2 = 4;
+
+  function lineas2(nueva) {
+    return [DEF2].concat(hechas2, nueva ? [nueva] : [], ["print(colores)"]);
+  }
+  // El código guarda el alto de sus 6 líneas: los botones de debajo no saltan al crecer
+  Codigo.reservarAlto($("s2-codigo"), [[DEF2, "x", "x", "x", "x", "print(colores)"]], function (copia, lineas) {
+    pintarLineas(copia.querySelector("code") || copia, lineas);
+  });
 
   function reiniciar2() {
     anim2.cortar();
     colores2 = BASE2.slice();
     bolsa2.valores(colores2);
     bolsa2.clases(null);
-    pintarLineas($("s2-lineas"), ['colores = {"rojo", "azul", "verde"}']);
+    hechas2 = [];
+    pintarLineas($("s2-lineas"), lineas2());
     Codigo.limpiar($("s2-codigo"));
     Codigo.consola($("s2-consola"), []);
+    activar("s2-elegir", true);
   }
 
   function quitar2(op, color, leccion) {
     anim2.cortar();
     bolsa2.clases(null);
     Codigo.consola($("s2-consola"), []);
+    if (hechas2.length >= MAX2) return;
     var codigo = $("s2-codigo");
-    pintarLineas($("s2-lineas"), ["colores." + op + '("' + color + '")', "print(colores)"]);
-    Codigo.marcar(codigo, { activas: [0] });
+    var nueva = "colores." + op + '("' + color + '")';
+    var k = hechas2.length + 1;
+    pintarLineas($("s2-lineas"), lineas2(nueva));
+    Codigo.marcar(codigo, { activas: [k] });
     var estaba = colores2.indexOf(color) !== -1;
+    // Una línea con error detiene el programa: la próxima vez ya no está
+    if (estaba || op === "discard") hechas2.push(nueva);
     var texto;
     var tipo = "ok";
 
@@ -510,7 +528,7 @@
 
     if (op === "discard" || estaba) {
       anim2.luego(estaba ? 1000 : 400, function () {
-        Codigo.marcar(codigo, { activas: [1] });
+        Codigo.marcar(codigo, { activas: [k + 1] });
         imprimir($("s2-consola"), Conjunto.python(colores2), bolsa2.el);
       });
     }
@@ -522,6 +540,10 @@
     } else {
       var falta = !s2.tiene("quita") ? "sacar un color que sí está" : !s2.tiene("error") ? "colores.remove(\"negro\")" : "colores.discard(\"negro\")";
       Pasos.feedback(fb, tipo, texto + " Ahora prueba " + falta + ".");
+    }
+    if (hechas2.length >= MAX2) {
+      activar("s2-elegir", false);
+      if (!s2.todos(["quita", "error", "calla"])) Pasos.feedback(fb, "pista", texto + " El programa ya está largo: toca «Volver al conjunto de antes» y prueba " + falta + ".");
     }
   }
 
