@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Búsqueda binaria · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: la búsqueda binaria en Python, línea a línea. inicio, medio y fin, while inicio <= fin, los tres casos, la tabla de seguimiento, cuando no está, los errores típicos (inicio = medio y while inicio < fin) y la búsqueda en una lista de nombres.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-top: var(--esp-3); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) 0.7rem; font-size: 0.95rem; }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-2) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* El código de la función es largo: un poco más chico para que quepa con los botones */
+    .codigo--largo { font-size: 0.95rem; line-height: 1.55; padding: var(--esp-3) 0; }
+    .codigo--largo .linea { min-height: 1.55em; }
+    .codigo .pieza-cambio { border-radius: 4px; box-shadow: 0 0 0 2px #ffb86b; }
+
+    /* ---------- Elegir (qué buscar, qué versión) ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .lab__visual > .elegir:first-child { margin: 0 0 var(--esp-1); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); }
+    .elegir__titulo { font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+    .btn--bien::after { content: " ✓"; color: var(--color-ok); }
+    .btn--mal::after { content: " ✗"; color: var(--color-error); }
+
+    /* ---------- Comparaciones: cuántos casilleros se miraron ---------- */
+    .contador { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { display: inline-block; min-width: 1.4em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-ok); }
+    .contador--pulso strong { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Cajas de inicio, medio y fin, del color de su puntero ---------- */
+    .cajas--punteros { gap: var(--esp-3) var(--esp-6); padding: var(--esp-3) 0 var(--esp-1); }
+    .cajas--punteros .caja__cuerpo { width: 5rem; height: 3.6rem; padding-bottom: var(--esp-2); }
+    .cajas--punteros .caja__cuerpo::before { left: -0.7rem; }
+    .cajas--punteros .caja__cuerpo::after { right: -0.7rem; }
+    .cajas--punteros .caja__valor { font-size: var(--texto-lg); min-width: 2.4rem; padding: 0 var(--esp-2); }
+    .cajas--punteros .caja__nombre { font-weight: 700; }
+    .caja--medio .caja__cuerpo { border-color: #7a3fb0; background: linear-gradient(to bottom, transparent 30%, #f3ebfa 30%); }
+    .caja--medio .caja__cuerpo::before, .caja--medio .caja__cuerpo::after { background: #7a3fb0; }
+    .caja--medio .caja__valor { border-color: #7a3fb0; }
+    .caja--medio .caja__nombre { color: #7a3fb0; }
+    .caja--fin .caja__cuerpo { border-color: var(--color-pista); background: linear-gradient(to bottom, transparent 30%, var(--color-pista-suave) 30%); }
+    .caja--fin .caja__cuerpo::before, .caja--fin .caja__cuerpo::after { background: var(--color-pista); }
+    .caja--fin .caja__valor { border-color: var(--color-pista); }
+    .caja--fin .caja__nombre { color: var(--color-pista); }
+    .caja--inicio .caja__nombre { color: var(--color-azul); }
+
+    /* ---------- La tabla de seguimiento: una fila por vuelta ---------- */
+    .seguimiento { width: 100%; margin-top: var(--esp-3); border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
+    .seguimiento caption { margin: 0 0 var(--esp-1); text-align: left; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .seguimiento caption .contador { float: right; margin: 0; letter-spacing: 0; text-transform: none; font-weight: 400; }
+    .seguimiento caption .contador strong { font-size: var(--texto-md); }
+    .seguimiento th { padding: var(--esp-1) var(--esp-2); border-bottom: 3px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .seguimiento th:nth-child(1) { border-bottom-color: var(--color-azul); color: var(--color-azul); }
+    .seguimiento th:nth-child(2) { border-bottom-color: var(--color-pista); color: var(--color-pista); }
+    .seguimiento th:nth-child(3) { border-bottom-color: #7a3fb0; color: #7a3fb0; }
+    .seguimiento th:nth-child(4) { color: var(--color-texto-suave); }
+    .seguimiento td { padding: 0.2rem var(--esp-2); border-bottom: 1px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; white-space: nowrap; }
+    .seguimiento tbody tr { animation: aparecer var(--dur) ease both; }
+    .seguimiento__activa td { background: var(--color-acento-suave); }
+    .seguimiento__activa td:first-child { box-shadow: inset 4px 0 0 var(--color-acento); }
+    .seguimiento__repetida td { background: var(--color-pista-suave); }
+    .seguimiento__igual { color: var(--color-ok); }
+    .seguimiento__nada { font-family: var(--fuente); font-weight: 400; font-style: italic; color: var(--color-texto-suave); white-space: normal; }
+    .celda--nueva { animation: valor-pulso 320ms ease-out; }
+
+    /* ---------- 2. Tú decides ---------- */
+    .buscas { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-md); font-weight: 600; }
+    .buscas strong { display: inline-block; padding: 0 0.45em; border-radius: var(--radio-sm); background: var(--color-acento-suave); color: var(--color-acento); font-family: var(--fuente-codigo); font-size: var(--texto-lg); }
+    .pregunta { min-height: 3.2em; margin: var(--esp-3) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .pregunta strong, .pregunta code { color: var(--color-texto); }
+    .acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .acciones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); white-space: nowrap; }
+
+    /* ---------- Expresión que se evalúa (textos) ---------- */
+    .lab__visual .expresion { margin-top: var(--esp-2); font-size: var(--texto-md); }
+    .expresion[hidden] { display: none; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .expresion__final--mal { background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- Reto ---------- */
+    .grupo-titulo { margin: var(--esp-3) 0 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); text-align: center; }
+    .grupo-titulo + .elegir { margin-top: var(--esp-1); }
+    .pruebas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas[hidden] { display: none; }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 150ms; }
+    .pruebas li:nth-child(3) { animation-delay: 300ms; }
+    .pruebas li:nth-child(4) { animation-delay: 450ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .prueba__error { color: var(--color-error); font-weight: 700; }
+    .pruebas + .feedback { margin-top: var(--esp-3); }
+
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.92rem; line-height: 1.45; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .pruebas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .lab__visual .lista { padding: var(--esp-1) 0; }
+    }
+    @media (max-width: 480px) {
+      .codigo--largo { font-size: 0.82rem; }
+      .codigo--largo .linea { padding-right: var(--esp-3); }
+      .cajas--punteros { gap: var(--esp-3) var(--esp-5); }
+      .cajas--punteros .caja__cuerpo { width: 4.4rem; height: 3.3rem; }
+      .seguimiento th, .seguimiento td { padding-inline: var(--esp-1); }
+      .pruebas li { font-size: var(--texto-xs); padding: var(--esp-2) var(--esp-3); }
+      .fila-botones .btn { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .elegir { gap: var(--esp-1) var(--esp-2); }
+      .elegir .btn { padding: var(--esp-1) var(--esp-2); }
+      #p7-lista .lista__valor { font-size: 0.7rem; padding: 0 0.25em; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas-binaria">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. La búsqueda binaria, línea a línea -->
+    <section class="paso" id="paso-codigo" data-requiere aria-labelledby="t-codigo">
+      <span class="paso__etiqueta">Búsquedas 4/7 · Búsqueda binaria</span>
+      <h1 class="paso__titulo" id="t-codigo">De la idea al código</h1>
+      <p>Partir a la mitad, en Python: tres variables, <code>inicio</code>, <code>medio</code> y <code>fin</code>, apuntan a casilleros. Ejecútalo y mira cómo se mueven.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p1-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p1-saltar">Siguiente vuelta ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p1-lista"></div>
+          <div class="cajas cajas--punteros">
+            <div class="caja caja--inicio" id="p1-inicio">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">inicio</code>
+            </div>
+            <div class="caja caja--medio" id="p1-medio">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">medio</code>
+            </div>
+            <div class="caja caja--fin" id="p1-fin">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">fin</code>
+            </div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p1-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. El alumno elige qué línea se ejecuta -->
+    <section class="paso" id="paso-tu" data-requiere aria-labelledby="t-tu">
+      <h2 class="paso__titulo" id="t-tu">Ahora decides tú</h2>
+      <p>Python destapa el casillero del medio. Tú eliges qué línea sigue: ¿lo encontraste, o qué mitad se descarta? Haz dos búsquedas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Código"></pre>
+          <p class="pregunta" id="p2-pregunta" aria-live="polite"></p>
+          <div class="acciones" role="group" aria-label="¿Qué línea se ejecuta?">
+            <button type="button" class="btn btn-secundario" data-accion2="return" disabled>return medio</button>
+            <button type="button" class="btn btn-secundario" data-accion2="inicio" disabled>inicio = medio + 1</button>
+            <button type="button" class="btn btn-secundario" data-accion2="fin" disabled>fin = medio - 1</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="buscas">Buscas el <strong id="p2-x">11</strong></p>
+          <div id="p2-lista"></div>
+          <p class="contador">Comparaciones: <strong id="p2-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="p2-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p2-otra-btn">🔍 Otra búsqueda</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. La tabla de seguimiento -->
+    <section class="paso" id="paso-tabla" data-requiere aria-labelledby="t-tabla">
+      <h2 class="paso__titulo" id="t-tabla">La tabla de seguimiento</h2>
+      <p>Para seguirla en papel, anota una fila por vuelta: <code>inicio</code>, <code>fin</code>, <code>medio</code> y lo que hay en <code>lista[medio]</code>. Elige una nota y mira cómo se llena.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p3-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p3-elegir" role="group" aria-label="¿Qué nota buscas?">
+            <span class="elegir__titulo" aria-hidden="true">Busca:</span>
+            <button type="button" class="btn btn-secundario" data-x="20" aria-pressed="true">20</button>
+            <button type="button" class="btn btn-secundario" data-x="9" aria-pressed="false">9</button>
+            <button type="button" class="btn btn-secundario" data-x="15" aria-pressed="false">15</button>
+          </div>
+          <div id="p3-lista"></div>
+          <table class="seguimiento" id="p3-tabla">
+            <caption>Tabla de seguimiento <span class="contador">Comparaciones: <strong id="p3-comps">0</strong></span></caption>
+            <thead><tr><th scope="col">inicio</th><th scope="col">fin</th><th scope="col">medio</th><th scope="col">lista[medio]</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Cuando no está: inicio pasa a fin -->
+    <section class="paso" id="paso-no-esta" data-requiere aria-labelledby="t-no-esta">
+      <h2 class="paso__titulo" id="t-no-esta">¿Y si no está?</h2>
+      <p>Busca una nota que <strong>no</strong> está en la lista. Fíjate dónde quedan <code>inicio</code> y <code>fin</code> al final.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p4-elegir" role="group" aria-label="¿Qué nota buscas?">
+            <span class="elegir__titulo" aria-hidden="true">Busca:</span>
+            <button type="button" class="btn btn-secundario" data-x="12" aria-pressed="true">12</button>
+            <button type="button" class="btn btn-secundario" data-x="3" aria-pressed="false">3</button>
+            <button type="button" class="btn btn-secundario" data-x="18" aria-pressed="false">18</button>
+          </div>
+          <div id="p4-lista"></div>
+          <table class="seguimiento" id="p4-tabla">
+            <caption>Tabla de seguimiento <span class="contador">Comparaciones: <strong id="p4-comps">0</strong></span></caption>
+            <thead><tr><th scope="col">inicio</th><th scope="col">fin</th><th scope="col">medio</th><th scope="col">lista[medio]</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Error típico: inicio = medio (bucle sin fin) -->
+    <section class="paso" id="paso-sin-fin" data-requiere aria-labelledby="t-sin-fin">
+      <h2 class="paso__titulo" id="t-sin-fin">Error típico: olvidar el + 1</h2>
+      <p>Aquí alguien escribió <code>inicio = medio</code>, sin el <code>+ 1</code>. Con algunas notas funciona igual… Prueba las tres.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p5-saltar">Siguiente vuelta ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p5-elegir" role="group" aria-label="¿Qué nota buscas?">
+            <span class="elegir__titulo" aria-hidden="true">Busca:</span>
+            <button type="button" class="btn btn-secundario" data-x="14" aria-pressed="true">14</button>
+            <button type="button" class="btn btn-secundario" data-x="17" aria-pressed="false">17</button>
+            <button type="button" class="btn btn-secundario" data-x="20" aria-pressed="false">20</button>
+          </div>
+          <div id="p5-lista"></div>
+          <table class="seguimiento" id="p5-tabla">
+            <caption>Tabla de seguimiento <span class="contador">Comparaciones: <strong id="p5-comps">0</strong></span></caption>
+            <thead><tr><th scope="col">inicio</th><th scope="col">fin</th><th scope="col">medio</th><th scope="col">lista[medio]</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Error típico: while inicio < fin -->
+    <section class="paso" id="paso-menor" data-requiere aria-labelledby="t-menor">
+      <h2 class="paso__titulo" id="t-menor">Error típico: &lt; en vez de &lt;=</h2>
+      <p>Ahora el <code>while</code> dice <code>inicio &lt; fin</code>. Con algunas notas funciona… Encuentra una nota que <strong>sí</strong> está en la lista y que esta versión no encuentra.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="p6-elegir" role="group" aria-label="¿Qué nota buscas?">
+            <span class="elegir__titulo" aria-hidden="true">Busca:</span>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p6-lista"></div>
+          <div class="expresion" id="p6-expresion" aria-live="polite" hidden>
+            <span id="p6-expr">buscar(notas, 9)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="p6-res">?</span>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p6-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Con textos ordenados -->
+    <section class="paso" id="paso-textos" data-requiere aria-labelledby="t-textos">
+      <h2 class="paso__titulo" id="t-textos">También con nombres</h2>
+      <p>Los textos se comparan por orden alfabético: <code>"Ana" &lt; "Luis"</code> es <code>True</code>. Si la lista de nombres está ordenada, la misma función sirve. Busca un nombre.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p7-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p7-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p7-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p7-elegir" role="group" aria-label="¿Qué nombre buscas?">
+            <span class="elegir__titulo" aria-hidden="true">Busca:</span>
+            <button type="button" class="btn btn-secundario" data-x="Luis" aria-pressed="true">"Luis"</button>
+            <button type="button" class="btn btn-secundario" data-x="Beto" aria-pressed="false">"Beto"</button>
+            <button type="button" class="btn btn-secundario" data-x="Pedro" aria-pressed="false">"Pedro"</button>
+          </div>
+          <div id="p7-lista"></div>
+          <div class="expresion" id="p7-expresion" aria-live="polite" hidden>
+            <span id="p7-expr"></span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano" id="p7-bool"></span>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p7-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto: las líneas que mueven los punteros -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Mueve los punteros</h2>
+      <p>Faltan las dos líneas que mueven <code>inicio</code> y <code>fin</code>. Elige qué va en cada espacio en blanco. Se probará con cuatro notas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="reto-codigo" aria-label="Código"></pre>
+          <p class="grupo-titulo" id="reto-t-a">Espacio 1: inicio = …</p>
+          <div class="elegir" id="reto-a" role="group" aria-labelledby="reto-t-a">
+            <button type="button" class="btn btn-secundario" data-valor="medio" aria-pressed="false">medio</button>
+            <button type="button" class="btn btn-secundario" data-valor="medio + 1" aria-pressed="false">medio + 1</button>
+            <button type="button" class="btn btn-secundario" data-valor="medio - 1" aria-pressed="false">medio - 1</button>
+          </div>
+          <p class="grupo-titulo" id="reto-t-b">Espacio 2: fin = …</p>
+          <div class="elegir" id="reto-b" role="group" aria-labelledby="reto-t-b">
+            <button type="button" class="btn btn-secundario" data-valor="medio" aria-pressed="false">medio</button>
+            <button type="button" class="btn btn-secundario" data-valor="medio + 1" aria-pressed="false">medio + 1</button>
+            <button type="button" class="btn btn-secundario" data-valor="medio - 1" aria-pressed="false">medio - 1</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta" id="reto-rotulo">notas</p>
+          <div id="reto-lista"></div>
+          <p class="contador">Comparaciones: <strong id="reto-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">La búsqueda binaria mira el casillero del medio y descarta la mitad que no puede tenerlo, mientras <code>inicio &lt;= fin</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">buscar</span>(<span class="tk-variable">lista</span>, <span class="tk-variable">x</span>):  <span class="tk-comentario"># lista ordenada</span></span><span class="linea">    <span class="tk-variable">inicio</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-variable">fin</span> = <span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>) - <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">while</span> <span class="tk-variable">inicio</span> &lt;= <span class="tk-variable">fin</span>:  <span class="tk-comentario"># &lt;=, no &lt;</span></span><span class="linea">        <span class="tk-variable">medio</span> = (<span class="tk-variable">inicio</span> + <span class="tk-variable">fin</span>) // <span class="tk-numero">2</span></span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">medio</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">medio</span></span><span class="linea">        <span class="tk-palabra">elif</span> <span class="tk-variable">lista</span>[<span class="tk-variable">medio</span>] &lt; <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-variable">inicio</span> = <span class="tk-variable">medio</span> + <span class="tk-numero">1</span>  <span class="tk-comentario"># medio ya se miró</span></span><span class="linea">        <span class="tk-palabra">else</span>:</span><span class="linea">            <span class="tk-variable">fin</span> = <span class="tk-variable">medio</span> - <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span>  <span class="tk-comentario"># no está</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../recursiva/index.html">Siguiente: Búsqueda binaria con recursión →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Temporizadores de una animación, para poder cortarla */
+  function relojes() {
+    var lista = [];
+    return {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+  }
+
+  var NOTAS = [6, 9, 11, 14, 15, 17, 19, 20];
+  var NOMBRES = ["Ana", "Beto", "Eva", "Luis", "Rosa"];
+  var COLOR = { inicio: "azul", medio: "morado", fin: "naranja" };
+
+  /* Líneas del código (desde 0) */
+  var L = { inicio: 1, fin: 2, mientras: 3, medio: 4, igual: 5, devuelve: 6, menor: 7, masUno: 8, sino: 9, menosUno: 10, noEsta: 11, llamada: 13 };
+
+  /* ---------- Cómo se escribe un valor ---------- */
+  function fmt(v) { return typeof v === "string" ? '"' + v + '"' : String(v); }
+  function c(s) { return "<code>" + s + "</code>"; }
+
+  /* ---------- El código de buscar, con sus variantes ---------- */
+  function kw(s) { return '<span class="tk-palabra">' + s + "</span>"; }
+  function fn(s) { return '<span class="tk-funcion">' + s + "</span>"; }
+  function va(s) { return '<span class="tk-variable">' + s + "</span>"; }
+  function nu(s) { return '<span class="tk-numero">' + s + "</span>"; }
+  function xHTML(x) { return typeof x === "string" ? '<span class="tk-texto">"' + x + '"</span>' : nu(x); }
+  function cambio(html) { return '<span class="pieza-cambio">' + html + "</span>"; }
+  function mover(expr) {
+    if (expr === "medio") return va("medio");
+    return va("medio") + " " + expr.charAt(6) + " " + nu("1");
+  }
+
+  /* o: { lista: "notas", x: 15, cond: "<=", inicio: "medio + 1", fin: "medio - 1",
+          marcar: "cond" | "inicio" (lo que cambia, recuadrado), huecos: true, llamada: false } */
+  function codigoHTML(o) {
+    o = o || {};
+    var cond = (o.cond || "<=").replace("<", "&lt;");
+    if (o.marcar === "cond") cond = cambio(cond);
+    var a = o.huecos ? '<span class="hueco" id="reto-ha">?</span>' : mover(o.inicio || "medio + 1");
+    var b = o.huecos ? '<span class="hueco" id="reto-hb">?</span>' : mover(o.fin || "medio - 1");
+    if (o.marcar === "inicio") a = cambio(a);
+    var lineas = [
+      kw("def") + " " + fn("buscar") + "(" + va("lista") + ", " + va("x") + "):",
+      "    " + va("inicio") + " = " + nu("0"),
+      "    " + va("fin") + " = " + fn("len") + "(" + va("lista") + ") - " + nu("1"),
+      "    " + kw("while") + " " + va("inicio") + " " + cond + " " + va("fin") + ":",
+      "        " + va("medio") + " = (" + va("inicio") + " + " + va("fin") + ") // " + nu("2"),
+      "        " + kw("if") + " " + va("lista") + "[" + va("medio") + "] == " + va("x") + ":",
+      "            " + kw("return") + " " + va("medio"),
+      "        " + kw("elif") + " " + va("lista") + "[" + va("medio") + "] &lt; " + va("x") + ":",
+      "            " + va("inicio") + " = " + a,
+      "        " + kw("else") + ":",
+      "            " + va("fin") + " = " + b,
+      "    " + kw("return") + " " + nu("-1")
+    ];
+    if (o.llamada !== false) {
+      lineas.push("");
+      lineas.push(fn("print") + "(" + fn("buscar") + "(" + va(o.lista || "notas") + ", " +
+        '<span class="x-llamada">' + xHTML(o.x) + "</span>))");
+    }
+    return "<code>" + lineas.map(function (l) { return '<span class="linea">' + l + "</span>"; }).join("") + "</code>";
+  }
+
+  function ponerX(pre, x) {
+    var s = pre.querySelector(".x-llamada");
+    if (s) s.innerHTML = xHTML(x);
+  }
+
+  /* ---------- Simular buscar(lista, x), como Python ----------
+     v = { cond: "<=" | "<", inicio: "medio + 1" | "medio" | "medio - 1", fin: … }
+     Si inicio y fin se repiten, el bucle no termina nunca: se corta a la tercera vuelta igual. */
+  function leer(lista, k) {
+    var n = lista.length;
+    if (k < -n || k >= n) return undefined;
+    return lista[k < 0 ? k + n : k];
+  }
+
+  function moverA(expr, m) { return expr === "medio" ? m : expr === "medio + 1" ? m + 1 : m - 1; }
+
+  function simular(lista, x, v) {
+    v = v || {};
+    var A = v.inicio || "medio + 1";
+    var B = v.fin || "medio - 1";
+    var menorIgual = (v.cond || "<=") === "<=";
+    var ini = 0;
+    var fin = lista.length - 1;
+    var vueltas = [];
+    var vistos = {};
+    var repetidas = 0;
+    while (menorIgual ? ini <= fin : ini < fin) {
+      var clave = ini + "," + fin;
+      var repetida = !!vistos[clave];
+      if (repetida) {
+        repetidas++;
+        if (repetidas > 2) return { vueltas: vueltas, resultado: "sinfin", inicio: ini, fin: fin };
+      }
+      if (vueltas.length >= 30) return { vueltas: vueltas, resultado: "sinfin", inicio: ini, fin: fin };
+      vistos[clave] = true;
+      var m = Math.floor((ini + fin) / 2);
+      var val = leer(lista, m);
+      if (val === undefined) return { vueltas: vueltas, resultado: "IndexError", inicio: ini, fin: fin, medio: m };
+      var caso = val === x ? "igual" : val < x ? "menor" : "mayor";
+      vueltas.push({ inicio: ini, fin: fin, medio: m, valor: val, caso: caso, repetida: repetida });
+      if (caso === "igual") return { vueltas: vueltas, resultado: m, inicio: ini, fin: fin };
+      if (caso === "menor") ini = moverA(A, m);
+      else fin = moverA(B, m);
+    }
+    return { vueltas: vueltas, resultado: -1, inicio: ini, fin: fin };
+  }
+
+  /* ---------- La traza línea a línea ----------
+     Cada paso guarda una copia del estado: inicio, fin, medio, el casillero que se mira,
+     los que ya se miraron, las comparaciones y las filas de la tabla de seguimiento. */
+  function trazar(valores, x, v, nombre) {
+    v = v || {};
+    nombre = nombre || "notas";
+    var A = v.inicio || "medio + 1";
+    var B = v.fin || "medio - 1";
+    var menorIgual = (v.cond || "<=") === "<=";
+    var op = menorIgual ? "&lt;=" : "&lt;";
+    var sim = simular(valores, x, v);
+    var X = fmt(x);
+    var n = valores.length;
+    var pasos = [];
+    var e = { inicio: null, fin: null, medio: null, mirar: null, igual: null, comps: 0, mirados: [], filas: [], activa: -1, expr: null, nombres: [nombre] };
+
+    function copia(extra) {
+      var s = Object.assign({}, e, extra || {});
+      s.filas = e.filas.map(function (f) { return Object.assign({}, f); });
+      s.mirados = e.mirados.slice();
+      s.nombres = e.nombres.slice();
+      return s;
+    }
+    function paso(linea, texto, extra, mas) {
+      pasos.push(Object.assign({ linea: linea, texto: texto, estado: copia(extra) }, mas || {}));
+    }
+
+    e.nombres = [nombre, "lista"];
+    paso(L.llamada, "Python llama a " + c("buscar(" + nombre + ", " + X + ")") + ". Dentro de la función, la lista se llama " + c("lista") + ".");
+    e.inicio = 0;
+    paso(L.inicio, c("inicio") + " apunta al primer casillero: <strong>0</strong>.", null, { flecha: true });
+    e.fin = n - 1;
+    paso(L.fin, c("fin") + " apunta al último: " + c("len(lista) - 1") + " = <strong>" + (n - 1) + "</strong>.");
+
+    sim.vueltas.forEach(function (vu) {
+      e.mirar = null;
+      paso(L.mientras, "¿" + c(vu.inicio + " " + op + " " + vu.fin) + "? <strong>True</strong>" +
+        (vu.repetida ? ". 🔁 ¡Los mismos " + c("inicio") + " y " + c("fin") + " que en la vuelta anterior!" : ": quedan casilleros por mirar."),
+        null, { parada: true });
+      e.medio = vu.medio;
+      e.filas.push({ inicio: vu.inicio, fin: vu.fin, medio: vu.medio, repetida: vu.repetida });
+      e.activa = e.filas.length - 1;
+      paso(L.medio, c("medio = (" + vu.inicio + " + " + vu.fin + ") // 2") + " = <strong>" + vu.medio + "</strong>: el casillero del medio.");
+
+      var V = fmt(vu.valor);
+      e.mirar = vu.medio;
+      e.comps++;
+      e.mirados.push(vu.medio);
+      e.filas[e.activa].valor = vu.valor;
+      e.filas[e.activa].caso = vu.caso;
+      e.expr = { texto: V + " == " + X, valor: vu.caso === "igual" };
+      if (vu.caso === "igual") {
+        paso(L.igual, "Mira el casillero " + vu.medio + ": ¿" + c(V + " == " + X) + "? <strong>True</strong>: ¡lo encontró!");
+        e.mirar = null;
+        e.igual = vu.medio;
+        paso(L.devuelve, c("return medio") + ": devuelve <strong>" + vu.medio + "</strong> y la función termina ahí.");
+        return;
+      }
+      paso(L.igual, "Mira el casillero " + vu.medio + ": ¿" + c(V + " == " + X) + "? <strong>False</strong>.");
+      var alfabeto = typeof x === "string" ? ", por orden alfabético" : "";
+      e.expr = { texto: V + " &lt; " + X, valor: vu.caso === "menor" };
+      if (vu.caso === "menor") {
+        paso(L.menor, "¿" + c(V + " &lt; " + X) + "? <strong>True</strong>" + alfabeto + ": " + X + " tiene que estar más a la derecha.");
+        var antes = e.inicio;
+        e.mirar = null;
+        e.inicio = moverA(A, vu.medio);
+        paso(L.masUno, c("inicio = " + A) + " = <strong>" + e.inicio + "</strong>" +
+          (e.inicio === antes ? ": ¡" + c("inicio") + " no se movió!"
+            : A === "medio + 1" ? ": se descarta hasta el casillero " + vu.medio + ", incluido." : "."));
+      } else {
+        paso(L.menor, "¿" + c(V + " &lt; " + X) + "? <strong>False</strong>" + alfabeto + ": " + X + " tiene que estar más a la izquierda.");
+        e.mirar = null;
+        e.fin = moverA(B, vu.medio);
+        paso(L.menosUno, "Por el " + c("else") + ": " + c("fin = " + B) + " = <strong>" + e.fin + "</strong>" +
+          (B === "medio - 1" ? ": se descarta desde el casillero " + vu.medio + ", incluido." : "."));
+      }
+    });
+
+    var r = sim.resultado;
+    if (r === "sinfin") {
+      e.mirar = null;
+      paso(L.mientras, "🔁 Las vueltas se repiten: " + c("inicio") + " y " + c("fin") + " ya no cambian. Este bucle no terminaría nunca: aquí lo cortamos.", { aviso: true }, { parada: true });
+    } else if (r === "IndexError") {
+      e.medio = sim.medio;
+      paso(L.medio, c("medio") + " = <strong>" + sim.medio + "</strong>: ¡ese casillero no existe! 💥 " + c("IndexError") + ".", { error: true });
+    } else if (r >= 0) {
+      e.nombres = [nombre];
+      paso(L.llamada, c("print") + " muestra lo que devolvió: <strong>" + r + "</strong>. Miró " + e.comps + (e.comps === 1 ? " casillero" : " casilleros") + " de " + n + ".",
+        null, { salida: String(r), flecha: true });
+    } else {
+      e.mirar = null;
+      e.filas.push({ inicio: e.inicio, fin: e.fin, salida: true, nota: menorIgual ? "inicio &gt; fin" : e.inicio + " &lt; " + e.fin + ": False" });
+      e.activa = e.filas.length - 1;
+      paso(L.mientras, "¿" + c(e.inicio + " " + op + " " + e.fin) + "? <strong>False</strong>: " +
+        (menorIgual ? c("inicio") + " pasó a " + c("fin") + ". No queda ningún casillero." : "el bucle termina."), null, { parada: true });
+      paso(L.noEsta, c("return -1") + ": " + (menorIgual ? X + " no está en la lista." : "dice que " + X + " no está."));
+      e.nombres = [nombre];
+      paso(L.llamada, c("print") + " muestra <strong>-1</strong>. Miró " + e.comps + (e.comps === 1 ? " casillero" : " casilleros") + " de " + n + ".",
+        null, { salida: "-1", flecha: true });
+    }
+    pasos.resultado = r;
+    pasos.final = { inicio: sim.inicio, fin: sim.fin };
+    return pasos;
+  }
+
+  /* ---------- La tabla de seguimiento ---------- */
+  function celda(td, html, animar) {
+    if (td.getAttribute("data-html") === html) return;
+    td.setAttribute("data-html", html);
+    td.innerHTML = html;
+    if (animar && html) {
+      td.classList.remove("celda--nueva");
+      void td.offsetWidth;
+      td.classList.add("celda--nueva");
+    }
+  }
+
+  function llenarTabla(tabla, filas, activa, animar) {
+    var cuerpo = tabla.tBodies[0];
+    while (cuerpo.rows.length > filas.length) cuerpo.deleteRow(-1);
+    while (cuerpo.rows.length < filas.length) {
+      var tr = cuerpo.insertRow();
+      for (var k = 0; k < 4; k++) tr.insertCell();
+    }
+    filas.forEach(function (f, i) {
+      var tr = cuerpo.rows[i];
+      tr.classList.toggle("seguimiento__activa", i === activa);
+      tr.classList.toggle("seguimiento__repetida", !!f.repetida);
+      celda(tr.cells[0], String(f.inicio), animar);
+      celda(tr.cells[1], String(f.fin), animar);
+      if (f.salida) {
+        celda(tr.cells[2], "—", animar);
+        celda(tr.cells[3], '<span class="seguimiento__nada">' + f.nota + "</span>", animar);
+        return;
+      }
+      celda(tr.cells[2], String(f.medio), animar);
+      celda(tr.cells[3], f.valor === undefined ? "" : '<span class="' + (f.caso === "igual" ? "seguimiento__igual" : "") + '">' + fmt(f.valor) + (f.caso === "igual" ? " ✓" : "") + "</span>", animar);
+    });
+  }
+
+  /* ---------- Lo que se ve: la lista, sus punteros, las cajas, la tabla ----------
+     o = { lista: el, valores, nombre, tapar, cajas: { inicio, medio, fin }, tabla, comps, expr: { caja, texto, chip } } */
+  function crearVista(o) {
+    var l = Lista.crear(o.lista, o.valores, { nombres: [o.nombre || "notas"] });
+    var ultimo = {};
+    var destapados = {};
+
+    function contar(n) {
+      if (!o.comps || o.comps.textContent === String(n)) return;
+      o.comps.textContent = String(n);
+      var p = o.comps.parentNode;
+      p.classList.remove("contador--pulso");
+      void p.offsetWidth;
+      if (n) p.classList.add("contador--pulso");
+    }
+
+    function reiniciar() {
+      ultimo = {};
+      destapados = {};
+      l.marcar(null);
+      l.clases(null);
+      l.punteros(null);
+      l.nombres([o.nombre || "notas"]);
+      ultimo.nombres = JSON.stringify([o.nombre || "notas"]);
+      if (o.tapar) l.tapar(true);
+      if (o.cajas) Object.keys(o.cajas).forEach(function (k) { Caja.vaciar(o.cajas[k]); });
+      if (o.tabla) llenarTabla(o.tabla, [], -1, false);
+      if (o.expr) o.expr.caja.hidden = true;
+      contar(0);
+    }
+
+    function pintar(e) {
+      // Las etiquetas: notas y, dentro de la función, también lista
+      if (e.nombres) {
+        var nom = JSON.stringify(e.nombres);
+        if (nom !== ultimo.nombres) { l.nombres(e.nombres); ultimo.nombres = nom; }
+      }
+      // Los punteros
+      var mapa = {};
+      var alguno = false;
+      ["inicio", "medio", "fin"].forEach(function (k) {
+        var hay = e[k] !== null && e[k] !== undefined;
+        mapa[k] = hay ? { i: e[k], color: COLOR[k] } : null;
+        if (hay) alguno = true;
+      });
+      if (alguno) l.punteros(mapa); else l.punteros(null);
+      // Los casilleros que se miraron se destapan
+      if (o.tapar) {
+        (e.mirados || []).forEach(function (k) {
+          if (destapados[k]) return;
+          destapados[k] = true;
+          l.destapar(k);
+        });
+      }
+      // Fuera de inicio..fin, apagados; el encontrado, verde; el que se saltó, naranja
+      l.clases(function (i) {
+        if (i === e.igual) return "lista__casilla--igual";
+        if (i === e.perdido) return "lista__casilla--distinta";
+        if (e.inicio !== null && e.fin !== null && (i < e.inicio || i > e.fin)) return "lista__casilla--apagada";
+        return "";
+      });
+      var mirar = e.mirar === null || e.mirar === undefined ? null : e.mirar;
+      if (mirar !== ultimo.mirar) { l.marcar(mirar); ultimo.mirar = mirar; }
+      // Las cajas: solo las que cambian (el valor viaja desde la línea activa)
+      if (o.cajas) {
+        Object.keys(o.cajas).forEach(function (k) {
+          var val = e[k] === undefined ? null : e[k];
+          if (val === ultimo[k]) return;
+          ultimo[k] = val;
+          if (val === null) Caja.vaciar(o.cajas[k]);
+          else Caja.poner(o.cajas[k], val);
+        });
+      }
+      if (o.tabla) llenarTabla(o.tabla, e.filas || [], e.activa, true);
+      if (o.expr) {
+        if (e.expr) {
+          o.expr.caja.hidden = false;
+          o.expr.texto.innerHTML = e.expr.texto;
+          Codigo.booleano(o.expr.chip, e.expr.valor);
+        } else {
+          o.expr.caja.hidden = true;
+        }
+      }
+      contar(e.comps || 0);
+    }
+
+    return { l: l, reiniciar: reiniciar, pintar: pintar };
+  }
+
+  /* Pasos de una traza reproducidos solos, deprisa (sin botones) */
+  function reproducirPasos(pre, vista, pasos, ms, reloj, alTerminar) {
+    pasos.forEach(function (p, i) {
+      reloj.luego(function () {
+        Codigo.marcar(pre, { activas: [p.linea] });
+        vista.pintar(p.estado);
+        if (i === pasos.length - 1 && alTerminar) alTerminar(p.estado);
+      }, i * ms);
+    });
+  }
+
+  /* Botones para elegir qué se busca */
+  function elegirX(grupo, alElegir) {
+    grupo.querySelectorAll("[data-x]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        grupo.querySelectorAll("[data-x]").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+        var t = b.getAttribute("data-x");
+        alElegir(/^-?\d+$/.test(t) ? Number(t) : t, b);
+      });
+    });
+  }
+
+  /* Una traza con botones (Traza) que pinta una vista */
+  function montarTraza(c) {
+    var pasos = [];
+    return Traza.crear({
+      codigo: c.pre,
+      explicacion: c.explicacion,
+      consola: c.consola,
+      ejecutar: c.ejecutar,
+      reproducir: c.reproducir,
+      saltar: c.saltar,
+      reiniciar: c.reiniciar,
+      intervalo: c.intervalo || 1100,
+      intervaloSaltar: 260,
+      generar: function () {
+        var d = c.datos();
+        pasos = trazar(d.valores, d.x, d.v, d.nombre);
+        if (c.tabla) {
+          Codigo.reservarAlto(c.tabla, pasos.map(function (p) { return p.estado; }), function (copia, e) {
+            llenarTabla(copia, e.filas, e.activa, false);
+          });
+        }
+        return pasos;
+      },
+      alReiniciar: function () {
+        c.vista.reiniciar();
+        if (c.fb) Pasos.limpiarFeedback(c.fb);
+      },
+      alPaso: function (paso) { c.vista.pintar(paso.estado); },
+      alTerminar: function () { c.alTerminar(pasos, pasos[pasos.length - 1].estado); }
+    });
+  }
+
+  function casilleros(n) { return n + (n === 1 ? " casillero" : " casilleros"); }
+
+  /* ---------- 1. La búsqueda binaria, línea a línea ---------- */
+  $("p1-codigo").innerHTML = codigoHTML({ x: 15 });
+  var vista1 = crearVista({
+    lista: $("p1-lista"), valores: NOTAS, tapar: true,
+    cajas: { inicio: $("p1-inicio"), medio: $("p1-medio"), fin: $("p1-fin") },
+    comps: $("p1-comps")
+  });
+
+  /* ---------- 2. Ahora decides tú ---------- */
+  $("p2-codigo").innerHTML = codigoHTML({ x: 11 });
+  var vista2 = crearVista({ lista: $("p2-lista"), valores: NOTAS, tapar: true, comps: $("p2-comps") });
+  var reloj2 = relojes();
+  var X2 = [11, 19, 12, 6, 20, 15];
+  var turno2 = 0;
+  var hechas2 = 0;
+  var s2 = null;
+  var botones2 = Array.prototype.slice.call(document.querySelectorAll("[data-accion2]"));
+
+  function estado2(extra) {
+    return Object.assign({
+      inicio: s2.ini, fin: s2.fin, medio: s2.medio, mirar: null, igual: s2.igual,
+      comps: s2.comps, mirados: s2.mirados.slice(), nombres: ["notas", "lista"]
+    }, extra || {});
+  }
+
+  function linea2(lineas) { Codigo.marcar($("p2-codigo"), { activas: lineas }); }
+  function pregunta2(html) { $("p2-pregunta").innerHTML = html; }
+  function activar2(si) { botones2.forEach(function (b) { b.disabled = !si; }); s2.esperando = si; }
+
+  function empezar2() {
+    reloj2.cortar();
+    var x = X2[turno2 % X2.length];
+    turno2++;
+    s2 = { x: x, ini: null, fin: null, medio: null, igual: null, comps: 0, mirados: [], esperando: false };
+    activar2(false);
+    ponerX($("p2-codigo"), x);
+    $("p2-x").textContent = String(x);
+    $("p2-otra").hidden = true;
+    Pasos.limpiarFeedback($("p2-fb"));
+    Codigo.limpiar($("p2-codigo"));
+    vista2.reiniciar();
+    pregunta2("Todos los casilleros empiezan tapados. Python solo mira el que necesita.");
+    reloj2.luego(function () {
+      linea2([L.inicio]);
+      s2.ini = 0;
+      vista2.pintar(estado2());
+    }, 700);
+    reloj2.luego(function () {
+      linea2([L.fin]);
+      s2.fin = NOTAS.length - 1;
+      vista2.pintar(estado2());
+    }, 1300);
+    reloj2.luego(vuelta2, 1900);
+  }
+
+  function vuelta2() {
+    linea2([L.mientras]);
+    if (s2.ini > s2.fin) {
+      pregunta2("¿" + c(s2.ini + " &lt;= " + s2.fin) + "? <strong>False</strong>: " + c("inicio") + " pasó a " + c("fin") + ".");
+      reloj2.luego(function () {
+        linea2([L.noEsta]);
+        pregunta2(c("return -1") + ": el " + s2.x + " no está en la lista.");
+        terminar2(-1);
+      }, 1100);
+      return;
+    }
+    pregunta2("¿" + c(s2.ini + " &lt;= " + s2.fin) + "? <strong>True</strong>: quedan casilleros por mirar.");
+    reloj2.luego(function () {
+      linea2([L.medio]);
+      s2.medio = Math.floor((s2.ini + s2.fin) / 2);
+      vista2.pintar(estado2());
+      pregunta2(c("medio = (" + s2.ini + " + " + s2.fin + ") // 2") + " = <strong>" + s2.medio + "</strong>.");
+    }, 800);
+    reloj2.luego(function () {
+      linea2([L.igual]);
+      s2.comps++;
+      s2.mirados.push(s2.medio);
+      vista2.pintar(estado2({ mirar: s2.medio }));
+      pregunta2("El casillero " + s2.medio + " tiene <strong>" + NOTAS[s2.medio] + "</strong> y buscas el <strong>" + s2.x + "</strong>. ¿Qué línea sigue?");
+      activar2(true);
+    }, 1600);
+  }
+
+  function pista2(accion, bien, v, x) {
+    if (bien === "return") return "¡El casillero tiene el " + x + "! Ya lo encontraste: devuélvelo con return medio.";
+    if (accion === "return") return "El casillero tiene " + v + ", no " + x + ": todavía no lo encuentras. ¿Hacia qué lado está el " + x + "?";
+    if (bien === "inicio") return v + " es menor que " + x + ": en una lista ordenada, el " + x + " tiene que estar a la derecha. Lo que sobra es la izquierda: mueve inicio.";
+    return v + " es mayor que " + x + ": el " + x + " tiene que estar a la izquierda. Lo que sobra es la derecha: mueve fin.";
+  }
+
+  function elegir2(accion) {
+    if (!s2 || !s2.esperando) return;
+    var v = NOTAS[s2.medio];
+    var x = s2.x;
+    var bien = v === x ? "return" : v < x ? "inicio" : "fin";
+    if (accion !== bien) {
+      Pasos.feedback($("p2-fb"), "pista", pista2(accion, bien, v, x));
+      return;
+    }
+    Pasos.limpiarFeedback($("p2-fb"));
+    activar2(false);
+    if (bien === "return") {
+      linea2([L.devuelve]);
+      s2.igual = s2.medio;
+      vista2.pintar(estado2());
+      pregunta2(c("return medio") + ": devuelve <strong>" + s2.medio + "</strong>.");
+      terminar2(s2.medio);
+      return;
+    }
+    if (bien === "inicio") {
+      linea2([L.menor, L.masUno]);
+      s2.ini = s2.medio + 1;
+      pregunta2(c(v + " &lt; " + x) + ", así que " + c("inicio = " + s2.medio + " + 1") + " = <strong>" + s2.ini + "</strong>: la izquierda se descarta.");
+    } else {
+      linea2([L.sino, L.menosUno]);
+      s2.fin = s2.medio - 1;
+      pregunta2(c(v + " &gt; " + x) + ", así que " + c("fin = " + s2.medio + " - 1") + " = <strong>" + s2.fin + "</strong>: la derecha se descarta.");
+    }
+    vista2.pintar(estado2());
+    reloj2.luego(vuelta2, 1500);
+  }
+
+  function terminar2(r) {
+    hechas2++;
+    var texto = r >= 0
+      ? "¡Encontraste el " + s2.x + " en el casillero " + r + " mirando " + casilleros(s2.comps) + " de 8!"
+      : "No está, y para saberlo bastó mirar " + casilleros(s2.comps) + " de 8: las mitades apagadas no podían tenerlo.";
+    if (hechas2 >= 2) {
+      Pasos.feedback($("p2-fb"), "ok", texto + " Así decide Python en cada vuelta: devuelve, o descarta una mitad.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p2-fb"), "ok", texto + " Haz otra búsqueda.");
+    }
+    $("p2-otra").hidden = false;
+  }
+
+  botones2.forEach(function (b) {
+    b.addEventListener("click", function () { elegir2(b.getAttribute("data-accion2")); });
+  });
+  $("p2-otra-btn").addEventListener("click", function () {
+    empezar2();
+  });
+
+  /* ---------- 3. La tabla de seguimiento ---------- */
+  var x3 = 20;
+  $("p3-codigo").innerHTML = codigoHTML({ x: x3 });
+  var vista3 = crearVista({ lista: $("p3-lista"), valores: NOTAS, tabla: $("p3-tabla"), comps: $("p3-comps") });
+
+  /* ---------- 4. ¿Y si no está? ---------- */
+  var x4 = 12;
+  $("p4-codigo").innerHTML = codigoHTML({ x: x4 });
+  var vista4 = crearVista({ lista: $("p4-lista"), valores: NOTAS, tabla: $("p4-tabla"), comps: $("p4-comps") });
+
+  /* ---------- 5. inicio = medio: bucle sin fin ---------- */
+  var x5 = 14;
+  var probados5 = {};
+  $("p5-codigo").innerHTML = codigoHTML({ x: x5, inicio: "medio", marcar: "inicio" });
+  var vista5 = crearVista({ lista: $("p5-lista"), valores: NOTAS, tabla: $("p5-tabla"), comps: $("p5-comps") });
+
+  /* ---------- 6. while inicio < fin: se salta el último casillero ---------- */
+  $("p6-codigo").innerHTML = codigoHTML({ x: 9, cond: "<", marcar: "cond" });
+  var vista6 = crearVista({ lista: $("p6-lista"), valores: NOTAS, comps: $("p6-comps") });
+  var reloj6 = relojes();
+  var grupo6 = $("p6-elegir");
+  NOTAS.forEach(function (n) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-secundario";
+    b.setAttribute("data-x", String(n));
+    b.setAttribute("aria-pressed", "false");
+    b.textContent = String(n);
+    grupo6.appendChild(b);
+  });
+  var falla6 = false;
+
+  function probar6(x, btn) {
+    reloj6.cortar();
+    var pre = $("p6-codigo");
+    ponerX(pre, x);
+    Codigo.limpiar(pre);
+    vista6.reiniciar();
+    Pasos.limpiarFeedback($("p6-fb"));
+    $("p6-expresion").hidden = false;
+    $("p6-expr").textContent = "buscar(notas, " + x + ")";
+    $("p6-res").textContent = "?";
+    $("p6-res").className = "expresion__final";
+    grupo6.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    var pasos = trazar(NOTAS, x, { cond: "<" });
+    reproducirPasos(pre, vista6, pasos, 230, reloj6, function (ultimo) {
+      grupo6.querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+      var k = NOTAS.indexOf(x);
+      var r = pasos.resultado;
+      $("p6-res").textContent = String(r);
+      if (r === k) {
+        btn.classList.add("btn--bien");
+        Pasos.feedback($("p6-fb"), falla6 ? "ok" : "pista", "Esta sí: encontró el " + x + " en el casillero " + k + "." + (falla6 ? "" : " Prueba otra nota: busca una para la que falle."));
+        return;
+      }
+      btn.classList.add("btn--mal");
+      $("p6-res").textContent = "-1 ✗";
+      $("p6-res").className = "expresion__final expresion__final--mal";
+      vista6.pintar(Object.assign({}, ultimo, { perdido: k }));
+      falla6 = true;
+      Pasos.feedback($("p6-fb"), "ok", "¡Falla! El " + x + " está en el casillero " + k + ". Cuando inicio y fin llegaron los dos a " + k +
+        ", quedaba ese casillero por mirar, pero " + k + " < " + k + " es False y el bucle terminó antes. Con <= sí entra cuando queda uno solo.");
+      leccion.desbloquear();
+    });
+  }
+  elegirX(grupo6, probar6);
+
+  /* ---------- 7. Con textos ---------- */
+  var x7 = "Luis";
+  $("p7-codigo").innerHTML = codigoHTML({ x: x7, lista: "nombres" });
+  var vista7 = crearVista({
+    lista: $("p7-lista"), valores: NOMBRES, nombre: "nombres", comps: $("p7-comps"),
+    expr: { caja: $("p7-expresion"), texto: $("p7-expr"), chip: $("p7-bool") }
+  });
+
+  /* ---------- 8. Reto ---------- */
+  $("reto-codigo").innerHTML = codigoHTML({ huecos: true, llamada: false });
+  var vistaReto = crearVista({ lista: $("reto-lista"), valores: NOTAS, comps: $("reto-comps") });
+  var relojReto = relojes();
+  var PRUEBAS = [6, 15, 20, 12];
+  var eleccion = { a: null, b: null };
+
+  function elegirReto(cual, btn) {
+    var grupo = $("reto-" + cual);
+    grupo.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+    eleccion[cual] = btn.getAttribute("data-valor");
+    $("reto-h" + cual).textContent = eleccion[cual];
+    limpiarReto();
+    leccion.listoParaComprobar(!!(eleccion.a && eleccion.b));
+  }
+
+  function limpiarReto() {
+    relojReto.cortar();
+    vistaReto.reiniciar();
+    Codigo.limpiar($("reto-codigo"));
+    $("reto-rotulo").textContent = "notas";
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto() {
+    eleccion = { a: null, b: null };
+    ["a", "b"].forEach(function (k) {
+      $("reto-" + k).querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      $("reto-h" + k).textContent = "?";
+    });
+    limpiarReto();
+  }
+
+  function muestra(r) {
+    if (r === "sinfin") return "🔁 sin fin";
+    if (r === "IndexError") return "💥 IndexError";
+    return String(r);
+  }
+
+  function pistaReto(a, b) {
+    if (a === "medio") return "Con inicio = medio, el casillero que ya miraste vuelve a quedar dentro. Cuando quedan dos casilleros, medio es el de la izquierda, inicio no se mueve y el bucle no termina. Descarta también medio.";
+    if (a === "medio - 1") return "Si lista[medio] < x, el valor está a la derecha de medio. inicio = medio - 1 lo mueve a la izquierda: vuelve a meter casilleros que ya se habían descartado.";
+    if (b === "medio") return "Casi: con fin = medio, el casillero que ya miraste sigue dentro. Si la nota no está (prueba con 12), inicio y fin dejan de moverse y el bucle no termina.";
+    return "Si lista[medio] es mayor que x, el valor está a la izquierda: fin tiene que quedar antes de medio, no después.";
+  }
+
+  function comprobarReto() {
+    if (!eleccion.a || !eleccion.b) return false;
+    limpiarReto();
+    var v = { inicio: eleccion.a, fin: eleccion.b };
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var mala = null;
+    PRUEBAS.forEach(function (x) {
+      var r = simular(NOTAS, x, v).resultado;
+      var esperado = NOTAS.indexOf(x);
+      var bien = r === esperado;
+      if (!bien && mala === null) mala = x;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      var error = typeof r !== "number";
+      li.innerHTML = "<span></span>" + '<span class="' + (error ? "prueba__error" : "prueba__res") + '"></span>';
+      li.children[0].textContent = "buscar(notas, " + x + ")";
+      li.children[1].textContent = muestra(r) + (bien ? " ✓" : " ✗ (debe dar " + esperado + ")");
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    // Se ve la prueba que falló (o una que funciona) moviendo los punteros
+    var xVer = mala === null ? 15 : mala;
+    $("reto-rotulo").textContent = "buscar(notas, " + xVer + ")";
+    reproducirPasos($("reto-codigo"), vistaReto, trazar(NOTAS, xVer, v), 260, relojReto);
+    if (mala === null) {
+      Pasos.feedback($("reto-fb"), "ok", "¡Eso es! inicio = medio + 1 y fin = medio - 1: el casillero medio ya se miró, así que se descarta junto con su mitad. Las cuatro pruebas dan bien.");
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", pistaReto(eleccion.a, eleccion.b));
+    return false;
+  }
+
+  ["a", "b"].forEach(function (k) {
+    $("reto-" + k).querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { elegirReto(k, b); });
+    });
+  });
+
+  /* ---------- Las trazas con botones ---------- */
+  var traza1 = montarTraza({
+    pre: $("p1-codigo"), explicacion: $("p1-explicacion"), consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"), reproducir: $("p1-reproducir"), saltar: $("p1-saltar"), reiniciar: $("p1-reiniciar"),
+    vista: vista1, fb: $("p1-fb"),
+    datos: function () { return { valores: NOTAS, x: 15 }; },
+    alTerminar: function (pasos, e) {
+      Pasos.feedback($("p1-fb"), "ok", "Encontró el 15 mirando solo " + casilleros(e.comps) + " de 8. En cada vuelta, inicio o fin se mueve y la mitad que no puede tenerlo se apaga.");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza3 = montarTraza({
+    pre: $("p3-codigo"), explicacion: $("p3-explicacion"),
+    ejecutar: $("p3-ejecutar"), reproducir: $("p3-reproducir"), reiniciar: $("p3-reiniciar"),
+    vista: vista3, fb: $("p3-fb"), tabla: $("p3-tabla"), intervalo: 900,
+    datos: function () { return { valores: NOTAS, x: x3 }; },
+    alTerminar: function (pasos, e) {
+      Pasos.feedback($("p3-fb"), "ok", "Una fila por vuelta: " + e.filas.length + (e.filas.length === 1 ? " fila" : " filas") + ", " + e.comps + (e.comps === 1 ? " comparación" : " comparaciones") +
+        ". Con 8 casilleros nunca hacen falta más de 4: cada fila deja la mitad que la anterior.");
+      leccion.desbloquear();
+    }
+  });
+  elegirX($("p3-elegir"), function (x) { x3 = x; ponerX($("p3-codigo"), x); traza3.reiniciar(); });
+
+  var traza4 = montarTraza({
+    pre: $("p4-codigo"), explicacion: $("p4-explicacion"),
+    ejecutar: $("p4-ejecutar"), reproducir: $("p4-reproducir"), reiniciar: $("p4-reiniciar"),
+    vista: vista4, fb: $("p4-fb"), tabla: $("p4-tabla"), intervalo: 900,
+    datos: function () { return { valores: NOTAS, x: x4 }; },
+    alTerminar: function (pasos, e) {
+      var f = pasos.final;
+      Pasos.feedback($("p4-fb"), "ok", "inicio (" + f.inicio + ") y fin (" + f.fin + ") se cruzaron: entre ellos no queda ningún casillero. El " + x4 +
+        " no está, y para saberlo bastaron " + casilleros(e.comps) + ".");
+      leccion.desbloquear();
+    }
+  });
+  elegirX($("p4-elegir"), function (x) { x4 = x; ponerX($("p4-codigo"), x); traza4.reiniciar(); });
+
+  var traza5 = montarTraza({
+    pre: $("p5-codigo"), explicacion: $("p5-explicacion"),
+    ejecutar: $("p5-ejecutar"), reproducir: $("p5-reproducir"), saltar: $("p5-saltar"), reiniciar: $("p5-reiniciar"),
+    vista: vista5, fb: $("p5-fb"), tabla: $("p5-tabla"), intervalo: 650,
+    datos: function () { return { valores: NOTAS, x: x5, v: { inicio: "medio" } }; },
+    alTerminar: function (pasos) {
+      probados5[x5] = true;
+      if (pasos.resultado === "sinfin") {
+        Pasos.feedback($("p5-fb"), "ok", "¡Bucle sin fin! Quedan los casilleros 6 y 7, medio es 6 e inicio = medio deja inicio otra vez en 6: nada cambia. Con + 1 se descarta también el casillero ya mirado.");
+        leccion.desbloquear();
+        return;
+      }
+      var falta = probados5[20] ? "" : " Ahora prueba con el 20.";
+      Pasos.feedback($("p5-fb"), "pista", "Esta vez funcionó: encontró el " + x5 + " en el casillero " + pasos.resultado + "." + falta);
+    }
+  });
+  elegirX($("p5-elegir"), function (x) { x5 = x; ponerX($("p5-codigo"), x); traza5.reiniciar(); });
+
+  var traza7 = montarTraza({
+    pre: $("p7-codigo"), explicacion: $("p7-explicacion"), consola: $("p7-consola"),
+    ejecutar: $("p7-ejecutar"), reproducir: $("p7-reproducir"), reiniciar: $("p7-reiniciar"),
+    vista: vista7, fb: $("p7-fb"), intervalo: 1000,
+    datos: function () { return { valores: NOMBRES, x: x7, nombre: "nombres" }; },
+    alTerminar: function (pasos, e) {
+      var r = pasos.resultado;
+      var texto = r >= 0 ? "\"" + x7 + "\" está en el casillero " + r + "." : "\"" + x7 + "\" no está: -1.";
+      Pasos.feedback($("p7-fb"), "ok", texto + " Miró " + casilleros(e.comps) + ". Con textos, < compara por orden alfabético: la lista tiene que estar ordenada de la A a la Z.");
+      leccion.desbloquear();
+    }
+  });
+  elegirX($("p7-elegir"), function (x) { x7 = x; ponerX($("p7-codigo"), x); traza7.reiniciar(); });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-codigo": function () { traza1.detener(); },
+      "paso-tu": function () { if (!s2) empezar2(); },
+      "paso-tabla": function () { traza3.detener(); },
+      "paso-no-esta": function () { traza4.detener(); },
+      "paso-sin-fin": function () { traza5.detener(); },
+      "paso-textos": function () { traza7.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
