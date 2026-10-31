@@ -17,7 +17,16 @@ Por orden de prioridad:
    **Para unificar** (cada lección lo resolvió dentro de su página): una caja para textos con comillas (`.caja__valor` corta `"Luis"` a `"Lu…`; Recorrer, Contar y Tuplas usan cajas más chicas o anchas), `marcar` de `dicc.js` sin error para `.get()` (Diccionarios pinta el casillero gris a mano) e iluminar todas las claves («`in` mira las claves»), un diccionario vacío que no se vea igual que un conjunto vacío (los dos muestran `{ vacío }`), una lista de diccionarios vertical (Estructuras juntas la arma con `.ldicc*`), `indices: false` en `lista.js` que aún guarda el alto de los índices (Contar lo arregla en la página), y las zonas «Programa / Dentro de la función», las predicciones y los retos de dos espacios en blanco, copiados otra vez.
    **`pasos.js`**: decide si la salida va bajo el código solo al entrar al paso; cuando la salida crece después (al terminar una ejecución o al comprobar), varios pasos se pasan de la pantalla. Recalcularlo entonces ayudaría a todas las lecciones.
    **No cabe a 1366×657**: casi todos los pasos piden bajar entre 50 y 250 px (el programa completo del proyecto, más), como en Listas.
-   **Búsquedas, completo (7/7)** (ver el registro del 2026-10-31). Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: la PC adivina tu número y pasar su tarjeta «Próximamente» de la portada a lección.
+   **Ordenar, completo (7/7)** (ver el registro del 2026-10-31, «Ordenar»). Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: la tabla de posiciones y pasar su tarjeta «Próximamente» de la portada a lección.
+   **Probar con alumnos** Ordenar en un móvil de verdad, sobre todo:
+   - si la lista que se parte en pedazos (`particion.js`) se sigue en quicksort y mergesort, y si las rayas y los estados (trabaja ahora / espera / ya ordenada) ayudan;
+   - el código de burbuja en móvil va a 0,68rem para que el segundo `for` quepa: ver si se lee;
+   - en ¿Cuál ordena más rápido?, si «un millón de comparaciones por segundo» (burbuja con un millón: unos 6 días; mergesort: unos 19 segundos) convence, y si el paso de `sorted()` (tramos ya ordenados que se mezclan, un modelo simplificado de Timsort) se entiende o sobra.
+   **Desvíos de las convenciones**: en Mergesort, pasos 1 a 3, el dibujo va antes de los botones en el móvil con `order` de CSS (`lab--visual-primero`), no por el orden del HTML. En el proyecto, la condición del empate se partió en `menor` y `empate`, y el programa admite como mucho 8 alumnos.
+   **No cabe a 1366×657**: las trazas largas (Quicksort 3 a 6, Mergesort 4 y 5, Mezclar 3 a 6), el paso 4 y el reto del proyecto, y algunos retos tras «Comprobar».
+   **Para unificar (Ordenar suma más copias)**: las siete lecciones traen su propio contador en pastilla, y varias un coloreador de Python (el código se escribe tal cual y se convierte en `.linea`), una tabla vertical con filas que se intercambian (proyecto) y la ayuda para tocar casilleros con el teclado. Ideas para `lista.js`: `marcar([a, b])` para el par que se compara, y reservar el lugar de los punteros aunque estén ocultos. Para `traza.js`: pausar en un paso y esperar la respuesta del alumno (Mezclar lo hace a mano). Para `opciones-codigo.js`: no atenuar lo común cuando lo que cambia es el orden de las líneas (Intercambiar vecinos, paso 7). `Pasos.feedback` solo acepta texto plano.
+   **Revisar** (aviso del agente del proyecto, sin comprobar): en `lecciones/busquedas/proyecto/`, las opciones de varias líneas podrían salir con sangría doble en el espacio en blanco (el `.hueco` es `inline-block` y además se le suma la sangría).
+   **Búsquedas, completo (7/7)** (ver el registro del 2026-10-31).
    **Probar con alumnos** Búsquedas en un móvil de verdad, sobre todo:
    - si los punteros `inicio`, `medio` y `fin` bajo la lista se siguen al deslizarse, y si los casilleros tapados se entienden como «la PC no ve hasta comparar»;
    - en ¿Cuál es más rápida?, si el costo de `sorted` (contado con el `sort` de JavaScript, «unas N comparaciones») convence o confunde;
@@ -84,6 +93,20 @@ Tema nuevo después de Listas y antes de Búsquedas: tuplas, diccionarios y conj
 - **7/7 · Proyecto: la votación del salón** (`estructuras-proyecto`, 9 pasos): jugar sin código, cinco partes (¿es candidato?, nadie vota dos veces, contar, `ganador` que devuelve dos valores, empates), el programa completo con `BucleInput` y misiones, y quiénes faltan votar.
 
 Portada con la tarjeta del tema; el tres en raya enlaza ahora a Otras estructuras. Probado con Playwright a 1280×800, 1366×657 y 390×844 (también con movimiento reducido): sin errores de JavaScript ni desborde horizontal.
+
+### 2026-10-31 · Ordenar: 7 lecciones
+
+Tema nuevo después de Búsquedas (el plan está en CLAUDE.md), con burbuja, quicksort y mergesort. Primero se fijó en el plan un código Python común a las siete (para que las comparaciones coincidan entre lecciones: con las 8 notas de la carrera, burbuja 28, quicksort 14, mergesort 17) y se añadió **`assets/js/particion.js`**: una lista que se parte en pedazos, piso por piso, cada trozo bajo las columnas de donde salió y unido a su padre (CSS `.particion` en `base.css`). Luego las lecciones se escribieron en paralelo, una por agente, y se juntaron en `leccion/ordenar`.
+- **1/7 · Intercambiar vecinos** (`ordenar`, 9 pasos): ordenar a mano tocando vecinos, `a = b` y `b = a` pierde un valor, la tercera caja `aux`, dos vecinos de una lista, una pasada decidida por el alumno, cuántas pasadas, el orden de las tres líneas y un reto («Haz de PC»).
+- **2/7 · Ordenamiento de burbuja** (`ordenar-burbuja`, 10 pasos): traza con `i`, `j`, `aux` y la parte verde que crece, la PC eres tú, `burbuja` devuelve `None`, por qué `- 1` (IndexError) y `- i` (comparaciones de más), cuántas comparaciones (×2 → ×4), `hubo_cambio`, de mayor a menor y un reto.
+- **3/7 · Quicksort** (`ordenar-quicksort`, 10 pasos): repartir alrededor del pivote, cada lado igual con `Particion`, el reparto en Python, la traza completa (pila compacta, fichas y partición), sin caso base (`IndexError`: la lista llega a `[]`), dos notas iguales con `elif`, una línea cambiada, la lista original no cambia y un reto.
+- **4/7 · Mezclar dos listas ordenadas** (`ordenar-mezclar`, 10 pasos): dos montones tapados, por qué basta mirar la primera, la traza con los dedos `i` y `j`, decidir cada `if`, olvidar lo que sobra, `or` en vez de `and`, cuántas comparaciones, un adelanto de mergesort y un reto.
+- **5/7 · Mergesort** (`ordenar-mergesort`, 9 pasos): partir y mezclar con `Particion`, la última mezcla a mano, partir 7 en 3 y 4, la traza con la pila, en qué orden pasa todo, cuántos pisos (frente a burbuja), tres trampas y un reto.
+- **6/7 · ¿Cuál ordena más rápido?** (`ordenar-comparar`, 9 pasos): carrera en tres carriles, duplicar hasta 256, un millón de valores, listas ya ordenadas y al revés, por qué se atasca quicksort, mil valores en cuatro casos, la idea de `sorted()` y un reto con cinco casos.
+- **7/7 · Proyecto: la tabla de posiciones** (`ordenar-proyecto`, 8 pasos): ordenar una tabla a mano, cinco partes (leer, de mayor a menor, mover las dos listas, empates, puestos) y el programa completo con `BucleInput` y cuatro misiones.
+
+Portada con la tarjeta del tema y «Siguiente: Ordenar →» en el proyecto de Búsquedas. Probado con Playwright a 1280×800, 1366×657 y 390×844 (también con movimiento reducido): sin errores de JavaScript ni desborde horizontal. Al probar, el plan decía que quicksort sin caso base da `RecursionError`; con este código da `IndexError` (se corrigió en CLAUDE.md).
+
 
 ### 2026-10-31 · Búsquedas: 7 lecciones
 

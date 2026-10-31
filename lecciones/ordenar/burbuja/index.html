@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ordenamiento de burbuja · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: el ordenamiento de burbuja en Python, línea a línea. Dos for, por qué range(len(lista) - 1 - i), burbuja cambia la lista y no devuelve nada, cuántas comparaciones hace, parar antes con hubo_cambio y break, y de mayor a menor.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-top: var(--esp-3); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) 0.7rem; font-size: 0.95rem; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-2) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-4); }
+    .rotulo-lista { margin: 0 0 var(--esp-2); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+
+    /* El código de la función es largo: un poco más chico para que quepa con los botones */
+    .codigo--largo { font-size: 0.95rem; line-height: 1.55; padding: var(--esp-3) 0; }
+    .codigo--largo .linea { min-height: 1.55em; }
+    .codigo .pieza-cambio { border-radius: 4px; box-shadow: 0 0 0 2px #ffb86b; }
+    .codigo .pieza-nueva { border-radius: 4px; box-shadow: 0 0 0 2px rgba(110, 231, 160, 0.55); }
+    .codigo .hueco { min-width: 3em; }
+
+    /* ---------- Elegir (qué lista, qué símbolo, qué predices) ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .lab__visual > .elegir:first-child { margin: 0 0 var(--esp-2); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .elegir--texto .btn { font-family: var(--fuente); }
+    .elegir__titulo { font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+    .btn--bien::after { content: " ✓"; color: var(--color-ok); }
+    .btn--mal::after { content: " ✗"; color: var(--color-error); }
+    .pregunta-titulo { margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; }
+
+    /* ---------- Contadores: comparaciones, intercambios, de más ---------- */
+    .marcador { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin: var(--esp-2) 0 0; }
+    .pastilla { display: inline-flex; align-items: center; gap: var(--esp-2); margin: 0; padding: 0.15rem var(--esp-3) 0.15rem var(--esp-4); border-radius: 999px; font-size: var(--texto-sm); font-weight: 700; }
+    .pastilla strong { display: inline-block; min-width: 1.3em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); text-align: center; }
+    .pastilla--comps { background: var(--color-pista-suave); color: var(--color-pista); }
+    .pastilla--swaps { background: var(--color-azul-suave); color: var(--color-azul); }
+    .pastilla--demas { background: #fde8e6; color: var(--color-error); }
+    .pastilla[hidden] { display: none; }
+    .pastilla--sube strong { animation: cuenta-sube 380ms var(--curva-rebote); }
+    @keyframes cuenta-sube { 40% { transform: scale(1.4); } }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-4); margin: var(--esp-2) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border-radius: 3px; border: 2px solid; }
+    .leyenda .ley-par::before { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .leyenda .ley-lista::before { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .leyenda .ley-demas::before { border-color: var(--color-error); background: #fde8e6; }
+    .leyenda .ley-esc::before { border-color: #c8792e; background: #f6c99b; }
+    .leyenda .ley-vieja::before { border-color: var(--color-azul); background: #a9c4f2; }
+    /* Una comparación de más: el par toca un casillero que ya estaba en su lugar */
+    .lista__casilla--demas > .lista__valor { border-color: var(--color-error); background: #fde8e6; color: var(--color-error); }
+
+    /* ---------- Cajas de i, j, aux y hubo_cambio ---------- */
+    .cajas--chicas { padding: var(--esp-3) 0 var(--esp-1); gap: var(--esp-3) var(--esp-6); align-items: center; }
+    .cajas--chicas .caja__cuerpo { width: 4.6rem; height: 3.4rem; padding-bottom: var(--esp-2); }
+    .cajas--chicas .caja__cuerpo::before { left: -0.7rem; }
+    .cajas--chicas .caja__cuerpo::after { right: -0.7rem; }
+    .cajas--chicas .caja__valor { font-size: var(--texto-lg); min-width: 2.2rem; padding: 0 var(--esp-2); }
+    .cajas--chicas .caja__nombre { font-size: var(--texto-xs); padding: var(--esp-1) var(--esp-2); }
+    .cajas--chicas .caja--ancha .caja__cuerpo { width: 6.6rem; }
+    .cajas--chicas .caja--ancha .caja__valor { font-size: var(--texto-md); }
+    .lab .cajas.cajas--chicas { padding: var(--esp-3) 0 var(--esp-1); }
+
+    /* ---------- 2. La PC eres tú ---------- */
+    .pregunta { min-height: 3.2em; margin: var(--esp-3) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .pregunta strong, .pregunta code { color: var(--color-texto); }
+    .acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .acciones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+
+    /* ---------- Consola con errores ---------- */
+    .consola__linea--error { color: var(--color-error); }
+
+    /* ---------- 6. La escalera de comparaciones ---------- */
+    .escalera { display: block; width: min(100%, 13rem); aspect-ratio: 1; margin: var(--esp-2) auto 0; overflow: visible; }
+    .escalera rect { fill: #f6c99b; stroke: #c8792e; }
+    .escalera rect.esc--vieja { fill: #a9c4f2; stroke: var(--color-azul); }
+    .escalera--nueva rect:not(.esc--vieja) { animation: aparecer var(--dur) ease both; }
+    .suma { margin: var(--esp-3) 0 0; text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; overflow-wrap: anywhere; }
+    .suma strong { color: var(--color-pista); font-size: var(--texto-lg); }
+    .tabla { width: 100%; margin-top: var(--esp-4); border-collapse: collapse; font-family: var(--fuente-codigo); text-align: center; font-size: var(--texto-sm); }
+    .tabla caption { margin-bottom: var(--esp-1); font-family: var(--fuente); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tabla th { padding: var(--esp-1) var(--esp-2); font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); border-bottom: 2px solid var(--color-borde); }
+    .tabla td { padding: 0.2rem var(--esp-2); border-bottom: 1px solid var(--color-borde); font-weight: 700; }
+    .tabla tbody tr { animation: aparecer var(--dur) ease both; }
+    .tabla .veces { color: var(--color-pista); }
+    .tabla tr.tabla__activa td { background: var(--color-pista-suave); }
+
+    /* ---------- Reto ---------- */
+    .huecos { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .huecos .opciones { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .huecos legend { margin: 0 0 var(--esp-1); padding: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .huecos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); text-align: left; white-space: pre; overflow-x: auto; }
+    .huecos .op-leyenda { margin: var(--esp-1) 0 0; }
+    .pruebas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas[hidden] { display: none; }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-xs); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 150ms; }
+    .pruebas li:nth-child(3) { animation-delay: 300ms; }
+    .pruebas li:nth-child(4) { animation-delay: 450ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .pruebas + .feedback { margin-top: var(--esp-3); }
+
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.92rem; line-height: 1.45; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .lab__visual .lista { padding: 0; }
+      .lab__resultado .consola { margin-top: 0; min-height: 3.6rem; padding: var(--esp-2) var(--esp-4); }
+      .lab__resultado .consola + .feedback { margin-top: var(--esp-3); }
+      .huecos .opciones { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+    }
+    @media (min-width: 1024px) {
+      #paso-resumen .celebracion { font-size: 3rem; line-height: 1.1; }
+      #paso-resumen .paso__titulo { margin-block: var(--esp-2) var(--esp-3); }
+      #paso-resumen .tarjeta { padding-block: var(--esp-4); }
+      #paso-resumen .resumen-codigo { font-size: 0.9rem; }
+    }
+    /* Escritorio bajo (p. ej. 1366×657): todo un poco más compacto para que el paso quepa */
+    @media (min-width: 1024px) and (max-height: 720px) {
+      .paso:has(> .lab) { padding: var(--esp-4) var(--esp-5); }
+      .paso:has(> .lab) > .paso__intro { margin-bottom: var(--esp-3); }
+      .paso__intro p { line-height: 1.45; }
+      .lab .codigo--largo { font-size: 0.86rem; line-height: 1.36; padding: var(--esp-2) 0; }
+      .lab .codigo--largo .linea { min-height: 1.36em; }
+      .lab__visual { padding: var(--esp-3) var(--esp-4); }
+      .lab__visual .lista { --lista-max: 2.7rem; }
+      .lab .cajas.cajas--chicas { padding: var(--esp-2) 0 0; }
+      .cajas--chicas .caja { gap: var(--esp-1); }
+      .cajas--chicas .caja__cuerpo { height: 3rem; }
+      .explicacion { margin-top: var(--esp-1); }
+      .fila-botones { margin-top: var(--esp-2); }
+      .fila-botones .btn, .elegir .btn, .acciones .btn { min-height: 2.4rem; padding-block: var(--esp-1); }
+      .lab__visual ~ .lab__resultado { margin-top: var(--esp-3); }
+      .feedback { padding: var(--esp-3) var(--esp-4); }
+      .escalera { width: min(100%, 10.5rem); }
+      .tabla { margin-top: var(--esp-2); }
+      .tabla td { padding-block: 0.1rem; }
+      .pruebas { gap: var(--esp-1); }
+      .pruebas li { padding: var(--esp-1) var(--esp-3); }
+    }
+    @media (min-width: 1280px) {
+      #paso-reto .huecos .opciones { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #paso-reto .huecos .opcion span { padding: var(--esp-2); font-size: 0.7rem; }
+    }
+    @media (max-width: 480px) {
+      /* Que la línea del segundo for (la más larga) quepa sin desplazarse */
+      .codigo--largo { font-size: 0.68rem; }
+      .codigo--largo .linea { padding-left: 2.1rem; padding-right: var(--esp-2); }
+      .codigo--largo .linea::before { width: 1.5rem; }
+      .fila-botones .btn { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .elegir { gap: var(--esp-1) var(--esp-2); }
+      .elegir .btn { padding: var(--esp-1) var(--esp-2); font-size: var(--texto-xs); }
+      .cajas--chicas { gap: var(--esp-3) var(--esp-5); }
+      .cajas--chicas .caja__cuerpo { width: 4rem; height: 3.1rem; }
+      .cajas--chicas .caja--ancha .caja__cuerpo { width: 5.8rem; }
+      .pastilla { font-size: var(--texto-xs); padding-left: var(--esp-3); }
+      .pastilla strong { font-size: var(--texto-md); }
+      .huecos .opcion span { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar-burbuja">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. El código completo, línea a línea -->
+    <section class="paso" id="paso-codigo" data-requiere aria-labelledby="t-codigo">
+      <span class="paso__etiqueta">Ordenar 2/7 · Ordenamiento de burbuja</span>
+      <h1 class="paso__titulo" id="t-codigo">Burbuja, en código</h1>
+      <p>Las pasadas de la lección anterior, en Python: un <code>for</code> para las pasadas y otro para los vecinos. Ejecútalo y mira cómo crece la parte verde.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p1-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p1-saltar">Siguiente pasada ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p1-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="p1-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+            <div class="caja caja--acento" id="p1-j">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">j</code>
+            </div>
+            <div class="caja" id="p1-aux">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">aux</code>
+            </div>
+          </div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p1-comps">0</strong></p>
+            <p class="pastilla pastilla--swaps">Intercambios <strong id="p1-swaps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. El alumno decide si se intercambian -->
+    <section class="paso" id="paso-tu" data-requiere aria-labelledby="t-tu">
+      <h2 class="paso__titulo" id="t-tu">Ahora la PC eres tú</h2>
+      <p>Python te muestra dos vecinos y pregunta lo del <code>if</code>. Tú decides: ¿se intercambian o se quedan así?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Código"></pre>
+          <p class="pregunta" id="p2-pregunta" aria-live="polite"></p>
+          <div class="acciones" role="group" aria-label="¿Qué hace Python?">
+            <button type="button" class="btn btn-secundario" data-accion2="cambiar" disabled>🔁 Intercambiar</button>
+            <button type="button" class="btn btn-secundario" data-accion2="dejar" disabled>Dejar así</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p2-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="p2-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+            <div class="caja caja--acento" id="p2-j">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">j</code>
+            </div>
+          </div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p2-comps">0</strong></p>
+            <p class="pastilla pastilla--swaps">Intercambios <strong id="p2-swaps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="p2-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p2-otra-btn">↺ Otra lista</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. burbuja no devuelve nada -->
+    <section class="paso" id="paso-none" data-requiere aria-labelledby="t-none">
+      <h2 class="paso__titulo" id="t-none">¿Qué devuelve <code>burbuja</code>?</h2>
+      <p><code>burbuja</code> no tiene <code>return</code>. Antes de ejecutarlo: ¿qué imprime <code>print(ordenada)</code>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p3-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="p3-elegir" role="group" aria-label="¿Qué imprime print(ordenada)?">
+            <button type="button" class="btn btn-secundario" data-valor="lista" aria-pressed="false">[6, 9, 11, 14, 17]</button>
+            <button type="button" class="btn btn-secundario" data-valor="none" aria-pressed="false">None</button>
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">[14, 9, 17, 11, 6]</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p3-lista"></div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p3-comps">0</strong></p>
+            <p class="pastilla pastilla--swaps">Intercambios <strong id="p3-swaps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Sin el - 1: IndexError -->
+    <section class="paso" id="paso-menos-uno" data-requiere aria-labelledby="t-menos-uno">
+      <h2 class="paso__titulo" id="t-menos-uno">¿Por qué el <code>- 1</code>?</h2>
+      <p>Aquí alguien quitó el <code>- 1</code> del segundo <code>for</code>. ¿Qué pasa en la primera pasada?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Código"></pre>
+          <div class="elegir elegir--texto" id="p4-elegir" role="group" aria-label="¿Qué pasa?">
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">Ordena igual</button>
+            <button type="button" class="btn btn-secundario" data-valor="mas" aria-pressed="false">Una comparación más, sin problema</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Da error</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p4-lista"></div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p4-comps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Sin el - i: comparaciones de más -->
+    <section class="paso" id="paso-menos-i" data-requiere aria-labelledby="t-menos-i">
+      <h2 class="paso__titulo" id="t-menos-i">¿Y por qué el <code>- i</code>?</h2>
+      <p>Ahora el <code>- 1</code> está, pero falta el <code>- i</code>. ¿Qué pasa?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Código"></pre>
+          <div class="elegir elegir--texto" id="p5-elegir" role="group" aria-label="¿Qué pasa?">
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">Ordena bien, con 10 comparaciones</button>
+            <button type="button" class="btn btn-secundario" data-valor="mas" aria-pressed="false">Ordena bien, pero con más comparaciones</button>
+            <button type="button" class="btn btn-secundario" data-valor="mal" aria-pressed="false">La deja mal ordenada</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p5-lista"></div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p5-comps">0</strong></p>
+            <p class="pastilla pastilla--demas">De más <strong id="p5-demas">0</strong></p>
+          </div>
+          <p class="leyenda"><span class="ley-par">se comparan</span><span class="ley-lista">ya en su lugar</span><span class="ley-demas">comparación de más</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Contar comparaciones -->
+    <section class="paso" id="paso-contar" data-requiere aria-labelledby="t-contar">
+      <h2 class="paso__titulo" id="t-contar">¿Cuántas comparaciones?</h2>
+      <p>Cada pasada compara un par menos. ¿Y si la lista tiene el doble de valores? Duplícala hasta llegar a 40.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p6-codigo" aria-label="Código"></pre>
+          <p class="suma" id="p6-suma" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p6-volver" hidden>↺ Volver a 5</button>
+            <button type="button" class="btn btn-secundario" id="p6-duplicar">×2 Duplicar la lista</button>
+          </div>
+          <table class="tabla" id="p6-tabla">
+            <caption>Comparaciones de burbuja</caption>
+            <thead><tr><th scope="col">valores</th><th scope="col">comparaciones</th><th scope="col">frente a la anterior</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista" id="p6-rotulo">5 valores</p>
+          <svg class="escalera" id="p6-escalera" aria-hidden="true"></svg>
+          <p class="leyenda"><span class="ley-esc">una comparación</span><span class="ley-vieja">las de antes de duplicar</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Parar antes: hubo_cambio y break -->
+    <section class="paso" id="paso-parar" data-requiere aria-labelledby="t-parar">
+      <h2 class="paso__titulo" id="t-parar">Parar antes</h2>
+      <p>Si una pasada no movió nada, la lista ya está ordenada. <code>hubo_cambio</code> lo anota y <code>break</code> sale. Prueba con la lista casi ordenada.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p7-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p7-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p7-saltar">Siguiente pasada ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p7-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir elegir--texto" id="p7-elegir" role="group" aria-label="¿Qué lista ordenas?">
+            <button type="button" class="btn btn-secundario" data-lista="casi" aria-pressed="true">Casi ordenada</button>
+            <button type="button" class="btn btn-secundario" data-lista="desordenada" aria-pressed="false">Desordenada</button>
+            <button type="button" class="btn btn-secundario" data-lista="ordenada" aria-pressed="false">Ya ordenada</button>
+          </div>
+          <div id="p7-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="p7-i">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">i</code>
+            </div>
+            <div class="caja caja--acento" id="p7-j">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">j</code>
+            </div>
+            <div class="caja" id="p7-aux">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">aux</code>
+            </div>
+            <div class="caja caja--ancha" id="p7-hubo">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">hubo_cambio</code>
+            </div>
+          </div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p7-comps">0</strong></p>
+            <p class="pastilla pastilla--swaps">Intercambios <strong id="p7-swaps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. De mayor a menor -->
+    <section class="paso" id="paso-mayor" data-requiere aria-labelledby="t-mayor">
+      <h2 class="paso__titulo" id="t-mayor">De mayor a menor</h2>
+      <p>¿Y para ordenar de mayor a menor? Basta con cambiar un símbolo del <code>if</code>. Elige uno y ordena.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p8-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="p8-elegir" role="group" aria-label="¿Qué símbolo va en el if?">
+            <span class="elegir__titulo" aria-hidden="true">En el if:</span>
+            <button type="button" class="btn btn-secundario" data-op=">" aria-pressed="true">&gt;</button>
+            <button type="button" class="btn btn-secundario" data-op="<" aria-pressed="false">&lt;</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p8-ordenar">▶ Ordenar</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p8-lista"></div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="p8-comps">0</strong></p>
+            <p class="pastilla pastilla--swaps">Intercambios <strong id="p8-swaps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p8-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Reto: el if y el intercambio -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Completa <code>burbuja</code></h2>
+      <p>Faltan la condición y el intercambio. Elige qué va en cada espacio en blanco. Se probará con cuatro listas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="reto-codigo" aria-label="Código"></pre>
+          <div class="huecos">
+            <fieldset class="opciones opciones--codigo opciones--cond" id="reto-cond">
+              <legend>Espacio 1: la condición</legend>
+              <label class="opcion"><input type="radio" name="reto-cond" value="menor"><span>lista[j] &lt; lista[j + 1]</span></label>
+              <label class="opcion"><input type="radio" name="reto-cond" value="i"><span>lista[j] &gt; lista[i]</span></label>
+              <label class="opcion"><input type="radio" name="reto-cond" value="bien"><span>lista[j] &gt; lista[j + 1]</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo" id="reto-swap">
+              <legend>Espacio 2: el intercambio</legend>
+              <label class="opcion"><input type="radio" name="reto-swap" value="sinAux"><span>aux = lista[j]
+lista[j] = lista[j + 1]
+lista[j + 1] = lista[j]</span></label>
+              <label class="opcion"><input type="radio" name="reto-swap" value="bien"><span>aux = lista[j]
+lista[j] = lista[j + 1]
+lista[j + 1] = aux</span></label>
+              <label class="opcion"><input type="radio" name="reto-swap" value="auxTarde"><span>aux = lista[j]
+lista[j + 1] = aux
+lista[j] = lista[j + 1]</span></label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista" id="reto-rotulo">notas</p>
+          <div id="reto-lista"></div>
+          <div class="marcador">
+            <p class="pastilla pastilla--comps">Comparaciones <strong id="reto-comps">0</strong></p>
+            <p class="pastilla pastilla--swaps">Intercambios <strong id="reto-swaps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Burbuja compara vecinos y los intercambia si están al revés: en cada pasada, la mayor sube al final.</p>
+        <pre class="codigo codigo--largo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">burbuja</span>(<span class="tk-variable">lista</span>):  <span class="tk-comentario"># devuelve None</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>) - <span class="tk-numero">1</span>):</span><span class="linea">        <span class="tk-variable">hubo_cambio</span> = <span class="tk-palabra">False</span></span><span class="linea">        <span class="tk-palabra">for</span> <span class="tk-variable">j</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-funcion">len</span>(<span class="tk-variable">lista</span>) - <span class="tk-numero">1</span> - <span class="tk-variable">i</span>):</span><span class="linea">            <span class="tk-palabra">if</span> <span class="tk-variable">lista</span>[<span class="tk-variable">j</span>] &gt; <span class="tk-variable">lista</span>[<span class="tk-variable">j</span> + <span class="tk-numero">1</span>]:  <span class="tk-comentario"># &lt; : al revés</span></span><span class="linea">                <span class="tk-variable">aux</span> = <span class="tk-variable">lista</span>[<span class="tk-variable">j</span>]</span><span class="linea">                <span class="tk-variable">lista</span>[<span class="tk-variable">j</span>] = <span class="tk-variable">lista</span>[<span class="tk-variable">j</span> + <span class="tk-numero">1</span>]</span><span class="linea">                <span class="tk-variable">lista</span>[<span class="tk-variable">j</span> + <span class="tk-numero">1</span>] = <span class="tk-variable">aux</span></span><span class="linea">                <span class="tk-variable">hubo_cambio</span> = <span class="tk-palabra">True</span></span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-palabra">not</span> <span class="tk-variable">hubo_cambio</span>:  <span class="tk-comentario"># ya está ordenada</span></span><span class="linea">            <span class="tk-palabra">break</span></span><span class="linea"><span class="tk-comentario"># 5 valores: 4 + 3 + 2 + 1 = 10 comparaciones; el doble, unas 4 veces más</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../quicksort/index.html">Siguiente: Quicksort →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Temporizadores de una animación, para poder cortarla */
+  var todosLosRelojes = [];
+  function relojes() {
+    var lista = [];
+    var r = {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+    todosLosRelojes.push(r);
+    return r;
+  }
+
+  var NOTAS = [14, 9, 17, 11, 6];
+  var LISTAS7 = { casi: [6, 9, 11, 17, 14], desordenada: [14, 9, 17, 11, 6], ordenada: [6, 9, 11, 14, 17] };
+
+  function c(s) { return "<code>" + s + "</code>"; }
+  function py(v) { return Lista.python(v); }
+  function veces(n, uno, varios) { return n + " " + (n === 1 ? uno : varios); }
+  function comparaciones(n) { return veces(n, "comparación", "comparaciones"); }
+  function enumerar(lista) {
+    if (lista.length === 1) return String(lista[0]);
+    return lista.slice(0, -1).join(", ") + " y " + lista[lista.length - 1];
+  }
+
+  /* ---------- El código de burbuja, con sus variantes ---------- */
+  function kw(s) { return '<span class="tk-palabra">' + s + "</span>"; }
+  function fn(s) { return '<span class="tk-funcion">' + s + "</span>"; }
+  function va(s) { return '<span class="tk-variable">' + s + "</span>"; }
+  function nu(s) { return '<span class="tk-numero">' + s + "</span>"; }
+  function co(s) { return '<span class="tk-comentario">' + s + "</span>"; }
+  function cambio(html) { return '<span class="pieza-cambio">' + html + "</span>"; }
+  function nueva(html) { return '<span class="pieza-nueva">' + html + "</span>"; }
+  function hueco(id) { return '<span class="hueco" id="' + id + '">?</span>'; }
+  function listaHTML(v) { return "[" + v.map(function (x) { return nu(x); }).join(", ") + "]"; }
+  function lj(mas) { return va("lista") + "[" + va("j") + (mas ? " + " + nu("1") : "") + "]"; }
+
+  /* o: { rango: "- 1 - i" | "- i" | "- 1", op: ">" | "<", parar, marcar: "rango" | "op",
+          huecos, llamada: false, valores, none: true (ordenada = burbuja(notas)), print: false }
+     Devuelve { html, L }: L dice en qué línea (desde 0) está cada parte */
+  function codigo(o) {
+    o = o || {};
+    var lineas = [];
+    var L = {};
+    function add(nombre, html) { L[nombre] = lineas.length; lineas.push(html); }
+    var rango = o.rango || "- 1 - i";
+    var r = rango === "- i" ? " - " + va("i") : rango === "- 1" ? " - " + nu("1") : " - " + nu("1") + " - " + va("i");
+    if (o.marcar === "rango") r = cambio(r);
+    var op = (o.op || ">") === "<" ? "&lt;" : "&gt;";
+    if (o.marcar === "op") op = cambio(op);
+    add("def", kw("def") + " " + fn("burbuja") + "(" + va("lista") + "):");
+    add("forI", "    " + kw("for") + " " + va("i") + " " + kw("in") + " " + fn("range") + "(" + fn("len") + "(" + va("lista") + ") - " + nu("1") + "):");
+    if (o.parar) add("hubo0", "        " + nueva(va("hubo_cambio") + " = " + kw("False")));
+    add("forJ", "        " + kw("for") + " " + va("j") + " " + kw("in") + " " + fn("range") + "(" + fn("len") + "(" + va("lista") + ")" + r + "):");
+    add("si", "            " + kw("if") + " " + (o.huecos ? hueco("reto-h1") : lj() + " " + op + " " + lj(true)) + ":");
+    if (o.huecos) {
+      add("aux", "                " + hueco("reto-h2"));
+      add("copia", "                " + hueco("reto-h3"));
+      add("pega", "                " + hueco("reto-h4"));
+    } else {
+      add("aux", "                " + va("aux") + " = " + lj());
+      add("copia", "                " + lj() + " = " + lj(true));
+      add("pega", "                " + lj(true) + " = " + va("aux"));
+    }
+    if (o.parar) {
+      add("hubo1", "                " + nueva(va("hubo_cambio") + " = " + kw("True")));
+      add("siNo", "        " + nueva(kw("if") + " " + kw("not") + " " + va("hubo_cambio") + ":"));
+      add("rompe", "            " + nueva(kw("break")));
+    }
+    if (o.llamada !== false) {
+      if (!o.parar) add("blanco", "");
+      add("notas", va("notas") + " = " + listaHTML(o.valores || NOTAS));
+      if (o.none) {
+        add("llamada", va("ordenada") + " = " + fn("burbuja") + "(" + va("notas") + ")");
+        add("print1", fn("print") + "(" + va("ordenada") + ")");
+        add("print", fn("print") + "(" + va("notas") + ")");
+      } else {
+        add("llamada", fn("burbuja") + "(" + va("notas") + ")");
+        if (o.print !== false) add("print", fn("print") + "(" + va("notas") + ")");
+      }
+    }
+    return { html: "<code>" + lineas.map(function (l) { return '<span class="linea">' + l + "</span>"; }).join("") + "</code>", L: L };
+  }
+
+  function ponerCodigo(pre, o) {
+    var cod = codigo(o);
+    pre.innerHTML = cod.html;
+    return cod.L;
+  }
+
+  /* ---------- Simular burbuja, como Python, comparación por comparación ----------
+     v = { rango, op: ">" | "<", parar, cond: "bien" | "menor" | "i", swap: "bien" | "sinAux" | "auxTarde" } */
+  function simular(valores, v) {
+    v = v || {};
+    var a = valores.slice();
+    var n = a.length;
+    var ev = [];
+    var comps = 0, swaps = 0, demas = 0, error = null, rompio = false;
+    function tope(i) { return v.rango === "- i" ? n - i : v.rango === "- 1" ? n - 1 : n - 1 - i; }
+    var menor = v.op === "<" || v.cond === "menor";
+    afuera:
+    for (var i = 0; i < n - 1; i++) {
+      ev.push({ tipo: "pasada", i: i });
+      var hubo = false;
+      for (var j = 0; j < tope(i); j++) {
+        var otro = v.cond === "i" ? i : j + 1;
+        if (j + 1 >= n) {
+          error = { i: i, j: j };
+          ev.push({ tipo: "error", i: i, j: j, comps: comps });
+          break afuera;
+        }
+        comps++;
+        var deMas = j + 1 >= n - i;
+        if (deMas) demas++;
+        var x = a[j], y = a[otro];
+        var cambia = menor ? x < y : x > y;
+        ev.push({ tipo: "compara", i: i, j: j, x: x, y: y, cambia: cambia, demasEsta: deMas, comps: comps, demas: demas });
+        if (cambia) {
+          var antes = a.slice();
+          var aux = a[j];
+          if (v.swap === "sinAux") { a[j] = a[j + 1]; a[j + 1] = a[j]; }
+          else if (v.swap === "auxTarde") { a[j + 1] = aux; a[j] = a[j + 1]; }
+          else { a[j] = a[j + 1]; a[j + 1] = aux; }
+          swaps++;
+          hubo = true;
+          ev.push({ tipo: "cambio", i: i, j: j, lista: a.slice(), cruce: a[j] === antes[j + 1] && a[j + 1] === antes[j], swaps: swaps });
+        }
+      }
+      if (v.parar && !hubo) { rompio = true; ev.push({ tipo: "rompe", i: i }); break; }
+    }
+    if (!error) ev.push({ tipo: "fin", lista: a.slice() });
+    return { eventos: ev, comps: comps, swaps: swaps, demas: demas, error: error, rompio: rompio, lista: a };
+  }
+
+  function ordenadaBien(v) { return v.slice().sort(function (x, y) { return x - y; }); }
+
+  /* ---------- La traza línea a línea (Traza) ----------
+     Cada paso guarda una copia del estado: la lista, i, j, aux, hubo_cambio, cuántos casilleros
+     de la derecha ya están en su lugar (verdes) y los contadores. mover dice cómo se anima
+     el cambio de la lista en ese paso. */
+  function trazar(valores, v) {
+    v = v || {};
+    var L = codigo(v).L;
+    var n = valores.length;
+    var a = valores.slice();
+    var pasos = [];
+    var e = { lista: a.slice(), nombres: ["notas"], i: null, j: null, pj: null, par: false, aux: null, auxDesde: null, hubo: null, verdes: 0, comps: 0, swaps: 0, mover: null };
+
+    function paso(linea, texto, mas) {
+      var s = Object.assign({}, e);
+      s.lista = e.lista.slice();
+      s.nombres = e.nombres.slice();
+      pasos.push(Object.assign({ linea: linea, texto: texto, estado: s }, mas || {}));
+      e.mover = null;
+      e.auxDesde = null;
+    }
+
+    paso(L.notas, "La lista de notas, desordenada.");
+    e.nombres = ["notas", "lista"];
+    paso(L.llamada, "Python llama a " + c("burbuja(notas)") + ". Dentro, la lista se llama " + c("lista") + ": es la misma.");
+    var rompio = false;
+    for (var i = 0; i < n - 1; i++) {
+      var hasta = n - 1 - i;
+      e.i = i;
+      e.pj = null;
+      e.par = false;
+      if (!v.parar) e.verdes = i;
+      var txt = i === 0
+        ? "Primera pasada: " + c("i = 0") + ". " + c("j") + " irá de 0 a " + (hasta - 1) + "."
+        : "Pasada " + (i + 1) + ": " + c("i = " + i) + ". El " + a[n - i] + " ya quedó en su lugar; " + c("j") + " solo llega a " + (hasta - 1) + ".";
+      paso(L.forI, txt, { parada: true });
+      var hubo = false;
+      if (v.parar) {
+        e.hubo = false;
+        paso(L.hubo0, c("hubo_cambio = False") + ": en esta pasada todavía no se movió nada.");
+      }
+      for (var j = 0; j < hasta; j++) {
+        e.j = j;
+        e.pj = j;
+        e.par = false;
+        paso(L.forJ, c("j = " + j) + ": toca mirar los casilleros " + j + " y " + (j + 1) + ".");
+        var x = a[j], y = a[j + 1];
+        e.comps++;
+        e.par = true;
+        if (x > y) {
+          paso(L.si, "¿" + c(x + " &gt; " + y) + "? <strong>True</strong>: están al revés.");
+          e.aux = x;
+          e.auxDesde = j;
+          paso(L.aux, c("aux = lista[" + j + "]") + ": el " + x + " se guarda en " + c("aux") + ".");
+          a[j] = y;
+          e.lista = a.slice();
+          e.mover = { tipo: "copia", i: j, desde: j + 1 };
+          paso(L.copia, c("lista[" + j + "] = lista[" + (j + 1) + "]") + ": el " + y + " se copia a la izquierda. Por un momento hay dos " + y + ".");
+          a[j + 1] = x;
+          e.lista = a.slice();
+          e.mover = { tipo: "aux", i: j + 1 };
+          e.swaps++;
+          paso(L.pega, c("lista[" + (j + 1) + "] = aux") + ": el " + x + " vuelve desde " + c("aux") + ". ¡Intercambiados!");
+          if (v.parar) {
+            hubo = true;
+            e.hubo = true;
+            paso(L.hubo1, c("hubo_cambio = True") + ": en esta pasada sí hubo un intercambio.");
+          }
+        } else {
+          paso(L.si, "¿" + c(x + " &gt; " + y) + "? <strong>False</strong>: ya están en orden. No se tocan.");
+        }
+      }
+      if (v.parar) {
+        e.pj = null;
+        e.par = false;
+        e.verdes = i + 1;
+        if (hubo) {
+          paso(L.siNo, c("hubo_cambio") + " es True, así que " + c("not hubo_cambio") + " es <strong>False</strong>: sigue con otra pasada.");
+        } else {
+          paso(L.siNo, "No se movió nada: " + c("not False") + " es <strong>True</strong>.");
+          e.verdes = n;
+          paso(L.rompe, c("break") + ": ¡ya está ordenada! Sale del " + c("for i") + " sin hacer las pasadas que faltan.", { flecha: false, parada: true });
+          rompio = true;
+          break;
+        }
+      }
+    }
+    if (!rompio) {
+      e.pj = null;
+      e.par = false;
+      e.verdes = n;
+      var vistas = [];
+      for (var k = 0; k < n - 1; k++) vistas.push(k);
+      paso(L.forI, c("i") + " ya pasó por " + enumerar(vistas) + ": no hay más pasadas. El " + a[0] + " también quedó en su lugar.", { parada: true });
+    }
+    e.nombres = ["notas"];
+    paso(L.print, "La función termina sin " + c("return") + ". " + c("print(notas)") + " muestra la lista ya ordenada.", { salida: py(a), flecha: true });
+    pasos.rompio = rompio;
+    return pasos;
+  }
+
+  /* ---------- Los mismos pasos, de comparación en comparación (sin botones) ----------
+     Cada estado lleva las líneas que se resaltan; los intercambios se cruzan (reordenar). */
+  function estadosRapidos(valores, v, L, opciones) {
+    opciones = opciones || {};
+    var sim = simular(valores, v);
+    var n = valores.length;
+    var estados = [];
+    var e = { lista: valores.slice(), nombres: ["notas", "lista"], i: null, j: null, pj: null, par: false, demasEsta: false, verdes: 0, comps: 0, swaps: 0, demas: 0, mover: null, fuera: null };
+    function push(lineas, ms) {
+      var s = Object.assign({}, e);
+      s.lista = e.lista.slice();
+      s.nombres = e.nombres.slice();
+      estados.push({ lineas: lineas, estado: s, ms: ms || 1 });
+      e.mover = null;
+    }
+    var verde = opciones.verde !== false;
+    sim.eventos.forEach(function (ev) {
+      if (ev.tipo === "pasada") {
+        e.i = ev.i; e.pj = null; e.par = false;
+        if (verde) e.verdes = ev.i;
+        push([L.forI], 0.8);
+      } else if (ev.tipo === "compara") {
+        e.j = ev.j; e.pj = ev.j; e.par = true; e.demasEsta = ev.demasEsta;
+        e.comps = ev.comps; e.demas = ev.demas;
+        push([L.si]);
+      } else if (ev.tipo === "cambio") {
+        e.lista = ev.lista.slice();
+        e.mover = ev.cruce ? { tipo: "cruce", a: ev.j, b: ev.j + 1 } : null;
+        e.swaps = ev.swaps;
+        push([L.aux, L.copia, L.pega], 1.2);
+      } else if (ev.tipo === "error") {
+        e.j = ev.j; e.pj = ev.j; e.par = true; e.fuera = ev.j + 1;
+        push([L.si]);
+      } else if (ev.tipo === "rompe") {
+        e.pj = null; e.par = false;
+        if (verde) e.verdes = n;
+        push([L.rompe]);
+      } else if (ev.tipo === "fin") {
+        e.pj = null; e.par = false;
+        if (verde) e.verdes = n;
+        e.nombres = ["notas"];
+        push(L.print !== undefined ? [L.print] : []);
+      }
+    });
+    estados.sim = sim;
+    return estados;
+  }
+
+  /* ---------- Lo que se ve: la lista, j y j + 1, las cajas, los contadores ----------
+     o = { lista: el, valores, cajas: { i, j, aux, hubo }, comps, swaps, demas } */
+  function crearVista(o) {
+    var l = Lista.crear(o.lista, o.valores, { nombres: ["notas"] });
+    var ultimo = {};
+
+    function contar(el, n) {
+      if (!el || el.textContent === String(n)) return;
+      el.textContent = String(n);
+      var p = el.parentNode;
+      p.classList.remove("pastilla--sube");
+      void p.offsetWidth;
+      if (n) p.classList.add("pastilla--sube");
+    }
+
+    function valorCaja(caja) { return caja ? caja.querySelector(".caja__valor:not(.caja__valor--saliendo)") : null; }
+
+    function reiniciar(valores) {
+      if (valores) o.valores = valores.slice();
+      ultimo = { nombres: '["notas"]', fuera: null };
+      l.valores(o.valores);
+      l.clases(null);
+      l.punteros(null);
+      l.marcar(null);
+      l.nombres(["notas"]);
+      if (o.cajas) Object.keys(o.cajas).forEach(function (k) { if (o.cajas[k]) Caja.vaciar(o.cajas[k]); });
+      contar(o.comps, 0);
+      contar(o.swaps, 0);
+      contar(o.demas, 0);
+    }
+
+    function pintar(e) {
+      if (e.nombres) {
+        var nom = JSON.stringify(e.nombres);
+        if (nom !== ultimo.nombres) { l.nombres(e.nombres); ultimo.nombres = nom; }
+      }
+      // La lista: si cambió, se anima según cómo cambió
+      var actual = l.lista;
+      if (JSON.stringify(actual) !== JSON.stringify(e.lista)) {
+        var m = e.mover;
+        if (m && m.tipo === "cruce") {
+          var orden = actual.map(function (x, k) { return k; });
+          orden[m.a] = m.b;
+          orden[m.b] = m.a;
+          l.reordenar(orden);
+        } else if (m && m.tipo === "copia") {
+          l.cambiar(m.i, e.lista[m.i], l.valor(m.desde).getBoundingClientRect());
+        } else if (m && m.tipo === "aux") {
+          var origen = valorCaja(o.cajas && o.cajas.aux);
+          l.cambiar(m.i, e.lista[m.i], origen ? origen.getBoundingClientRect() : undefined);
+        } else if (actual.length === e.lista.length) {
+          e.lista.forEach(function (x, k) { if (actual[k] !== x) l.cambiar(k, x); });
+        }
+        if (JSON.stringify(l.lista) !== JSON.stringify(e.lista)) l.valores(e.lista);
+      }
+      // Colores: el par que se compara, lo que ya está en su lugar, las comparaciones de más
+      var n = e.lista.length;
+      l.clases(function (k) {
+        var verde = k >= n - (e.verdes || 0);
+        if (e.par && (k === e.j || k === e.j + 1)) return e.demasEsta ? "lista__casilla--demas" : "lista__casilla--cambio";
+        if (verde) return "lista__casilla--igual";
+        return "";
+      });
+      if (e.pj !== null && e.pj !== undefined) l.punteros({ j: { i: e.pj, color: "verde" }, "j + 1": { i: e.pj + 1, color: "morado" } });
+      else l.punteros(null);
+      // Un casillero que no existe (IndexError)
+      var fuera = e.fuera === undefined ? null : e.fuera;
+      if (fuera !== ultimo.fuera) { l.marcar(fuera); ultimo.fuera = fuera; }
+      // Las cajas: solo las que cambian (el valor viaja desde la línea activa o desde la lista)
+      if (o.cajas) {
+        Object.keys(o.cajas).forEach(function (k) {
+          var caja = o.cajas[k];
+          if (!caja) return;
+          var val = e[k] === undefined ? null : e[k];
+          if (val === ultimo[k]) return;
+          ultimo[k] = val;
+          if (val === null) { Caja.vaciar(caja); return; }
+          var texto = val === true ? "True" : val === false ? "False" : val;
+          if (k === "aux" && e.auxDesde !== null && e.auxDesde !== undefined) Caja.poner(caja, texto, l.valor(e.auxDesde).getBoundingClientRect());
+          else Caja.poner(caja, texto);
+        });
+      }
+      contar(o.comps, e.comps || 0);
+      contar(o.swaps, e.swaps || 0);
+      contar(o.demas, e.demas || 0);
+    }
+
+    return { l: l, reiniciar: reiniciar, pintar: pintar };
+  }
+
+  /* Estados reproducidos solos, deprisa */
+  function reproducir(pre, vista, estados, ms, reloj, alTerminar) {
+    var t = 0;
+    estados.forEach(function (s, k) {
+      reloj.luego(function () {
+        Codigo.marcar(pre, { activas: s.lineas });
+        vista.pintar(s.estado);
+        if (k === estados.length - 1 && alTerminar) alTerminar(s.estado);
+      }, t);
+      t += ms * s.ms;
+    });
+    if (!estados.length && alTerminar) alTerminar(null);
+  }
+
+  /* Una línea en la consola, que vuela desde la línea activa */
+  function imprimir(consola, pre, texto, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    Codigo.volarDesdeLinea(pre, linea, texto, "vuelo--salida");
+  }
+
+  /* Botones de respuesta: aria-pressed y ✓ / ✗ */
+  function elegirBoton(grupo, btn) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b === btn));
+      b.classList.remove("btn--bien", "btn--mal");
+    });
+  }
+  function bloquear(grupo, si) { grupo.querySelectorAll("button").forEach(function (b) { b.disabled = si; }); }
+
+  /* ---------- 1. Burbuja, en código ---------- */
+  ponerCodigo($("p1-codigo"), {});
+  var vista1 = crearVista({
+    lista: $("p1-lista"), valores: NOTAS,
+    cajas: { i: $("p1-i"), j: $("p1-j"), aux: $("p1-aux") },
+    comps: $("p1-comps"), swaps: $("p1-swaps")
+  });
+  var traza1 = Traza.crear({
+    codigo: $("p1-codigo"), explicacion: $("p1-explicacion"), consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"), reproducir: $("p1-reproducir"), saltar: $("p1-saltar"), reiniciar: $("p1-reiniciar"),
+    intervalo: 750, intervaloSaltar: 240,
+    generar: function () { return trazar(NOTAS, {}); },
+    alReiniciar: function () { vista1.reiniciar(NOTAS); Pasos.limpiarFeedback($("p1-fb")); },
+    alPaso: function (paso) { vista1.pintar(paso.estado); },
+    alTerminar: function () {
+      Pasos.feedback($("p1-fb"), "ok", "Ordenada con 4 pasadas: 10 comparaciones y 7 intercambios. En cada pasada, la mayor de lo que faltaba subió al final y la parte verde creció en uno.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 2. Ahora la PC eres tú ---------- */
+  var LISTAS2 = [[15, 8, 20, 11], [12, 18, 7, 10]];
+  var turno2 = 0;
+  var hechas2 = 0;
+  var L2 = ponerCodigo($("p2-codigo"), { valores: LISTAS2[0], print: false });
+  var vista2 = crearVista({
+    lista: $("p2-lista"), valores: LISTAS2[0],
+    cajas: { i: $("p2-i"), j: $("p2-j") },
+    comps: $("p2-comps"), swaps: $("p2-swaps")
+  });
+  var reloj2 = relojes();
+  var s2 = null;
+  var botones2 = Array.prototype.slice.call(document.querySelectorAll("[data-accion2]"));
+
+  function estado2(extra) {
+    return Object.assign({
+      lista: s2.a.slice(), nombres: ["notas", "lista"], i: s2.i, j: s2.j, pj: s2.pj, par: s2.par,
+      verdes: s2.verdes, comps: s2.comps, swaps: s2.swaps, mover: null
+    }, extra || {});
+  }
+  function linea2(ls) { Codigo.marcar($("p2-codigo"), { activas: ls }); }
+  function pregunta2(html) { $("p2-pregunta").innerHTML = html; }
+  function activar2(si) { botones2.forEach(function (b) { b.disabled = !si; }); s2.esperando = si; }
+
+  function empezar2() {
+    reloj2.cortar();
+    var valores = LISTAS2[turno2 % LISTAS2.length];
+    turno2++;
+    L2 = ponerCodigo($("p2-codigo"), { valores: valores, print: false });
+    s2 = { a: valores.slice(), i: null, j: null, pj: null, par: false, verdes: 0, comps: 0, swaps: 0, esperando: false };
+    activar2(false);
+    $("p2-otra").hidden = true;
+    Pasos.limpiarFeedback($("p2-fb"));
+    vista2.reiniciar(valores);
+    pregunta2("Python llama a " + c("burbuja(notas)") + ".");
+    linea2([L2.llamada]);
+    reloj2.luego(function () {
+      vista2.pintar(estado2());
+      pasada2(0);
+    }, 700);
+  }
+
+  function pasada2(i) {
+    var n = s2.a.length;
+    if (i >= n - 1) { terminar2(); return; }
+    s2.i = i;
+    s2.pj = null;
+    s2.par = false;
+    s2.verdes = i;
+    linea2([L2.forI]);
+    vista2.pintar(estado2());
+    pregunta2("Pasada " + (i + 1) + ": " + c("i = " + i) + ". " + c("j") + " irá de 0 a " + (n - 2 - i) + ".");
+    reloj2.luego(function () { comparar2(0); }, 1100);
+  }
+
+  function comparar2(j) {
+    var n = s2.a.length;
+    var i = s2.i;
+    if (j >= n - 1 - i) {
+      s2.pj = null;
+      s2.par = false;
+      s2.verdes = i + 1;
+      vista2.pintar(estado2());
+      pregunta2(c("j") + " llegó al final de su " + c("range") + ": el " + s2.a[n - 1 - i] + " quedó en su lugar.");
+      reloj2.luego(function () { pasada2(i + 1); }, 1400);
+      return;
+    }
+    s2.j = j;
+    s2.pj = j;
+    s2.par = true;
+    s2.comps++;
+    linea2([L2.forJ, L2.si]);
+    vista2.pintar(estado2());
+    pregunta2(c("j = " + j) + ": ¿" + c(s2.a[j] + " &gt; " + s2.a[j + 1]) + "? ¿Qué hace Python?");
+    activar2(true);
+  }
+
+  function elegir2(accion) {
+    if (!s2 || !s2.esperando) return;
+    var j = s2.j;
+    var x = s2.a[j], y = s2.a[j + 1];
+    var bien = x > y ? "cambiar" : "dejar";
+    if (accion !== bien) {
+      Pasos.feedback($("p2-fb"), "pista", bien === "cambiar"
+        ? x + " > " + y + " es True: el de la izquierda es mayor, están al revés. El if entra y se intercambian."
+        : x + " > " + y + " es False: ya están en orden. El if no entra y no se tocan.");
+      return;
+    }
+    Pasos.limpiarFeedback($("p2-fb"));
+    activar2(false);
+    if (bien === "cambiar") {
+      s2.a[j] = y;
+      s2.a[j + 1] = x;
+      s2.swaps++;
+      linea2([L2.aux, L2.copia, L2.pega]);
+      vista2.pintar(estado2({ mover: { tipo: "cruce", a: j, b: j + 1 } }));
+      pregunta2("Con " + c("aux") + ", el " + x + " y el " + y + " se intercambian.");
+      reloj2.luego(function () { comparar2(j + 1); }, 1100);
+    } else {
+      pregunta2("El " + c("if") + " no entra: siguen igual.");
+      reloj2.luego(function () { comparar2(j + 1); }, 800);
+    }
+  }
+
+  function terminar2() {
+    var n = s2.a.length;
+    s2.pj = null;
+    s2.par = false;
+    s2.verdes = n;
+    linea2([]);
+    vista2.pintar(estado2());
+    pregunta2("¡Ordenada! " + c(py(s2.a)));
+    hechas2++;
+    Pasos.feedback($("p2-fb"), "ok", "Con 4 valores: 3 pasadas y " + comparaciones(s2.comps) + " (3 + 2 + 1). Cada pasada mira un par menos: los verdes ya no se comparan.");
+    $("p2-otra").hidden = false;
+    leccion.desbloquear();
+  }
+
+  botones2.forEach(function (b) { b.addEventListener("click", function () { elegir2(b.getAttribute("data-accion2")); }); });
+  $("p2-otra-btn").addEventListener("click", empezar2);
+
+  /* ---------- 3. ¿Qué devuelve burbuja? ---------- */
+  var L3 = ponerCodigo($("p3-codigo"), { none: true });
+  var vista3 = crearVista({ lista: $("p3-lista"), valores: NOTAS, comps: $("p3-comps"), swaps: $("p3-swaps") });
+  var reloj3 = relojes();
+  $("p3-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var grupo = $("p3-elegir");
+      elegirBoton(grupo, b);
+      bloquear(grupo, true);
+      reloj3.cortar();
+      vista3.reiniciar(NOTAS);
+      Codigo.consola($("p3-consola"), []);
+      Pasos.limpiarFeedback($("p3-fb"));
+      var pre = $("p3-codigo");
+      var estados = estadosRapidos(NOTAS, {}, L3);
+      estados[estados.length - 1].lineas = [L3.llamada];
+      Codigo.marcar(pre, { activas: [L3.llamada] });
+      reproducir(pre, vista3, estados, 260, reloj3, function () {
+        reloj3.luego(function () {
+          Codigo.marcar(pre, { activas: [L3.print1] });
+          imprimir($("p3-consola"), pre, "None");
+        }, 500);
+        reloj3.luego(function () {
+          Codigo.marcar(pre, { activas: [L3.print] });
+          imprimir($("p3-consola"), pre, py(ordenadaBien(NOTAS)));
+        }, 1300);
+        reloj3.luego(function () {
+          bloquear(grupo, false);
+          var bien = b.getAttribute("data-valor") === "none";
+          b.classList.add(bien ? "btn--bien" : "btn--mal");
+          Pasos.feedback($("p3-fb"), bien ? "ok" : "pista", (bien ? "¡Eso es! " : "Imprime None. ") +
+            "Sin return, una función devuelve None. burbuja cambió la misma lista, notas, como notas.sort(). sorted(notas), en cambio, devuelve una lista nueva.");
+          leccion.desbloquear();
+        }, 1800);
+      });
+    });
+  });
+
+  /* ---------- 4. Sin el - 1 ---------- */
+  var L4 = ponerCodigo($("p4-codigo"), { rango: "- i", marcar: "rango" });
+  var vista4 = crearVista({ lista: $("p4-lista"), valores: NOTAS, comps: $("p4-comps") });
+  var reloj4 = relojes();
+  $("p4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var grupo = $("p4-elegir");
+      elegirBoton(grupo, b);
+      bloquear(grupo, true);
+      reloj4.cortar();
+      vista4.reiniciar(NOTAS);
+      Codigo.consola($("p4-consola"), []);
+      Pasos.limpiarFeedback($("p4-fb"));
+      var pre = $("p4-codigo");
+      var estados = estadosRapidos(NOTAS, { rango: "- i" }, L4);
+      Codigo.marcar(pre, { activas: [L4.llamada] });
+      reproducir(pre, vista4, estados, 420, reloj4, function () {
+        imprimir($("p4-consola"), pre, "IndexError: list index out of range", true);
+        bloquear(grupo, false);
+        var bien = b.getAttribute("data-valor") === "error";
+        b.classList.add(bien ? "btn--bien" : "btn--mal");
+        Pasos.feedback($("p4-fb"), bien ? "ok" : "pista", (bien ? "¡Eso es! " : "Da error. ") +
+          "Sin el - 1, j llega a 4 y lista[j + 1] es lista[5]: ese casillero no existe. El último no tiene vecino a la derecha, por eso j para en el penúltimo.");
+        leccion.desbloquear();
+      });
+    });
+  });
+
+  /* ---------- 5. Sin el - i ---------- */
+  var L5 = ponerCodigo($("p5-codigo"), { rango: "- 1", marcar: "rango" });
+  var vista5 = crearVista({ lista: $("p5-lista"), valores: NOTAS, comps: $("p5-comps"), demas: $("p5-demas") });
+  var reloj5 = relojes();
+  $("p5-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var grupo = $("p5-elegir");
+      elegirBoton(grupo, b);
+      bloquear(grupo, true);
+      reloj5.cortar();
+      vista5.reiniciar(NOTAS);
+      Codigo.consola($("p5-consola"), []);
+      Pasos.limpiarFeedback($("p5-fb"));
+      var pre = $("p5-codigo");
+      var estados = estadosRapidos(NOTAS, { rango: "- 1" }, L5);
+      Codigo.marcar(pre, { activas: [L5.llamada] });
+      reproducir(pre, vista5, estados, 300, reloj5, function () {
+        var sim = estados.sim;
+        imprimir($("p5-consola"), pre, py(sim.lista));
+        bloquear(grupo, false);
+        var bien = b.getAttribute("data-valor") === "mas";
+        b.classList.add(bien ? "btn--bien" : "btn--mal");
+        Pasos.feedback($("p5-fb"), bien ? "ok" : "pista", (bien ? "¡Eso es! " : "Ordena bien, pero hace más comparaciones. ") +
+          "Hizo " + sim.comps + " en vez de 10: " + sim.demas + " fueron de más, contra casilleros que ya estaban en su lugar. Con el - i, cada pasada se detiene antes de la parte verde.");
+        leccion.desbloquear();
+      });
+    });
+  });
+
+  /* ---------- 6. ¿Cuántas comparaciones? ---------- */
+  var n6 = 5;
+  var visto6 = {};
+  function comps6(n) { return n * (n - 1) / 2; }
+
+  function codigo6(n) {
+    var sumandos = n <= 6
+      ? Array.from({ length: n - 1 }, function (x, k) { return n - 1 - k; }).join(" + ")
+      : (n - 1) + " + " + (n - 2) + " + … + 1";
+    $("p6-codigo").innerHTML = "<code>" +
+      '<span class="linea">' + kw("for") + " " + va("i") + " " + kw("in") + " " + fn("range") + "(" + fn("len") + "(" + va("lista") + ") - " + nu("1") + "):  " + co("# " + (n - 1) + " pasadas") + "</span>" +
+      '<span class="linea">    ' + kw("for") + " " + va("j") + " " + kw("in") + " " + fn("range") + "(" + fn("len") + "(" + va("lista") + ") - " + nu("1") + " - " + va("i") + "):</span>" +
+      '<span class="linea">        ' + co("# compara lista[j] con lista[j + 1]") + "</span></code>";
+    $("p6-suma").innerHTML = sumandos + " = <strong>" + comps6(n) + "</strong> comparaciones";
+  }
+
+  function escalera6(n, previo) {
+    var m = n - 1;
+    var svg = $("p6-escalera");
+    svg.setAttribute("viewBox", "-0.1 -0.1 " + (m + 0.2) + " " + (m + 0.2));
+    var html = "";
+    var borde = Math.min(0.12, 2.4 / m * 0.06 + 0.02);
+    for (var k = 0; k < m; k++) {
+      for (var col = 0; col < m - k; col++) {
+        var vieja = previo && k < previo - 1 && col < previo - 1 - k;
+        html += '<rect x="' + (col + 0.06) + '" y="' + (k + 0.06) + '" width="0.88" height="0.88" rx="0.12" stroke-width="' + borde + '"' + (vieja ? ' class="esc--vieja"' : "") + "/>";
+      }
+    }
+    svg.innerHTML = html;
+    svg.classList.remove("escalera--nueva");
+    void svg.getBoundingClientRect();
+    if (previo) svg.classList.add("escalera--nueva");
+  }
+
+  function tabla6() {
+    var cuerpo = $("p6-tabla").tBodies[0];
+    cuerpo.innerHTML = "";
+    [5, 10, 20, 40].forEach(function (n) {
+      if (!visto6[n]) return;
+      var tr = cuerpo.insertRow();
+      if (n === n6) tr.className = "tabla__activa";
+      tr.insertCell().textContent = String(n);
+      tr.insertCell().textContent = String(comps6(n));
+      var td = tr.insertCell();
+      if (n > 5) {
+        td.className = "veces";
+        td.textContent = "×" + String(Math.round(comps6(n) / comps6(n / 2) * 10) / 10).replace(".", ",");
+      } else {
+        td.textContent = "—";
+      }
+    });
+  }
+
+  function mostrar6(n, previo) {
+    n6 = n;
+    visto6[n] = true;
+    codigo6(n);
+    escalera6(n, previo);
+    $("p6-rotulo").textContent = n + " valores · " + (n - 1) + " pasadas";
+    tabla6();
+    $("p6-duplicar").disabled = n >= 40;
+    $("p6-volver").hidden = n === 5;
+    if (n === 40) {
+      Pasos.feedback($("p6-fb"), "ok", "Cada vez que duplicaste la lista, las comparaciones se multiplicaron por algo más de 4: la escalera es el doble de ancha y el doble de alta. Con 40 valores, burbuja ya hace 780.");
+      leccion.desbloquear();
+    } else if (previo) {
+      Pasos.feedback($("p6-fb"), "pista", "El doble de valores, pero " + String(Math.round(comps6(n) / comps6(previo) * 10) / 10).replace(".", ",") + " veces más comparaciones. Las azules son las de antes: ¿qué parte de la escalera ocupan?");
+    } else {
+      Pasos.limpiarFeedback($("p6-fb"));
+    }
+  }
+  $("p6-duplicar").addEventListener("click", function () { if (n6 < 40) mostrar6(n6 * 2, n6); });
+  $("p6-volver").addEventListener("click", function () { mostrar6(5, null); $("p6-duplicar").focus(); });
+  mostrar6(5, null);
+
+  /* ---------- 7. Parar antes ---------- */
+  var lista7 = "casi";
+  ponerCodigo($("p7-codigo"), { parar: true, valores: LISTAS7[lista7] });
+  var vista7 = crearVista({
+    lista: $("p7-lista"), valores: LISTAS7[lista7],
+    cajas: { i: $("p7-i"), j: $("p7-j"), aux: $("p7-aux"), hubo: $("p7-hubo") },
+    comps: $("p7-comps"), swaps: $("p7-swaps")
+  });
+  var probadas7 = {};
+  var traza7 = Traza.crear({
+    codigo: $("p7-codigo"), explicacion: $("p7-explicacion"),
+    ejecutar: $("p7-ejecutar"), reproducir: $("p7-reproducir"), saltar: $("p7-saltar"), reiniciar: $("p7-reiniciar"),
+    intervalo: 750, intervaloSaltar: 240,
+    generar: function () { return trazar(LISTAS7[lista7], { parar: true }); },
+    alReiniciar: function () {
+      vista7.reiniciar(LISTAS7[lista7]);
+      Pasos.limpiarFeedback($("p7-fb"));
+    },
+    alPaso: function (paso) { vista7.pintar(paso.estado); },
+    alTerminar: function () {
+      var v = LISTAS7[lista7];
+      var sin = simular(v, {}).comps;
+      var con = simular(v, { parar: true }).comps;
+      probadas7[lista7] = true;
+      var texto;
+      if (lista7 === "casi") texto = "La primera pasada arregló el 17 y el 14; la segunda no movió nada y break cortó ahí: " + con + " comparaciones en vez de " + sin + ".";
+      else if (lista7 === "ordenada") texto = "Ya estaba ordenada: una sola pasada sin cambios bastó para saberlo. " + con + " comparaciones en vez de " + sin + ".";
+      else texto = "Muy desordenada: todas las pasadas movieron algo, así que no se ahorró nada (" + con + " comparaciones). hubo_cambio ayuda cuando la lista está casi ordenada.";
+      if (probadas7.casi) {
+        Pasos.feedback($("p7-fb"), "ok", texto);
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("p7-fb"), "pista", texto + " Ahora prueba con la casi ordenada.");
+      }
+    }
+  });
+  $("p7-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("p7-elegir").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      lista7 = b.getAttribute("data-lista");
+      ponerCodigo($("p7-codigo"), { parar: true, valores: LISTAS7[lista7] });
+      traza7.reiniciar();
+    });
+  });
+
+  /* ---------- 8. De mayor a menor ---------- */
+  var op8 = ">";
+  var L8 = ponerCodigo($("p8-codigo"), { op: op8, marcar: "op" });
+  var vista8 = crearVista({ lista: $("p8-lista"), valores: NOTAS, comps: $("p8-comps"), swaps: $("p8-swaps") });
+  var reloj8 = relojes();
+  var hecho8 = {};
+  function limpiar8() {
+    reloj8.cortar();
+    vista8.reiniciar(NOTAS);
+    Codigo.limpiar($("p8-codigo"));
+    Codigo.consola($("p8-consola"), []);
+    Pasos.limpiarFeedback($("p8-fb"));
+    $("p8-ordenar").disabled = false;
+    bloquear($("p8-elegir"), false);
+  }
+  $("p8-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("p8-elegir").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      op8 = b.getAttribute("data-op");
+      L8 = ponerCodigo($("p8-codigo"), { op: op8, marcar: "op" });
+      limpiar8();
+    });
+  });
+  $("p8-ordenar").addEventListener("click", function () {
+    limpiar8();
+    $("p8-ordenar").disabled = true;
+    bloquear($("p8-elegir"), true);
+    var pre = $("p8-codigo");
+    var estados = estadosRapidos(NOTAS, { op: op8 }, L8);
+    Codigo.marcar(pre, { activas: [L8.llamada] });
+    reproducir(pre, vista8, estados, 300, reloj8, function () {
+      imprimir($("p8-consola"), pre, py(estados.sim.lista));
+      $("p8-ordenar").disabled = false;
+      bloquear($("p8-elegir"), false);
+      hecho8[op8] = true;
+      if (op8 === "<") {
+        Pasos.feedback($("p8-fb"), "ok", "¡De mayor a menor! Con <, se intercambian cuando el de la izquierda es menor: en cada pasada, la menor sube al final. Las mismas 10 comparaciones.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("p8-fb"), "pista", "Con > queda de menor a mayor, como antes. Cambia el símbolo del if y vuelve a ordenar.");
+      }
+    });
+  });
+
+  /* ---------- 9. Reto ---------- */
+  var Lr = ponerCodigo($("reto-codigo"), { huecos: true, llamada: false });
+  var vistaReto = crearVista({ lista: $("reto-lista"), valores: NOTAS, comps: $("reto-comps"), swaps: $("reto-swaps") });
+  var relojReto = relojes();
+  var PRUEBAS = [[14, 9, 17, 11, 6], [20, 15, 11, 8], [12, 5, 12, 3, 18], [11, 13, 16]];
+  var TEXTOS = {
+    cond: { menor: "lista[j] < lista[j + 1]", i: "lista[j] > lista[i]", bien: "lista[j] > lista[j + 1]" },
+    swap: {
+      sinAux: ["aux = lista[j]", "lista[j] = lista[j + 1]", "lista[j + 1] = lista[j]"],
+      bien: ["aux = lista[j]", "lista[j] = lista[j + 1]", "lista[j + 1] = aux"],
+      auxTarde: ["aux = lista[j]", "lista[j + 1] = aux", "lista[j] = lista[j + 1]"]
+    }
+  };
+  var eleccion = { cond: null, swap: null };
+
+  function colorear(t) {
+    return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\b(aux|lista|j|i)\b/g, '<span class="tk-variable">$1</span>')
+      .replace(/\b(\d+)\b/g, '<span class="tk-numero">$1</span>');
+  }
+
+  function limpiarReto() {
+    relojReto.cortar();
+    vistaReto.reiniciar(NOTAS);
+    Codigo.limpiar($("reto-codigo"));
+    $("reto-rotulo").textContent = "notas";
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function pintarHuecos() {
+    $("reto-h1").innerHTML = eleccion.cond ? colorear(TEXTOS.cond[eleccion.cond]) : "?";
+    var s = eleccion.swap ? TEXTOS.swap[eleccion.swap] : ["?", "?", "?"];
+    $("reto-h2").innerHTML = eleccion.swap ? colorear(s[0]) : "?";
+    $("reto-h3").innerHTML = eleccion.swap ? colorear(s[1]) : "?";
+    $("reto-h4").innerHTML = eleccion.swap ? colorear(s[2]) : "?";
+  }
+
+  function entrarReto() {
+    var cond = document.querySelector('input[name="reto-cond"]:checked');
+    var swap = document.querySelector('input[name="reto-swap"]:checked');
+    eleccion = { cond: cond ? cond.value : null, swap: swap ? swap.value : null };
+    pintarHuecos();
+    limpiarReto();
+    document.querySelectorAll("#paso-reto .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    // Puede llamarse mientras Pasos.iniciar aún no devolvió la lección (al retomar en este paso)
+    setTimeout(function () { leccion.listoParaComprobar(!!(eleccion.cond && eleccion.swap)); }, 0);
+  }
+
+  document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (inp) {
+    inp.addEventListener("change", function () {
+      eleccion[inp.name === "reto-cond" ? "cond" : "swap"] = inp.value;
+      document.querySelectorAll("#paso-reto .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      pintarHuecos();
+      limpiarReto();
+      leccion.listoParaComprobar(!!(eleccion.cond && eleccion.swap));
+    });
+  });
+
+  function pistaReto(v) {
+    if (v.cond === "menor") return "Con <, se intercambian si el de la izquierda es menor: queda de mayor a menor. Hay que intercambiarlos si el de la izquierda es mayor.";
+    if (v.cond === "i") return "lista[i] no es el vecino de lista[j]: i cuenta las pasadas. Compara con el de la derecha, el que se va a intercambiar.";
+    if (v.swap === "sinAux") return "La última línea copia lista[j], que ya cambió: quedan dos iguales. Para eso está aux: guarda el de la izquierda hasta el final.";
+    return "lista[j + 1] = aux pisa el de la derecha antes de copiarlo: quedan dos iguales. Primero copia lista[j + 1] a la izquierda.";
+  }
+
+  function comprobarReto() {
+    if (!eleccion.cond || !eleccion.swap) return false;
+    limpiarReto();
+    var v = { cond: eleccion.cond, swap: eleccion.swap };
+    var ul = $("reto-pruebas");
+    ul.innerHTML = "";
+    var mala = null;
+    PRUEBAS.forEach(function (p) {
+      var r = simular(p, v).lista;
+      var esperado = ordenadaBien(p);
+      var bien = JSON.stringify(r) === JSON.stringify(esperado);
+      if (!bien && mala === null) mala = p;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      li.innerHTML = "<span></span><span class=\"prueba__res\"></span>";
+      li.children[0].textContent = py(p) + " →";
+      li.children[1].textContent = py(r) + (bien ? " ✓" : " ✗");
+      if (!bien) li.children[1].title = "Debe dar " + py(esperado);
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+    // Se ve la prueba que falló (o la primera) ordenándose
+    var ver = mala || PRUEBAS[0];
+    $("reto-rotulo").textContent = "burbuja(" + py(ver) + ")";
+    vistaReto.reiniciar(ver);
+    var correcto = mala === null;
+    reproducir($("reto-codigo"), vistaReto, estadosRapidos(ver, v, Lr, { verde: correcto }), 260, relojReto);
+    document.querySelectorAll("#paso-reto .opcion").forEach(function (o) {
+      var inp = o.querySelector("input");
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+      if (inp.checked) o.classList.add(correcto ? "opcion--correcta" : "opcion--incorrecta");
+    });
+    if (correcto) {
+      Pasos.feedback($("reto-fb"), "ok", "¡Eso es! Si el de la izquierda es mayor, se intercambian con aux. Las cuatro quedan de menor a mayor, también la de dos 12.");
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", pistaReto(v));
+    return false;
+  }
+
+  /* ---------- Al entrar a un paso, se corta lo que seguía corriendo ---------- */
+  function pararTodo() {
+    todosLosRelojes.forEach(function (r) { r.cortar(); });
+    traza1.detener();
+    traza7.detener();
+  }
+
+  function rehabilitar(grupo) { bloquear(grupo, false); }
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-codigo": pararTodo,
+      "paso-tu": function () { pararTodo(); empezar2(); },
+      "paso-none": function () { pararTodo(); rehabilitar($("p3-elegir")); },
+      "paso-menos-uno": function () { pararTodo(); rehabilitar($("p4-elegir")); },
+      "paso-menos-i": function () { pararTodo(); rehabilitar($("p5-elegir")); },
+      "paso-contar": pararTodo,
+      "paso-parar": pararTodo,
+      "paso-mayor": function () { pararTodo(); limpiar8(); },
+      "paso-reto": function () { pararTodo(); entrarReto(); },
+      "paso-resumen": pararTodo
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
