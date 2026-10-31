@@ -174,11 +174,13 @@
     /* Una raya de la parte de abajo del padre (sin la píldora) a la de arriba del hijo.
        Se mide con offsetLeft/offsetTop: no cambian mientras el trozo baja animado. */
     function caja(t) {
+      // El trozo va posicionado (base.css): las celdas se miden desde él, y él desde la rejilla
       var c = t.querySelector(".particion__celdas");
+      var x0 = rejilla.offsetLeft + t.offsetLeft, y0 = rejilla.offsetTop + t.offsetTop;
       return {
-        x: t.offsetLeft + c.offsetLeft + c.offsetWidth / 2,
-        arriba: t.offsetTop + c.offsetTop,
-        abajo: t.offsetTop + c.offsetTop + c.offsetHeight
+        x: x0 + c.offsetLeft + c.offsetWidth / 2,
+        arriba: y0 + c.offsetTop,
+        abajo: y0 + c.offsetTop + c.offsetHeight
       };
     }
 
