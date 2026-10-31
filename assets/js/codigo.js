@@ -63,6 +63,8 @@
     marcar(pre, {});
     quitarSalto(pre);
     pre.querySelectorAll(".pausas, .valores").forEach(function (el) { el.remove(); });
+    // La línea que dio error y las que no se ejecutaron (mensaje-error.js)
+    if (window.MensajeError) MensajeError.limpiar(pre);
   }
 
   var SVG = "http://www.w3.org/2000/svg";
