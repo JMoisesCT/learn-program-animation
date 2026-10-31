@@ -81,6 +81,10 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-10-31 · Conjuntos: el código de «Sacar una ficha» se acumula
+
+Al tocar `remove` o `discard`, el código se reemplazaba por esa sola línea y se perdía `colores = {"rojo", "azul", "verde"}`. Ahora la definición se queda arriba y cada acción se suma debajo (hasta 4, con el alto reservado); una línea que da `KeyError` se muestra, pero no queda en el programa. Se revisó con un script el resto del tema: los demás cambios de código son a propósito (otra versión, otra frase, completar el espacio en blanco).
+
 ### 2026-10-31 · Otras estructuras: 7 lecciones
 
 Tema nuevo después de Listas y antes de Búsquedas: tuplas, diccionarios y conjuntos (el plan está en CLAUDE.md). Primero se hicieron las piezas visuales, hermanas de los casilleros: la tupla en `lista.js` (`tupla: true`: paréntesis y candado; `rechazar(i)` sacude lo que no se puede cambiar; `Lista.tupla` y los objetos simples se imprimen como tupla y diccionario), el diccionario en `assets/js/dicc.js` (casilleros con una clave colgada encima; `poner`, `quitar`, `marcar` con `KeyError`, vista vertical) y el conjunto en `assets/js/conjunto.js` (una bolsa con fichas sueltas; un repetido rebota; `Conjunto.venn` con dos bolsas que se cruzan y la zona del resultado iluminada). Luego las siete lecciones se escribieron en paralelo, una por agente.
