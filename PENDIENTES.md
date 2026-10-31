@@ -9,7 +9,14 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Listas, completo (8/8).** Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: tres en raya y pasar su tarjeta «Próximamente» de la portada a lección.
+2. **Búsquedas, completo (7/7)** (ver el registro del 2026-10-31). Lo siguiente: planear **Errores** en CLAUDE.md (sus sublecciones) y escribirlo; al publicarlo, añadir «Siguiente» en el Proyecto: la PC adivina tu número y pasar su tarjeta «Próximamente» de la portada a lección.
+   **Probar con alumnos** Búsquedas en un móvil de verdad, sobre todo:
+   - si los punteros `inicio`, `medio` y `fin` bajo la lista se siguen al deslizarse, y si los casilleros tapados se entienden como «la PC no ve hasta comparar»;
+   - en ¿Cuál es más rápida?, si el costo de `sorted` (contado con el `sort` de JavaScript, «unas N comparaciones») convence o confunde;
+   - en el proyecto, que `preguntas += 1` va antes del `input`: una respuesta inválida también cuenta como pregunta.
+   **Para unificar** (cada lección lo resolvió dentro de su página): el contador de comparaciones (pastilla con salto), un coloreador de Python para escribir el código en JS en vez de los `<span>` a mano, la tabla de seguimiento (Búsqueda binaria y Recursión que devuelve valores), la regla 1–N que se encoge (Partir a la mitad y el proyecto, copiada de Bucles) y tocar casilleros con el teclado (Buscar uno por uno y Partir a la mitad; `lista.js` pone `aria-hidden` en la lista). Pasarlos a `assets/` cuando una lección más los necesite.
+   **No cabe a 1366×657**: los pasos con el código completo de la binaria (14 líneas) más la tabla, la pila de la recursiva (13 líneas) y el reto del proyecto (20 líneas y consola) piden bajar entre 100 y 300 px, como las lecciones de Recursión.
+   **Listas, completo (8/8).**
    **Probar con alumnos** las lecciones de Listas en un móvil de verdad, sobre todo:
    - si los casilleros que se corren al insertar y quitar (Agregar y quitar) se siguen con la vista;
    - si «dos etiquetas, una lista» (Dos nombres, una lista) se entiende o hace falta otra imagen (p. ej. flechas);
@@ -56,6 +63,19 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-10-31 · Búsquedas: 7 lecciones
+
+Tema nuevo después de Listas (el plan está en CLAUDE.md). Primero se añadieron a `lista.js` las dos piezas del tema: casilleros **tapados** (`tapar`, `destapar`: buscar sin ver, como la PC) y **punteros** con nombre bajo la lista (`punteros({ inicio, medio, fin })`, que se deslizan y bajan un piso si chocan). Luego las siete lecciones se escribieron en paralelo, una por agente, y se juntaron en `leccion/busquedas`. En todas, un contador de comparaciones.
+- **1/7 · Buscar uno por uno** (`busquedas`, 8 pasos): destapar hasta encontrar el 17, `buscar(lista, x)` línea a línea, la PC eres tú (True/False en cada comparación), mejor y peor caso, el `-1` en un `else` (falla tras una comparación), `in` e `.index()` por dentro y un reto.
+- **2/7 · Buscar con condiciones** (`busquedas-condiciones`, 8 pasos): el primer desaprobado, dos listas paralelas, todas las posiciones, el último con `range(len - 1, -1, -1)`, un salón 3×3 con dos `for` y el reto `primero_con_20`.
+- **3/7 · Partir a la mitad** (`busquedas-mitad`, 10 pasos): adivinar del 1 al 100, siempre el del medio, cuántas preguntas bastan (7 y 10), un diccionario de papel, casilleros ordenados que se apagan, qué pasa si no está ordenada y un adelanto del código.
+- **4/7 · Búsqueda binaria** (`busquedas-binaria`, 9 pasos): el código con punteros y cajas del mismo color, decidir qué línea sigue, la tabla de seguimiento, cuando no está, los errores `inicio = medio` (bucle sin fin, cortado) y `<` en vez de `<=`, con nombres y un reto.
+- **5/7 · Búsqueda binaria con recursión** (`busquedas-recursiva`, 8 pasos): la pila con `inicio` y `fin` en cada tarjeta, la vuelta hecha por el alumno, el caso base, `while` frente a recursión (mismas tablas), la trampa de la rebanada y un reto.
+- **6/7 · ¿Cuál es más rápida?** (`busquedas-comparar`, 9 pasos): una carrera en dos carriles, el peor caso, duplicar la lista (×2 frente a +1), `mitades(n)` y `binario`, un millón de valores, la lista desordenada (ordenar cuesta) y buscar muchas veces.
+- **7/7 · Proyecto: la PC adivina tu número** (`busquedas-proyecto`, 7 pasos): jugar sin código, cuatro partes (el medio, descartar la mitad, contar preguntas, detectar la trampa) y el programa completo con `BucleInput` y misiones (del 1 al 1000 cambiando una línea).
+
+Portada con la tarjeta del tema y «Siguiente: Búsquedas →» en el tres en raya. Probado con Playwright a 1280×800, 1366×657 y 390×844 (también con movimiento reducido): sin errores de JavaScript ni desborde horizontal.
 
 ### 2026-10-29 · Escritorio: cada paso en una sola pantalla
 
