@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mergesort · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: mergesort en Python. Partir la lista a la mitad hasta tener listas de un valor y mezclarlas de a dos hacia arriba; medio = len(lista) // 2, las rebanadas, la pila de llamadas, cuántos pisos y las trampas típicas.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .pista-texto { color: var(--color-pista); }
+
+    /* ---------- Comparaciones: el hilo del tema ---------- */
+    .contador { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-azul); }
+    .contador--cambio strong { display: inline-block; animation: valor-pulso 320ms ease-out; }
+    .rotulo-lista { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo-lista code { text-transform: none; letter-spacing: 0; }
+    .rotulo-lista + div { margin-bottom: var(--esp-3); }
+
+    /* ---------- Botones para elegir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--codigo .btn { font-family: var(--fuente-codigo); }
+    .elegir .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .btn--mal, .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+    .btn--bien, .btn--bien:hover:not(:disabled) { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .prediccion .btn.btn--bien.btn--bien, .elegir .btn.btn--bien.btn--bien { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .prediccion .btn.btn--mal.btn--mal, .elegir .btn.btn--mal.btn--mal { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion--codigo .btn { font-family: var(--fuente-codigo); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- La partición ---------- */
+    .bajo-particion { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-1) var(--esp-5); }
+    .bajo-particion > * { margin: 0; }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-1) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 1em; height: 1em; margin-right: 0.35em; vertical-align: -0.15em; border: 2px solid; border-radius: 4px; }
+    .leyenda .leyenda__activo::before { border-color: var(--color-acento); background: linear-gradient(#fff, #fff) center / 45% 45% no-repeat, var(--color-acento-suave); }
+    .leyenda .leyenda__espera::before { border-style: dashed; border-color: #9aa4b2; }
+    .leyenda .leyenda__listo::before { width: 0.8em; height: 0.8em; border-color: var(--color-ok); border-bottom-width: 3px; background: var(--color-ok-suave); }
+
+    /* ---------- Paso 3: la mitad ---------- */
+    .cuentas { display: grid; grid-template-columns: auto auto; justify-content: center; gap: var(--esp-1) var(--esp-4); margin: var(--esp-3) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .cuentas dt { color: var(--color-texto-suave); }
+    .cuentas dd { margin: 0; font-weight: 700; }
+    .cuentas--oculta dd { visibility: hidden; }
+
+    /* ---------- Paso 6: los pisos ---------- */
+    .pisos { display: grid; gap: var(--esp-2); }
+    .pisos__fila { display: grid; grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); gap: 3px; animation: aparecer var(--dur) ease both; }
+    .pisos__grupo { display: grid; place-items: center; min-width: 0; height: 1.9rem; border: 2px solid var(--color-azul); border-radius: 6px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-azul); overflow: hidden; }
+    .pisos__fila--hojas .pisos__grupo { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .pisos__mezclas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-1); font-size: var(--texto-sm); }
+    .pisos__mezclas li { display: flex; justify-content: space-between; gap: var(--esp-3); padding: var(--esp-1) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie); animation: aparecer var(--dur) ease both; }
+    .pisos__mezclas li strong { font-family: var(--fuente-codigo); color: var(--color-azul); }
+    .pisos__mezclas li.pisos__total { background: var(--color-azul-suave); font-weight: 700; }
+    .tabla-carrera { width: 100%; margin-top: var(--esp-3); border-collapse: separate; border-spacing: 0; font-size: var(--texto-sm); }
+    .tabla-carrera th { padding: var(--esp-1) var(--esp-2); border-bottom: 2px solid var(--color-borde); text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .tabla-carrera td { padding: var(--esp-2); border-bottom: 1px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .tabla-carrera td.tabla-carrera__vacia { color: var(--color-texto-suave); font-weight: 400; }
+    .tabla-carrera tr.tabla-carrera--activa td { background: var(--color-acento-suave); }
+    .tabla-carrera td.tabla-carrera__merge { color: var(--color-ok); }
+
+    /* ---------- Paso 7: trampas ---------- */
+    .versiones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: 0 0 var(--esp-3); }
+    .versiones .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-size: var(--texto-sm); }
+    .versiones .btn[aria-current="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .versiones .btn.version--lista::after { content: " ✓"; color: var(--color-ok); }
+    .codigo .linea.linea--trampa { background: rgba(255, 170, 60, 0.18); box-shadow: inset 4px 0 0 #f2a23c; }
+
+    /* ---------- La pila, más compacta ---------- */
+    .lab .pila { margin-top: var(--esp-3); }
+    .lab .marco { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--esp-3); padding: 0.35rem var(--esp-3); }
+    .lab .marco__cabecera { flex: 1 1 100%; }
+    .lab .marco__vars { flex: 0 1 auto; margin-top: 0.3rem; min-height: 0; gap: var(--esp-1) var(--esp-2); }
+    .lab .marco__falta { flex: 1 0 auto; margin-top: 0.3rem; text-align: right; }
+    .lab .marco .var { font-size: var(--texto-xs); }
+    .lab .marco--programa .marco__vars { display: none; }
+    .lab .pila__marcos { gap: 0.4rem; }
+    .lab .rotulo { min-height: 0; }
+    .lab .rotulo__llamada { font-size: var(--texto-xs); }
+    .lab .rotulo .var { font-size: 0.75rem; }
+    .lab .rotulo__cuerpo { flex-basis: auto; gap: var(--esp-1); }
+    /* Las variables ya se ven en la tarjeta: el rótulo dice solo qué llamada corre */
+    .lab .rotulo .var { display: none; }
+
+    #paso-mezclar .lista { --lista-max: 2.5rem; }
+    #p5-prediccion { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+    #p5-prediccion .btn { font-size: var(--texto-xs); }
+    #p7-opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* ---------- Espacios en blanco dentro del código ---------- */
+    .codigo__elegir { font: inherit; font-weight: 700; max-width: 100%; padding: 0 0.3em; border: 2px dashed var(--tk-numero); border-radius: 6px; background: #232a33; color: var(--tk-numero); cursor: pointer; }
+    .codigo__elegir:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: 2px; }
+    .codigo__elegir--lleno { border-style: solid; }
+
+    /* ---------- Pruebas del reto ---------- */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 120ms; }
+    .pruebas li:nth-child(3) { animation-delay: 240ms; }
+    .pruebas li:nth-child(4) { animation-delay: 360ms; }
+    .pruebas li:nth-child(5) { animation-delay: 480ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.9rem; line-height: 1.45; padding: var(--esp-3) 0; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .codigo--reto { font-size: 1rem; }
+      .lab .explicacion { margin-top: var(--esp-3); }
+      .lab .fila-botones { margin-top: var(--esp-3); gap: var(--esp-2); }
+      .lab .fila-botones .btn { padding-inline: var(--esp-2); font-size: var(--texto-sm); }
+    }
+    @media (max-width: 480px) {
+      .lab .codigo--largo, .codigo--reto, .lab .codigo--trampa { font-size: 0.75rem; }
+      .codigo--largo .linea, .codigo--reto .linea, .codigo--trampa .linea { padding-left: 2.5rem; padding-right: var(--esp-2); white-space: pre-wrap; }
+      .codigo--largo .linea::before, .codigo--reto .linea::before, .codigo--trampa .linea::before { width: 1.75rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); font-size: var(--texto-xs); }
+      .pisos__grupo { height: 1.6rem; font-size: 0.7rem; border-width: 1.5px; border-radius: 4px; }
+      .pisos__fila { gap: 2px; }
+      .tabla-carrera th, .tabla-carrera td { padding-left: var(--esp-1); padding-right: var(--esp-1); }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual > :first-child { margin-top: var(--esp-5); }
+      /* En el móvil, lo que se toca va debajo del dibujo que cambia (el dibujo no tiene
+         nada que se enfoque: el orden del teclado no cambia) */
+      .lab--visual-primero { display: flex; flex-direction: column; }
+      .lab--visual-primero > .lab__visual { order: -1; }
+      .lab--visual-primero > .lab__visual > :first-child { margin-top: 0; }
+      .lab--visual-primero > .lab__principal { margin-top: var(--esp-4); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar-mergesort">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: partir hasta tener de a uno y mezclar hacia arriba -->
+    <section class="paso" id="paso-partir" data-requiere aria-labelledby="h-partir">
+      <span class="paso__etiqueta">Ordenar 5/7 · Mergesort</span>
+      <h1 class="paso__titulo" id="h-partir">Partir y mezclar</h1>
+      <p>Una lista de <strong>un solo valor</strong> ya está ordenada. Parte las notas a la mitad hasta llegar ahí y después mézclalas de a dos.</p>
+
+      <div class="tarjeta lab lab--visual-primero">
+        <div class="lab__principal">
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-otra" hidden>↺ Otra vez</button>
+            <button type="button" class="btn btn-primario" id="p1-accion">✂ Partir a la mitad</button>
+          </div>
+          <p class="contador" id="p1-contador">Comparaciones: <strong>0</strong></p>
+        </div>
+        <div class="lab__visual">
+          <div id="p1-particion"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Repaso: mezclar dos listas ordenadas a mano -->
+    <section class="paso" id="paso-mezclar" data-requiere aria-labelledby="h-mezclar">
+      <h2 class="paso__titulo" id="h-mezclar">La última mezcla, a mano</h2>
+      <p>Las dos mitades ya volvieron ordenadas. Júntalas como en la lección anterior: mira la primera que queda de cada una y toma la <strong>menor</strong>.</p>
+
+      <div class="tarjeta lab lab--visual-primero">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p2-pregunta">¿Cuál va ahora a <code>resultado</code>?</p>
+          <div class="elegir elegir--codigo" id="p2-acciones" role="group" aria-labelledby="p2-pregunta"></div>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <p class="contador" id="p2-contador">Comparaciones: <strong>0</strong></p>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista"><code>a</code> (la izquierda)</p>
+          <div id="p2-a"></div>
+          <p class="rotulo-lista"><code>b</code> (la derecha)</p>
+          <div id="p2-b"></div>
+          <p class="rotulo-lista"><code>resultado</code></p>
+          <div id="p2-resultado"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. medio y las rebanadas -->
+    <section class="paso" id="paso-medio" data-requiere aria-labelledby="h-medio">
+      <h2 class="paso__titulo" id="h-medio">¿Y si no se parte justo?</h2>
+      <p>Python parte con <code>medio = len(lista) // 2</code>, <code>lista[:medio]</code> y <code>lista[medio:]</code>. Con 7 notas, <code>7 // 2</code> es 3.</p>
+
+      <div class="tarjeta lab lab--visual-primero">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p3-pregunta">¿Cuántas notas van a cada lado?</p>
+          <div class="prediccion" id="p3-prediccion" role="group" aria-labelledby="p3-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="3-4" aria-pressed="false">3 y 4</button>
+            <button type="button" class="btn btn-secundario" data-valor="4-3" aria-pressed="false">4 y 3</button>
+            <button type="button" class="btn btn-secundario" data-valor="3-3" aria-pressed="false">3 y 3 (sobra una)</button>
+            <button type="button" class="btn btn-secundario" data-valor="35" aria-pressed="false">3,5 y 3,5</button>
+          </div>
+          <dl class="cuentas cuentas--oculta" id="p3-cuentas">
+            <dt>medio = len(lista) // 2</dt><dd id="p3-medio"></dd>
+            <dt>lista[:medio]</dt><dd id="p3-izq"></dd>
+            <dt>lista[medio:]</dt><dd id="p3-der"></dd>
+          </dl>
+          <p class="prediccion__pregunta" id="p3-largo-pregunta" style="margin-top: var(--esp-4)">Prueba con otros largos</p>
+          <div class="elegir elegir--codigo" id="p3-largo" role="group" aria-labelledby="p3-largo-pregunta">
+            <button type="button" class="btn btn-secundario" data-n="4" aria-pressed="false" disabled>4</button>
+            <button type="button" class="btn btn-secundario" data-n="5" aria-pressed="false" disabled>5</button>
+            <button type="button" class="btn btn-secundario" data-n="6" aria-pressed="false" disabled>6</button>
+            <button type="button" class="btn btn-secundario" data-n="7" aria-pressed="true" disabled>7</button>
+            <button type="button" class="btn btn-secundario" data-n="8" aria-pressed="false" disabled>8</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p3-particion"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. La función recursiva, línea a línea -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="h-traza">
+      <h2 class="paso__titulo" id="h-traza">mergesort, línea a línea</h2>
+      <p>Cada llamada parte su lista, ordena cada mitad con <strong>otra llamada</strong> y las mezcla con <code>mezclar</code>, la de la lección anterior.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+            <button type="button" class="btn btn-secundario" id="p4-saltar">Siguiente salto ▸▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p4-particion"></div>
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. El orden real, con 8 notas -->
+    <section class="paso" id="paso-orden" data-requiere aria-labelledby="h-orden">
+      <h2 class="paso__titulo" id="h-orden">¿En qué orden pasa todo?</h2>
+      <p>Ahora con las 8 notas. Python no parte todo de una vez: cada llamada espera a que su izquierda vuelva ordenada.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">Cuando <code>[14, 9]</code> ya volvió ordenada, ¿qué hace Python después?</p>
+          <div class="prediccion prediccion--codigo" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="der" aria-pressed="false">ordena [17, 11]</button>
+            <button type="button" class="btn btn-secundario" data-valor="otra" aria-pressed="false">ordena [6, 19, 3, 12]</button>
+            <button type="button" class="btn btn-secundario" data-valor="mezcla" aria-pressed="false">mezcla [9, 14] con [17, 11]</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Ejecutar línea ▸</button>
+            <button type="button" class="btn btn-secundario" id="p5-saltar">Siguiente mezcla ▸▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p5-particion"></div>
+          <div class="bajo-particion">
+            <p class="leyenda" aria-hidden="true"><span class="leyenda__activo">trabaja ahora</span><span class="leyenda__espera">espera</span><span class="leyenda__listo">ya ordenada</span></p>
+            <p class="contador" id="p5-contador">Comparaciones: <strong>0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Cuántos pisos -->
+    <section class="paso" id="paso-pisos" data-requiere aria-labelledby="h-pisos">
+      <h2 class="paso__titulo" id="h-pisos">¿Cuántos pisos?</h2>
+      <p>Con 8 notas, la lista se partió <strong>3 veces</strong> (8 → 4 → 2 → 1), como las mitades de Búsquedas. Y para volver a subir, 3 pisos de mezclas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p6-pregunta">Con 16 notas, ¿cuántas veces se parte?</p>
+          <div class="prediccion" id="p6-prediccion" role="group" aria-labelledby="p6-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="4" aria-pressed="false">4</button>
+            <button type="button" class="btn btn-secundario" data-valor="6" aria-pressed="false">6</button>
+            <button type="button" class="btn btn-secundario" data-valor="8" aria-pressed="false">8</button>
+            <button type="button" class="btn btn-secundario" data-valor="16" aria-pressed="false">16</button>
+          </div>
+          <div class="elegir elegir--codigo" id="p6-n" role="group" aria-label="Cuántas notas ordenar">
+            <button type="button" class="btn btn-secundario" data-n="4" aria-pressed="false" disabled>4 notas</button>
+            <button type="button" class="btn btn-secundario" data-n="8" aria-pressed="true" disabled>8 notas</button>
+            <button type="button" class="btn btn-secundario" data-n="16" aria-pressed="false" disabled>16 notas</button>
+          </div>
+          <table class="tabla-carrera" id="p6-tabla">
+            <thead><tr><th scope="col">notas</th><th scope="col">veces que se parte</th><th scope="col">mergesort</th><th scope="col">burbuja</th></tr></thead>
+            <tbody>
+              <tr data-n="4"><td>4</td><td class="tabla-carrera__vacia">?</td><td class="tabla-carrera__vacia">?</td><td class="tabla-carrera__vacia">?</td></tr>
+              <tr data-n="8"><td>8</td><td class="tabla-carrera__vacia">?</td><td class="tabla-carrera__vacia">?</td><td class="tabla-carrera__vacia">?</td></tr>
+              <tr data-n="16"><td>16</td><td class="tabla-carrera__vacia">?</td><td class="tabla-carrera__vacia">?</td><td class="tabla-carrera__vacia">?</td></tr>
+            </tbody>
+          </table>
+          <p class="nota">Las columnas de mergesort y burbuja cuentan comparaciones.</p>
+        </div>
+        <div class="lab__visual">
+          <div class="pisos" id="p6-pisos" aria-label="Cómo se parte la lista"></div>
+          <ul class="pisos__mezclas" id="p6-mezclas" aria-live="polite"></ul>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Trampas -->
+    <section class="paso" id="paso-trampas" data-requiere aria-labelledby="h-trampas">
+      <h2 class="paso__titulo" id="h-trampas">Tres trampas</h2>
+      <p>Cada versión tiene un cambio (resaltado). ¿Qué imprime cada una?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="versiones" id="p7-versiones" role="group" aria-label="Versión"></div>
+          <pre class="codigo codigo--trampa" id="p7-codigo" aria-label="Código de la versión"></pre>
+        </div>
+        <div class="lab__visual">
+          <p class="prediccion__pregunta" id="p7-pregunta"></p>
+          <div class="prediccion prediccion--codigo" id="p7-opciones" role="group" aria-labelledby="p7-pregunta"></div>
+          <div class="consola" id="p7-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-siguiente" hidden>Siguiente versión →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">Completa mergesort</h2>
+      <p>Elige qué va en cada espacio en blanco. La probaremos con cinco listas, una de largo impar y dos muy cortas.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--reto" id="reto-codigo" aria-label="Código con tres espacios en blanco"></pre>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Mergesort parte la lista a la mitad hasta tener listas de <strong>un valor</strong> (ya ordenadas) y las <strong>mezcla de a dos</strong> hacia arriba: pocos pisos, pocas comparaciones.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../comparar/index.html">Siguiente: ¿Cuál ordena más rápido? →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/particion.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function demora(ms) { return Pasos.reducirMovimiento ? Math.min(ms, 200) : ms; }
+
+  function boton(texto, alTocar) {
+    var b = crear("button", "btn btn-secundario", texto);
+    b.type = "button";
+    b.addEventListener("click", function () { alTocar(b); });
+    return b;
+  }
+
+  function txt(lista) { return "[" + lista.join(", ") + "]"; }
+
+  function plural(n, uno, varios) { return n + " " + (n === 1 ? uno : varios); }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Código Python coloreado ----------
+     Cada línea del texto es una .linea; {{nombre}} deja un <span data-hueco="nombre">
+     donde después va un espacio en blanco. */
+  var PALABRAS = { def: 1, if: 1, elif: 1, else: 1, return: 1, while: 1, for: 1, in: 1, not: 1, and: 1, or: 1, True: 1, False: 1, None: 1 };
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function resaltar(linea) {
+    var re = /(\{\{\w+\}\})|(#.*$)|("[^"]*")|(\d+)|([A-Za-z_]\w*)|([\s\S])/g;
+    var m, html = "";
+    while ((m = re.exec(linea))) {
+      if (m[1]) html += '<span data-hueco="' + m[1].slice(2, -2) + '"></span>';
+      else if (m[2]) html += '<span class="tk-comentario">' + esc(m[2]) + "</span>";
+      else if (m[3]) html += '<span class="tk-texto">' + esc(m[3]) + "</span>";
+      else if (m[4]) html += '<span class="tk-numero">' + m[4] + "</span>";
+      else if (m[5]) {
+        var clase = PALABRAS[m[5]] ? "tk-palabra" : /^\s*\(/.test(linea.slice(re.lastIndex)) ? "tk-funcion" : "tk-variable";
+        html += '<span class="' + clase + '">' + m[5] + "</span>";
+      } else html += esc(m[6]);
+    }
+    return html;
+  }
+
+  function escribirCodigo(pre, texto) {
+    pre.innerHTML = "<code>" + texto.split("\n").map(function (l) {
+      return '<span class="linea">' + resaltar(l) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function hueco(pre, nombre) { return pre.querySelector('[data-hueco="' + nombre + '"]'); }
+
+  function pintarContador(el, n) {
+    var fuerte = el.querySelector("strong");
+    if (fuerte.textContent === String(n)) return;
+    fuerte.textContent = String(n);
+    el.classList.remove("contador--cambio");
+    void el.offsetWidth;
+    if (n > 0) el.classList.add("contador--cambio");
+  }
+
+  /* ---------- mezclar(a, b), como en la lección anterior ----------
+     Devuelve el resultado, cuántas veces se comparó a[i] <= b[j] y, para cada valor del
+     resultado, de dónde vino: [0, i] (de a) o [1, j] (de b). */
+  function mezclar(a, b) {
+    var res = [], fuentes = [], i = 0, j = 0, comps = 0;
+    while (i < a.length && j < b.length) {
+      comps++;
+      if (a[i] <= b[j]) { res.push(a[i]); fuentes.push([0, i]); i++; }
+      else { res.push(b[j]); fuentes.push([1, j]); j++; }
+    }
+    for (; i < a.length; i++) { res.push(a[i]); fuentes.push([0, i]); }
+    for (; j < b.length; j++) { res.push(b[j]); fuentes.push([1, j]); }
+    return { res: res, comps: comps, fuentes: fuentes };
+  }
+
+  /* El árbol de trozos: cada nodo es una llamada, con su lista, su piso y su columna */
+  function armarArbol(lista) {
+    function nodo(id, l, desde, piso, padre) {
+      var n = { id: id, lista: l, desde: desde, piso: piso, padre: padre, hijos: [] };
+      if (l.length > 1) {
+        var m = Math.floor(l.length / 2);
+        n.medio = m;
+        n.hijos = [nodo(id + "0", l.slice(0, m), desde, piso + 1, id), nodo(id + "1", l.slice(m), desde + m, piso + 1, id)];
+      }
+      return n;
+    }
+    return nodo("r", lista.slice(), 0, 0, null);
+  }
+
+  function porPiso(raiz) {
+    var pisos = [];
+    (function visitar(n) {
+      (pisos[n.piso] = pisos[n.piso] || []).push(n);
+      n.hijos.forEach(visitar);
+    })(raiz);
+    return pisos;
+  }
+
+  // Los valores de un trozo hijo vuelan hasta el trozo de arriba, ya mezclados
+  function volarMezcla(p, idPadre, idsHijos, fuentes, valores) {
+    fuentes.forEach(function (f, k) {
+      var origen = p.celda(idsHijos[f[0]], f[1]);
+      var destino = p.celda(idPadre, k);
+      if (origen && destino) Codigo.volar(origen, destino, String(valores[k]), "lista__vuelo");
+    });
+  }
+
+  var NOTAS = [14, 9, 17, 11, 6, 19, 3, 12];
+
+  /* ---------- 1. Partir y mezclar ---------- */
+  var p1 = Particion.crear($("p1-particion"), { n: 8, etiqueta: "Las 8 notas partidas en pedazos" });
+  var raiz1 = armarArbol(NOTAS);
+  var pisos1 = porPiso(raiz1);
+  var juego1 = null;
+
+  var TEXTOS1 = {
+    partir: [
+      "Ocho notas desordenadas. Toca <strong>Partir</strong>: la lista se corta por la mitad.",
+      "Dos mitades de 4. Sigue partiendo.",
+      "Cuatro trozos de 2. Una vez más."
+    ],
+    hojas: "Ocho listas de <strong>un solo valor</strong>. Cada una <strong>ya está ordenada</strong>: no hay con quién compararla. Ahora junta de a dos hacia arriba.",
+    mezclar: [
+      "",
+      "Dos listas ordenadas de 4. Cada mezcla miró solo la primera que quedaba de cada lista. Falta la última.",
+      "Cuatro listas ordenadas de 2. Cada par se mezcló con <strong>1 comparación</strong>. Sigue."
+    ],
+    fin: "¡La lista entera quedó ordenada! Solo se mezclaron listas que ya estaban ordenadas."
+  };
+
+  function empezar1() {
+    juego1 = { fase: "partir", piso: 0, comps: 0 };
+    p1.vaciar();
+    p1.trozo({ id: "r", piso: 0, desde: 0, valores: NOTAS });
+    $("p1-explicacion").innerHTML = TEXTOS1.partir[0];
+    $("p1-accion").textContent = "✂ Partir a la mitad";
+    $("p1-accion").hidden = false;
+    $("p1-otra").hidden = true;
+    pintarContador($("p1-contador"), 0);
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  function accion1() {
+    var j = juego1;
+    if (j.fase === "partir") {
+      j.piso++;
+      pisos1[j.piso].forEach(function (n) {
+        p1.trozo({ id: n.id, piso: n.piso, desde: n.desde, valores: n.lista, padre: n.padre });
+      });
+      if (j.piso === pisos1.length - 1) {
+        pisos1[j.piso].forEach(function (n) { p1.estado(n.id, "listo"); });
+        j.fase = "mezclar";
+        $("p1-explicacion").innerHTML = TEXTOS1.hojas;
+        $("p1-accion").textContent = "Mezclar de a dos ↑";
+      } else {
+        $("p1-explicacion").innerHTML = TEXTOS1.partir[j.piso];
+      }
+      return;
+    }
+    if (j.fase !== "mezclar") return;
+    j.piso--;
+    var comps = 0;
+    pisos1[j.piso].forEach(function (n) {
+      var a = n.hijos[0].ordenada || n.hijos[0].lista;
+      var b = n.hijos[1].ordenada || n.hijos[1].lista;
+      var m = mezclar(a, b);
+      n.ordenada = m.res;
+      comps += m.comps;
+      p1.valores(n.id, m.res);
+      p1.estado(n.id, "listo");
+      volarMezcla(p1, n.id, [n.hijos[0].id, n.hijos[1].id], m.fuentes, m.res);
+      n.hijos.forEach(function (h) { p1.estado(h.id, "apagado"); });
+    });
+    j.comps += comps;
+    pintarContador($("p1-contador"), j.comps);
+    if (j.piso === 0) {
+      j.fase = "fin";
+      $("p1-explicacion").innerHTML = TEXTOS1.fin;
+      $("p1-accion").hidden = true;
+      $("p1-otra").hidden = false;
+      $("p1-otra").focus();
+      Pasos.feedback($("p1-fb"), "ok", "Partir hasta tener listas de un valor y mezclarlas de a dos hacia arriba: eso es mergesort (ordenar mezclando). " +
+        j.comps + " comparaciones: 4 + 6 + 7, una tanda de mezclas por piso.");
+      leccion.desbloquear();
+    } else {
+      $("p1-explicacion").innerHTML = TEXTOS1.mezclar[j.piso];
+    }
+  }
+
+  $("p1-accion").addEventListener("click", accion1);
+  $("p1-otra").addEventListener("click", function () {
+    pisos1.forEach(function (fila) { fila.forEach(function (n) { delete n.ordenada; }); });
+    empezar1();
+    $("p1-accion").focus();
+  });
+  Codigo.reservarAlto($("p1-explicacion"), TEXTOS1.partir.concat([TEXTOS1.hojas, TEXTOS1.fin], TEXTOS1.mezclar),
+    function (copia, t) { copia.innerHTML = t; });
+
+  /* ---------- 2. La última mezcla, a mano ---------- */
+  var A2 = [9, 11, 14, 17];
+  var B2 = [3, 6, 12, 19];
+  var listaA = Lista.crear($("p2-a"), A2, { capacidad: 8 });
+  var listaB = Lista.crear($("p2-b"), B2, { capacidad: 8 });
+  var listaR = Lista.crear($("p2-resultado"), [], { capacidad: 8 });
+  var juego2 = null;
+
+  function pintar2() {
+    var j = juego2;
+    listaA.clases(function (i) { return i < j.i ? "lista__casilla--apagada" : ""; });
+    listaB.clases(function (i) { return i < j.j ? "lista__casilla--apagada" : ""; });
+    listaA.punteros({ i: { i: j.i, color: "azul" } });
+    listaB.punteros({ j: { i: j.j, color: "naranja" } });
+    pintarContador($("p2-contador"), j.comps);
+    var acc = $("p2-acciones");
+    acc.textContent = "";
+    if (j.i < A2.length && j.j < B2.length) {
+      $("p2-pregunta").innerHTML = "¿Cuál va ahora a <code>resultado</code>?";
+      acc.appendChild(boton("a[" + j.i + "] = " + A2[j.i], function (b) { tomar2(0, b); }));
+      acc.appendChild(boton("b[" + j.j + "] = " + B2[j.j], function (b) { tomar2(1, b); }));
+    } else if (!j.fin) {
+      var cual = j.i < A2.length ? "a" : "b";
+      var resto = cual === "a" ? A2.slice(j.i) : B2.slice(j.j);
+      $("p2-pregunta").innerHTML = "<code>" + (cual === "a" ? "b" : "a") + "</code> se quedó sin valores.";
+      $("p2-explicacion").innerHTML = "Lo que sobra en <code>" + cual + "</code> ya está ordenado y es mayor que todo lo de <code>resultado</code>: va al final, tal cual.";
+      acc.appendChild(boton("+ " + cual + "[" + (cual === "a" ? j.i : j.j) + ":] = " + txt(resto), function () { sobra2(cual); }));
+    } else {
+      $("p2-pregunta").innerHTML = "¡Listo!";
+      acc.appendChild(boton("↺ Otra vez", function () { empezar2(); $("p2-acciones").querySelector("button").focus(); }));
+    }
+  }
+
+  function empezar2() {
+    juego2 = { i: 0, j: 0, comps: 0, fin: false };
+    listaR.valores([]);
+    $("p2-explicacion").innerHTML = "Las dos están ordenadas: la menor de todas tiene que ser <code>a[0]</code> o <code>b[0]</code>.";
+    Pasos.limpiarFeedback($("p2-fb"));
+    pintar2();
+  }
+
+  function tomar2(lado, b) {
+    var j = juego2;
+    var va = A2[j.i];
+    var vb = B2[j.j];
+    var bien = va <= vb ? 0 : 1;
+    if (lado !== bien) {
+      b.classList.add("btn--mal");
+      $("p2-explicacion").innerHTML = '<span class="pista-texto">💡 Toma la <strong>menor</strong> de las dos: ' + Math.min(va, vb) + " &lt; " + Math.max(va, vb) + ".</span>";
+      return;
+    }
+    j.comps++;
+    var origen = lado === 0 ? listaA.valor(j.i) : listaB.valor(j.j);
+    listaR.agregar(lado === 0 ? va : vb, origen);
+    $("p2-explicacion").innerHTML = "<code>" + va + " &lt;= " + vb + "</code> es " + chip(va <= vb) + ": va <strong>" + (lado === 0 ? va : vb) + "</strong> y avanza <code>" + (lado === 0 ? "i" : "j") + "</code>.";
+    if (lado === 0) j.i++; else j.j++;
+    pintar2();
+    var primero = $("p2-acciones").querySelector("button");
+    if (primero) primero.focus();
+  }
+
+  function sobra2(cual) {
+    var j = juego2;
+    var lista = cual === "a" ? listaA : listaB;
+    var valores = cual === "a" ? A2 : B2;
+    var desde = cual === "a" ? j.i : j.j;
+    for (var k = desde; k < valores.length; k++) listaR.agregar(valores[k], lista.valor(k));
+    if (cual === "a") j.i = A2.length; else j.j = B2.length;
+    j.fin = true;
+    pintar2();
+    $("p2-explicacion").innerHTML = "<code>resultado</code> es <strong>" + txt(listaR.lista) + "</strong>: la lista entera, ordenada.";
+    Pasos.feedback($("p2-fb"), "ok", "Juntar 8 notas costó " + j.comps + " comparaciones: como mucho una por valor (len(a) + len(b) - 1). Es rápido porque las dos ya venían ordenadas.");
+    $("p2-acciones").querySelector("button").focus();
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. ¿Y si no se parte justo? ---------- */
+  var p3 = Particion.crear($("p3-particion"), { n: 8, etiqueta: "Una lista partida en dos con medio = len(lista) // 2" });
+  var n3 = 7;
+  var acerto3 = false;
+
+  function pintar3(conHijos) {
+    var lista = NOTAS.slice(0, n3);
+    var m = Math.floor(n3 / 2);
+    p3.vaciar();
+    var x = Math.floor((8 - n3) / 2);   // centrada en las 8 columnas
+    p3.trozo({ id: "todo", piso: 0, desde: x, valores: lista });
+    $("p3-medio").textContent = n3 + " // 2 = " + m;
+    $("p3-izq").textContent = txt(lista.slice(0, m));
+    $("p3-der").textContent = txt(lista.slice(m));
+    if (!conHijos) return;
+    p3.trozo({ id: "izq", piso: 1, desde: x, valores: lista.slice(0, m), padre: "todo", rotulo: "lista[:" + m + "]" });
+    p3.trozo({ id: "der", piso: 1, desde: x + m, valores: lista.slice(m), padre: "todo", rotulo: "lista[" + m + ":]" });
+  }
+
+  $("p3-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (acerto3) return;
+      var v = b.getAttribute("data-valor");
+      $("p3-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (v !== "3-4") {
+        b.classList.add("btn--mal");
+        var pistas = {
+          "4-3": "lista[:3] toma las posiciones 0, 1 y 2: el final no se incluye. Son 3; las demás van a la derecha.",
+          "3-3": "No sobra ninguna: lista[:medio] llega hasta medio sin incluirlo, y lista[medio:] empieza justo en medio. Entre las dos están todas.",
+          "35": "// es la división entera: 7 // 2 da 3, sin decimales. No hay media nota."
+        };
+        Pasos.feedback($("p3-fb"), "pista", pistas[v]);
+        return;
+      }
+      acerto3 = true;
+      b.classList.add("btn--bien");
+      $("p3-cuentas").classList.remove("cuentas--oculta");
+      pintar3(true);
+      $("p3-largo").querySelectorAll("button").forEach(function (o) { o.disabled = false; });
+      Pasos.feedback($("p3-fb"), "ok", "3 a la izquierda y 4 a la derecha. lista[:3] y lista[3:] se tocan en el 3 sin repetir ni perder a nadie. " +
+        "Con largo impar, la derecha lleva uno más. Prueba otros largos.");
+      leccion.desbloquear();
+    });
+  });
+
+  $("p3-largo").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      n3 = Number(b.getAttribute("data-n"));
+      $("p3-largo").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      pintar3(true);
+    });
+  });
+  pintar3(false);
+
+  /* ---------- La traza de mergesort ----------
+     Un paso por línea (o, en modo «mezclas», solo las líneas importantes). Cada estado trae
+     la pila (Pila.crear), los trozos de la partición y las comparaciones hechas. */
+  var FUNCION = [
+    "# def mezclar(a, b): la de la lección anterior",
+    "def mergesort(lista):",
+    "    if len(lista) <= 1:",
+    "        return lista",
+    "    medio = len(lista) // 2",
+    "    izquierda = mergesort(lista[:medio])",
+    "    derecha = mergesort(lista[medio:])",
+    "    return mezclar(izquierda, derecha)"
+  ];
+  var L = { def: 1, base: 2, devuelve: 3, medio: 4, izq: 5, der: 6, mezcla: 7, print: 9 };
+
+  function programaCodigo(lista) { return FUNCION.concat(["", "print(mergesort(" + txt(lista) + "))"]).join("\n"); }
+
+  function trazaMerge(lista, modo) {
+    var lineas = modo !== "mezclas";
+    var raiz = armarArbol(lista);
+    var pasos = [];
+    var trozos = {};
+    var orden = [];
+    var marcos = [];       // la pila: { nodo, vars, linea, falta }
+    var comps = 0;
+    var programaEspera = false;
+
+    function titulo(n) { return "mergesort(" + txt(n.lista) + ")"; }
+    function ponerTrozo(n, cambios) {
+      if (!trozos[n.id]) {
+        orden.push(n.id);
+        trozos[n.id] = { id: n.id, piso: n.piso, desde: n.desde, valores: n.lista.slice(), padre: n.padre, estado: null };
+      }
+      for (var k in cambios) trozos[n.id][k] = cambios[k];
+    }
+    function programa(recibe) {
+      var p = Pila.programa();
+      if (programaEspera || recibe !== undefined) {
+        p.linea = L.print;
+        p.ficha = "programa";
+        p.falta = "print(▢)";
+      }
+      if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+      return p;
+    }
+    function foto(arriba, extra) {
+      var pila = [programa(extra && extra.programaRecibe)];
+      marcos.forEach(function (f, k) {
+        var t = Pila.llamada(titulo(f.nodo), f.vars.slice());
+        if (f.linea !== undefined) { t.linea = f.linea; t.falta = f.falta; t.ficha = txt(f.nodo.lista); }
+        if (k === marcos.length - 1 && arriba) for (var c in arriba) t[c] = arriba[c];
+        pila.push(t);
+      });
+      var e = { pila: pila, comps: comps, trozos: orden.map(function (id) {
+        var t = trozos[id], c = {};
+        for (var k in t) c[k] = t[k];
+        c.valores = t.valores.slice();
+        return c;
+      }) };
+      if (extra) for (var x in extra) if (x !== "programaRecibe") e[x] = extra[x];
+      return e;
+    }
+
+    function llamar(n, lineaPadre, texto) {
+      var padre = marcos[marcos.length - 1];
+      if (padre) {
+        padre.linea = lineaPadre;
+        padre.falta = (lineaPadre === L.izq ? "izquierda" : "derecha") + " = ▢";
+        ponerTrozo(padre.nodo, { estado: "espera" });
+      } else programaEspera = true;
+      var marco = { nodo: n, vars: [] };
+      marcos.push(marco);
+      ponerTrozo(n, { estado: "activo" });
+      pasos.push({ linea: lineaPadre, fase: "ida", parada: lineas, texto: texto, estado: foto() });
+
+      if (lineas) {
+        pasos.push({ linea: L.def, fase: "ida",
+          texto: "Nace una tarjeta de <strong>mergesort</strong> con su propia <code>lista = " + txt(n.lista) + "</code>.",
+          estado: foto() });
+        pasos.push({ linea: L.base,
+          texto: "¿<code>len(lista) &lt;= 1</code>? <code>" + n.lista.length + " &lt;= 1</code> es " + chip(n.lista.length <= 1) +
+            (n.lista.length <= 1 ? ": el caso base." : ": hay que partir."),
+          estado: foto() });
+      }
+      if (n.lista.length <= 1) {
+        ponerTrozo(n, { estado: "listo" });
+        pasos.push({ linea: L.devuelve,
+          texto: "<strong>return lista</strong>: <code>" + txt(n.lista) + "</code> tiene un solo valor, ya está ordenada. Vuelve tal cual.",
+          estado: foto({ devuelve: txt(n.lista) }) });
+        marcos.pop();
+        return n.lista.slice();
+      }
+      var m = n.medio;
+      marco.vars.push(["medio", m]);
+      pasos.push({ linea: L.medio,
+        texto: (lineas ? "" : "Tiene " + n.lista.length + " valores, más de uno. ") + "<code>medio = " + n.lista.length + " // 2</code> = <strong>" + m + "</strong>.",
+        estado: foto() });
+
+      var lados = [["izquierda", L.izq, "lista[:" + m + "]"], ["derecha", L.der, "lista[" + m + ":]"]];
+      var res = [];
+      lados.forEach(function (lado, k) {
+        var hijo = n.hijos[k];
+        res[k] = llamar(hijo, lado[1], "<code>" + lado[2] + "</code> es <code>" + txt(hijo.lista) + "</code>: llama a <strong>" + titulo(hijo) + "</strong>. Esta tarjeta espera.");
+        ponerTrozo(n, { estado: "activo" });
+        pasos.push({ linea: lado[1], flecha: true, fase: "vuelta", parada: lineas,
+          texto: "Volvió <code>" + txt(res[k]) + "</code>, ordenada: ahora <strong>" + lado[0] + " = " + txt(res[k]) + "</strong>." +
+            (k === 1 ? " Las dos mitades están ordenadas." : ""),
+          estado: foto({ sigue: true, recibe: txt(res[k]) }) });
+        marco.linea = undefined;
+        marco.falta = undefined;
+        marco.vars.push([lado[0], txt(res[k])]);
+      });
+
+      var mz = mezclar(res[0], res[1]);
+      comps += mz.comps;
+      ponerTrozo(n, { valores: mz.res, estado: "listo" });
+      ponerTrozo(n.hijos[0], { estado: "apagado" });
+      ponerTrozo(n.hijos[1], { estado: "apagado" });
+      pasos.push({ linea: L.mezcla, parada: !lineas,
+        texto: "<code>mezclar(" + txt(res[0]) + ", " + txt(res[1]) + ")</code> las junta en <strong>" + txt(mz.res) + "</strong> (" +
+          plural(mz.comps, "comparación", "comparaciones") + ") y la devuelve.",
+        estado: foto({ devuelve: txt(mz.res) }, { vuela: { id: n.id, hijos: [n.hijos[0].id, n.hijos[1].id], fuentes: mz.fuentes } }) });
+      marcos.pop();
+      return mz.res;
+    }
+
+    ponerTrozo(raiz, {});
+    pasos.push({ linea: L.def, texto: "Python recuerda la receta <strong>mergesort</strong>. Todavía no la ejecuta.", estado: foto() });
+    var final = llamar(raiz, L.print, "El <code>print</code> necesita <strong>" + titulo(raiz) + "</strong>: Python la llama.");
+    programaEspera = false;
+    pasos.push({ linea: L.print, flecha: true, fase: "vuelta", parada: true, salida: txt(final),
+      texto: "Volvió <strong>" + txt(final) + "</strong> al programa: <code>print</code> la muestra. En total, " + plural(comps, "comparación", "comparaciones") + ".",
+      estado: foto(null, { programaRecibe: txt(final) }) });
+    return pasos;
+  }
+
+  /* Pinta los trozos de un estado sobre una partición, cambiando solo lo que cambió */
+  function pintarParticion(p, dibujados, e) {
+    var vivos = {};
+    e.trozos.forEach(function (t) {
+      vivos[t.id] = true;
+      var d = dibujados[t.id];
+      var clave = t.valores.join(",");
+      if (!d) {
+        p.trozo({ id: t.id, piso: t.piso, desde: t.desde, valores: t.valores, padre: t.padre });
+        d = dibujados[t.id] = { clave: clave, estado: null };
+      } else if (d.clave !== clave) {
+        p.valores(t.id, t.valores);
+        d.clave = clave;
+        if (e.vuela && e.vuela.id === t.id) volarMezcla(p, t.id, e.vuela.hijos, e.vuela.fuentes, t.valores);
+      }
+      if (d.estado !== t.estado) {
+        p.estado(t.id, t.estado);
+        d.estado = t.estado;
+      }
+    });
+    Object.keys(dibujados).forEach(function (id) {
+      if (!vivos[id]) { p.quitar(id); delete dibujados[id]; }
+    });
+  }
+
+  function crearTrazaMerge(prefijo, lista, modo, extra) {
+    var pre = $(prefijo + "-codigo");
+    escribirCodigo(pre, programaCodigo(lista));
+    var p = Particion.crear($(prefijo + "-particion"), { n: lista.length, max: extra.max, etiqueta: "La lista " + txt(lista) + " partida en pedazos" });
+    var dibujados = {};
+    var pila = extra.pila ? Pila.crear($(prefijo + "-pila"), { codigo: pre, rotulo: true }) : null;
+    var contador = $(prefijo + "-contador");
+    var traza = Traza.crear({
+      codigo: pre,
+      explicacion: $(prefijo + "-explicacion"),
+      consola: $(prefijo + "-consola"),
+      ejecutar: $(prefijo + "-ejecutar"),
+      reproducir: $(prefijo + "-reproducir"),
+      saltar: $(prefijo + "-saltar"),
+      reiniciar: $(prefijo + "-reiniciar"),
+      generar: function () { return trazaMerge(lista, modo); },
+      pila: pila,
+      intervalo: extra.intervalo || 900,
+      intervaloSaltar: 260,
+      alReiniciar: function () {
+        if (pila) pila.vaciar();
+        p.vaciar();
+        dibujados = {};
+        pintarParticion(p, dibujados, { trozos: [{ id: "r", piso: 0, desde: 0, valores: lista, padre: null, estado: null }] });
+        if (contador) pintarContador(contador, 0);
+        Pasos.limpiarFeedback($(prefijo + "-fb"));
+        if (extra.alReiniciar) extra.alReiniciar();
+      },
+      alPaso: function (paso) {
+        if (pila) pila.pintar(paso.estado);
+        pintarParticion(p, dibujados, paso.estado);
+        if (contador) pintarContador(contador, paso.estado.comps);
+      },
+      alTerminar: extra.alTerminar
+    });
+    return { traza: traza, particion: p, pila: pila };
+  }
+
+  /* ---------- 4. mergesort, línea a línea ---------- */
+  var LISTA4 = [14, 9, 17, 11];
+  var t4 = crearTrazaMerge("p4", LISTA4, "lineas", {
+    pila: true,
+    max: 2.2,
+    intervalo: 900,
+    alTerminar: function () {
+      Pasos.feedback($("p4-fb"), "ok", "Imprime [9, 11, 14, 17]. Cada tarjeta partió su lista, esperó a que su izquierda y su derecha volvieran ordenadas y recién ahí las mezcló. " +
+        "Las de un solo valor no partieron nada: el caso base las devolvió tal cual.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 5. ¿En qué orden pasa todo? ---------- */
+  var prediccion5 = null;
+  var t5 = crearTrazaMerge("p5", NOTAS, "mezclas", {
+    pila: false,
+    max: 2.2,
+    intervalo: 750,
+    alReiniciar: function () { habilitar5(); },
+    alTerminar: function () {
+      var explica = "Después de [14, 9] vino su vecina [17, 11], y recién ahí se mezclaron. Siempre igual: primero toda la izquierda, luego toda la derecha, al final la mezcla.";
+      if (prediccion5 === "der") Pasos.feedback($("p5-fb"), "ok", "¡Bien predicho! " + explica);
+      else Pasos.feedback($("p5-fb"), "ok", explica + (prediccion5 === "otra" ? " [6, 19, 3, 12] esperó a que la izquierda entera estuviera lista." :
+        " [17, 11] todavía no estaba ordenada."));
+      leccion.desbloquear();
+    }
+  });
+
+  function habilitar5() {
+    var listo = prediccion5 !== null;
+    $("p5-ejecutar").disabled = !listo;
+    $("p5-reproducir").disabled = !listo;
+    $("p5-saltar").disabled = !listo;
+    if (!listo) $("p5-explicacion").textContent = "Elige tu predicción para poder ejecutar.";
+    else if (!$("p5-reiniciar").hidden) return;
+    else $("p5-explicacion").innerHTML = "Toca «Siguiente mezcla» para ir de una mezcla a la siguiente, o «Ejecutar todo» para verlo seguido.";
+  }
+
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion5 === null;
+      prediccion5 = b.getAttribute("data-valor");
+      $("p5-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (nueva) t5.traza.reiniciar();
+    });
+  });
+
+  /* ---------- 6. ¿Cuántos pisos? ---------- */
+  var LISTAS6 = {
+    4: [14, 9, 17, 11],
+    8: NOTAS,
+    16: [14, 9, 17, 11, 6, 19, 3, 12, 8, 15, 0, 20, 5, 13, 10, 7]
+  };
+  var n6 = 8;
+  var prediccion6 = null;
+  var vistos6 = {};
+
+  // Cuántas comparaciones hacen las mezclas de cada piso, de abajo hacia arriba
+  function contar6(lista) {
+    var porPisoComps = [];
+    var porPisoMezclas = [];
+    (function ms(l, piso) {
+      if (l.length <= 1) return l;
+      var m = Math.floor(l.length / 2);
+      var mz = mezclar(ms(l.slice(0, m), piso + 1), ms(l.slice(m), piso + 1));
+      porPisoComps[piso] = (porPisoComps[piso] || 0) + mz.comps;
+      porPisoMezclas[piso] = (porPisoMezclas[piso] || 0) + 1;
+      return mz.res;
+    })(lista, 0);
+    return { comps: porPisoComps, mezclas: porPisoMezclas };
+  }
+
+  function pintar6() {
+    var lista = LISTAS6[n6];
+    var raiz = armarArbol(lista);
+    var pisos = porPiso(raiz);
+    var caja = $("p6-pisos");
+    caja.textContent = "";
+    caja.style.setProperty("--n", n6);
+    pisos.forEach(function (fila, k) {
+      var f = crear("div", "pisos__fila" + (k === pisos.length - 1 ? " pisos__fila--hojas" : ""));
+      f.style.animationDelay = (Pasos.reducirMovimiento ? 0 : k * 160) + "ms";
+      fila.forEach(function (n) {
+        var g = crear("span", "pisos__grupo", String(n.lista.length));
+        g.style.gridColumn = (n.desde + 1) + " / span " + n.lista.length;
+        f.appendChild(g);
+      });
+      caja.appendChild(f);
+    });
+    var c = contar6(lista);
+    var ul = $("p6-mezclas");
+    ul.textContent = "";
+    var total = 0;
+    for (var piso = c.comps.length - 1; piso >= 0; piso--) {
+      var tam = n6 / Math.pow(2, piso + 1);
+      var li = crear("li");
+      li.appendChild(crear("span", "", "Juntar de a " + tam + " (" + plural(c.mezclas[piso], "mezcla", "mezclas") + ")"));
+      li.appendChild(crear("strong", "", String(c.comps[piso])));
+      li.style.animationDelay = (Pasos.reducirMovimiento ? 0 : (c.comps.length - 1 - piso) * 160 + 300) + "ms";
+      ul.appendChild(li);
+      total += c.comps[piso];
+    }
+    var tot = crear("li", "pisos__total");
+    tot.appendChild(crear("span", "", "Total"));
+    tot.appendChild(crear("strong", "", String(total)));
+    tot.style.animationDelay = (Pasos.reducirMovimiento ? 0 : c.comps.length * 160 + 300) + "ms";
+    ul.appendChild(tot);
+    caja.setAttribute("aria-label", n6 + " notas: se parten " + (pisos.length - 1) + " veces hasta quedar de a una");
+
+    // La tabla
+    var fila = $("p6-tabla").querySelector('tr[data-n="' + n6 + '"]');
+    var celdas = fila.querySelectorAll("td");
+    celdas[1].textContent = String(pisos.length - 1);
+    celdas[2].textContent = String(total);
+    celdas[3].textContent = String(n6 * (n6 - 1) / 2);
+    celdas[2].className = "tabla-carrera__merge";
+    celdas[1].className = celdas[3].className = "";
+    $("p6-tabla").querySelectorAll("tbody tr").forEach(function (tr) { tr.classList.toggle("tabla-carrera--activa", tr === fila); });
+    vistos6[n6] = true;
+  }
+
+  function revisar6() {
+    if (!vistos6[16]) return;
+    Pasos.feedback($("p6-fb"), "ok", "Al duplicar las notas, se parte una vez más: 4 → 2 veces, 8 → 3, 16 → 4. En cada piso, las mezclas suman como mucho una comparación por nota. " +
+      "Por eso mergesort crece poco: con 16 notas hace unas 50 comparaciones, y burbuja, 120.");
+    leccion.desbloquear();
+  }
+
+  $("p6-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (prediccion6 === "4") return;
+      prediccion6 = b.getAttribute("data-valor");
+      $("p6-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (prediccion6 !== "4") {
+        b.classList.add("btn--mal");
+        Pasos.feedback($("p6-fb"), "pista", "Cuenta las mitades: 16 → 8 → 4 → 2 → 1. Cada vez que se parte, los trozos miden la mitad.");
+        return;
+      }
+      b.classList.add("btn--bien");
+      Pasos.feedback($("p6-fb"), "ok", "¡Eso! 16 → 8 → 4 → 2 → 1: 4 veces, solo una más que con 8. Mira cómo queda con 16, y también con 4.");
+      $("p6-n").querySelectorAll("button").forEach(function (o) { o.disabled = false; });
+      var b16 = $("p6-n").querySelector('[data-n="16"]');
+      b16.focus();
+    });
+  });
+
+  $("p6-n").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      n6 = Number(b.getAttribute("data-n"));
+      $("p6-n").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      pintar6();
+      revisar6();
+    });
+  });
+
+  /* ---------- 7. Tres trampas ---------- */
+  var LISTA7 = [14, 9, 6, 11];
+  var OPCIONES7 = ["[6, 9, 11, 14]", "[14, 9, 6, 11]", "[6, 11, 14, 9]", "RecursionError"];
+  var VERSIONES7 = [
+    {
+      nombre: "Versión 1",
+      codigo: [
+        "def mergesort(lista):",
+        "    if len(lista) <= 1:",
+        "        return lista",
+        "    medio = len(lista) // 2",
+        "    izquierda = mergesort(lista[:medio])",
+        "    derecha = mergesort(lista[medio:])",
+        "    return izquierda + derecha"
+      ],
+      trampa: [6],
+      bien: "[14, 9, 6, 11]",
+      salida: ["[14, 9, 6, 11]"],
+      explica: "Pegar dos listas con + no las ordena entre sí: [14] + [9] es [14, 9]. Todo se parte y se vuelve a pegar igual que estaba. Sin mezclar, no se ordena nada.",
+      pistas: {
+        "[6, 9, 11, 14]": "Mira la última línea: izquierda + derecha solo pega una lista detrás de la otra, sin comparar nada. ¿Qué devuelve mergesort([14, 9])?",
+        "[6, 11, 14, 9]": "Nadie compara en esta versión: + solo pega. ¿Qué devuelve mergesort([14, 9])? [14] + [9].",
+        "RecursionError": "El caso base está: las listas de un valor vuelven sin llamar a nadie. La pila no crece sin fin."
+      }
+    },
+    {
+      nombre: "Versión 2",
+      codigo: [
+        "def mergesort(lista):",
+        "    if len(lista) <= 1:",
+        "        return lista",
+        "    medio = len(lista) // 2",
+        "    mergesort(lista[:medio])",
+        "    mergesort(lista[medio:])",
+        "    return mezclar(lista[:medio], lista[medio:])"
+      ],
+      trampa: [4, 5, 6],
+      bien: "[6, 11, 14, 9]",
+      salida: ["[6, 11, 14, 9]"],
+      explica: "mergesort no cambia la lista que recibe: devuelve una lista nueva, como sorted(). Si no se guarda, se pierde. Así mezclar recibe [14, 9] y [6, 11] sin ordenar: toma 6, luego 11, y pega [14, 9] al final.",
+      pistas: {
+        "[6, 9, 11, 14]": "Las llamadas ordenan… pero lo que devuelven no se guarda en ninguna variable. ¿Qué mitades recibe mezclar en la última línea?",
+        "[14, 9, 6, 11]": "Aquí sí se mezcla: mezclar compara las primeras de cada lista. Pero recibe lista[:2] = [14, 9] y lista[2:] = [6, 11], sin ordenar. Hazlo a mano.",
+        "RecursionError": "El caso base está y cada llamada recibe una lista más corta: la pila no crece sin fin."
+      }
+    },
+    {
+      nombre: "Versión 3",
+      codigo: [
+        "def mergesort(lista):",
+        "    # (aquí no hay caso base)",
+        "    medio = len(lista) // 2",
+        "    izquierda = mergesort(lista[:medio])",
+        "    derecha = mergesort(lista[medio:])",
+        "    return mezclar(izquierda, derecha)"
+      ],
+      trampa: [1],
+      bien: "RecursionError",
+      salida: ["RecursionError: maximum recursion depth exceeded"],
+      explica: "Sin caso base, nadie para. Con [14], medio es 0: lista[:0] es [] y lista[0:] es [14] otra vez. mergesort([14]) se llama a sí misma con [14] para siempre, y Python corta la pila con RecursionError.",
+      pistas: {
+        "[6, 9, 11, 14]": "Falta algo arriba: ¿qué hace mergesort([14])? medio = 1 // 2 = 0, y lista[0:] es otra vez [14].",
+        "[14, 9, 6, 11]": "Falta algo arriba: ¿qué hace mergesort([14])? medio = 1 // 2 = 0, y lista[0:] es otra vez [14].",
+        "[6, 11, 14, 9]": "Falta algo arriba: ¿qué hace mergesort([14])? medio = 1 // 2 = 0, y lista[0:] es otra vez [14]."
+      }
+    }
+  ];
+  var v7 = 0;
+  var resueltas7 = {};
+
+  VERSIONES7.forEach(function (v, k) {
+    var b = boton(v.nombre, function () { mostrar7(k); });
+    $("p7-versiones").appendChild(b);
+  });
+
+  function mostrar7(k) {
+    v7 = k;
+    var v = VERSIONES7[k];
+    var pre = $("p7-codigo");
+    escribirCodigo(pre, v.codigo.concat(["", "print(mergesort(" + txt(LISTA7) + "))"]).join("\n"));
+    pre.querySelectorAll(".linea").forEach(function (l, i) { l.classList.toggle("linea--trampa", v.trampa.indexOf(i) !== -1); });
+    $("p7-versiones").querySelectorAll("button").forEach(function (b, i) {
+      b.setAttribute("aria-current", String(i === k));
+      b.classList.toggle("version--lista", !!resueltas7[i]);
+    });
+    $("p7-pregunta").innerHTML = "¿Qué imprime la " + v.nombre.toLowerCase() + "?";
+    var ops = $("p7-opciones");
+    ops.textContent = "";
+    OPCIONES7.forEach(function (o) {
+      var b = boton(o, function () { elegir7(o, b); });
+      b.setAttribute("aria-pressed", "false");
+      if (resueltas7[k] && o === v.bien) b.classList.add("btn--bien");
+      ops.appendChild(b);
+    });
+    if (resueltas7[k]) {
+      Codigo.consola($("p7-consola"), v.salida);
+      Pasos.feedback($("p7-fb"), "ok", v.explica);
+    } else {
+      Codigo.consola($("p7-consola"), []);
+      Pasos.limpiarFeedback($("p7-fb"));
+    }
+    $("p7-siguiente").hidden = !(resueltas7[k] && k < VERSIONES7.length - 1);
+  }
+
+  function elegir7(o, b) {
+    var v = VERSIONES7[v7];
+    if (resueltas7[v7]) return;
+    if (o !== v.bien) {
+      b.classList.add("btn--mal");
+      Pasos.feedback($("p7-fb"), "pista", v.pistas[o]);
+      return;
+    }
+    resueltas7[v7] = true;
+    b.classList.add("btn--bien");
+    Codigo.consola($("p7-consola"), []);
+    v.salida.forEach(function (s) {
+      Codigo.agregar($("p7-consola"), s);
+      Codigo.volar(b, $("p7-consola").lastElementChild, s, "vuelo--salida");
+    });
+    Pasos.feedback($("p7-fb"), "ok", (v.bien === "RecursionError" ? "¡Exacto! " : "¡Eso! Imprime " + v.bien + ". ") + v.explica);
+    $("p7-versiones").querySelectorAll("button")[v7].classList.add("version--lista");
+    var todas = VERSIONES7.every(function (x, i) { return resueltas7[i]; });
+    if (todas) {
+      $("p7-siguiente").hidden = true;
+      leccion.desbloquear();
+    } else {
+      $("p7-siguiente").hidden = false;
+      $("p7-siguiente").focus();
+    }
+  }
+
+  $("p7-siguiente").addEventListener("click", function () {
+    var sig = VERSIONES7.findIndex(function (x, i) { return !resueltas7[i]; });
+    mostrar7(sig === -1 ? Math.min(v7 + 1, VERSIONES7.length - 1) : sig);
+    $("p7-opciones").querySelector("button").focus();
+  });
+  mostrar7(0);
+
+  /* ---------- 8. Reto: completar mergesort ---------- */
+  var RETO = [
+    "# def mezclar(a, b): la de la lección anterior",
+    "def mergesort(lista):",
+    "    if len(lista) <= 1:",
+    "        return lista",
+    "    medio = len(lista) // 2",
+    "    izquierda = mergesort(lista[{{a}}])",
+    "    derecha = mergesort(lista[{{b}}])",
+    "    return {{c}}"
+  ].join("\n");
+  escribirCodigo($("reto-codigo"), RETO);
+
+  var OPCIONES_RETO = {
+    a: [":medio", ":medio - 1", ":medio + 1", "1:medio"],
+    b: ["medio + 1:", "medio:", ":medio", "medio - 1:"],
+    c: ["izquierda + derecha", "mezclar(izquierda, derecha)", "mezclar(lista[:medio], lista[medio:])", "lista"]
+  };
+  var BIEN_RETO = { a: ":medio", b: "medio:", c: "mezclar(izquierda, derecha)" };
+  var NOMBRES_HUECO = { a: "Espacio en blanco 1: la rebanada de la izquierda", b: "Espacio en blanco 2: la rebanada de la derecha", c: "Espacio en blanco 3: lo que devuelve" };
+
+  Object.keys(OPCIONES_RETO).forEach(function (h) {
+    var sel = crear("select", "codigo__elegir");
+    sel.id = "reto-" + h;
+    sel.setAttribute("aria-label", NOMBRES_HUECO[h]);
+    sel.appendChild(crear("option", "", "?")).value = "";
+    OPCIONES_RETO[h].forEach(function (t) { sel.appendChild(crear("option", "", t)).value = t; });
+    hueco($("reto-codigo"), h).replaceWith(sel);
+    sel.addEventListener("change", function () {
+      sel.classList.toggle("codigo__elegir--lleno", !!sel.value);
+      $("reto-pruebas").hidden = true;
+      Pasos.limpiarFeedback($("reto-fb"));
+      leccion.listoParaComprobar(retoCompleto());
+    });
+  });
+
+  function retoCompleto() { return !!($("reto-a").value && $("reto-b").value && $("reto-c").value); }
+
+  // lista[":medio - 1"] y compañía, con el medio de esa llamada
+  function rebanar(expr, lista, medio) {
+    var partes = expr.split(":");
+    function valor(s, siVacio) {
+      s = s.trim();
+      if (!s) return siVacio;
+      var p = s.split(" ");
+      var v = p[0] === "medio" ? medio : Number(p[0]);
+      if (p[1] === "+") v += Number(p[2]);
+      if (p[1] === "-") v -= Number(p[2]);
+      return Math.max(0, Math.min(v, lista.length));
+    }
+    var desde = valor(partes[0], 0);
+    var hasta = valor(partes[1], lista.length);
+    return lista.slice(desde, Math.max(desde, hasta));
+  }
+
+  // Lo que imprime print(mergesort(lista)) con esas tres piezas; RecursionError si no termina
+  function salidaReto(A, B, C, lista) {
+    function ms(l, prof) {
+      if (prof > 60) throw new Error("RecursionError");
+      if (l.length <= 1) return l;
+      var m = Math.floor(l.length / 2);
+      var izq = ms(rebanar(A, l, m), prof + 1);
+      var der = ms(rebanar(B, l, m), prof + 1);
+      if (C === "mezclar(izquierda, derecha)") return mezclar(izq, der).res;
+      if (C === "izquierda + derecha") return izq.concat(der);
+      if (C === "mezclar(lista[:medio], lista[medio:])") return mezclar(l.slice(0, m), l.slice(m)).res;
+      return l;
+    }
+    try { return txt(ms(lista, 0)); } catch (err) { return err.message; }
+  }
+
+  var PRUEBAS_RETO = [
+    [14, 9, 17, 11, 6, 19, 3, 12],
+    [11, 6, 19, 3, 12],
+    [20, 0, 15],
+    [7],
+    []
+  ];
+
+  function pintarPruebas(ul, filas) {
+    ul.textContent = "";
+    filas.forEach(function (f) {
+      var li = crear("li", f.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", f.llamada));
+      li.appendChild(crear("span", "prueba__salida", f.sale));
+      li.appendChild(crear("span", "prueba__marca", f.ok ? "✓" : "✗"));
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+  }
+
+  var PISTAS_RETO = {
+    a: {
+      ":medio - 1": "La izquierda pierde valores: lista[:medio - 1] deja fuera el de la posición medio - 1. Mira las pruebas: faltan notas.",
+      ":medio + 1": "Con 2 valores, medio es 1 y lista[:2] es la lista entera: la llamada no se achica y la pila crece hasta el RecursionError.",
+      "1:medio": "lista[1:medio] se salta la posición 0: la primera nota se pierde."
+    },
+    b: {
+      "medio + 1:": "La derecha se salta el valor de la posición medio: se pierde una nota en cada partida.",
+      ":medio": "lista[:medio] es la misma mitad que la izquierda: la otra mitad se pierde y los valores se repiten.",
+      "medio - 1:": "Con 2 valores, medio es 1 y lista[0:] es la lista entera: la llamada no se achica (RecursionError)."
+    },
+    c: {
+      "izquierda + derecha": "Pegar las dos mitades no las ordena entre sí: [9, 14] + [3, 6] queda [9, 14, 3, 6]. Hay que mezclarlas.",
+      "mezclar(lista[:medio], lista[medio:])": "Así se mezclan las mitades de la lista original, que no están ordenadas. Lo que ordenaron las llamadas quedó guardado en izquierda y derecha.",
+      "lista": "return lista devuelve la lista como llegó: las llamadas ordenan sus mitades, pero nadie usa lo que devolvieron."
+    }
+  };
+
+  function comprobarReto() {
+    var A = $("reto-a").value, B = $("reto-b").value, C = $("reto-c").value;
+    if (!A || !B || !C) return false;
+    pintarPruebas($("reto-pruebas"), PRUEBAS_RETO.map(function (l) {
+      var sale = salidaReto(A, B, C, l);
+      return { llamada: "mergesort(" + txt(l) + ")", sale: sale, ok: sale === txt(l.slice().sort(function (x, y) { return x - y; })) };
+    }));
+    if (A === BIEN_RETO.a && B === BIEN_RETO.b && C === BIEN_RETO.c) {
+      Pasos.feedback($("reto-fb"), "ok", "¡Ordena las cinco! lista[:medio] y lista[medio:] se reparten todas las notas sin repetir ninguna, también con largo impar. " +
+        "Cada mitad vuelve ordenada y mezclar(izquierda, derecha) las junta. Las listas de 0 o 1 valor vuelven por el caso base.");
+      return true;
+    }
+    var h = A !== BIEN_RETO.a ? "a" : B !== BIEN_RETO.b ? "b" : "c";
+    var valor = { a: A, b: B, c: C }[h];
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[h][valor]);
+    return false;
+  }
+
+  /* ---------- Resumen ---------- */
+  escribirCodigo($("resumen-codigo"), [
+    "def mergesort(lista):",
+    "    if len(lista) <= 1:",
+    "        return lista  # un valor: ya está ordenada",
+    "    medio = len(lista) // 2",
+    "    izquierda = mergesort(lista[:medio])  # ordena una mitad",
+    "    derecha = mergesort(lista[medio:])    # y la otra",
+    "    return mezclar(izquierda, derecha)    # y las junta"
+  ].join("\n"));
+
+  /* ---------- Conexiones ---------- */
+  empezar1();
+  empezar2();
+  habilitar5();
+
+  function pausar() {
+    t4.traza.detener();
+    t5.traza.detener();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-partir": pausar,
+      "paso-mezclar": pausar,
+      "paso-medio": pausar,
+      "paso-traza": pausar,
+      "paso-orden": pausar,
+      "paso-pisos": function () { pausar(); if (!$("p6-pisos").children.length) pintar6(); },
+      "paso-trampas": pausar,
+      "paso-reto": function (paso, l, info) {
+        pausar();
+        if (!info.desbloqueado) l.listoParaComprobar(retoCompleto());
+      },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
