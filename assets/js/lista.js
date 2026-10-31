@@ -7,8 +7,9 @@
        negativos: false,    número negativo debajo (notas[-1] es el último)
        nombres: ["notas"],  (opcional) etiquetas que apuntan a la lista (dos nombres, una lista)
        corchetes: true,     [ y ] en los extremos, como se escribe en Python
-       capacidad: 4         (opcional) el tamaño de los casilleros se calcula para al menos
+       capacidad: 4,        (opcional) el tamaño de los casilleros se calcula para al menos
                             tantos elementos: si la lista va a crecer, así no se achican
+       tupla: false         una tupla: paréntesis en vez de corchetes y un candado (no cambia)
      });
 
    Los textos se ven con comillas ("Ana") y los números sin ellas. Una lista de listas
@@ -45,10 +46,16 @@
                              deslizan al cambiar. Pueden quedar fuera, en -1 o en len(lista).
                              Color por orden (azul, morado, naranja, verde) o { i: 3, color: "naranja" }.
                              null en un nombre lo quita; l.punteros(null), todos
+   l.rechazar(i)             el casillero i se sacude en rojo: no se puede cambiar (una tupla o
+                             un texto: TypeError). Sin i (o si i se sale), se sacude toda la fila
    l.el                      el contenedor .lista
 
    Lista.python(v)           cómo lo imprime print: [14, 9, 'Ana'] (comillas simples, como Python)
    Lista.texto(v)            cómo se escribe en el código: "Ana", 14, [1, 2]
+   Lista.tupla(v)            marca un arreglo como tupla: python y texto lo escriben (3, 5) o (5,)
+                             (p. ej. una lista de tuplas: [Lista.tupla(["Ana", 14]), …])
+   Un objeto simple ({ nombre: "Ana", nota: 14 }) se escribe como diccionario:
+   {'nombre': 'Ana', 'nota': 14}. Un valor así cabe en un casillero (una lista de diccionarios).
 
    Al cambiar la lista (agregar, insertar, quitar, reordenar), los casilleros que se quedan
    se deslizan desde su lugar viejo y los índices se renumeran. Sin movimiento, todo es de golpe.
@@ -70,8 +77,37 @@
   /* ---------- Cómo se escribe un valor ---------- */
   function numero(v) { return String(v); }
 
+  function esTupla(v) { return Array.isArray(v) && !!v.esTupla; }
+
+  function tupla(v) {
+    Object.defineProperty(v, "esTupla", { value: true, configurable: true });
+    return v;
+  }
+
+  function esDicc(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
+
+  // Copia en profundidad que no pierde la marca de tupla
+  function copiar(v) {
+    if (Array.isArray(v)) {
+      var c = v.map(copiar);
+      return esTupla(v) ? tupla(c) : c;
+    }
+    if (esDicc(v)) {
+      var o = {};
+      Object.keys(v).forEach(function (k) { o[k] = copiar(v[k]); });
+      return o;
+    }
+    return v;
+  }
+
+  function envolver(v, f) {
+    if (esTupla(v)) return "(" + v.map(f).join(", ") + (v.length === 1 ? "," : "") + ")";
+    if (Array.isArray(v)) return "[" + v.map(f).join(", ") + "]";
+    return "{" + Object.keys(v).map(function (k) { return f(k) + ": " + f(v[k]); }).join(", ") + "}";
+  }
+
   function texto(v) {
-    if (Array.isArray(v)) return "[" + v.map(texto).join(", ") + "]";
+    if (Array.isArray(v) || esDicc(v)) return envolver(v, texto);
     if (typeof v === "string") return '"' + v + '"';
     if (v === true) return "True";
     if (v === false) return "False";
@@ -80,7 +116,7 @@
   }
 
   function python(v) {
-    if (Array.isArray(v)) return "[" + v.map(python).join(", ") + "]";
+    if (Array.isArray(v) || esDicc(v)) return envolver(v, python);
     if (typeof v === "string") return v.indexOf("'") !== -1 ? '"' + v + '"' : "'" + v + "'";
     return texto(v);
   }
@@ -92,6 +128,7 @@
       negativos: !!opciones.negativos,
       corchetes: opciones.corchetes !== false
     };
+    var esTuplaVista = !!opciones.tupla;
     var valores = [];
     var nombres = [];
     var fila = null;
@@ -110,6 +147,7 @@
       el.classList.toggle("lista--negativos", vista.negativos);
       el.classList.toggle("lista--sin-corchetes", !vista.corchetes);
       el.classList.toggle("lista--cuadricula", cuadricula);
+      el.classList.toggle("lista--tupla", esTuplaVista);
     }
 
     /* ---------- Casilleros ---------- */
@@ -187,15 +225,16 @@
 
     function pintar(nuevos) {
       // Copia en profundidad: cambiar la lista (o una fila de la cuadrícula) no toca el original
-      valores = JSON.parse(JSON.stringify(nuevos));
-      cuadricula = valores.length > 0 && valores.every(Array.isArray);
+      valores = copiar(nuevos);
+      cuadricula = valores.length > 0 && valores.every(function (v) { return Array.isArray(v) && !esTupla(v); });
       if (fila) fila.remove();
       fantasma = null;
       marcada = null;
       fila = span("lista__fila");
-      fila.appendChild(span("lista__corchete", "["));
+      fila.appendChild(span("lista__corchete", esTuplaVista ? "(" : "["));
       valores.forEach(function (v) { fila.appendChild(cuadricula ? nuevaFila(v) : nuevaCasilla(v)); });
-      fila.appendChild(span("lista__corchete", "]"));
+      fila.appendChild(span("lista__corchete", esTuplaVista ? ")" : "]"));
+      if (esTuplaVista) fila.insertBefore(span("lista__candado", "🔒"), fila.firstChild);
       el.appendChild(fila);
       aplicarVista();
       renumerar();
@@ -257,7 +296,7 @@
       fantasma.appendChild(span("lista__indice", i >= 0 ? String(i) : ""));
       fantasma.appendChild(span("lista__valor", "?"));
       fantasma.appendChild(span("lista__indice lista__indice--neg", i < 0 ? String(i) : ""));
-      if (i < 0) fila.insertBefore(fantasma, fila.children[1]);
+      if (i < 0) fila.insertBefore(fantasma, casillas()[0] || fila.lastChild);
       else fila.insertBefore(fantasma, fila.lastChild);
       return null;
     }
@@ -509,6 +548,22 @@
       return rect;
     }
 
+    function rechazar(i) {
+      var c = i === undefined || i === null ? null : casilla(i);
+      var blanco = c || fila;
+      blanco.classList.remove("lista--rechaza");
+      void blanco.offsetWidth;
+      blanco.classList.add("lista--rechaza");
+      var candado = fila.querySelector(".lista__candado");
+      if (candado) {
+        candado.classList.remove("lista__candado--salta");
+        void candado.offsetWidth;
+        candado.classList.add("lista__candado--salta");
+      }
+      setTimeout(function () { blanco.classList.remove("lista--rechaza"); }, 900);
+      return c;
+    }
+
     function reordenar(orden) {
       quitarMarca();
       var previas = medir();
@@ -530,7 +585,7 @@
     return {
       el: el,
       valores: pintar,
-      get lista() { return JSON.parse(JSON.stringify(valores)); },
+      get lista() { return copiar(valores); },
       get largo() { return valores.length; },
       mostrar: function (cambios) {
         for (var k in cambios) vista[k] = !!cambios[k];
@@ -552,6 +607,7 @@
       tapar: tapar,
       destapar: destapar,
       punteros: punteros,
+      rechazar: rechazar,
       nombres: function (lista) {
         nombres = lista.slice();
         pintarNombres();
@@ -559,5 +615,5 @@
     };
   }
 
-  window.Lista = { crear: crear, python: python, texto: texto };
+  window.Lista = { crear: crear, python: python, texto: texto, tupla: tupla, copiar: copiar };
 })();
