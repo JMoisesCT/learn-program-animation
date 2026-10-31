@@ -36,6 +36,15 @@
    l.reordenar(orden)        .sort(): orden dice, para cada lugar nuevo, de qué índice viene el
                              valor (p. ej. [2, 0, 1]); cada casillero viaja a su lugar nuevo
    l.nombres([…])            cambia las etiquetas: las nuevas aparecen con un salto
+   l.tapar(true | false | fn) tapa los casilleros (se ve «?» en vez del valor): true, todos;
+                             false, ninguno; fn(i, valor) dice cuáles (en la cuadrícula, cada
+                             casilla: fn([f, c], valor)). Para buscar a ciegas
+   l.destapar(i)             el casillero i se da vuelta y muestra su valor
+   l.punteros({ inicio: 0, medio: 3, fin: 7 })
+                             fichas con un nombre bajo los casilleros (búsqueda binaria), que se
+                             deslizan al cambiar. Pueden quedar fuera, en -1 o en len(lista).
+                             Color por orden (azul, morado, naranja, verde) o { i: 3, color: "naranja" }.
+                             null en un nombre lo quita; l.punteros(null), todos
    l.el                      el contenedor .lista
 
    Lista.python(v)           cómo lo imprime print: [14, 9, 'Ana'] (comillas simples, como Python)
@@ -90,6 +99,8 @@
     var fantasma = null;
     var marcada = null;
     var cuadricula = false;
+    var filaPunteros = null;
+    var punterosActuales = {};
 
     el.classList.add("lista");
     el.setAttribute("aria-hidden", "true");
@@ -188,6 +199,8 @@
       el.appendChild(fila);
       aplicarVista();
       renumerar();
+      if (filaPunteros) el.appendChild(filaPunteros);
+      ubicarPunteros();
     }
 
     /* ---------- Índices ---------- */
@@ -280,6 +293,115 @@
       });
     }
 
+    /* ---------- Tapar y destapar ---------- */
+    function tapar(fn) {
+      function aplicar(c, clave, v) {
+        var t = typeof fn === "function" ? !!fn(clave, v) : !!fn;
+        c.classList.toggle("lista__casilla--tapada", t);
+        c.classList.remove("lista__casilla--destapa");
+      }
+      casillas().forEach(function (c, i) {
+        if (!cuadricula) { aplicar(c, i, valores[i]); return; }
+        // En la cuadrícula se tapa cada casilla, no la fila: fn([f, c], valor)
+        c.querySelectorAll(".lista__interna > .lista__casilla").forEach(function (d, j) { aplicar(d, [i, j], valores[i][j]); });
+      });
+    }
+
+    function destapar(i) {
+      var c = casilla(i);
+      if (!c) return null;
+      if (!c.classList.contains("lista__casilla--tapada")) return c;
+      c.classList.remove("lista__casilla--tapada");
+      void c.offsetWidth;
+      if (!reducir()) c.classList.add("lista__casilla--destapa");
+      return c;
+    }
+
+    /* ---------- Punteros: inicio, medio, fin ---------- */
+    var COLORES = ["azul", "morado", "naranja", "verde"];
+
+    function centro(k) {
+      var cs = casillas();
+      if (!cs.length) return null;
+      var base = el.getBoundingClientRect().left;
+      function mitad(c) { var r = c.getBoundingClientRect(); return r.left + r.width / 2 - base; }
+      if (k >= 0 && k < cs.length) return mitad(cs[k]);
+      var paso = cs.length > 1 ? mitad(cs[1]) - mitad(cs[0]) : cs[0].getBoundingClientRect().width * 1.15;
+      return k < 0 ? mitad(cs[0]) + k * paso : mitad(cs[cs.length - 1]) + (k - cs.length + 1) * paso;
+    }
+
+    // Cada ficha va bajo su casillero; si choca con otra (mismo casillero o nombres largos
+    // en casilleros vecinos), baja un piso
+    function ubicarPunteros() {
+      if (!filaPunteros) return;
+      var ocupados = [];
+      var maxPiso = 0;
+      Array.prototype.forEach.call(filaPunteros.children, function (p) {
+        var x = centro(Number(p.getAttribute("data-i")));
+        if (x === null) { p.hidden = true; return; }
+        p.hidden = false;
+        var w = p.offsetWidth + 4;
+        // Una ficha fuera de la lista (inicio = len) no se sale de la tarjeta
+        x = Math.max(w / 2, Math.min(el.clientWidth - w / 2, x));
+        var a = x - w / 2;
+        var b = x + w / 2;
+        var piso = 0;
+        while (ocupados.some(function (o) { return o.piso === piso && a < o.b && b > o.a; })) piso++;
+        ocupados.push({ piso: piso, a: a, b: b });
+        maxPiso = Math.max(maxPiso, piso + 1);
+        p.style.left = x + "px";
+        p.style.setProperty("--piso", String(piso));
+      });
+      filaPunteros.style.setProperty("--pisos", String(maxPiso));
+    }
+
+    function punteros(mapa) {
+      if (!filaPunteros) {
+        filaPunteros = span("lista__punteros");
+        el.appendChild(filaPunteros);
+        if (window.ResizeObserver) new ResizeObserver(ubicarPunteros).observe(el);
+      }
+      if (mapa === null) { punterosActuales = {}; filaPunteros.textContent = ""; filaPunteros.hidden = true; return; }
+      Object.keys(mapa).forEach(function (nombre) {
+        var dato = mapa[nombre];
+        if (dato === null || dato === undefined) { delete punterosActuales[nombre]; return; }
+        if (typeof dato === "number") dato = { i: dato };
+        var previo = punterosActuales[nombre];
+        punterosActuales[nombre] = { i: dato.i, color: dato.color || (previo && previo.color) };
+      });
+      var nombresP = Object.keys(punterosActuales);
+      // Quitar los que ya no están; crear los nuevos
+      Array.prototype.slice.call(filaPunteros.children).forEach(function (p) {
+        if (!punterosActuales[p.getAttribute("data-nombre")]) p.remove();
+      });
+      nombresP.forEach(function (nombre, orden) {
+        var dato = punterosActuales[nombre];
+        var p = filaPunteros.querySelector('[data-nombre="' + nombre + '"]');
+        var nuevo = !p;
+        if (nuevo) {
+          p = span("lista__puntero lista__puntero--nuevo", nombre);
+          p.setAttribute("data-nombre", nombre);
+          filaPunteros.appendChild(p);
+        }
+        var color = dato.color || COLORES[orden % COLORES.length];
+        dato.color = color;
+        COLORES.forEach(function (c) { p.classList.remove("lista__puntero--" + c); });
+        p.classList.add("lista__puntero--" + color);
+        if (!nuevo && Number(p.getAttribute("data-i")) !== dato.i) {
+          p.classList.remove("lista__puntero--salta");
+          void p.offsetWidth;
+          p.classList.add("lista__puntero--salta");
+        }
+        p.setAttribute("data-i", String(dato.i));
+        var k = normal(dato.i, valores.length);
+        p.classList.toggle("lista__puntero--fuera", k === null);
+      });
+      // Mismo orden en el DOM que en el mapa: así se apilan siempre igual
+      nombresP.forEach(function (nombre) { filaPunteros.appendChild(filaPunteros.querySelector('[data-nombre="' + nombre + '"]')); });
+      filaPunteros.hidden = !nombresP.length;
+      ubicarPunteros();
+    }
+
     /* ---------- Animaciones ---------- */
     // FLIP: se mide dónde estaba cada casillero, se cambia la fila y cada uno se desliza desde ahí
     function medir() {
@@ -363,6 +485,7 @@
       valores.splice(i, 0, v);
       renumerar();
       deslizar(previas);
+      ubicarPunteros();
       if (!reducir()) c.classList.add("lista__casilla--entra");
       llegar(c.querySelector(".lista__valor"), v, origen);
       return c;
@@ -382,6 +505,7 @@
       valores.splice(k, 1);
       renumerar();
       deslizar(previas);
+      ubicarPunteros();
       return rect;
     }
 
@@ -425,6 +549,9 @@
       insertar: insertar,
       quitar: quitar,
       reordenar: reordenar,
+      tapar: tapar,
+      destapar: destapar,
+      punteros: punteros,
       nombres: function (lista) {
         nombres = lista.slice();
         pintarNombres();

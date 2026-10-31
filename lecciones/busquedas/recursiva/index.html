@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Búsqueda binaria con recursión · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: la búsqueda binaria de Python como función recursiva. buscar(lista, x, inicio, fin) mira el del medio y se llama con la mitad que queda; la pila de llamadas, el caso base inicio > fin y la trampa de la rebanada.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .pista-texto { color: var(--color-pista); }
+
+    /* ---------- Comparaciones: el hilo del tema ---------- */
+    .contador { margin: 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-azul); }
+    .contador--cambio strong { display: inline-block; animation: valor-pulso 320ms ease-out; }
+    .rotulo-lista { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo-lista code { text-transform: none; letter-spacing: 0; }
+    .rotulo-lista--nueva { color: var(--color-acento); }
+
+    /* ---------- Paso 1: las preguntas, cada vez más chicas ---------- */
+    .preguntas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .preguntas li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .preguntas li:last-child { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .preguntas li.preguntas__fin { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .preguntas__texto { font-weight: 600; }
+    .preguntas__codigo { font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-acento); }
+    .preguntas__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--codigo .btn { font-family: var(--fuente-codigo); }
+    .elegir .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .btn--mal, .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion--codigo .btn { font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- La pila, más compacta: caben cinco tarjetas ---------- */
+    .lab .pila { margin-top: var(--esp-3); }
+    /* Las variables y «le falta» van en la misma fila */
+    .lab .marco { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--esp-3); padding: 0.35rem var(--esp-3); }
+    .lab .marco__cabecera { flex: 1 1 100%; }
+    .lab .marco__vars { flex: 0 1 auto; margin-top: 0.3rem; min-height: 0; gap: var(--esp-1) var(--esp-2); }
+    .lab .marco__falta { flex: 1 0 auto; margin-top: 0.3rem; text-align: right; }
+    .lab .marco__toca { flex: 1 1 100%; }
+    .lab .marco .var { font-size: var(--texto-xs); }
+    .lab .marco--programa .marco__vars { display: none; }
+    .lab .pila__marcos { gap: 0.4rem; }
+    /* «Ahora corre: …» en una sola fila */
+    .lab .rotulo { min-height: 0; }
+    .lab .rotulo__llamada { font-size: var(--texto-xs); }
+    .lab .rotulo .var { font-size: 0.75rem; }
+    .lab .rotulo__cuerpo { flex-basis: auto; gap: var(--esp-1); }
+
+    /* ---------- La vuelta la haces tú ---------- */
+    .vuelta__opciones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .vuelta__opciones .btn { font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+    .vuelta__opciones--espera { visibility: hidden; }
+
+    /* ---------- while frente a recursión ---------- */
+    .equivale { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
+    .equivale th { padding: var(--esp-1) var(--esp-2); border-bottom: 2px solid var(--color-borde); text-align: left; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .equivale td { padding: var(--esp-2); border-bottom: 1px solid var(--color-borde); vertical-align: top; transition: background-color var(--dur); }
+    .equivale td code { display: inline; padding: 0; background: none; font-size: inherit; font-weight: 700; white-space: normal; }
+    .equivale .equivale__que { display: block; margin-bottom: 0.15em; font-family: var(--fuente); font-weight: 600; color: var(--color-texto-suave); }
+    .equivale tr.equivale--activa td { background: var(--color-acento-suave); }
+    .equivale tr.equivale--activa td:first-child { box-shadow: inset 4px 0 0 var(--color-acento); }
+    #p5-x { margin-top: 0; }
+    .dos-tablas { margin-top: var(--esp-4); display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--esp-3); }
+    .seguimiento { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
+    .seguimiento caption { margin: 0 0 var(--esp-1); text-align: left; font-weight: 700; color: var(--color-texto-suave); }
+    .seguimiento caption small { display: block; font-weight: 400; }
+    .seguimiento th { padding: var(--esp-1); border-bottom: 2px solid var(--color-borde); text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .seguimiento td { padding: 0.3rem var(--esp-1); border-bottom: 1px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .seguimiento tbody tr { animation: aparecer var(--dur) ease both; }
+    .seguimiento td.seguimiento__fin { text-align: left; font-family: var(--fuente); font-weight: 600; color: var(--color-ok); }
+    .seguimiento td.seguimiento__fin code { font-size: inherit; }
+    .seguimiento td.seguimiento__no { color: var(--color-pista); }
+    .seguimiento__vacio td { color: var(--color-texto-suave); font-family: var(--fuente); font-weight: 400; font-style: italic; }
+    .seguimiento__total { margin: var(--esp-1) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .seguimiento__total strong { font-family: var(--fuente-codigo); font-size: var(--texto-md); color: var(--color-azul); }
+
+    /* ---------- La trampa de la rebanada ---------- */
+    .rebanada-zona { margin-top: var(--esp-2); }
+    .rebanada-zona .lista__fila { transition: transform var(--dur) ease; }
+
+    /* ---------- Espacios en blanco dentro del código ---------- */
+    .codigo__elegir { font: inherit; font-weight: 700; max-width: 100%; padding: 0 0.3em; border: 2px dashed var(--tk-numero); border-radius: 6px; background: #232a33; color: var(--tk-numero); cursor: pointer; }
+    .codigo__elegir:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: 2px; }
+    .codigo__elegir--lleno { border-style: solid; }
+
+    /* ---------- Pruebas del reto ---------- */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 120ms; }
+    .pruebas li:nth-child(3) { animation-delay: 240ms; }
+    .pruebas li:nth-child(4) { animation-delay: 360ms; }
+    .pruebas li:nth-child(5) { animation-delay: 480ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* El código de la búsqueda tiene 13 líneas: un poco más chico, para que el paso quepa */
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.86rem; line-height: 1.45; padding: var(--esp-3) 0; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .codigo--reto { font-size: 1rem; }
+    }
+    @media (max-width: 480px) {
+      /* Las líneas largas siguen debajo, sin esconderse a la derecha */
+      .lab .codigo--largo, .codigo--reto { font-size: 0.75rem; }
+      .codigo--largo .linea, .codigo--reto .linea { padding-left: 2.5rem; padding-right: var(--esp-2); white-space: pre-wrap; }
+      .codigo--largo .linea::before, .codigo--reto .linea::before { width: 1.75rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); font-size: var(--texto-xs); }
+      .vuelta__opciones .btn { font-size: var(--texto-sm); }
+      .equivale td, .equivale th { padding-left: var(--esp-1); padding-right: var(--esp-1); }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual > :first-child { margin-top: var(--esp-5); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas-recursiva">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: la misma pregunta, más chica -->
+    <section class="paso" id="paso-mitad" data-requiere aria-labelledby="h-mitad">
+      <span class="paso__etiqueta">Búsquedas 5/7 · Búsqueda binaria con recursión</span>
+      <h1 class="paso__titulo" id="h-mitad">La misma pregunta, más chica</h1>
+      <p>Busca el <strong id="p1-x">17</strong> en las notas ordenadas. Mira el del medio y decide en qué mitad <strong>sigue</strong> la búsqueda.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="rotulo-lista"><code>notas</code> de menor a mayor</p>
+          <div id="p1-lista"></div>
+          <p class="contador" id="p1-contador">Comparaciones: <strong>0</strong></p>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="elegir" id="p1-acciones" role="group" aria-label="Qué hacer ahora"></div>
+        </div>
+        <div class="lab__visual">
+          <p class="preguntas__titulo">Lo que te preguntas cada vez</p>
+          <ol class="preguntas" id="p1-preguntas" aria-live="polite"></ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. La función recursiva, línea a línea -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="h-traza">
+      <h2 class="paso__titulo" id="h-traza">Una llamada por mitad</h2>
+      <p><code>buscar</code> recibe también <strong>entre qué posiciones</strong> buscar. Si el del medio no es, se llama a sí misma con la mitad que queda.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p2-lista"></div>
+          <p class="contador" id="p2-contador">Comparaciones: <strong>0</strong></p>
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. La vuelta la hace el alumno -->
+    <section class="paso" id="paso-vuelta" data-requiere aria-labelledby="h-vuelta">
+      <h2 class="paso__titulo" id="h-vuelta">Ahora la vuelta la haces tú</h2>
+      <p>La pila está llena: la de arriba encontró el 17. Toca la tarjeta que puede volver y di qué <strong>devuelve</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="pv-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="pv-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="pv-otra" hidden>↺ Llenar la pila otra vez</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="prediccion__pregunta" id="pv-pregunta" aria-live="polite"></p>
+          <div class="prediccion vuelta__opciones" id="pv-opciones" role="group" aria-labelledby="pv-pregunta"></div>
+          <div class="pila" id="pv-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="pv-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="pv-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Cuando no está: el caso base -->
+    <section class="paso" id="paso-no-esta" data-requiere aria-labelledby="h-no-esta">
+      <h2 class="paso__titulo" id="h-no-esta">¿Y si no está?</h2>
+      <p>Ahora busca el <strong>10</strong>, que no está en <code>notas</code>. Cada llamada achica el rango… hasta que no queda ningún casillero.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p4-pregunta">Antes de ejecutar: ¿qué imprime?</p>
+          <div class="prediccion prediccion--codigo" id="p4-prediccion" role="group" aria-labelledby="p4-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="-1" aria-pressed="false">-1</button>
+            <button type="button" class="btn btn-secundario" data-valor="None" aria-pressed="false">None</button>
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">un error</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p4-lista"></div>
+          <p class="contador" id="p4-contador">Comparaciones: <strong>0</strong></p>
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Con while o con recursión -->
+    <section class="paso" id="paso-while" data-requiere aria-labelledby="h-while">
+      <h2 class="paso__titulo" id="h-while">Con while o con recursión</h2>
+      <p>En la lección anterior, un <code>while</code> movía <code>inicio</code> y <code>fin</code>. Aquí, cada llamada recibe los suyos. Lo demás (el <code>medio</code> y los <code>if</code>) es igual.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">Buscando el mismo número, ¿cuál mira menos casilleros?</p>
+          <div class="prediccion" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="while" aria-pressed="false">Con while</button>
+            <button type="button" class="btn btn-secundario" data-valor="rec" aria-pressed="false">Con recursión</button>
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">Los mismos</button>
+          </div>
+          <table class="equivale" id="p5-equivale">
+            <thead><tr><th scope="col">Con while</th><th scope="col">Con recursión</th></tr></thead>
+            <tbody>
+              <tr data-c="empieza">
+                <td><span class="equivale__que">Empieza con toda la lista</span><code>inicio = 0</code><br><code>fin = len(lista) - 1</code></td>
+                <td><span class="equivale__que">La primera llamada</span><code>buscar(notas, x, 0, len(notas) - 1)</code></td>
+              </tr>
+              <tr data-c="derecha">
+                <td><span class="equivale__que">Sigue a la derecha</span><code>inicio = medio + 1</code></td>
+                <td><span class="equivale__que">Otra llamada, a la derecha</span><code>return buscar(lista, x, medio + 1, fin)</code></td>
+              </tr>
+              <tr data-c="izquierda">
+                <td><span class="equivale__que">Sigue a la izquierda</span><code>fin = medio - 1</code></td>
+                <td><span class="equivale__que">Otra llamada, a la izquierda</span><code>return buscar(lista, x, inicio, medio - 1)</code></td>
+              </tr>
+              <tr data-c="nada">
+                <td><span class="equivale__que">No queda nada</span><code>while inicio &lt;= fin:</code> termina y <code>return -1</code></td>
+                <td><span class="equivale__que">El caso base</span><code>if inicio &gt; fin:</code> <code>return -1</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir elegir--codigo" id="p5-x" role="group" aria-label="Qué número buscar">
+            <button type="button" class="btn btn-secundario" data-x="19" aria-pressed="true">x = 19</button>
+            <button type="button" class="btn btn-secundario" data-x="6" aria-pressed="false">x = 6</button>
+            <button type="button" class="btn btn-secundario" data-x="14" aria-pressed="false">x = 14</button>
+            <button type="button" class="btn btn-secundario" data-x="10" aria-pressed="false">x = 10</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar" disabled>▶ Ejecutar las dos</button>
+          </div>
+          <div class="dos-tablas">
+            <div>
+              <table class="seguimiento" id="p5-while">
+                <caption>Con while <small>una fila por vuelta</small></caption>
+                <thead><tr><th scope="col">inicio</th><th scope="col">fin</th><th scope="col">medio</th><th scope="col">lista[medio]</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <p class="seguimiento__total" id="p5-while-total" aria-live="polite"></p>
+            </div>
+            <div>
+              <table class="seguimiento" id="p5-rec">
+                <caption>Con recursión <small>una fila por llamada</small></caption>
+                <thead><tr><th scope="col">inicio</th><th scope="col">fin</th><th scope="col">medio</th><th scope="col">lista[medio]</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <p class="seguimiento__total" id="p5-rec-total" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. La trampa: buscar en una rebanada -->
+    <section class="paso" id="paso-rebanada" data-requiere aria-labelledby="h-rebanada">
+      <h2 class="paso__titulo" id="h-rebanada">La trampa de la rebanada</h2>
+      <p>¿Y si en vez de pasar <code>inicio</code> y <code>fin</code>, le pasamos solo la mitad que queda, con una rebanada? Parece más fácil…</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p6-pregunta">Antes de ejecutar: ¿qué imprime?</p>
+          <div class="prediccion prediccion--codigo" id="p6-prediccion" role="group" aria-labelledby="p6-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="6" aria-pressed="false">6</button>
+            <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">1</button>
+            <button type="button" class="btn btn-secundario" data-valor="17" aria-pressed="false">17</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p6-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p6-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p6-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista"><code>notas</code></p>
+          <div id="p6-notas"></div>
+          <div class="rebanada-zona" id="p6-rebanada-zona" hidden>
+            <p class="rotulo-lista rotulo-lista--nueva">la rebanada: otra lista, desde 0</p>
+            <div id="p6-rebanada"></div>
+          </div>
+          <div class="pila" id="p6-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: completar las dos llamadas -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">Completa las dos llamadas</h2>
+      <p>Elige qué va en cada espacio en blanco. La probaremos buscando cinco números en <code>notas = [6, 9, 11, 12, 14, 15, 17, 19]</code>.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--reto" id="reto-codigo" aria-label="Código con dos espacios en blanco"></pre>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Cada llamada mira el del medio y, si no es, se llama con la <strong>mitad que queda</strong> (misma lista, otro <code>inicio</code> y <code>fin</code>); lo que encuentra baja <strong>sin cambios</strong>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../comparar/index.html">Siguiente: ¿Cuál es más rápida? →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function demora(ms) { return Pasos.reducirMovimiento ? Math.min(ms, 200) : ms; }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- Código Python coloreado ----------
+     Cada línea del texto es una .linea; {{nombre}} deja un <span data-hueco="nombre">
+     donde después va un número que cambia o un espacio en blanco. */
+  var PALABRAS = { def: 1, if: 1, elif: 1, else: 1, return: 1, while: 1, for: 1, in: 1, not: 1, and: 1, or: 1, True: 1, False: 1, None: 1 };
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function resaltar(linea) {
+    var re = /(\{\{\w+\}\})|(#.*$)|("[^"]*")|(\d+)|([A-Za-z_]\w*)|([\s\S])/g;
+    var m, html = "";
+    while ((m = re.exec(linea))) {
+      if (m[1]) html += '<span data-hueco="' + m[1].slice(2, -2) + '"></span>';
+      else if (m[2]) html += '<span class="tk-comentario">' + esc(m[2]) + "</span>";
+      else if (m[3]) html += '<span class="tk-texto">' + esc(m[3]) + "</span>";
+      else if (m[4]) html += '<span class="tk-numero">' + m[4] + "</span>";
+      else if (m[5]) {
+        var clase = PALABRAS[m[5]] ? "tk-palabra" : /^\s*\(/.test(linea.slice(re.lastIndex)) ? "tk-funcion" : "tk-variable";
+        html += '<span class="' + clase + '">' + m[5] + "</span>";
+      } else html += esc(m[6]);
+    }
+    return html;
+  }
+
+  function escribirCodigo(pre, texto) {
+    pre.innerHTML = "<code>" + texto.split("\n").map(function (l) {
+      return '<span class="linea">' + resaltar(l) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function hueco(pre, nombre) { return pre.querySelector('[data-hueco="' + nombre + '"]'); }
+
+  /* ---------- La búsqueda ---------- */
+  var NOTAS = [6, 9, 11, 12, 14, 15, 17, 19];
+  var NOTAS_TEXTO = "[6, 9, 11, 12, 14, 15, 17, 19]";
+
+  var FUNCION = [
+    "def buscar(lista, x, inicio, fin):",
+    "    if inicio > fin:",
+    "        return -1",
+    "    medio = (inicio + fin) // 2",
+    "    if lista[medio] == x:",
+    "        return medio",
+    "    elif lista[medio] < x:",
+    "        return buscar(lista, x, medio + 1, fin)",
+    "    else:",
+    "        return buscar(lista, x, inicio, medio - 1)"
+  ];
+  var PROGRAMA = FUNCION.concat(["", "notas = " + NOTAS_TEXTO, "print(buscar(notas, {{x}}, 0, len(notas) - 1))"]).join("\n");
+  // Índices (desde 0) de las líneas del programa
+  var L = { def: 0, base: 1, menos1: 2, medio: 3, igual: 4, devuelve: 5, menor: 6, derecha: 7, izquierda: 9, notas: 11, print: 12 };
+
+  function ponerX(pre, x) {
+    var h = hueco(pre, "x");
+    h.className = "tk-numero";
+    h.textContent = String(x);
+  }
+
+  // Las llamadas que hace buscar(notas, x, 0, 7): inicio, fin, medio, lista[medio] y qué pasó
+  function recorrido(x) {
+    var llamadas = [];
+    var a = 0;
+    var b = NOTAS.length - 1;
+    for (;;) {
+      if (a > b) { llamadas.push({ a: a, b: b, base: true }); break; }
+      var m = Math.floor((a + b) / 2);
+      var c = { a: a, b: b, m: m, v: NOTAS[m] };
+      llamadas.push(c);
+      if (c.v === x) { c.res = "igual"; break; }
+      if (c.v < x) { c.res = "menor"; a = m + 1; } else { c.res = "mayor"; b = m - 1; }
+    }
+    var ultima = llamadas[llamadas.length - 1];
+    var mirados = llamadas.filter(function (c) { return !c.base; }).length;
+    return { x: x, llamadas: llamadas, resultado: ultima.base ? -1 : ultima.m, mirados: mirados };
+  }
+
+  /* ---------- Pintar la lista: tapada, con punteros y la mitad descartada apagada ----------
+     e trae: vistos { i: "igual" | "distinta" }, nuevo (el que se destapa en este paso),
+     rango [inicio, fin] (lo de fuera se apaga) y punteros (o nada). */
+  function pintarLista(l, e) {
+    var vistos = e.vistos || {};
+    l.tapar(function (i) { return !(i in vistos) || i === e.nuevo; });
+    if (e.nuevo !== undefined && e.nuevo !== null) l.destapar(e.nuevo);
+    l.clases(function (i) {
+      if (i in vistos) return "lista__casilla--" + vistos[i];
+      if (e.rango && (i < e.rango[0] || i > e.rango[1])) return "lista__casilla--apagada";
+      return "";
+    });
+    l.punteros(e.punteros || null);
+  }
+
+  function punteros(a, b, m) {
+    return {
+      inicio: { i: a, color: "azul" },
+      medio: m === undefined || m === null ? null : { i: m, color: "morado" },
+      fin: { i: b, color: "naranja" }
+    };
+  }
+
+  function pintarContador(el, n) {
+    var fuerte = el.querySelector("strong");
+    if (fuerte.textContent === String(n)) return;
+    fuerte.textContent = String(n);
+    el.classList.remove("contador--cambio");
+    void el.offsetWidth;
+    if (n > 0) el.classList.add("contador--cambio");
+  }
+
+  /* ---------- 1. La misma pregunta, más chica ---------- */
+  var lista1 = Lista.crear($("p1-lista"), NOTAS);
+  var OBJETIVOS1 = [17, 9, 19];
+  var juego1 = null;
+
+  function textoPregunta(x, a, b) {
+    return a === 0 && b === NOTAS.length - 1 ? "Buscar el " + x + " en toda la lista" : "Buscar el " + x + " entre " + a + " y " + b;
+  }
+
+  function agregarPregunta(fin) {
+    var j = juego1;
+    var li = crear("li", fin ? "preguntas__fin" : "");
+    li.appendChild(crear("span", "preguntas__texto", fin ? "¡Está en la posición " + j.m + "!" : textoPregunta(j.x, j.a, j.b)));
+    li.appendChild(crear("code", "preguntas__codigo", fin ? "return " + j.m : "buscar(notas, " + j.x + ", " + j.a + ", " + j.b + ")"));
+    $("p1-preguntas").appendChild(li);
+  }
+
+  function boton(texto, alTocar) {
+    var b = crear("button", "btn btn-secundario", texto);
+    b.type = "button";
+    b.addEventListener("click", function () { alTocar(b); });
+    return b;
+  }
+
+  function pintar1() {
+    var j = juego1;
+    pintarLista(lista1, { vistos: j.vistos, nuevo: j.nuevo, rango: [j.a, j.b], punteros: punteros(j.a, j.b, j.fase === "elegir" || j.fase === "fin" ? j.m : null) });
+    j.nuevo = null;
+    pintarContador($("p1-contador"), j.mirados);
+    var acc = $("p1-acciones");
+    acc.textContent = "";
+    if (j.fase === "mirar") {
+      $("p1-explicacion").innerHTML = j.mirados === 0
+        ? "Están tapadas: la PC solo ve un casillero cuando lo <strong>mira</strong>. Empieza por el del medio."
+        : "Es la <strong>misma pregunta</strong> de antes, con menos casilleros. Haz lo mismo: mira el del medio.";
+      acc.appendChild(boton("Mirar el del medio", mirar1));
+    } else if (j.fase === "elegir") {
+      var m = j.m;
+      $("p1-explicacion").innerHTML = "En el medio (posición " + m + ") hay un <strong>" + j.v + "</strong>, no un " + j.x + ". ¿Dónde sigues buscando?";
+      if (j.a <= m - 1) acc.appendChild(boton("Entre " + j.a + " y " + (m - 1), function (b) { elegir1("izq", b); }));
+      if (m + 1 <= j.b) acc.appendChild(boton("Entre " + (m + 1) + " y " + j.b, function (b) { elegir1("der", b); }));
+    } else {
+      var otra = boton("↺ Buscar otro número", function () {
+        empezar1(OBJETIVOS1[(OBJETIVOS1.indexOf(j.x) + 1) % OBJETIVOS1.length]);
+        $("p1-acciones").querySelector("button").focus();
+      });
+      acc.appendChild(otra);
+    }
+  }
+
+  function empezar1(x) {
+    juego1 = { x: x, a: 0, b: NOTAS.length - 1, m: null, v: null, fase: "mirar", vistos: {}, nuevo: null, mirados: 0, preguntas: 1 };
+    $("p1-x").textContent = String(x);
+    $("p1-preguntas").textContent = "";
+    agregarPregunta(false);
+    Pasos.limpiarFeedback($("p1-fb"));
+    pintar1();
+  }
+
+  function mirar1() {
+    var j = juego1;
+    j.m = Math.floor((j.a + j.b) / 2);
+    j.v = NOTAS[j.m];
+    j.mirados++;
+    j.nuevo = j.m;
+    j.vistos[j.m] = j.v === j.x ? "igual" : "distinta";
+    if (j.v === j.x) {
+      j.fase = "fin";
+      agregarPregunta(true);
+      pintar1();
+      $("p1-explicacion").innerHTML = "¡Ahí está el <strong>" + j.x + "</strong>! Miraste solo <strong>" + j.mirados + "</strong> " + (j.mirados === 1 ? "casillero" : "casilleros") + " de 8.";
+      Pasos.feedback($("p1-fb"), "ok", "Cada vez te hiciste la misma pregunta, con un rango más chico: " +
+        (j.preguntas > 1 ? "toda la lista, luego la mitad que quedaba" + (j.preguntas > 2 ? ", luego la mitad de esa" : "") : "toda la lista") +
+        ". Una función que se hace la misma pregunta con un problema más chico es una función recursiva: buscar se llama a sí misma con la mitad que queda.");
+      $("p1-acciones").querySelector("button").focus();
+      leccion.desbloquear();
+      return;
+    }
+    j.fase = "elegir";
+    pintar1();
+    var primero = $("p1-acciones").querySelector("button");
+    if (primero) primero.focus();
+  }
+
+  function elegir1(lado, b) {
+    var j = juego1;
+    var bien = j.v < j.x ? "der" : "izq";
+    if (lado !== bien) {
+      b.classList.add("btn--mal");
+      $("p1-explicacion").innerHTML = '<span class="pista-texto">💡 Están ordenadas: a la ' + (lado === "izq" ? "izquierda del " + j.v + " solo hay notas <strong>menores</strong>" : "derecha del " + j.v + " solo hay notas <strong>mayores</strong>") +
+        ". El " + j.x + " es " + (j.x > j.v ? "mayor" : "menor") + " que " + j.v + ".</span>";
+      return;
+    }
+    if (bien === "der") j.a = j.m + 1; else j.b = j.m - 1;
+    j.fase = "mirar";
+    j.preguntas++;
+    agregarPregunta(false);
+    pintar1();
+    $("p1-acciones").querySelector("button").focus();
+  }
+
+  /* ---------- La traza de buscar(notas, x, 0, 7) ----------
+     Un paso por línea. El estado trae la pila (Pila.crear) y lo que pinta pintarLista. */
+  function trazaBuscar(x) {
+    var r = recorrido(x);
+    var ll = r.llamadas;
+    var vistos = {};
+    var mirados = 0;
+    var pasos = [];
+
+    function titulo(i) { return "buscar(notas, " + x + ", " + ll[i].a + ", " + ll[i].b + ")"; }
+    function programa(recibe) {
+      var p = Pila.programa();
+      p.linea = L.print;
+      p.ficha = "programa";
+      p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+      if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+      return p;
+    }
+    function vars(i, conMedio) {
+      var c = ll[i];
+      var v = [["inicio", c.a], ["fin", c.b]];
+      if (conMedio && !c.base) v.push(["medio", c.m]);
+      return v;
+    }
+    function tarjeta(i, conMedio, extra) {
+      var t = Pila.llamada(titulo(i), vars(i, conMedio));
+      for (var k in extra) t[k] = extra[k];
+      return t;
+    }
+    function lineaLlamada(i) { return ll[i].res === "menor" ? L.derecha : L.izquierda; }
+    function espera(i) { return tarjeta(i, true, { linea: lineaLlamada(i), falta: "return ▢", ficha: ll[i].a + "…" + ll[i].b }); }
+    function debajo(i) {
+      var lista = [programa()];
+      for (var j = 0; j < i; j++) lista.push(espera(j));
+      return lista;
+    }
+    function copia(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
+    // La lista como la ve la tarjeta i
+    function vista(i, conMedio, extra) {
+      var c = ll[i];
+      var e = { vistos: copia(vistos), mirados: mirados, rango: [c.a, c.b], punteros: punteros(c.a, c.b, conMedio && !c.base ? c.m : null) };
+      for (var k in extra) e[k] = extra[k];
+      return e;
+    }
+
+    pasos.push({ linea: L.def, texto: "Python recuerda la receta <strong>buscar</strong>. Todavía no la ejecuta.",
+      estado: { pila: [Pila.programa()], vistos: {}, mirados: 0 } });
+    pasos.push({ linea: L.notas, texto: "Las 8 notas, ordenadas. Están <strong>tapadas</strong>: la PC solo ve un casillero cuando lo mira.",
+      estado: { pila: [Pila.programa()], vistos: {}, mirados: 0 } });
+    pasos.push({ linea: L.print, fase: "ida", parada: true,
+      texto: "<code>len(notas) - 1</code> es 7. El <code>print</code> necesita <strong>" + titulo(0) + "</strong>: Python la llama.",
+      estado: { pila: [programa(), Pila.llamada(titulo(0), [])], vistos: {}, mirados: 0 } });
+
+    ll.forEach(function (c, i) {
+      var abajo = debajo(i);
+      var nivel = abajo.length;
+      pasos.push({ linea: L.def, fase: "ida",
+        texto: i === 0 ? "Nace la tarjeta con <strong>inicio = " + c.a + "</strong> y <strong>fin = " + c.b + "</strong>: busca en toda la lista."
+          : "Otra tarjeta de <strong>buscar</strong>, con <strong>su propio inicio = " + c.a + " y fin = " + c.b + "</strong>: la mitad que quedó.",
+        estado: vista(i, false, { pila: abajo.concat([tarjeta(i, false)]) }) });
+      pasos.push({ linea: L.base,
+        texto: "¿<code>inicio &gt; fin</code>? <code>" + c.a + " &gt; " + c.b + "</code> es " + chip(!!c.base) +
+          (c.base ? ": los punteros se cruzaron, <strong>no queda ningún casillero</strong>. Es el caso base." : ": todavía quedan casilleros."),
+        estado: vista(i, false, { pila: abajo.concat([tarjeta(i, false)]), leer: [nivel, "inicio"] }) });
+      if (c.base) {
+        pasos.push({ linea: L.menos1, texto: "<strong>return -1</strong>: no está. Devuelve -1 sin llamar a nadie.",
+          estado: vista(i, false, { pila: abajo.concat([tarjeta(i, false, { devuelve: "-1" })]) }) });
+        return;
+      }
+      pasos.push({ linea: L.medio, texto: "<code>medio = (" + c.a + " + " + c.b + ") // 2</code> = <strong>" + c.m + "</strong>.",
+        estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true)]), leer: [nivel, "medio"] }) });
+      mirados++;
+      vistos[c.m] = c.res === "igual" ? "igual" : "distinta";
+      pasos.push({ linea: L.igual,
+        texto: "Mira el casillero " + c.m + ": ¿<code>" + c.v + " == " + x + "</code>? " + chip(c.res === "igual") + (c.res === "igual" ? ": ¡lo encontró!" : "."),
+        estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true)]), nuevo: c.m }) });
+      if (c.res === "igual") {
+        pasos.push({ linea: L.devuelve, texto: "<strong>return medio</strong>: devuelve <strong>" + c.m + "</strong>, la posición donde está el " + x + ".",
+          estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true, { devuelve: String(c.m) })]) }) });
+        return;
+      }
+      var der = c.res === "menor";
+      pasos.push({ linea: L.menor,
+        texto: "¿<code>" + c.v + " &lt; " + x + "</code>? " + chip(der) + ": el " + x + " solo puede estar a la <strong>" + (der ? "derecha" : "izquierda") + "</strong> del medio.",
+        estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true)]) }) });
+      var sig = ll[i + 1];
+      pasos.push({ linea: lineaLlamada(i),
+        texto: "Llama con " + (der ? "<code>medio + 1</code>" : "<code>medio - 1</code>") + ": <strong>buscar(notas, " + x + ", " + sig.a + ", " + sig.b + ")</strong>. " +
+          "Esta tarjeta espera con <code>return ▢</code>.",
+        estado: vista(i, true, { pila: abajo.concat([espera(i), Pila.llamada(titulo(i + 1), [])]), rango: [sig.a, sig.b] }) });
+    });
+
+    // La vuelta: el resultado baja tarjeta por tarjeta, sin cambiar
+    var res = String(r.resultado);
+    for (var i = ll.length - 2; i >= 0; i--) {
+      pasos.push({ linea: lineaLlamada(i), flecha: true, fase: "vuelta", parada: true,
+        texto: titulo(i + 1) + " devolvió <strong>" + res + "</strong> y su tarjeta se fue. Esta sigue en la línea " + (lineaLlamada(i) + 1) +
+          ": <code>return ▢</code> es <code>return " + res + "</code>.",
+        estado: vista(i, true, { pila: debajo(i).concat([tarjeta(i, true, { linea: lineaLlamada(i), sigue: true, falta: "return ▢", recibe: res })]) }) });
+      pasos.push({ linea: lineaLlamada(i), fase: "vuelta",
+        texto: "No le suma ni le cambia nada: devuelve <strong>" + res + "</strong> tal cual a la de abajo.",
+        estado: vista(i, true, { pila: debajo(i).concat([tarjeta(i, true, { devuelve: res })]) }) });
+    }
+    pasos.push({ linea: L.print, flecha: true, fase: "vuelta", salida: res, parada: true,
+      texto: titulo(0) + " devolvió <strong>" + res + "</strong> al programa: <code>print(" + res + ")</code> lo muestra.",
+      estado: { pila: [programa(res)], vistos: copia(vistos), mirados: mirados, rango: r.resultado === -1 ? [1, 0] : null } });
+    return { pasos: pasos, r: r };
+  }
+
+  function crearTrazaBuscar(prefijo, obtenerX, alTerminar, alReiniciar) {
+    var pre = $(prefijo + "-codigo");
+    var lista = Lista.crear($(prefijo + "-lista"), NOTAS);
+    lista.tapar(true);
+    var pila = Pila.crear($(prefijo + "-pila"), { codigo: pre, rotulo: true });
+    var traza = Traza.crear({
+      codigo: pre,
+      explicacion: $(prefijo + "-explicacion"),
+      consola: $(prefijo + "-consola"),
+      ejecutar: $(prefijo + "-ejecutar"),
+      reproducir: $(prefijo + "-reproducir"),
+      reiniciar: $(prefijo + "-reiniciar"),
+      generar: function () { return trazaBuscar(obtenerX()).pasos; },
+      pila: pila,
+      intervalo: 1000,
+      alReiniciar: function () {
+        pila.vaciar();
+        lista.tapar(true);
+        lista.clases(null);
+        lista.punteros(null);
+        pintarContador($(prefijo + "-contador"), 0);
+        Pasos.limpiarFeedback($(prefijo + "-fb"));
+        if (alReiniciar) alReiniciar();
+      },
+      alPaso: function (paso) {
+        pila.pintar(paso.estado);
+        pintarLista(lista, paso.estado);
+        pintarContador($(prefijo + "-contador"), paso.estado.mirados || 0);
+      },
+      alTerminar: alTerminar
+    });
+    return { traza: traza, lista: lista, pila: pila };
+  }
+
+  /* ---------- 2. Una llamada por mitad ---------- */
+  escribirCodigo($("p2-codigo"), PROGRAMA);
+  var x2 = 17;
+  ponerX($("p2-codigo"), x2);
+  var t2 = crearTrazaBuscar("p2", function () { return x2; }, function () {
+    var r = recorrido(x2);
+    var n = r.llamadas.length;
+    Pasos.feedback($("p2-fb"), "ok", "Encontró el " + x2 + " en la posición " + r.resultado + " mirando " + r.mirados + (r.mirados === 1 ? " casillero" : " casilleros") + " de 8, con " +
+      n + (n === 1 ? " llamada" : " llamadas") + ". Cada llamada miró uno y le pasó la mitad que quedaba a la siguiente." +
+      (n > 1 ? " A la vuelta, el " + r.resultado + " bajó por la pila sin cambiar: cada tarjeta solo hizo return ▢." : ""));
+    leccion.desbloquear();
+  });
+
+
+  /* ---------- 3. La vuelta la haces tú ----------
+     La pila empieza llena: buscar(…, 0, 7) espera a buscar(…, 4, 7), que espera a
+     buscar(…, 6, 7), que encontró el 17. El alumno toca la tarjeta de arriba y elige qué
+     devuelve; al acertar, su valor baja al ▢ de la de abajo. */
+  escribirCodigo($("pv-codigo"), PROGRAMA);
+  ponerX($("pv-codigo"), 17);
+  var VUELTA = recorrido(17);           // tres llamadas; la de arriba devuelve 6
+  var LLV = VUELTA.llamadas;
+  var RES = String(VUELTA.resultado);
+  var pilaV = Pila.crear($("pv-pila"), { codigo: $("pv-codigo"), rotulo: true, alTocar: tocarVuelta });
+  var vuelta = null;   // { i: tarjeta de arriba (2 … 0, -1 el programa), fase: "tocar" | "elegir" | "baja" | "fin" }
+  var timerV = null;
+
+  function tituloV(i) { return "buscar(notas, 17, " + LLV[i].a + ", " + LLV[i].b + ")"; }
+  function varsV(i) { return [["inicio", LLV[i].a], ["fin", LLV[i].b], ["medio", LLV[i].m]]; }
+  function lineaLlamadaV(i) { return LLV[i].res === "menor" ? L.derecha : L.izquierda; }
+  function programaV(recibe) {
+    var p = Pila.programa();
+    p.linea = L.print;
+    p.ficha = "programa";
+    p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+    if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+    return p;
+  }
+  function esperaV(i) {
+    var t = Pila.llamada(tituloV(i), varsV(i));
+    t.linea = lineaLlamadaV(i);
+    t.falta = "return ▢";
+    t.ficha = LLV[i].a + "…" + LLV[i].b;
+    return t;
+  }
+  function debajoV(i) {
+    var lista = [programaV()];
+    for (var j = 0; j < i; j++) lista.push(esperaV(j));
+    return lista;
+  }
+  function arribaV(i, extra) {
+    var t = Pila.llamada(tituloV(i), varsV(i));
+    if (i < LLV.length - 1) {
+      t.linea = lineaLlamadaV(i);
+      t.sigue = true;
+      t.falta = "return ▢";
+      t.recibe = RES;
+    }
+    for (var c in extra) t[c] = extra[c];
+    return t;
+  }
+
+  function estadoV(i, fase) {
+    if (i === -1) {
+      return fase === "fin" ? { pila: [Pila.programa()] }
+        : { pila: [programaV(RES)], tocable: fase === "tocar" ? "👆 Tócalo: el programa sigue" : "" };
+    }
+    if (fase === "baja") return { pila: debajoV(i).concat([arribaV(i, { devuelve: RES })]) };
+    return { pila: debajoV(i).concat([arribaV(i)]), tocable: fase === "tocar" ? "👆 Tócala: es la única que puede volver" : "" };
+  }
+
+  // Lo que devuelve cada tarjeta (siempre 6) y tres respuestas que no, cada una con su pista
+  function opcionesV(i) {
+    var c = LLV[i];
+    var top = i === LLV.length - 1;
+    var lista = top ? [
+      { v: 17, pista: "17 es <code>x</code>, el número que buscabas. <code>return medio</code> devuelve la <strong>posición</strong> donde está: su medio." },
+      { v: c.b, pista: c.b + " es su <code>fin</code>. La línea 6 dice <code>return medio</code>, y su medio es " + c.m + "." },
+      { v: LLV[0].m, pista: LLV[0].m + " es el medio de la primera llamada. Esta tarjeta tiene <strong>su propio</strong> medio: " + c.m + "." }
+    ] : [
+      { v: c.m, pista: c.m + " es su medio, pero ahí no estaba el 17. Esta tarjeta ya no busca: devuelve lo que le devolvió la de arriba, <code>return ▢</code>." },
+      { v: VUELTA.resultado + 1, pista: "La línea " + (lineaLlamadaV(i) + 1) + " es <code>return buscar(…)</code>: no le suma nada a lo que recibe." },
+      { v: c.a, pista: c.a + " es su <code>inicio</code>. Devuelve tal cual lo que recibió de la de arriba." },
+      { v: c.b, pista: c.b + " es su <code>fin</code>. Devuelve tal cual lo que recibió de la de arriba." }
+    ];
+    var vistos = {};
+    vistos[VUELTA.resultado] = true;
+    lista = lista.filter(function (o) {
+      if (vistos[o.v]) return false;
+      vistos[o.v] = true;
+      return true;
+    }).slice(0, 3);
+    lista.push({ v: VUELTA.resultado, bien: true });
+    return lista.sort(function (a, b) { return a.v - b.v; });
+  }
+
+  function textosV(i, fase) {
+    if (i === -1 && fase === "fin") return { explica: "El programa imprime <strong>" + RES + "</strong>: el 17 está en <code>notas[" + RES + "]</code>.", pregunta: "¡Listo! Ya no quedan llamadas: solo el programa." };
+    if (i === -1) return { explica: tituloV(0) + " devolvió <strong>" + RES + "</strong> al programa, que sigue en la línea 13 con <code>print(" + RES + ")</code>.", pregunta: "👆 Toca el programa para que siga." };
+    var top = i === LLV.length - 1;
+    if (fase === "baja") return { explica: tituloV(i) + " devuelve <strong>" + RES + "</strong> y su tarjeta se va: el valor baja a " + (i > 0 ? tituloV(i - 1) : "el programa") + ".", pregunta: "" };
+    if (fase === "tocar") return {
+      explica: top ? "Arriba está <strong>" + tituloV(i) + "</strong>: miró el casillero " + LLV[i].m + " y encontró el 17. Las demás esperan."
+        : "<strong>" + tituloV(i) + "</strong> recibió " + RES + " y sigue en la línea " + (lineaLlamadaV(i) + 1) + ". Ahora es la de arriba.",
+      pregunta: "👆 Toca la tarjeta de arriba de la pila." };
+    return {
+      explica: top ? "<code>lista[" + LLV[i].m + "] == 17</code> es " + chip(true) + ": sigue en la línea 6, <code>return medio</code>."
+        : "Le falta <code>return ▢</code>, y en el espacio en blanco cayó el " + RES + ".",
+      pregunta: "¿Qué devuelve " + tituloV(i) + "?" };
+  }
+
+  function lineaV(i, fase) {
+    if (i === -1) return L.print;
+    if (i === LLV.length - 1) return fase === "tocar" ? L.igual : L.devuelve;
+    return lineaLlamadaV(i);
+  }
+
+  function pintarVuelta(desde) {
+    var i = vuelta.i;
+    var fase = vuelta.fase;
+    var linea = lineaV(i, fase);
+    Codigo.marcar($("pv-codigo"), { activas: fase === "fin" ? [] : [linea] });
+    pilaV.pintar(estadoV(i, fase));
+    if (desde !== undefined) Codigo.salto($("pv-codigo"), desde, linea, "vuelta");
+    else Codigo.quitarSalto($("pv-codigo"));
+    var t = textosV(i, fase);
+    $("pv-explicacion").innerHTML = t.explica;
+    $("pv-pregunta").innerHTML = t.pregunta;
+    var opciones = $("pv-opciones");
+    opciones.textContent = "";
+    if (fase === "elegir") {
+      opcionesV(i).forEach(function (o) {
+        opciones.appendChild(boton(String(o.v), function (b) { elegirVuelta(o, b); }));
+      });
+    } else {
+      // Ocupan su lugar sin verse: la pila de debajo no salta
+      for (var k = 0; k < 4; k++) opciones.appendChild(crear("button", "btn btn-secundario", "0")).disabled = true;
+    }
+    opciones.classList.toggle("vuelta__opciones--espera", fase !== "elegir");
+  }
+
+  function pararVuelta() {
+    if (timerV) clearTimeout(timerV);
+    timerV = null;
+  }
+
+  function empezarVuelta() {
+    pararVuelta();
+    vuelta = { i: LLV.length - 1, fase: "tocar" };
+    pilaV.vaciar();
+    Codigo.limpiar($("pv-codigo"));
+    Codigo.consola($("pv-consola"), []);
+    Pasos.limpiarFeedback($("pv-fb"));
+    $("pv-otra").hidden = true;
+    pintarVuelta();
+  }
+
+  function pistaV(texto) { return '<span class="pista-texto">💡 ' + texto + "</span>"; }
+
+  // nivel 0 es el programa; la tarjeta i está en el nivel i + 1
+  function pistaTocarV(nivel) {
+    return pistaV((nivel === 0 ? "El programa está pausado" : tituloV(nivel - 1) + " está pausada") + ": espera lo que devuelva la de encima. " +
+      "Solo puede volver la tarjeta de <strong>arriba</strong>.");
+  }
+
+  function tocarVuelta(nivel, arriba) {
+    if (!vuelta || vuelta.fase === "baja" || vuelta.fase === "fin") return;
+    if (!arriba) {
+      $("pv-explicacion").innerHTML = pistaTocarV(nivel);
+      return;
+    }
+    if (vuelta.fase !== "tocar") return;
+    if (vuelta.i === -1) { terminarVuelta(); return; }
+    vuelta.fase = "elegir";
+    pintarVuelta();
+    var primera = $("pv-opciones").querySelector("button");
+    if (primera) primera.focus();
+  }
+
+  function elegirVuelta(o, b) {
+    if (vuelta.fase !== "elegir") return;
+    if (!o.bien) {
+      b.classList.add("btn--mal");
+      $("pv-explicacion").innerHTML = pistaV(o.pista);
+      return;
+    }
+    var i = vuelta.i;
+    var desde = lineaV(i, "elegir");
+    vuelta.fase = "baja";
+    pintarVuelta();
+    timerV = setTimeout(function () {
+      timerV = null;
+      vuelta = { i: i - 1, fase: "tocar" };
+      pintarVuelta(desde);
+      var tope = pilaV.tope();
+      if (tope && ($("pv-pila").contains(document.activeElement) || $("pv-opciones").contains(document.activeElement) || document.activeElement === document.body)) tope.focus();
+    }, demora(900));
+  }
+
+  function terminarVuelta() {
+    vuelta.fase = "fin";
+    Codigo.marcar($("pv-codigo"), { activas: [L.print] });
+    Codigo.agregar($("pv-consola"), RES);
+    Codigo.volarDesdeLinea($("pv-codigo"), $("pv-consola").lastElementChild, RES, "vuelo--salida");
+    pintarVuelta();
+    $("pv-otra").hidden = false;
+    $("pv-otra").focus();
+    Pasos.feedback($("pv-fb"), "ok", "¡Deshiciste la pila! La de arriba devolvió su medio, 6, y las otras dos devolvieron ese mismo 6 sin tocarlo: " +
+      "su return ▢ solo pasa hacia abajo lo que recibe. En la búsqueda, todo el trabajo se hace a la ida.");
+    leccion.desbloquear();
+  }
+
+  (function () {
+    var estados = [];
+    var textos = [];
+    for (var i = LLV.length - 1; i >= -1; i--) {
+      (i === -1 ? ["tocar", "fin"] : ["tocar", "elegir", "baja"]).forEach(function (fase) {
+        estados.push(estadoV(i, fase));
+        textos.push(textosV(i, fase).explica);
+      });
+      if (i >= 0) opcionesV(i).forEach(function (o) { if (!o.bien) textos.push(pistaV(o.pista)); });
+    }
+    for (var nivel = 0; nivel < LLV.length; nivel++) textos.push(pistaTocarV(nivel));
+    pilaV.reservar(estados);
+    Codigo.reservarAlto($("pv-explicacion"), textos, function (copia, texto) { copia.innerHTML = texto; });
+  })();
+
+  /* ---------- 4. ¿Y si no está? ---------- */
+  escribirCodigo($("p4-codigo"), PROGRAMA);
+  ponerX($("p4-codigo"), 10);
+  var prediccion4 = null;
+  var t4 = crearTrazaBuscar("p4", function () { return 10; }, function () {
+    var explica = "Cada llamada achicó el rango: de 0…7 a 0…2, luego 2…2 (un solo casillero) y por fin inicio = 2 y fin = 1. " +
+      "Los punteros se cruzaron: no quedaba ningún casillero y el caso base devolvió -1, que bajó por la pila hasta el print. Miró 3 casilleros de 8.";
+    if (prediccion4 === "-1") Pasos.feedback($("p4-fb"), "ok", "¡Bien predicho! Imprime -1. " + explica);
+    else Pasos.feedback($("p4-fb"), "ok", "Imprime -1" + (prediccion4 === "error" ? ", sin errores" : ", no " + prediccion4) + ". " + explica);
+    leccion.desbloquear();
+  }, function () { habilitar4(); });
+
+  function habilitar4() {
+    var listo = prediccion4 !== null;
+    $("p4-ejecutar").disabled = !listo;
+    $("p4-reproducir").disabled = !listo;
+    if (!listo) $("p4-explicacion").textContent = "Elige tu predicción para poder ejecutar.";
+  }
+
+  $("p4-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion4 === null;
+      prediccion4 = b.getAttribute("data-valor");
+      $("p4-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (nueva) t4.traza.reiniciar();
+    });
+  });
+
+  /* ---------- 5. Con while o con recursión ----------
+     Las dos tablas se llenan a la vez, fila por fila: mismos medios, mismos casilleros. */
+  var x5 = 19;
+  var prediccion5 = null;
+  var timer5 = null;
+
+  function pararComparar() {
+    if (timer5) clearTimeout(timer5);
+    timer5 = null;
+  }
+
+  function marcarEquivale(cual) {
+    $("p5-equivale").querySelectorAll("tbody tr").forEach(function (tr) {
+      tr.classList.toggle("equivale--activa", tr.getAttribute("data-c") === cual);
+    });
+  }
+
+  function vaciarTablas() {
+    ["p5-while", "p5-rec"].forEach(function (id) {
+      var cuerpo = $(id).tBodies[0];
+      cuerpo.textContent = "";
+      var tr = cuerpo.insertRow();
+      tr.className = "seguimiento__vacio";
+      var td = tr.insertCell();
+      td.colSpan = 4;
+      td.textContent = "(sin ejecutar)";
+    });
+    $("p5-while-total").textContent = "";
+    $("p5-rec-total").textContent = "";
+    marcarEquivale(null);
+  }
+
+  function filaTabla(id, celdas, clase) {
+    var cuerpo = $(id).tBodies[0];
+    var vacia = cuerpo.querySelector(".seguimiento__vacio");
+    if (vacia) vacia.remove();
+    var tr = cuerpo.insertRow();
+    celdas.forEach(function (c) {
+      var td = tr.insertCell();
+      if (typeof c === "object") { td.colSpan = c.span; td.className = c.clase || ""; td.innerHTML = c.html; }
+      else td.textContent = String(c);
+    });
+    if (clase) tr.className = clase;
+  }
+
+  function ejecutarComparar() {
+    pararComparar();
+    vaciarTablas();
+    Pasos.limpiarFeedback($("p5-fb"));
+    var r = recorrido(x5);
+    var filas = r.llamadas;
+    var k = 0;
+    $("p5-ejecutar").disabled = true;
+    marcarEquivale("empieza");
+    function una() {
+      if (k < filas.length) {
+        var c = filas[k];
+        if (c.base) {
+          ["p5-while", "p5-rec"].forEach(function (id) {
+            filaTabla(id, [c.a, c.b, { span: 2, clase: "seguimiento__fin", html: "inicio &gt; fin: <code>return -1</code>" }]);
+          });
+          marcarEquivale("nada");
+        } else {
+          ["p5-while", "p5-rec"].forEach(function (id) { filaTabla(id, [c.a, c.b, c.m, { span: 1, clase: c.res === "igual" ? "" : "seguimiento__no", html: String(c.v) }]); });
+          if (c.res === "igual") {
+            ["p5-while", "p5-rec"].forEach(function (id) {
+              filaTabla(id, [{ span: 4, clase: "seguimiento__fin", html: c.v + " == " + x5 + ": <code>return " + c.m + "</code>" }]);
+            });
+            marcarEquivale(null);
+          } else marcarEquivale(c.res === "menor" ? "derecha" : "izquierda");
+        }
+        k++;
+        timer5 = setTimeout(una, demora(1000));
+        return;
+      }
+      timer5 = null;
+      marcarEquivale(null);
+      var texto = "<strong>" + r.mirados + "</strong> " + (r.mirados === 1 ? "comparación" : "comparaciones");
+      $("p5-while-total").innerHTML = texto;
+      $("p5-rec-total").innerHTML = texto;
+      $("p5-ejecutar").disabled = false;
+      $("p5-ejecutar").textContent = "▶ Ejecutar otra vez";
+      var explica = "Las dos tablas son iguales: mismos medios y " + r.mirados + (r.mirados === 1 ? " comparación" : " comparaciones") + ". " +
+        "Una vuelta del while es una llamada: donde el while cambia inicio o fin, la recursión llama con los nuevos. Prueba con otro x.";
+      if (prediccion5 === "igual") Pasos.feedback($("p5-fb"), "ok", "¡Bien pensado! " + explica);
+      else Pasos.feedback($("p5-fb"), "ok", "Miran los mismos. " + explica);
+      leccion.desbloquear();
+    }
+    una();
+  }
+
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion5 = b.getAttribute("data-valor");
+      $("p5-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (!timer5) $("p5-ejecutar").disabled = false;
+    });
+  });
+  $("p5-x").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      x5 = Number(b.getAttribute("data-x"));
+      $("p5-x").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      pararComparar();
+      vaciarTablas();
+      Pasos.limpiarFeedback($("p5-fb"));
+      $("p5-ejecutar").textContent = "▶ Ejecutar las dos";
+      $("p5-ejecutar").disabled = prediccion5 === null;
+    });
+  });
+  $("p5-ejecutar").addEventListener("click", ejecutarComparar);
+  vaciarTablas();
+
+  /* ---------- 6. La trampa de la rebanada ---------- */
+  var REBANADA = [
+    "def buscar(lista, x):",
+    "    if len(lista) == 0:",
+    "        return -1",
+    "    medio = len(lista) // 2",
+    "    if lista[medio] == x:",
+    "        return medio",
+    "    elif lista[medio] < x:",
+    "        return buscar(lista[medio + 1:], x)",
+    "    else:",
+    "        return buscar(lista[:medio], x)",
+    "",
+    "notas = " + NOTAS_TEXTO,
+    "print(buscar(notas, 17))"
+  ].join("\n");
+  escribirCodigo($("p6-codigo"), REBANADA);
+  var notas6 = Lista.crear($("p6-notas"), NOTAS);
+  var RESTO = NOTAS.slice(5);   // lista[5:] → [15, 17, 19]
+  var rebanada6 = Lista.crear($("p6-rebanada"), RESTO, { capacidad: Number($("p6-notas").style.getPropertyValue("--lista-n")) || 8 });
+  var pila6 = Pila.crear($("p6-pila"), { codigo: $("p6-codigo"), rotulo: true });
+  var prediccion6 = null;
+
+  // La rebanada se ve justo debajo de los casilleros de notas de donde salió (5, 6 y 7)
+  function alinear6() {
+    var caja = $("p6-rebanada");
+    var zona = caja.querySelector(".lista__fila") || caja;
+    zona.style.transform = "";
+    if ($("p6-rebanada-zona").hidden) return;
+    var a = notas6.valor(5);
+    var b = rebanada6.valor(0);
+    var ultimo = rebanada6.valor(RESTO.length - 1);
+    if (!a || !b || !ultimo) return;
+    var dx = a.getBoundingClientRect().left - b.getBoundingClientRect().left;
+    var borde = caja.getBoundingClientRect().right - zona.getBoundingClientRect().right;
+    dx = Math.min(dx, borde);
+    zona.style.transform = "translateX(" + Math.round(dx) + "px)";
+  }
+  window.addEventListener("resize", alinear6);
+
+  var R6 = { programa: 12, def: 0, base: 1, medio: 3, igual: 4, devuelve: 5, menor: 6, derecha: 7 };
+
+  function trazaRebanada() {
+    function programa(recibe) {
+      var p = Pila.programa();
+      p.linea = R6.programa;
+      p.ficha = "programa";
+      p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+      if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+      return p;
+    }
+    var T1 = "buscar(notas, 17)";
+    var T2 = "buscar(lista[5:], 17)";
+    function v1(medio) { var v = [["lista", NOTAS_TEXTO], ["x", 17]]; if (medio) v.push(["medio", 4]); return v; }
+    function v2(medio) { var v = [["lista", Lista.python(RESTO)], ["x", 17]]; if (medio) v.push(["medio", 1]); return v; }
+    function espera1() { var t = Pila.llamada(T1, v1(true)); t.linea = R6.derecha; t.falta = "return ▢"; t.ficha = "medio=4"; return t; }
+    var nada = { notas: {}, reb: null };
+    return [
+      { linea: R6.def, texto: "Una versión sin <code>inicio</code> ni <code>fin</code>: cada llamada recibe <strong>solo la parte</strong> donde buscar.",
+        estado: { pila: [Pila.programa()], v: nada } },
+      { linea: 11, texto: "Las 8 notas, ordenadas.", estado: { pila: [Pila.programa()], v: nada } },
+      { linea: R6.programa, fase: "ida", texto: "El <code>print</code> necesita <strong>buscar(notas, 17)</strong>: Python la llama.",
+        estado: { pila: [programa(), Pila.llamada(T1, [])], v: nada } },
+      { linea: R6.def, fase: "ida", texto: "En esta tarjeta, <code>lista</code> es <code>notas</code>: los 8 casilleros, del 0 al 7.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(false))], v: nada } },
+      { linea: R6.base, texto: "¿<code>len(lista) == 0</code>? <code>8 == 0</code> es " + chip(false) + ": hay casilleros.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(false))], v: nada } },
+      { linea: R6.medio, texto: "<code>medio = 8 // 2</code> = <strong>4</strong>.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(true))], v: { notas: {}, medio: 4, reb: null } } },
+      { linea: R6.igual, texto: "Mira el casillero 4: ¿<code>14 == 17</code>? " + chip(false) + ".",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(true))], v: { notas: { 4: "distinta" }, medio: 4, reb: null } } },
+      { linea: R6.menor, texto: "¿<code>14 &lt; 17</code>? " + chip(true) + ": el 17 está a la derecha.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(true))], v: { notas: { 4: "distinta" }, medio: 4, reb: null } } },
+      { linea: R6.derecha, texto: "<code>lista[5:]</code> corta los casilleros 5, 6 y 7 y hace con ellos una <strong>lista nueva</strong>. Esa lista nueva cuenta <strong>desde 0</strong>.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, [])], v: { notas: { 4: "distinta" }, apagar: 5, reb: {} } } },
+      { linea: R6.def, fase: "ida", texto: "Otra tarjeta. Su <code>lista</code> es la rebanada <code>[15, 17, 19]</code>: posiciones 0, 1 y 2.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(false))], v: { notas: { 4: "distinta" }, apagar: 5, reb: {} } } },
+      { linea: R6.base, texto: "¿<code>len(lista) == 0</code>? <code>3 == 0</code> es " + chip(false) + ".",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(false))], v: { notas: { 4: "distinta" }, apagar: 5, reb: {} } } },
+      { linea: R6.medio, texto: "<code>medio = 3 // 2</code> = <strong>1</strong>: el 1 de la <strong>rebanada</strong>.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(true))], v: { notas: { 4: "distinta" }, apagar: 5, reb: { medio: 1 } } } },
+      { linea: R6.igual, texto: "Mira su casillero 1: ¿<code>17 == 17</code>? " + chip(true) + ": ¡lo encontró!",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(true))], v: { notas: { 4: "distinta" }, apagar: 5, reb: { medio: 1, igual: 1 } } } },
+      { linea: R6.devuelve, texto: "<strong>return medio</strong> devuelve <strong>1</strong>: la posición del 17 <strong>en la rebanada</strong>.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(true), "1")], v: { notas: { 4: "distinta" }, apagar: 5, reb: { medio: 1, igual: 1 } } } },
+      { linea: R6.derecha, flecha: true, fase: "vuelta", texto: "La primera tarjeta recibe 1 y lo devuelve tal cual. Ya nadie sabe que la rebanada empezaba en el 5.",
+        estado: { pila: [programa(), (function () { var t = Pila.llamada(T1, v1(true), "1"); return t; })()], v: { notas: { 4: "distinta" }, apagar: 5, reb: { igual: 1 } } } },
+      { linea: R6.programa, flecha: true, fase: "vuelta", salida: "1",
+        texto: "Imprime <strong>1</strong>. Pero <code>notas[1]</code> es <strong>9</strong>: el 17 está en la posición <strong>6</strong>.",
+        estado: { pila: [programa("1")], v: { notas: { 1: "distinta", 6: "igual" }, final: true, reb: { igual: 1 } } } }
+    ];
+  }
+
+  function pintar6(e) {
+    var v = e.v;
+    notas6.clases(function (i) {
+      if (v.notas[i]) return "lista__casilla--" + v.notas[i];
+      if (v.apagar !== undefined && i < v.apagar) return "lista__casilla--apagada";
+      return "";
+    });
+    if (v.final) notas6.punteros({ medio: null, "devolvió 1": { i: 1, color: "naranja" }, "el 17": { i: 6, color: "verde" } });
+    else notas6.punteros(v.medio !== undefined ? { medio: { i: v.medio, color: "morado" }, "devolvió 1": null, "el 17": null } : null);
+    var zona = $("p6-rebanada-zona");
+    var antes = zona.hidden;
+    zona.hidden = !v.reb;
+    if (v.reb) {
+      rebanada6.clases(function (i) { return v.reb.igual === i ? "lista__casilla--igual" : ""; });
+      rebanada6.punteros(v.reb.medio !== undefined ? { medio: { i: v.reb.medio, color: "morado" } } : null);
+      if (antes) alinear6();
+    } else rebanada6.punteros(null);
+  }
+
+  var t6 = Traza.crear({
+    codigo: $("p6-codigo"),
+    explicacion: $("p6-explicacion"),
+    consola: $("p6-consola"),
+    ejecutar: $("p6-ejecutar"),
+    reproducir: $("p6-reproducir"),
+    reiniciar: $("p6-reiniciar"),
+    generar: trazaRebanada,
+    pila: pila6,
+    intervalo: 1100,
+    alReiniciar: function () {
+      pila6.vaciar();
+      pintar6({ v: { notas: {}, reb: null } });
+      Pasos.limpiarFeedback($("p6-fb"));
+      habilitar6();
+    },
+    alPaso: function (paso) {
+      pila6.pintar(paso.estado);
+      pintar6(paso.estado);
+    },
+    alTerminar: function () {
+      var explica = "La rebanada es una lista nueva y cuenta desde 0: el 17 está en su posición 1, pero en notas está en la 6. Al cortar, la posición se pierde. " +
+        "Por eso la versión buena no corta la lista: le pasa siempre la misma lista entera y solo cambia inicio y fin. Así medio es siempre una posición de notas.";
+      if (prediccion6 === "1") Pasos.feedback($("p6-fb"), "ok", "¡Bien visto! Imprime 1. " + explica);
+      else Pasos.feedback($("p6-fb"), "ok", "Imprime 1, no " + prediccion6 + ". " + explica);
+      leccion.desbloquear();
+    }
+  });
+
+  function habilitar6() {
+    var listo = prediccion6 !== null;
+    $("p6-ejecutar").disabled = !listo;
+    $("p6-reproducir").disabled = !listo;
+    if (!listo) $("p6-explicacion").textContent = "Elige tu predicción para poder ejecutar.";
+  }
+
+  $("p6-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion6 === null;
+      prediccion6 = b.getAttribute("data-valor");
+      $("p6-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (nueva) t6.reiniciar();
+    });
+  });
+
+  /* ---------- 7. Reto: completar las dos llamadas ---------- */
+  var RETO = FUNCION.slice(0, 7).concat([
+    "        return buscar(lista, x, {{a}})",
+    "    else:",
+    "        return buscar(lista, x, {{b}})"
+  ]).join("\n");
+  escribirCodigo($("reto-codigo"), RETO);
+
+  var OPCIONES_RETO = {
+    a: ["medio + 1, fin", "medio, fin", "inicio, medio - 1", "inicio, fin"],
+    b: ["inicio, medio - 1", "inicio, medio", "medio + 1, fin", "inicio, fin"]
+  };
+  var NOMBRES_HUECO = { a: "Espacio en blanco 1: la llamada cuando lista[medio] < x", b: "Espacio en blanco 2: la llamada del else" };
+
+  Object.keys(OPCIONES_RETO).forEach(function (h) {
+    var sel = crear("select", "codigo__elegir");
+    sel.id = "reto-" + h;
+    sel.setAttribute("aria-label", NOMBRES_HUECO[h]);
+    sel.appendChild(crear("option", "", "?")).value = "";
+    OPCIONES_RETO[h].forEach(function (t) { sel.appendChild(crear("option", "", t)).value = t; });
+    hueco($("reto-codigo"), h).replaceWith(sel);
+    sel.addEventListener("change", function () {
+      sel.classList.toggle("codigo__elegir--lleno", !!sel.value);
+      $("reto-pruebas").hidden = true;
+      Pasos.limpiarFeedback($("reto-fb"));
+      leccion.listoParaComprobar(!!($("reto-a").value && $("reto-b").value));
+    });
+  });
+
+  // Evalúa "medio + 1, fin" y compañía con los valores de la llamada
+  function argumentos(texto, a, b, m) {
+    var valores = { inicio: a, fin: b, medio: m };
+    return texto.split(",").map(function (parte) {
+      var p = parte.trim().split(" ");
+      var v = valores[p[0]];
+      if (p[1] === "+") v += Number(p[2]);
+      if (p[1] === "-") v -= Number(p[2]);
+      return v;
+    });
+  }
+
+  // Lo que imprime buscar(notas, x, 0, 7) con esas dos llamadas; RecursionError si no termina
+  function salidaReto(llamadaA, llamadaB, x) {
+    function buscar(a, b, prof) {
+      if (prof > 50) throw new Error("RecursionError");
+      if (a > b) return -1;
+      var m = Math.floor((a + b) / 2);
+      if (NOTAS[m] === x) return m;
+      var args = argumentos(NOTAS[m] < x ? llamadaA : llamadaB, a, b, m);
+      return buscar(args[0], args[1], prof + 1);
+    }
+    try { return String(buscar(0, NOTAS.length - 1, 0)); } catch (err) { return err.message; }
+  }
+
+  var PRUEBAS_RETO = [6, 12, 19, 10, 20];
+
+  function pintarPruebas(ul, filas) {
+    ul.textContent = "";
+    filas.forEach(function (f) {
+      var li = crear("li", f.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", f.llamada));
+      li.appendChild(crear("span", "prueba__salida", f.sale));
+      li.appendChild(crear("span", "prueba__marca", f.ok ? "✓" : "✗"));
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+  }
+
+  function comprobarReto() {
+    var A = $("reto-a").value;
+    var B = $("reto-b").value;
+    if (!A || !B) return false;
+    var bienA = OPCIONES_RETO.a[0];
+    var bienB = OPCIONES_RETO.b[0];
+    pintarPruebas($("reto-pruebas"), PRUEBAS_RETO.map(function (x) {
+      var sale = salidaReto(A, B, x);
+      return { llamada: "buscar(notas, " + x + ", 0, 7)", sale: sale, ok: sale === salidaReto(bienA, bienB, x) };
+    }));
+    if (A === bienA && B === bienB) {
+      Pasos.feedback($("reto-fb"), "ok", "¡Funciona con los cinco! Si lista[medio] < x, lo que queda va de medio + 1 a fin; si no, de inicio a medio - 1. " +
+        "El medio ya se miró: por eso + 1 y - 1. Y los que no están llegan al caso base y devuelven -1.");
+      return true;
+    }
+    var pista;
+    if (A === "inicio, fin" || B === "inicio, fin") {
+      pista = "Con «inicio, fin» la llamada recibe el mismo rango que tenía: el problema no se achica y la pila crece hasta el RecursionError. Cada llamada tiene que quedarse con una mitad.";
+    } else if (A === "inicio, medio - 1" && B === "medio + 1, fin") {
+      pista = "Las dos llamadas están al revés. Si lista[medio] < x, x está a la derecha del medio (de medio + 1 a fin); en el else, a la izquierda (de inicio a medio - 1).";
+    } else if (A === "inicio, medio - 1" || B === "medio + 1, fin") {
+      pista = (A === "inicio, medio - 1" ? "En la línea 8, lista[medio] es menor que x: x tiene que estar a la derecha del medio, de medio + 1 a fin." :
+        "En el else, lista[medio] es mayor que x: x tiene que estar a la izquierda del medio, de inicio a medio - 1.") + " Mira las pruebas que fallan.";
+    } else {
+      pista = "El casillero medio ya se miró y no era. Si se deja dentro (" + (A === "medio, fin" ? "medio, fin" : "inicio, medio") + "), con dos casilleros el rango a veces no se achica " +
+        "y la llamada se repite igual hasta el RecursionError. Hay que dejarlo fuera: medio + 1 o medio - 1.";
+    }
+    Pasos.feedback($("reto-fb"), "pista", pista);
+    return false;
+  }
+
+  /* ---------- Resumen ---------- */
+  escribirCodigo($("resumen-codigo"), [
+    "def buscar(lista, x, inicio, fin):",
+    "    if inicio > fin:",
+    "        return -1  # no queda nada",
+    "    medio = (inicio + fin) // 2",
+    "    if lista[medio] == x:",
+    "        return medio  # lo encontró",
+    "    elif lista[medio] < x:  # a la derecha",
+    "        return buscar(lista, x, medio + 1, fin)",
+    "    else:  # a la izquierda",
+    "        return buscar(lista, x, inicio, medio - 1)"
+  ].join("\n"));
+
+  /* ---------- Conexiones ---------- */
+  empezar1(17);
+  $("pv-otra").addEventListener("click", function () {
+    empezarVuelta();
+    var tope = pilaV.tope();
+    if (tope) tope.focus();
+  });
+  empezarVuelta();
+  habilitar4();
+  habilitar6();
+
+  // Al cambiar de paso, se pausa cualquier ejecución en marcha
+  function pausar() {
+    t2.traza.detener();
+    t4.traza.detener();
+    t6.detener();
+    if (timer5) {
+      pararComparar();
+      vaciarTablas();
+      $("p5-ejecutar").disabled = prediccion5 === null;
+    }
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-mitad": pausar,
+      "paso-traza": pausar,
+      "paso-vuelta": pausar,
+      "paso-no-esta": pausar,
+      "paso-while": pausar,
+      "paso-rebanada": function () { pausar(); alinear6(); },
+      "paso-reto": function (paso, l, info) {
+        pausar();
+        if (!info.desbloqueado) l.listoParaComprobar(!!($("reto-a").value && $("reto-b").value));
+      },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

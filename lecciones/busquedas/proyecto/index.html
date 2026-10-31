@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: la PC adivina tu número · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Búsquedas: programar en Python un juego en el que la PC adivina tu número del 1 al 100 con búsqueda binaria: inicio, fin, medio, while True, .strip().lower(), un contador de preguntas y «¡Hiciste trampa!».">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; --color-medio: #7a3fb0; --color-medio-suave: #f1e8fa; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+    .codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.9rem; }
+    .lab .codigo { margin-top: var(--esp-4); }
+
+    /* Un número del código que se puede cambiar (fin = 100) */
+    .codigo__editable {
+      width: 4.6ch; margin: 0; padding: 0 0.15em;
+      font: inherit; font-weight: 700; color: var(--tk-numero);
+      background: rgba(255, 212, 121, 0.12); border: 0; border-bottom: 2px dashed var(--tk-numero); border-radius: 3px 3px 0 0;
+    }
+    .codigo__editable:focus-visible { outline: 2px solid var(--tk-numero); outline-offset: 2px; }
+
+    /* ---------- La PC que pregunta ---------- */
+    .pc { display: flex; align-items: center; justify-content: center; gap: var(--esp-3); margin: 0; }
+    .pc__cara { font-size: 2.6rem; line-height: 1; }
+    .pc__globo {
+      position: relative; margin: 0; padding: var(--esp-3) var(--esp-5);
+      border-radius: var(--radio); background: var(--color-medio-suave); border: 2px solid var(--color-medio);
+      font-size: var(--texto-lg); font-weight: 700; color: var(--color-texto);
+    }
+    .pc__globo::before { content: ""; position: absolute; left: -0.6rem; top: 50%; transform: translateY(-50%); border: 0.5rem solid transparent; border-right-color: var(--color-medio); border-left: 0; }
+    .pc__globo strong { color: var(--color-medio); font-family: var(--fuente-codigo); }
+    .pc__globo--cambio { animation: valor-pulso 300ms ease-out; }
+    .pc__globo--acierto { background: var(--color-ok-suave); border-color: var(--color-ok); }
+    .pc__globo--acierto::before { border-right-color: var(--color-ok); }
+    .pc__globo--acierto strong { color: var(--color-ok); }
+    .pc__globo--trampa { background: var(--color-pista-suave); border-color: var(--color-pista); }
+    .pc__globo--trampa::before { border-right-color: var(--color-pista); }
+    .contador { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { color: var(--color-texto); }
+    .respuestas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .respuestas .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .tu-numero { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .tu-numero strong { font-family: var(--fuente-codigo); font-size: var(--texto-md); color: var(--color-azul); }
+
+    /* ---------- La recta del 1 al 100: la zona donde puede estar tu número ----------
+       Verde: los números que quedan. Rayado: los descartados. Las rayitas son las
+       preguntas anteriores; arriba, el medio; abajo, inicio y fin. */
+    .recta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--esp-2); }
+    .recta__extremo { padding-top: 2.15rem; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; line-height: 1rem; color: var(--color-texto-suave); }
+    .recta__centro { position: relative; padding-top: 2.2rem; min-width: 0; }
+    .recta__barra {
+      position: relative; height: 1rem; border-radius: 999px; overflow: hidden;
+      background: repeating-linear-gradient(135deg, #eef1f5 0 6px, #dfe4eb 6px 12px);
+      box-shadow: inset 0 0 0 2px var(--color-borde);
+    }
+    .recta__zona { position: absolute; top: 0; bottom: 0; background: var(--color-acento-suave); box-shadow: inset 0 0 0 2px var(--color-acento); border-radius: 3px; transition: left 480ms var(--curva-rebote), width 480ms var(--curva-rebote); }
+    .recta__zona--acierto { background: var(--color-acento); }
+    .recta__barra--trampa { box-shadow: inset 0 0 0 2px var(--color-pista); }
+    .recta__raya { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #6a7482; }
+    .recta__medio {
+      position: absolute; top: 0; transform: translateX(-50%);
+      padding: 0 0.5em; border-radius: 999px; line-height: 1.5rem;
+      font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; white-space: nowrap;
+      color: #fff; background: var(--color-medio);
+      transition: left 480ms var(--curva-rebote), background-color var(--dur);
+    }
+    .recta__medio::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 0.35rem solid transparent; border-top-color: var(--color-medio); }
+    .recta__medio--acierto { background: var(--color-ok); }
+    .recta__medio--acierto::after { border-top-color: var(--color-ok); }
+    .recta__punteros .lista__puntero { transition: left 480ms var(--curva-rebote), top var(--dur-rapida); }
+    .quedan { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); min-height: 1.5em; }
+    .quedan strong { color: var(--color-acento); font-family: var(--fuente-codigo); }
+    .quedan--trampa strong { color: var(--color-pista); }
+
+    .historial { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-2); min-height: 1.9rem; margin: var(--esp-3) 0 0; padding: 0; list-style: none; }
+    .historial li { padding: 0.1em 0.6em; border-radius: 999px; background: var(--color-superficie); border: 1px solid var(--color-borde); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .historial .h-si { border-color: var(--color-ok); color: var(--color-ok); background: var(--color-ok-suave); }
+
+    /* ---------- Variables del programa ---------- */
+    .vars { display: grid; grid-template-columns: repeat(4, auto); justify-content: center; gap: var(--esp-1) var(--esp-4); margin: var(--esp-4) auto 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); text-align: center; }
+    .vars dt { grid-row: 1; font-weight: 700; color: var(--color-texto-suave); }
+    .vars dd { grid-row: 2; margin: 0; font-weight: 700; color: var(--color-azul); font-size: var(--texto-md); }
+    .vars dd.vars--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Consola que espera respuestas ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 6.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .atajos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); width: 100%; font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .atajos .btn { min-height: 2.25rem; padding: 0 var(--esp-3); font-family: var(--fuente-codigo); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .consola .consola__linea { white-space: pre-wrap; }
+    .registro { max-height: 12rem; overflow-y: auto; overscroll-behavior: contain; }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Opciones y pruebas ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__etiqueta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-1) var(--esp-3); }
+    .prueba__salida { grid-column: 1; grid-row: 2; font-family: var(--fuente-codigo); font-weight: 700; overflow-wrap: anywhere; }
+    .prueba__marca { grid-column: 2; grid-row: 1 / span 2; font-weight: 700; font-size: var(--texto-md); }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* Recta chiquita dentro de una prueba: la zona y dónde cae el medio */
+    .mini-recta { position: relative; display: inline-block; flex: none; width: 6rem; height: 0.6rem; border-radius: 999px; background: repeating-linear-gradient(135deg, #eef1f5 0 4px, #dfe4eb 4px 8px); box-shadow: inset 0 0 0 1px var(--color-borde); }
+    .mini-recta__zona { position: absolute; top: 0; bottom: 0; background: var(--color-acento-suave); box-shadow: inset 0 0 0 1.5px var(--color-acento); border-radius: 2px; }
+    .mini-recta__punto { position: absolute; top: 50%; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--color-medio); border: 2px solid #fff; transform: translate(-50%, -50%); box-shadow: var(--sombra); }
+    .mini-recta__punto--fuera { background: var(--color-pista); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+      .codigo.codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.78rem; }
+      .pc__cara { font-size: 2.1rem; }
+      .pc__globo { padding: var(--esp-2) var(--esp-4); font-size: var(--texto-md); }
+      .vars { gap: var(--esp-1) var(--esp-3); }
+      .registro { max-height: 10rem; }
+      .entrada input { width: 4.5rem; }
+    }
+    /* En escritorio, la consola más baja deja ver la explicación */
+    @media (min-width: 1024px) {
+      #paso-jugar .registro { max-height: 8.5rem; }
+    }
+    /* En el móvil, la recta va bajo la pregunta de la PC, antes de los botones: se ve encogerse al responder */
+    @media (max-width: 1023.98px) {
+      #paso-demo .lab { display: flex; flex-direction: column; }
+      #paso-demo .lab__principal { display: contents; }
+      #paso-demo .lab__visual { order: 1; margin-top: var(--esp-4); }
+      #paso-demo .respuestas, #paso-demo .fila-botones, #paso-demo .tu-numero { order: 2; }
+      #paso-demo .lab__resultado { order: 3; margin-top: var(--esp-4); }
+      /* En el reto, la recta va antes que la consola, y las misiones antes que el programa, que es largo */
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { display: contents; }
+      #paso-jugar .lab__visual { order: 0; margin-bottom: var(--esp-2); }
+      #paso-jugar .consola, #paso-jugar .fila-botones, #paso-jugar .explicacion { order: 1; }
+      #paso-jugar .lab__resultado { order: 2; margin-top: var(--esp-4); }
+      #paso-jugar .reto-codigo { order: 3; }
+      #paso-jugar .consola { margin-top: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Jugar sin código -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="h-demo">
+      <span class="paso__etiqueta">Búsquedas 7/7 · Proyecto</span>
+      <h1 class="paso__titulo" id="h-demo">Proyecto: la PC adivina tu número</h1>
+      <p>Al revés que en Bucles: ahora <strong>tú</strong> piensas un número del <strong>1 al 100</strong> (no lo digas) y la PC lo adivina. A cada pregunta, responde si tu número es mayor, menor o ese.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="pc">
+            <span class="pc__cara" aria-hidden="true">🤖</span>
+            <span class="pc__globo" id="d-globo" aria-live="polite"></span>
+          </p>
+          <p class="contador" id="d-contador"></p>
+          <div class="respuestas" id="d-respuestas" role="group" aria-label="Tu respuesta">
+            <button type="button" class="btn btn-secundario" data-resp="mayor">⬆ Mayor</button>
+            <button type="button" class="btn btn-secundario" data-resp="menor">⬇ Menor</button>
+            <button type="button" class="btn btn-secundario" data-resp="si">✓ ¡Es ese!</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-dado">🎲 Elige un número por mí</button>
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Otra partida</button>
+          </div>
+          <p class="tu-numero" id="d-tuyo" hidden></p>
+        </div>
+        <div class="lab__visual">
+          <div id="d-recta" aria-hidden="true"></div>
+          <p class="quedan" id="d-quedan" aria-live="polite"></p>
+          <ul class="historial" id="d-historial" aria-label="Preguntas y respuestas"></ul>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: el medio -->
+    <section class="paso" id="paso-medio" data-comprobar aria-labelledby="h-medio">
+      <span class="paso__etiqueta">Parte 1 de 4</span>
+      <h2 class="paso__titulo" id="h-medio">La pregunta del medio</h2>
+      <p>Tu número está entre <code>inicio</code> y <code>fin</code>. La PC pregunta siempre por el del <strong>medio</strong>. ¿Qué línea lo calcula? La probamos con tres zonas.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">inicio</span> = <span class="tk-numero">1</span></span><span class="linea"><span class="tk-variable">fin</span> = <span class="tk-numero">100</span></span><span class="linea"><span class="hueco" id="p1-hueco">?</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"¿Es <span class="tk-llave">{</span><span class="tk-variable">medio</span><span class="tk-llave">}</span>?"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">¿Qué línea calcula el medio?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="division"><span>medio = (inicio + fin) / 2</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="sin-parentesis"><span>medio = inicio + fin // 2</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>medio = (inicio + fin) // 2</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="fin"><span>medio = fin // 2</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: descartar la mitad -->
+    <section class="paso" id="paso-mover" data-comprobar aria-labelledby="h-mover">
+      <span class="paso__etiqueta">Parte 2 de 4</span>
+      <h2 class="paso__titulo" id="h-mover">Descartar la mitad</h2>
+      <p>Si tu número es <strong>mayor</strong> que <code>medio</code>, la zona empieza justo después; si es <strong>menor</strong>, termina justo antes. ¿Qué va en el espacio en blanco? Lo probamos pensando 37, 100 y 1.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">inicio</span> = <span class="tk-numero">1</span></span><span class="linea"><span class="tk-variable">fin</span> = <span class="tk-numero">100</span></span><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="tk-variable">medio</span> = (<span class="tk-variable">inicio</span> + <span class="tk-variable">fin</span>) // <span class="tk-numero">2</span></span><span class="linea">    <span class="tk-variable">resp</span> = <span class="tk-funcion">input</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"¿Es <span class="tk-llave">{</span><span class="tk-variable">medio</span><span class="tk-llave">}</span>? "</span>).<span class="tk-funcion">strip</span>().<span class="tk-funcion">lower</span>()</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">resp</span> == <span class="tk-texto">"si"</span>:</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea">    <span class="hueco" id="p2-hueco">?</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="sin1"><span>elif resp == "mayor":
+    inicio = medio
+elif resp == "menor":
+    fin = medio</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="medio"><span>elif resp == "mayor":
+    medio = medio + 1
+elif resp == "menor":
+    medio = medio - 1</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>elif resp == "mayor":
+    inicio = medio + 1
+elif resp == "menor":
+    fin = medio - 1</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="reves"><span>elif resp == "mayor":
+    fin = medio - 1
+elif resp == "menor":
+    inicio = medio + 1</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: contar las preguntas -->
+    <section class="paso" id="paso-contar" data-comprobar aria-labelledby="h-contar">
+      <span class="paso__etiqueta">Parte 3 de 4</span>
+      <h2 class="paso__titulo" id="h-contar">Contar las preguntas</h2>
+      <p>Al acertar, la PC dirá cuántas preguntas hizo: cada una es una <strong>comparación</strong>. Si piensas 37, debe decir <strong>¡Lo adiviné en 3 preguntas!</strong> ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Tu programa"><code><span class="linea"><span class="tk-variable">inicio</span> = <span class="tk-numero">1</span></span><span class="linea"><span class="tk-variable">fin</span> = <span class="tk-numero">100</span></span><span class="linea"><span class="hueco" id="p3-hueco">?</span></span><span class="linea">    <span class="tk-variable">resp</span> = <span class="tk-funcion">input</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"¿Es <span class="tk-llave">{</span><span class="tk-variable">medio</span><span class="tk-llave">}</span>? "</span>).<span class="tk-funcion">strip</span>().<span class="tk-funcion">lower</span>()</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">resp</span> == <span class="tk-texto">"si"</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"¡Lo adiviné en <span class="tk-llave">{</span><span class="tk-variable">preguntas</span><span class="tk-llave">}</span> preguntas!"</span>)</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea linea--hecha">    <span class="tk-comentario"># mayor y menor ✓</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p3-opciones">
+          <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p3" value="dentro"><span>while True:
+    preguntas = 0
+    medio = (inicio + fin) // 2
+    preguntas += 1</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="bien"><span>preguntas = 0
+while True:
+    medio = (inicio + fin) // 2
+    preguntas += 1</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="sin-suma"><span>preguntas = 0
+while True:
+    medio = (inicio + fin) // 2</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="antes"><span>preguntas = 0
+preguntas += 1
+while True:
+    medio = (inicio + fin) // 2</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: la trampa -->
+    <section class="paso" id="paso-trampa" data-comprobar aria-labelledby="h-trampa">
+      <span class="paso__etiqueta">Parte 4 de 4</span>
+      <h2 class="paso__titulo" id="h-trampa">¿Y si mientes?</h2>
+      <p>Si alguien miente, la zona se acaba: <code>inicio</code> pasa a <code>fin</code> y no queda ningún número. ¿Qué revisa eso al empezar cada vuelta?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Tu programa"><code><span class="linea linea--hecha"><span class="tk-comentario"># inicio, fin y preguntas ✓</span></span><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="hueco" id="p4-hueco">?</span></span><span class="linea">    <span class="tk-variable">medio</span> = (<span class="tk-variable">inicio</span> + <span class="tk-variable">fin</span>) // <span class="tk-numero">2</span></span><span class="linea">    <span class="tk-variable">preguntas</span> += <span class="tk-numero">1</span></span><span class="linea linea--hecha">    <span class="tk-comentario"># preguntar, si, mayor y menor ✓</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="igual"><span>if inicio == fin:
+    print("¡Hiciste trampa!")
+    break</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>if inicio &gt; fin:
+    print("¡Hiciste trampa!")
+    break</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="sin-break"><span>if inicio &gt; fin:
+    print("¡Hiciste trampa!")</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="reves"><span>if fin &gt; inicio:
+    print("¡Hiciste trampa!")
+    break</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Reto: el programa completo -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="h-jugar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-jugar">¡Tu programa funciona!</h2>
+      <p>Este es tu programa completo. Piensa un número y responde en la consola (o toca una respuesta). Cumple las <strong>cuatro misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="registro" id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo" id="t-etiqueta">¿Es 50?</label>
+              <input type="text" id="t-campo" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+              <div class="atajos" role="group" aria-label="Escribir una respuesta">
+                <span>o toca:</span>
+                <button type="button" class="btn btn-secundario" data-escribe="mayor">mayor</button>
+                <button type="button" class="btn btn-secundario" data-escribe="menor">menor</button>
+                <button type="button" class="btn btn-secundario" data-escribe="si">si</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Otra partida</button>
+          </div>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="reto-codigo">
+            <pre class="codigo codigo--compacto" id="t-codigo" aria-label="Tu programa completo"><code id="t-codigo-lineas"></code></pre>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div id="t-recta" aria-hidden="true"></div>
+          <p class="quedan" id="t-quedan"></p>
+          <dl class="vars" id="t-vars" aria-label="Variables"></dl>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="siete">Adivina del 1 al 100 en 7 preguntas o menos</li>
+            <li data-mision="trampa">Haz que diga «¡Hiciste trampa!»</li>
+            <li data-mision="invalida">Responde algo que no sea mayor, menor ni si</li>
+            <li data-mision="mil">Del 1 al 1000 en 10 preguntas o menos, cambiando una línea</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Preguntar por el medio y descartar la mitad: con 100 números bastan 7 preguntas, y con 1000, solo 10.</p>
+        <ul class="usado" aria-label="Lo que usaste">
+          <li>(inicio + fin) // 2</li><li>inicio = medio + 1</li><li>fin = medio - 1</li><li>inicio &gt; fin</li><li>while True</li><li>.strip().lower()</li><li>preguntas += 1</li><li>break</li>
+        </ul>
+        <pre class="codigo codigo--compacto resumen-codigo" aria-label="Tu programa completo"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir el proyecto</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function medioDe(a, b) { return Math.floor((a + b) / 2); }   // (inicio + fin) // 2
+
+  /* ---------- La recta: dónde puede estar tu número ----------
+     crearRecta(el).pintar({ max, inicio, fin, medio, previas, acierto, trampa }) */
+  function crearRecta(el) {
+    el.classList.add("recta");
+    el.innerHTML =
+      '<span class="recta__extremo">1</span>' +
+      '<div class="recta__centro">' +
+        '<span class="recta__medio" hidden></span>' +
+        '<div class="recta__barra"><div class="recta__zona"></div></div>' +
+        '<div class="lista__punteros recta__punteros">' +
+          '<span class="lista__puntero lista__puntero--azul"></span>' +
+          '<span class="lista__puntero lista__puntero--naranja"></span>' +
+        "</div>" +
+      "</div>" +
+      '<span class="recta__extremo">100</span>';
+    var extremoFin = el.lastElementChild;
+    var centro = el.querySelector(".recta__centro");
+    var barra = el.querySelector(".recta__barra");
+    var zona = el.querySelector(".recta__zona");
+    var medio = el.querySelector(".recta__medio");
+    var fila = el.querySelector(".recta__punteros");
+    var chipInicio = fila.children[0];
+    var chipFin = fila.children[1];
+    var estado = null;
+
+    function pct(x, max) { return ((x - 0.5) / max) * 100; }
+
+    // Cada ficha va bajo su número, sin salirse de la recta; si se chocan, fin baja un piso
+    function ubicar() {
+      if (!estado) return;
+      var ancho = centro.clientWidth;
+      if (!ancho) return;
+      function x(chip, valor) {
+        var w = chip.offsetWidth;
+        var px = Math.max(w / 2, Math.min(ancho - w / 2, pct(valor, estado.max) / 100 * ancho));
+        chip.style.left = px + "px";
+        return { a: px - w / 2, b: px + w / 2 };
+      }
+      var a = x(chipInicio, estado.inicio);
+      var b = x(chipFin, estado.fin);
+      var choca = a.a < b.b + 4 && b.a < a.b + 4;
+      chipInicio.style.setProperty("--piso", "0");
+      chipFin.style.setProperty("--piso", choca ? "1" : "0");
+      fila.style.setProperty("--pisos", choca ? "2" : "1");
+      if (!medio.hidden) {
+        var wm = medio.offsetWidth;
+        medio.style.left = Math.max(wm / 2, Math.min(ancho - wm / 2, pct(estado.medio, estado.max) / 100 * ancho)) + "px";
+      }
+    }
+    if (window.ResizeObserver) new ResizeObserver(ubicar).observe(centro);
+
+    function pintar(e) {
+      estado = e;
+      var max = e.max;
+      extremoFin.textContent = String(max);
+      var cuantos = Math.max(0, e.fin - e.inicio + 1);
+      zona.hidden = cuantos === 0;
+      zona.style.left = ((Math.min(e.inicio, max + 1) - 1) / max) * 100 + "%";
+      zona.style.width = (cuantos / max) * 100 + "%";
+      zona.classList.toggle("recta__zona--acierto", !!e.acierto);
+      barra.classList.toggle("recta__barra--trampa", !!e.trampa);
+      barra.querySelectorAll(".recta__raya").forEach(function (r) { r.remove(); });
+      (e.previas || []).forEach(function (p) {
+        var r = document.createElement("span");
+        r.className = "recta__raya";
+        r.style.left = pct(p, max) + "%";
+        barra.appendChild(r);
+      });
+      medio.hidden = e.medio === null || e.medio === undefined || !!e.trampa;
+      if (!medio.hidden) {
+        medio.textContent = e.acierto ? "¡" + e.medio + "!" : "¿" + e.medio + "?";
+        medio.classList.toggle("recta__medio--acierto", !!e.acierto);
+      }
+      chipInicio.textContent = "inicio " + e.inicio;
+      chipFin.textContent = "fin " + e.fin;
+      ubicar();
+    }
+    return { pintar: pintar, ubicar: ubicar };
+  }
+
+  /* Texto bajo la recta: cuántos números quedan */
+  function quedan(el, e) {
+    el.classList.toggle("quedan--trampa", !!e.trampa);
+    if (e.trampa) {
+      el.innerHTML = "<code>inicio</code> es <strong>" + e.inicio + "</strong> y <code>fin</code> es <strong>" + e.fin + "</strong>: no queda ningún número.";
+    } else if (e.acierto) {
+      el.innerHTML = "¡Tu número era el <strong>" + e.medio + "</strong>!";
+    } else {
+      var n = e.fin - e.inicio + 1;
+      el.innerHTML = "Puede ser del <strong>" + e.inicio + "</strong> al <strong>" + e.fin + "</strong>: " +
+        (n === 1 ? "queda <strong>1</strong> número." : "quedan <strong>" + n + "</strong> números.");
+    }
+  }
+
+  /* ---------- 1. Jugar sin código ---------- */
+  var demo = {};
+  var dRecta = crearRecta($("d-recta"));
+  var dGlobo = $("d-globo");
+
+  function pintarDemo(cambia) {
+    var e = { max: 100, inicio: demo.inicio, fin: demo.fin, medio: demo.medio, previas: demo.previas, acierto: demo.final === "si", trampa: demo.final === "trampa" };
+    dRecta.pintar(e);
+    quedan($("d-quedan"), e);
+    dGlobo.className = "pc__globo" + (demo.final === "si" ? " pc__globo--acierto" : demo.final === "trampa" ? " pc__globo--trampa" : "");
+    if (demo.final === "si") dGlobo.innerHTML = "¡Es el <strong>" + demo.medio + "</strong>!";
+    else if (demo.final === "trampa") dGlobo.innerHTML = "¡Hiciste trampa! 🤨";
+    else dGlobo.innerHTML = "¿Es <strong>" + demo.medio + "</strong>?";
+    if (cambia) {
+      void dGlobo.offsetWidth;
+      dGlobo.classList.add("pc__globo--cambio");
+    }
+    $("d-contador").innerHTML = demo.final === "si"
+      ? "Lo adiviné en <strong>" + demo.preguntas + "</strong> " + (demo.preguntas === 1 ? "pregunta" : "preguntas") + "."
+      : "Pregunta <strong>" + demo.preguntas + "</strong> · nunca necesito más de 7";
+    $("d-respuestas").querySelectorAll("button").forEach(function (b) { b.disabled = !!demo.final; });
+    $("d-otra").hidden = !demo.final;
+  }
+
+  function empezarDemo() {
+    demo = { inicio: 1, fin: 100, medio: 50, preguntas: 1, previas: [], final: null, tuyo: demo.tuyo || null };
+    $("d-historial").textContent = "";
+    Pasos.limpiarFeedback($("d-fb"));
+    pintarDemo(false);
+  }
+
+  function anotarDemo(medio, resp) {
+    var li = document.createElement("li");
+    li.textContent = resp === "si" ? medio + " ✓" : medio + (resp === "mayor" ? " ⬆" : " ⬇");
+    if (resp === "si") li.className = "h-si";
+    li.setAttribute("aria-label", "¿Es " + medio + "? " + (resp === "si" ? "sí" : resp));
+    $("d-historial").appendChild(li);
+  }
+
+  function responderDemo(resp) {
+    if (demo.final) return;
+    var m = demo.medio;
+    // Con un número elegido por el dado, una respuesta que no le corresponde se corrige con amabilidad
+    if (demo.tuyo !== null) {
+      var debe = demo.tuyo === m ? "si" : demo.tuyo > m ? "mayor" : "menor";
+      if (resp !== debe) {
+        var como = debe === "si" ? "es justo ese: toca «¡Es ese!»" : debe === "mayor" ? "es mayor que " + m + ": toca «Mayor»" : "es menor que " + m + ": toca «Menor»";
+        Pasos.feedback($("d-fb"), "pista", "Ojo: tu número es " + demo.tuyo + ", y " + demo.tuyo + " " + como + ".");
+        return;
+      }
+    }
+    Pasos.limpiarFeedback($("d-fb"));
+    anotarDemo(m, resp);
+    if (resp === "si") {
+      demo.final = "si";
+      pintarDemo(true);
+      Pasos.feedback($("d-fb"), "ok", "¡Lo adivinó en " + demo.preguntas + (demo.preguntas === 1 ? " pregunta!" : " preguntas!") +
+        " Cada respuesta descartó la mitad de los números que quedaban, así que con 100 números nunca necesita más de 7. Juega otra vez si quieres; luego lo programamos en cuatro partes.");
+      leccion.desbloquear();
+      return;
+    }
+    demo.previas.push(m);
+    if (resp === "mayor") demo.inicio = m + 1;
+    else demo.fin = m - 1;
+    if (demo.inicio > demo.fin) {
+      demo.final = "trampa";
+      pintarDemo(true);
+      Pasos.feedback($("d-fb"), "pista", "Tus respuestas se contradicen: tu número tendría que ser mayor que " + (demo.inicio - 1) +
+        " y menor que " + (demo.fin + 1) + ", y no hay ninguno así. ¿Te equivocaste en alguna? Toca «Otra partida».");
+      leccion.desbloquear();
+      return;
+    }
+    demo.medio = medioDe(demo.inicio, demo.fin);
+    demo.preguntas++;
+    pintarDemo(true);
+  }
+
+  $("d-respuestas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { responderDemo(b.getAttribute("data-resp")); });
+  });
+  $("d-otra").addEventListener("click", function () {
+    empezarDemo();
+    $("d-respuestas").querySelector("button").focus();
+  });
+  $("d-dado").addEventListener("click", function () {
+    var tuyo = 1 + Math.floor(Math.random() * 100);
+    demo.tuyo = tuyo;
+    empezarDemo();
+    $("d-tuyo").hidden = false;
+    $("d-tuyo").innerHTML = "Tu número: <strong>" + tuyo + "</strong> (la PC no lo mira)";
+    $("d-dado").textContent = "🎲 Elige otro";
+  });
+
+  /* ---------- Simular el programa con una variante ----------
+     cfg: { medio(i, f), mover, contar, trampa }; responder(medio, k) → "mayor" | "menor" | "si"
+     Devuelve { ev: [{ medio } | { texto }], final: "si" | "trampa" | "sigue", preguntas } */
+  function simular(cfg, responder) {
+    var inicio = 1, fin = 100, preguntas = 0, ev = [], k = 0;
+    var contar = cfg.contar || "bien", mover = cfg.mover || "bien";
+    if (contar === "antes") preguntas += 1;
+    for (var vuelta = 0; vuelta < 14; vuelta++) {
+      if (contar === "dentro") preguntas = 0;
+      if (cfg.trampa) {
+        var t = cfg.trampa;
+        var hay = t === "igual" ? inicio === fin : t === "reves" ? fin > inicio : inicio > fin;
+        if (hay) {
+          ev.push({ texto: "¡Hiciste trampa!" });
+          if (t !== "sin-break") return { ev: ev, final: "trampa", preguntas: preguntas };
+        }
+      }
+      var medio = cfg.medio ? cfg.medio(inicio, fin) : medioDe(inicio, fin);
+      if (contar === "bien" || contar === "dentro") preguntas += 1;
+      var r = responder(medio, k++);
+      ev.push({ medio: medio });
+      if (r === "si") {
+        ev.push({ texto: "¡Lo adiviné en " + preguntas + " preguntas!" });
+        return { ev: ev, final: "si", preguntas: preguntas };
+      }
+      if (mover === "bien") { if (r === "mayor") inicio = medio + 1; else fin = medio - 1; }
+      else if (mover === "sin1") { if (r === "mayor") inicio = medio; else fin = medio; }
+      else if (mover === "reves") { if (r === "mayor") fin = medio - 1; else inicio = medio + 1; }
+      // mover === "medio": cambia medio, pero la vuelta siguiente lo vuelve a calcular igual
+    }
+    return { ev: ev, final: "sigue", preguntas: preguntas };
+  }
+
+  function piensa(s) { return function (m) { return m === s ? "si" : s > m ? "mayor" : "menor"; }; }
+  function mentiroso(m, k) { return k === 0 ? "mayor" : "menor"; }
+
+  /* Las preguntas (y lo que imprime) en una línea: 50 → 25 → 37 ✓ */
+  function cadena(r, conTextos) {
+    var partes = [];
+    r.ev.forEach(function (e) {
+      if (e.texto === undefined) partes.push(String(e.medio));
+      else if (conTextos) partes.push(e.texto);
+    });
+    if (partes.length > 8) partes = partes.slice(0, 4).concat(["…"], partes.slice(-3));
+    var s = partes.join(" → ");
+    if (r.final === "sigue") s += " → … sin parar";
+    else if (r.final === "si" && !conTextos) s += " ✓";
+    return s;
+  }
+
+  /* ---------- Pruebas y pasos de elegir una opción ---------- */
+  function miniRecta(inicio, fin, medio) {
+    var m = document.createElement("span");
+    m.className = "mini-recta";
+    m.setAttribute("aria-hidden", "true");
+    var z = document.createElement("span");
+    z.className = "mini-recta__zona";
+    z.style.left = (inicio - 1) + "%";
+    z.style.width = (fin - inicio + 1) + "%";
+    var p = document.createElement("span");
+    p.className = "mini-recta__punto" + (medio < inicio || medio > fin ? " mini-recta__punto--fuera" : "");
+    p.style.left = Math.min(100, Math.max(0, medio - 0.5)) + "%";
+    m.appendChild(z);
+    m.appendChild(p);
+    return m;
+  }
+
+  /* Pinta una lista de pruebas: [{ etiqueta, salida, ok, mini (opcional) }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].appendChild(document.createTextNode(p.etiqueta));
+      if (p.mini) li.children[0].appendChild(p.mini);
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* cfg: { id, nombre, correcta, hueco, sangria, probar(valor) → filas, ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiar() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiar();
+      $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        // Una opción de varias líneas entra en el espacio en blanco con su sangría
+        $(cfg.hueco).textContent = r.nextElementSibling.textContent.replace(/\n/g, "\n" + (cfg.sangria || ""));
+        leccion.listoParaComprobar(true);
+      });
+    });
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- 2. Parte 1: el medio ---------- */
+  var MEDIO = {
+    bien: function (i, f) { return Math.floor((i + f) / 2); },
+    division: function (i, f) { return (i + f) / 2; },
+    "sin-parentesis": function (i, f) { return i + Math.floor(f / 2); },
+    fin: function (i, f) { return Math.floor(f / 2); }
+  };
+  var ZONAS_P1 = [[1, 100], [51, 100], [51, 74]];
+
+  var parte1 = crearEleccion({
+    id: "paso-medio",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) {
+      return ZONAS_P1.map(function (z) {
+        var m = MEDIO[valor](z[0], z[1]);
+        var debe = MEDIO.bien(z[0], z[1]);
+        var fuera = m < z[0] || m > z[1];
+        return {
+          etiqueta: "inicio = " + z[0] + ", fin = " + z[1],
+          mini: miniRecta(z[0], z[1], m),
+          salida: "¿Es " + m + "?" + (fuera ? "  ← fuera de la zona" : ""),
+          ok: m === debe
+        };
+      });
+    },
+    ok: "¡Eso es! Primero se suman inicio y fin (los paréntesis) y luego // 2 parte a la mitad sin decimales: 50, 75 y 62, justo en el medio de cada zona.",
+    pistas: {
+      division: "Con / la división da decimales: (1 + 100) / 2 es 50.5, y nadie pensó en el 50.5. Con // se queda sin decimales.",
+      "sin-parentesis": "Sin paréntesis, Python hace primero fin // 2 y luego le suma inicio: con inicio = 51 y fin = 100 pregunta por el 101, que ni siquiera está. Hay que sumar primero.",
+      fin: "fin // 2 no mira dónde empieza la zona: con inicio = 51 y fin = 100 vuelve a preguntar por el 50, que ya se descartó. El medio está entre inicio y fin."
+    }
+  });
+
+  /* ---------- 3. Parte 2: descartar la mitad ---------- */
+  var PIENSA_P2 = [37, 100, 1];
+
+  var parte2 = crearEleccion({
+    id: "paso-mover",
+    nombre: "p2",
+    correcta: "bien",
+    hueco: "p2-hueco",
+    sangria: "    ",
+    probar: function (valor) {
+      return PIENSA_P2.map(function (s) {
+        var r = simular({ mover: valor }, piensa(s));
+        var bien = simular({}, piensa(s));
+        return {
+          etiqueta: "Piensas " + s,
+          salida: cadena(r, false) + (r.final === "si" ? "  (" + r.preguntas + " preguntas)" : ""),
+          ok: r.final === "si"
+        };
+      });
+    },
+    ok: "¡Bien! El medio ya se preguntó, así que la zona empieza en medio + 1 o termina en medio - 1. Cada respuesta descarta la mitad, y el medio también.",
+    pistas: {
+      sin1: "Con 37 funciona, pero con 100 se queda preguntando por el 99 para siempre: la zona del 99 al 100 tiene su medio en 99, y si no se descarta el medio, la zona ya no se achica. Falta el + 1 y el - 1.",
+      medio: "Cambiar medio no sirve: al empezar la vuelta, medio = (inicio + fin) // 2 lo calcula de nuevo y sale otra vez 50. Lo que hay que mover son los bordes de la zona: inicio y fin.",
+      reves: "Está al revés: si tu número es mayor, se descarta la mitad de arriba, justo donde está. La PC se aleja de tu número y nunca lo encuentra."
+    }
+  });
+
+  /* ---------- 4. Parte 3: contar las preguntas ---------- */
+  var PIENSA_P3 = [37, 100, 50];
+
+  var parte3 = crearEleccion({
+    id: "paso-contar",
+    nombre: "p3",
+    correcta: "bien",
+    hueco: "p3-hueco",
+    probar: function (valor) {
+      return PIENSA_P3.map(function (s) {
+        var r = simular({ contar: valor }, piensa(s));
+        var bien = simular({}, piensa(s));
+        return {
+          etiqueta: "Piensas " + s + " (" + cadena(bien, false) + ")",
+          salida: r.ev[r.ev.length - 1].texto,
+          ok: r.preguntas === bien.preguntas
+        };
+      });
+    },
+    ok: "¡Exacto! preguntas = 0 va una sola vez, antes del bucle, y preguntas += 1 va dentro: suma una en cada vuelta, es decir, en cada pregunta.",
+    pistas: {
+      dentro: "preguntas = 0 quedó dentro del while: en cada vuelta vuelve a 0 y luego suma 1, así que siempre dice 1. La cuenta debe empezar antes del bucle.",
+      "sin-suma": "Nadie le suma nada a preguntas: siempre dice 0. Falta preguntas += 1 en cada vuelta.",
+      antes: "preguntas += 1 quedó antes del while: suma una sola vez y siempre dice 1. Tiene que ir dentro del bucle, para sumar en cada vuelta."
+    }
+  });
+
+  /* ---------- 5. Parte 4: la trampa ---------- */
+  var PRUEBAS_P4 = [
+    { etiqueta: "Piensas 100 y dices la verdad", responder: piensa(100) },
+    { etiqueta: "Mientes: «mayor» al 50 y después siempre «menor»", responder: mentiroso },
+    { etiqueta: "Piensas 1 y dices la verdad", responder: piensa(1) }
+  ];
+
+  var parte4 = crearEleccion({
+    id: "paso-trampa",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    sangria: "    ",
+    probar: function (valor) {
+      return PRUEBAS_P4.map(function (p) {
+        var r = simular({ trampa: valor }, p.responder);
+        var bien = simular({ trampa: "bien" }, p.responder);
+        return {
+          etiqueta: p.etiqueta,
+          salida: cadena(r, true),
+          ok: cadena(r, true) === cadena(bien, true)
+        };
+      });
+    },
+    ok: "¡Eso es! Mientras inicio <= fin queda al menos un número. Si inicio pasa a fin, no queda ninguno: alguien mintió. Se avisa y break termina el juego.",
+    pistas: {
+      igual: "Cuando inicio == fin todavía queda un número: si piensas 100, la zona termina en 100..100 y la PC te acusa de trampa justo antes de acertar. La zona se acaba cuando inicio > fin.",
+      "sin-break": "Avisa, pero sin break el bucle sigue: pregunta por números de una zona que ya no existe y vuelve a avisar, sin parar. Tras el aviso hay que salir.",
+      reves: "fin > inicio es lo normal cuando todavía quedan números: dice «¡Hiciste trampa!» de entrada, antes de preguntar nada. Es al revés: inicio > fin."
+    }
+  });
+
+  /* ---------- 6. El programa completo ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function fs(t) { return '<span class="tk-prefijo">f</span>' + s(t); }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+
+  function lineas(finHtml) {
+    return [
+      v("inicio") + " = " + n("1"),                                                                       // 0
+      v("fin") + " = " + finHtml,                                                                         // 1
+      f("print") + "(" + fs('"Piensa un número del ' + llave("inicio") + " al " + llave("fin") + '."') + ")",
+      v("preguntas") + " = " + n("0"),                                                                    // 3
+      kw("while") + " " + kw("True") + ":",                                                               // 4
+      "    " + kw("if") + " " + v("inicio") + " &gt; " + v("fin") + ":",                                    // 5
+      "        " + f("print") + "(" + s('"¡Hiciste trampa!"') + ")",
+      "        " + kw("break"),                                                                          // 7
+      "    " + v("medio") + " = (" + v("inicio") + " + " + v("fin") + ") // " + n("2"),                     // 8
+      "    " + v("preguntas") + " += " + n("1"),                                                          // 9
+      "    " + v("resp") + " = " + f("input") + "(" + fs('"¿Es ' + llave("medio") + '? "') + ")." + f("strip") + "()." + f("lower") + "()",  // 10
+      "    " + kw("if") + " " + v("resp") + " == " + s('"si"') + ":",                                      // 11
+      "        " + f("print") + "(" + fs('"¡Lo adiviné en ' + llave("preguntas") + ' preguntas!"') + ")",
+      "        " + kw("break"),                                                                          // 13
+      "    " + kw("elif") + " " + v("resp") + " == " + s('"mayor"') + ":",                                 // 14
+      "        " + v("inicio") + " = " + v("medio") + " + " + n("1"),
+      "    " + kw("elif") + " " + v("resp") + " == " + s('"menor"') + ":",                                 // 16
+      "        " + v("fin") + " = " + v("medio") + " - " + n("1"),
+      "    " + kw("else") + ":",                                                                          // 18
+      "        " + f("print") + "(" + s('"Responde mayor, menor o si."') + ")"
+    ];
+  }
+  var LINEA_INPUT = 10;
+
+  function pintarLineas(code, ls) {
+    code.innerHTML = ls.map(function (h) { return '<span class="linea">' + h + "</span>"; }).join("");
+  }
+  pintarLineas($("t-codigo-lineas"), lineas('<input class="codigo__editable" id="t-max" type="text" value="100" inputmode="numeric" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Valor de fin (puedes cambiarlo)">'));
+  pintarLineas($("r-codigo-lineas"), lineas(n("100")));
+
+  var juego = {};
+  var maxReto = 100;
+  var tRecta = crearRecta($("t-recta"));
+  var registro = $("t-registro");
+  var misiones = {};
+  var config;
+
+  function bajarConsola() {
+    setTimeout(function () { registro.scrollTop = registro.scrollHeight; }, 0);
+  }
+
+  function pintarVars(cambia) {
+    var dl = $("t-vars");
+    dl.innerHTML = "";
+    [["inicio", juego.inicio], ["fin", juego.fin], ["medio", juego.medio], ["preguntas", juego.preguntas]].forEach(function (par) {
+      var dt = document.createElement("dt");
+      dt.textContent = par[0];
+      var dd = document.createElement("dd");
+      dd.textContent = String(par[1]);
+      if (cambia.indexOf(par[0]) !== -1) dd.className = "vars--cambio";
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    });
+  }
+
+  function pintarJuego(cambia) {
+    var e = { max: maxReto, inicio: juego.inicio, fin: juego.fin, medio: juego.medio, previas: juego.previas, acierto: juego.final === "si", trampa: juego.final === "trampa" };
+    tRecta.pintar(e);
+    quedan($("t-quedan"), e);
+    pintarVars(cambia);
+  }
+
+  function preguntar() {
+    config.pregunta = "¿Es " + juego.medio + "?";
+    $("t-etiqueta").textContent = config.pregunta;
+  }
+
+  function cumplir(m) {
+    if (misiones[m]) return;
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  function q(t) { return "<code>\"" + t.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "\"</code>"; }
+
+  config = {
+    prefijo: "t",
+    vueltas: null,
+    rotulo: "Pregunta",
+    pregunta: "¿Es 50?",
+    lineaInput: LINEA_INPUT,
+    siguiente: "Responde en la consola.",
+    validar: function () { return null; },   // el programa revisa la respuesta él mismo (else)
+    alEmpezar: function () {
+      juego = { inicio: 1, fin: maxReto, preguntas: 1, previas: [], final: null };
+      juego.medio = medioDe(1, maxReto);
+      preguntar();
+      Codigo.agregar(registro, "Piensa un número del 1 al " + maxReto + ".");
+      pintarJuego([]);
+      return "La zona va del <strong>1</strong> al <strong>" + maxReto + "</strong>. La PC pregunta por el medio: <code>(1 + " + maxReto + ") // 2</code> es <strong>" + juego.medio + "</strong>.";
+    },
+    alDato: function (texto) {
+      bajarConsola();
+      var resp = texto.toLowerCase();       // input() ya llega sin espacios a los lados: .strip()
+      var m = juego.medio;
+      var limpio = texto !== resp ? "<code>.lower()</code> lo deja en " + q(resp) + ". " : "";
+      if (resp === "si") {
+        juego.final = "si";
+        pintarJuego([]);
+        return {
+          texto: limpio + "<code>resp == \"si\"</code>: ¡lo adivinó en <strong>" + juego.preguntas + "</strong> " + (juego.preguntas === 1 ? "pregunta" : "preguntas") + "! <code>break</code> termina el juego.",
+          camino: { activas: [10, 11, 12, 13], saltadas: [14, 15, 16, 17, 18, 19] },
+          salida: ["¡Lo adiviné en " + juego.preguntas + " preguntas!"],
+          fin: true
+        };
+      }
+      if (resp === "mayor" || resp === "menor") {
+        juego.previas.push(m);
+        var cambio;
+        if (resp === "mayor") { juego.inicio = m + 1; cambio = "<code>inicio = " + m + " + 1</code>"; }
+        else { juego.fin = m - 1; cambio = "<code>fin = " + m + " - 1</code>"; }
+        var mover = resp === "mayor" ? [14, 15] : [14, 16, 17];
+        var saltaMover = resp === "mayor" ? [16, 17, 18, 19] : [15, 18, 19];
+        if (juego.inicio > juego.fin) {
+          juego.final = "trampa";
+          pintarJuego([resp === "mayor" ? "inicio" : "fin"]);
+          return {
+            texto: limpio + "Dijiste " + q(resp) + ": " + cambio + ". Ahora <code>inicio &gt; fin</code> (" + juego.inicio + " &gt; " + juego.fin + "): no queda ningún número posible. <code>break</code> termina.",
+            camino: { activas: [10, 11].concat(mover, [4, 5, 6, 7]), saltadas: [12, 13, 8, 9].concat(saltaMover) },
+            salida: ["¡Hiciste trampa!"],
+            fin: true
+          };
+        }
+        juego.medio = medioDe(juego.inicio, juego.fin);
+        juego.preguntas++;
+        preguntar();
+        pintarJuego([resp === "mayor" ? "inicio" : "fin", "medio", "preguntas"]);
+        return {
+          texto: limpio + "Dijiste " + q(resp) + ": " + cambio + ". Nueva vuelta: <code>(" + juego.inicio + " + " + juego.fin + ") // 2</code> es <strong>" + juego.medio + "</strong>.",
+          camino: { activas: [10, 11].concat(mover, [4, 5, 8, 9]), saltadas: [12, 13, 6, 7].concat(saltaMover) }
+        };
+      }
+      // Ni "si", ni "mayor", ni "menor": el else avisa y la vuelta pregunta otra vez lo mismo
+      cumplir("invalida");
+      juego.preguntas++;
+      preguntar();
+      pintarJuego(["preguntas"]);
+      var porque = texto === "" ? "No escribiste nada"
+        : resp === "sí" ? "«sí» lleva tilde, y para Python " + q("sí") + " y " + q("si") + " son textos distintos"
+        : q(resp) + " no es " + q("si") + ", " + q("mayor") + " ni " + q("menor");
+      return {
+        texto: porque + ": el <code>else</code> avisa y otra vuelta vuelve a preguntar por el <strong>" + m + "</strong> (y suma una pregunta).",
+        camino: { activas: [10, 11, 14, 16, 18, 19, 4, 5, 8, 9], saltadas: [12, 13, 15, 17, 6, 7] },
+        salida: ["Responde mayor, menor o si."]
+      };
+    },
+    alTerminar: function () {
+      bajarConsola();
+      var p = juego.preguntas;
+      if (juego.final === "si" && maxReto === 100 && p <= 7) cumplir("siete");
+      if (juego.final === "si" && maxReto === 1000 && p <= 10) cumplir("mil");
+      if (juego.final === "trampa") cumplir("trampa");
+      var faltan = ["siete", "trampa", "invalida", "mil"].filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) {
+        Pasos.feedback($("t-fb"), "ok", "¡Misiones cumplidas! Tu programa parte la zona a la mitad en cada pregunta, avisa si le mientes y no se confunde con respuestas raras. Con 1000 números le bastan 10 preguntas: solo 3 más que con 100.");
+        leccion.desbloquear();
+        return;
+      }
+      var pistas = {
+        siete: "Para la primera misión, deja fin = 100, piensa un número y responde siempre la verdad.",
+        trampa: "Para que diga «¡Hiciste trampa!», contradícete: responde «mayor» al 50 y después «menor» a todo.",
+        invalida: "Prueba responder algo que no sea mayor, menor ni si: «sí» con tilde, «no sé»…",
+        mil: "Para la del 1 al 1000, toca el 100 de la línea 2 del programa (fin = 100), escríbelo como 1000 y juega."
+      };
+      var inicio;
+      if (juego.final === "trampa") inicio = "¡Hiciste trampa! ";
+      else if (maxReto === 100 && p > 7) inicio = "Lo adivinó en " + p + " preguntas: las respuestas que no valen también cuentan como pregunta. ";
+      else inicio = "¡Lo adivinó en " + p + (p === 1 ? " pregunta! " : " preguntas! ");
+      Pasos.feedback($("t-fb"), "pista", inicio + pistas[faltan[0]] + " Toca «Otra partida».");
+    }
+  };
+  var bucle = BucleInput.crear(config);
+
+  /* Las respuestas que se tocan escriben por ti */
+  document.querySelectorAll("#t-fila [data-escribe]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("t-campo").value = b.getAttribute("data-escribe");
+      $("t-enviar").click();
+      if (!$("t-fila").hidden) b.focus();
+    });
+  });
+  $("t-otra").addEventListener("click", function () { Pasos.limpiarFeedback($("t-fb")); });
+
+  /* Cambiar el 100 de fin = 100: el programa empieza de nuevo con otra zona */
+  var campoMax = $("t-max");
+  function cambiarMax() {
+    var texto = campoMax.value.trim();
+    if (!/^\d{1,7}$/.test(texto) || Number(texto) < 2) {
+      Pasos.feedback($("t-fb"), "pista", "En fin va un número entero mayor que 1, como 1000.");
+      campoMax.value = String(maxReto);
+      return;
+    }
+    var nuevo = Number(texto);
+    campoMax.value = String(nuevo);
+    if (nuevo === maxReto) return;
+    maxReto = nuevo;
+    Pasos.limpiarFeedback($("t-fb"));
+    bucle.empezar();
+    $("t-explicacion").innerHTML = "Cambiaste una línea: <code>fin = " + nuevo + "</code>. " + $("t-explicacion").innerHTML;
+  }
+  campoMax.addEventListener("change", cambiarMax);
+  campoMax.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    cambiarMax();
+    $("t-campo").focus();
+  });
+
+  empezarDemo();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-medio": parte1.entrar,
+      "paso-mover": parte2.entrar,
+      "paso-contar": parte3.entrar,
+      "paso-trampa": parte4.entrar,
+      "paso-jugar": function () { setTimeout(tRecta.ubicar, 0); },
+      "paso-demo": function () { setTimeout(dRecta.ubicar, 0); }
+    },
+    comprobar: {
+      "paso-medio": parte1.comprobar,
+      "paso-mover": parte2.comprobar,
+      "paso-contar": parte3.comprobar,
+      "paso-trampa": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
