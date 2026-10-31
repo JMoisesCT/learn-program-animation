@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mezclar dos listas ordenadas · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: mezclar dos listas ordenadas en Python. Mirar solo la primera de cada una, los dedos i y j, while con and, .append() de la menor, lo que sobra con a[i:] + b[j:], las trampas (olvidar lo que sobra, or en el while) y cuántas comparaciones hace.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-top: var(--esp-3); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) 0.7rem; font-size: 0.95rem; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-2) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .pregunta { min-height: 3.2em; margin: var(--esp-3) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .pregunta strong, .pregunta code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo-lista { margin: 0 0 var(--esp-1); text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* El código de la función es largo: un poco más chico */
+    .codigo--largo { font-size: 0.95rem; line-height: 1.55; padding: var(--esp-3) 0; }
+    .codigo--largo .linea { min-height: 1.55em; }
+    .codigo .pieza-cambio { border-radius: 4px; box-shadow: 0 0 0 2px #ffb86b; }
+
+    /* ---------- Montones: a, b y resultado ---------- */
+    .montones { display: grid; gap: var(--esp-1); }
+    .monton { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; align-items: center; column-gap: var(--esp-2); }
+    /* El dedo (puntero) siempre ocupa su lugar: así la lista no salta cuando aparece */
+    .lista--sin-dedo .lista__punteros { visibility: hidden; }
+    .monton__nombre { justify-self: center; display: grid; place-items: center; min-width: 2rem; height: 2rem; padding: 0 var(--esp-2); border-radius: 999px; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); background: var(--color-azul-suave); }
+    .monton__nombre--b { color: #7a3fb0; background: #f3ebfa; }
+    .bloque-res { margin-top: var(--esp-2); padding-top: var(--esp-2); border-top: 2px dashed var(--color-borde); transition: opacity var(--dur); }
+    .bloque-res--aun { opacity: 0.35; }
+    .bloque-res__nombre { display: block; text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-acento); }
+    .lab__visual .lista { --lista-max: 2.9rem; }
+
+    /* ---------- Botones de tomar (1) ---------- */
+    .tomar { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .tomar .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .tomar .btn code { font-weight: 700; }
+
+    /* ---------- Elegir (qué listas, qué respuesta) ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .lab__visual > .elegir:first-child { margin: 0 0 var(--esp-2); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-xs); }
+    .elegir--grande .btn { min-height: 2.75rem; font-size: var(--texto-sm); }
+    .elegir__titulo { font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+    .btn--bien::after { content: " ✓"; color: var(--color-ok); }
+    .btn--mal::after { content: " ✗"; color: var(--color-error); }
+
+    /* ---------- Comparaciones ---------- */
+    .contador { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { display: inline-block; min-width: 1.4em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-ok); }
+    .contador--pulso strong { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Cajas i y j, del color de su dedo ---------- */
+    .caja--mini { margin: 0 0.5rem; }
+    .caja--mini .caja__cuerpo { width: 3.4rem; height: 2.7rem; padding-bottom: var(--esp-1); }
+    .caja--mini .caja__cuerpo::before { left: -0.5rem; }
+    .caja--mini .caja__cuerpo::after { right: -0.5rem; }
+    .caja--mini .caja__valor { font-size: var(--texto-md); min-width: 1.9rem; padding: 0 var(--esp-1); }
+    .caja--mini .caja__nombre { margin-top: 0.15rem; font-weight: 700; }
+    .caja--i .caja__nombre { color: var(--color-azul); }
+    .caja--j .caja__cuerpo { border-color: #7a3fb0; background: linear-gradient(to bottom, transparent 30%, #f3ebfa 30%); }
+    .caja--j .caja__cuerpo::before, .caja--j .caja__cuerpo::after { background: #7a3fb0; }
+    .caja--j .caja__valor { border-color: #7a3fb0; }
+    .caja--j .caja__nombre { color: #7a3fb0; }
+
+    /* ---------- Respuestas True / False (4) ---------- */
+    .acciones[hidden] { display: none; }
+    .acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-3); margin-top: var(--esp-2); }
+    .acciones .btn { min-width: 7rem; min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+
+    /* ---------- Opciones de texto (2) ---------- */
+    .opciones--texto { grid-template-columns: 1fr; gap: var(--esp-2); margin: var(--esp-3) 0 0; }
+    .opciones--texto .opcion span { padding: var(--esp-3) var(--esp-4); text-align: left; font-family: var(--fuente); font-size: var(--texto-sm); font-weight: 600; }
+    .nota-visual { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .nota-visual strong { color: var(--color-texto); }
+
+    /* ---------- Consola con error ---------- */
+    .consola__linea--error { color: var(--color-error); }
+
+    /* ---------- Tabla de comparaciones (7) ---------- */
+    .tabla-comps { width: 100%; margin-top: var(--esp-3); border-collapse: collapse; font-size: var(--texto-xs); }
+    .tabla-comps th { padding: var(--esp-1) var(--esp-2); border-bottom: 3px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .tabla-comps td { padding: 0.25rem var(--esp-2); border-bottom: 1px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .tabla-comps td:last-child { color: var(--color-ok); }
+    .tabla-comps tbody tr { animation: aparecer var(--dur) ease both; }
+    .tabla-comps .tabla-comps__vacia td { font-family: var(--fuente); font-weight: 400; font-style: italic; color: var(--color-texto-suave); }
+    .prediccion { margin-top: var(--esp-4); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); }
+    .prediccion[hidden] { display: none; }
+    .prediccion__texto { margin: 0; font-weight: 600; text-align: center; }
+    .prediccion .elegir { margin-top: var(--esp-2); }
+    .prediccion .feedback:not(:empty) { margin-top: var(--esp-3); padding: var(--esp-3); }
+
+    /* ---------- Reto ---------- */
+    .huecos { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .huecos .opciones { grid-template-columns: 6.5rem repeat(3, minmax(0, 1fr)); align-items: center; gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .huecos .opciones--dos { grid-template-columns: 6.5rem repeat(2, minmax(0, 1fr)); }
+    .huecos legend { float: left; margin: 0; padding: 0; font-size: var(--texto-xs); font-weight: 700; line-height: 1.25; color: var(--color-texto-suave); }
+    .huecos .opcion span { padding: var(--esp-2) var(--esp-2); font-size: var(--texto-xs); }
+    .pruebas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas[hidden] { display: none; }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--esp-3); padding: var(--esp-1) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-ok-suave); font-family: var(--fuente-codigo); font-size: var(--texto-xs); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 120ms; }
+    .pruebas li:nth-child(3) { animation-delay: 240ms; }
+    .pruebas li:nth-child(4) { animation-delay: 360ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .huecos + .feedback:not(:empty) { margin-top: var(--esp-3); }
+
+    /* ---------- Adelanto: partir y mezclar ---------- */
+    .lab__visual .particion { --particion-max: 2.5rem; }
+
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.88rem; line-height: 1.32; padding: var(--esp-2) 0; }
+      .lab .codigo--largo .linea { min-height: 1.32em; }
+      .lab .explicacion, .lab .pregunta { margin-top: var(--esp-1); }
+      .lab .fila-botones { margin-top: var(--esp-2); }
+      .pruebas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pruebas li { display: grid; gap: 0; font-size: 0.78rem; }
+      .prueba__res { justify-self: end; }
+      /* Los dedos, más juntos a su lista */
+      .lab__visual .lista__punteros { height: 1.95rem; }
+      .lab__visual .lista__puntero { top: 0.45rem; }
+      .lab__visual { padding-block: var(--esp-3); }
+      .lab__visual ~ .lab__resultado { margin-top: var(--esp-3); }
+      .lab__visual > .elegir:first-child { margin-bottom: var(--esp-1); }
+      .lab__visual > .elegir:first-child .btn { min-height: 2.2rem; }
+      .lab__visual .contador strong { font-size: var(--texto-md); }
+      .lab__visual .lista { padding: 0.15rem 0; --lista-max: 2.6rem; }
+      .lab__visual .lista__punteros { margin-top: 0; }
+      .bloque-res { margin-top: var(--esp-1); padding-top: var(--esp-1); }
+      .lab__visual .contador { margin-top: var(--esp-1); }
+      /* 1. Sin código: lo que se dice va a la izquierda, bajo el enunciado */
+      #paso-montones .lab__resultado { grid-area: principal; margin-top: 0; }
+      #paso-montones .lab__resultado .pregunta { margin-top: 0; text-align: left; }
+    }
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual { margin-top: var(--esp-4); }
+    }
+    @media (max-width: 480px) {
+      .codigo--largo { font-size: 0.8rem; }
+      .codigo--largo .linea { padding-right: var(--esp-3); }
+      /* La llamada es larga: en el móvil sigue en otra línea, bajo el primer [ */
+      .codigo .linea--llamada { white-space: pre-wrap; padding-left: calc(2.5rem + 14ch); text-indent: -14ch; }
+      .monton { grid-template-columns: 1.9rem minmax(0, 1fr) auto; column-gap: var(--esp-1); }
+      .caja--mini { margin: 0 0.4rem 0 0.2rem; }
+      .caja--mini .caja__cuerpo { width: 2.8rem; height: 2.4rem; }
+      .monton__nombre { min-width: 1.7rem; height: 1.7rem; }
+      .fila-botones .btn { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .elegir { gap: var(--esp-1) var(--esp-2); }
+      .elegir .btn { padding: var(--esp-1) var(--esp-2); }
+      .huecos .opciones, .huecos .opciones--dos { display: flex; flex-wrap: wrap; }
+      .huecos .opcion { flex: 1 1 auto; }
+      .huecos legend { width: 100%; }
+      .acciones .btn { min-width: 6rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar-mezclar">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Dos montones ordenados: tomar siempre la menor de las primeras -->
+    <section class="paso" id="paso-montones" data-requiere aria-labelledby="t-montones">
+      <span class="paso__etiqueta">Ordenar 4/7 · Mezclar dos listas ordenadas</span>
+      <h1 class="paso__titulo" id="t-montones">Dos montones ordenados</h1>
+      <p>Dos montones de notas, cada uno ya ordenado de menor a mayor. Solo ves la primera de cada montón. Toca siempre la <strong>menor</strong> y júntalas todas en <code>resultado</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p1-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p1-b"></div></div>
+          </div>
+          <div class="tomar" role="group" aria-label="¿Qué nota tomas?">
+            <button type="button" class="btn btn-secundario" id="p1-tomar-a">Tomar de a</button>
+            <button type="button" class="btn btn-secundario" id="p1-tomar-b">Tomar de b</button>
+          </div>
+          <div class="bloque-res">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p1-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p1-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <p class="pregunta" id="p1-pregunta" aria-live="polite"></p>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="p1-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p1-otra-btn">↺ Otra vez</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. ¿Por qué basta mirar la primera? -->
+    <section class="paso" id="paso-porque" data-comprobar aria-labelledby="t-porque">
+      <h2 class="paso__titulo" id="t-porque">¿Por qué basta mirar la primera?</h2>
+      <p>Nunca viste las notas de atrás y aun así <code>resultado</code> salió ordenado. ¿Por qué?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--texto" id="p2-opciones">
+            <legend class="visualmente-oculto">¿Por qué basta mirar la primera de cada montón?</legend>
+            <label class="opcion"><input type="radio" name="p2" value="suerte"><span>Por suerte: con otras notas habría que mirarlas todas.</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="ordenado"><span>Cada montón está ordenado: todo lo que viene detrás de la primera es mayor o igual.</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="pc"><span>Porque la PC no puede mirar más de dos notas.</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p2-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p2-b"></div></div>
+          </div>
+          <div class="bloque-res">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p2-res"></div>
+          </div>
+          <p class="nota-visual" id="p2-nota" aria-live="polite">Cada montón va de menor a mayor.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. mezclar(a, b), línea a línea -->
+    <section class="paso" id="paso-codigo" data-requiere aria-labelledby="t-codigo">
+      <h2 class="paso__titulo" id="t-codigo">De los montones al código</h2>
+      <p>En Python nada sale de las listas: dos dedos, <code>i</code> y <code>j</code>, marcan la primera que queda en cada una.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p3-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p3-saltar">Siguiente vuelta ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p3-elegir" role="group" aria-label="¿Qué listas mezclas?">
+            <button type="button" class="btn btn-secundario" data-par="0" aria-pressed="true">[6, 11, 14, 20] y [3, 9, 17]</button>
+            <button type="button" class="btn btn-secundario" data-par="1" aria-pressed="false">[5, 12] y [8, 10, 19]</button>
+          </div>
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p3-a"></div>
+              <div class="caja caja--i caja--mini" id="p3-i">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">i</code>
+              </div>
+            </div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p3-b"></div>
+              <div class="caja caja--j caja--mini" id="p3-j">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">j</code>
+              </div>
+            </div>
+          </div>
+          <div class="bloque-res bloque-res--aun" id="p3-bloque">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p3-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p3-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. El alumno evalúa a[i] <= b[j] -->
+    <section class="paso" id="paso-tu" data-requiere aria-labelledby="t-tu">
+      <h2 class="paso__titulo" id="t-tu">Ahora decides tú</h2>
+      <p>En cada <code>if</code>, tú dices si <code>a[i] &lt;= b[j]</code> es <code>True</code> o <code>False</code>. Haz dos mezclas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Código"></pre>
+          <p class="pregunta" id="p4-pregunta" aria-live="polite"></p>
+          <div class="acciones" id="p4-acciones" role="group" aria-label="¿Qué da a[i] <= b[j]?">
+            <button type="button" class="btn btn-secundario" data-valor4="true" disabled>True</button>
+            <button type="button" class="btn btn-secundario" data-valor4="false" disabled>False</button>
+          </div>
+          <div class="fila-botones" id="p4-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p4-otra-btn">Otra mezcla ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p4-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p4-b"></div></div>
+          </div>
+          <div class="bloque-res bloque-res--aun" id="p4-bloque">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p4-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p4-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Trampa: olvidar lo que sobra -->
+    <section class="paso" id="paso-sobra" data-requiere aria-labelledby="t-sobra">
+      <h2 class="paso__titulo" id="t-sobra">Trampa: olvidar lo que sobra</h2>
+      <p>Aquí alguien terminó con <code>return resultado</code>, sin pegar lo que sobra. ¿Qué imprime?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Código"></pre>
+          <div class="elegir elegir--grande" id="p5-elegir" role="group" aria-label="¿Qué imprime?">
+            <button type="button" class="btn btn-secundario" data-r="todo" aria-pressed="false">[3, 6, 9, 11, 14, 17, 20]</button>
+            <button type="button" class="btn btn-secundario" data-r="falta" aria-pressed="false">[3, 6, 9, 11, 14, 17]</button>
+            <button type="button" class="btn btn-secundario" data-r="error" aria-pressed="false">IndexError</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p5-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p5-b"></div></div>
+          </div>
+          <div class="bloque-res bloque-res--aun" id="p5-bloque">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p5-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p5-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Trampa: or en el while -->
+    <section class="paso" id="paso-or" data-requiere aria-labelledby="t-or">
+      <h2 class="paso__titulo" id="t-or">Trampa: <code>or</code> en vez de <code>and</code></h2>
+      <p>Aquí el <code>while</code> sigue mientras quede algo en <code>a</code> <strong>o</strong> en <code>b</code>: así no sobra nada… ¿Qué pasa?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Código"></pre>
+          <div class="elegir elegir--grande" id="p6-elegir" role="group" aria-label="¿Qué pasa?">
+            <button type="button" class="btn btn-secundario" data-r="todo" aria-pressed="false">[3, 6, 9, 11, 14, 17, 20]</button>
+            <button type="button" class="btn btn-secundario" data-r="error" aria-pressed="false">IndexError</button>
+            <button type="button" class="btn btn-secundario" data-r="sinfin" aria-pressed="false">Bucle sin fin</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p6-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p6-b"></div></div>
+          </div>
+          <div class="bloque-res bloque-res--aun" id="p6-bloque">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p6-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p6-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. ¿Cuántas comparaciones? -->
+    <section class="paso" id="paso-cuantas" data-requiere aria-labelledby="t-cuantas">
+      <h2 class="paso__titulo" id="t-cuantas">¿Cuántas comparaciones?</h2>
+      <p>Cada comparación pone una nota en <code>resultado</code>. Mezcla los tres pares y mira cuántas hizo cada uno.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--grande" id="p7-elegir" role="group" aria-label="¿Qué listas mezclas?">
+            <button type="button" class="btn btn-secundario" data-par="0">[6, 11, 14, 20] y [3, 9, 17]</button>
+            <button type="button" class="btn btn-secundario" data-par="1">[2, 5, 8] y [10, 13, 16, 19]</button>
+            <button type="button" class="btn btn-secundario" data-par="2">[4, 12, 18] y [7, 15, 20]</button>
+          </div>
+          <p class="pregunta" id="p7-pregunta" aria-live="polite">Toca un par para mezclarlo.</p>
+          <div class="prediccion" id="p7-prediccion" hidden>
+            <p class="prediccion__texto">Mezclas dos listas de <strong>50</strong> notas cada una. ¿Cuántas comparaciones hace, como mucho?</p>
+            <div class="elegir elegir--grande" id="p7-respuestas" role="group" aria-label="¿Cuántas comparaciones, como mucho?">
+              <button type="button" class="btn btn-secundario" data-r="50" aria-pressed="false">50</button>
+              <button type="button" class="btn btn-secundario" data-r="99" aria-pressed="false">99</button>
+              <button type="button" class="btn btn-secundario" data-r="100" aria-pressed="false">100</button>
+              <button type="button" class="btn btn-secundario" data-r="2500" aria-pressed="false">2500</button>
+            </div>
+            <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="p7-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="p7-b"></div></div>
+          </div>
+          <div class="bloque-res bloque-res--aun" id="p7-bloque">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="p7-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="p7-comps">0</strong></p>
+          <table class="tabla-comps" id="p7-tabla">
+            <thead><tr><th scope="col">len(a)</th><th scope="col">len(b)</th><th scope="col">comparaciones</th></tr></thead>
+            <tbody><tr class="tabla-comps__vacia"><td colspan="3">Aún no mezclaste ningún par.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Adelanto: ¿y si la lista no está ordenada? -->
+    <section class="paso" id="paso-adelanto" data-requiere aria-labelledby="t-adelanto">
+      <h2 class="paso__titulo" id="t-adelanto">¿Y si la lista no está ordenada?</h2>
+      <p>Mezclar dos listas ordenadas es fácil. Pero, ¿de dónde sacas listas ordenadas? Parte esta lista a la mitad, y otra vez…</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="pregunta" id="p8-pregunta" aria-live="polite"></p>
+          <div class="elegir elegir--grande" id="p8-elegir" role="group" aria-label="¿Una lista de un solo valor ya está ordenada?" hidden>
+            <button type="button" class="btn btn-secundario" data-r="si" aria-pressed="false">Sí</button>
+            <button type="button" class="btn btn-secundario" data-r="no" aria-pressed="false">No</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p8-accion">Partir a la mitad ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p8-particion"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Reto: el if que elige -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Completa el <code>if</code> que elige</h2>
+      <p>Llena los tres espacios en blanco: se probará con cuatro pares.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="reto-codigo" aria-label="Código"></pre>
+          <div class="huecos">
+            <fieldset class="opciones opciones--codigo" id="reto-g1">
+              <legend>Espacio 1: la condición</legend>
+              <label class="opcion"><input type="radio" name="reto-h1" value="ij"><span>i &lt;= j</span></label>
+              <label class="opcion"><input type="radio" name="reto-h1" value="&lt;="><span>a[i] &lt;= b[j]</span></label>
+              <label class="opcion"><input type="radio" name="reto-h1" value="&gt;="><span>a[i] &gt;= b[j]</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo opciones--dos" id="reto-g2">
+              <legend>Espacio 2: tras tomar a[i]</legend>
+              <label class="opcion"><input type="radio" name="reto-h2" value="i"><span>i += 1</span></label>
+              <label class="opcion"><input type="radio" name="reto-h2" value="j"><span>j += 1</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo opciones--dos" id="reto-g3">
+              <legend>Espacio 3: tras tomar b[j]</legend>
+              <label class="opcion"><input type="radio" name="reto-h3" value="i"><span>i += 1</span></label>
+              <label class="opcion"><input type="radio" name="reto-h3" value="j"><span>j += 1</span></label>
+            </fieldset>
+          </div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista" id="reto-rotulo">mezclar(a, b)</p>
+          <div class="montones">
+            <div class="monton"><code class="monton__nombre">a</code><div id="reto-a"></div></div>
+            <div class="monton"><code class="monton__nombre monton__nombre--b">b</code><div id="reto-b"></div></div>
+          </div>
+          <div class="bloque-res bloque-res--aun" id="reto-bloque">
+            <span class="bloque-res__nombre">resultado</span>
+            <div id="reto-res"></div>
+          </div>
+          <p class="contador">Comparaciones: <strong id="reto-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Pruebas"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Para mezclar dos listas ordenadas, mira la primera que queda de cada una, toma la menor y avanza su dedo; al final, pega lo que sobra.</p>
+        <pre class="codigo resumen-codigo" aria-label="Resumen en código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">mezclar</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):  <span class="tk-comentario"># a y b, ya ordenadas</span></span><span class="linea">    <span class="tk-variable">resultado</span> = []</span><span class="linea">    <span class="tk-variable">i</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-variable">j</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-palabra">while</span> <span class="tk-variable">i</span> &lt; <span class="tk-funcion">len</span>(<span class="tk-variable">a</span>) <span class="tk-palabra">and</span> <span class="tk-variable">j</span> &lt; <span class="tk-funcion">len</span>(<span class="tk-variable">b</span>):  <span class="tk-comentario"># and, no or</span></span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">a</span>[<span class="tk-variable">i</span>] &lt;= <span class="tk-variable">b</span>[<span class="tk-variable">j</span>]:</span><span class="linea">            <span class="tk-variable">resultado</span>.<span class="tk-funcion">append</span>(<span class="tk-variable">a</span>[<span class="tk-variable">i</span>])</span><span class="linea">            <span class="tk-variable">i</span> += <span class="tk-numero">1</span></span><span class="linea">        <span class="tk-palabra">else</span>:</span><span class="linea">            <span class="tk-variable">resultado</span>.<span class="tk-funcion">append</span>(<span class="tk-variable">b</span>[<span class="tk-variable">j</span>])</span><span class="linea">            <span class="tk-variable">j</span> += <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">resultado</span> + <span class="tk-variable">a</span>[<span class="tk-variable">i</span>:] + <span class="tk-variable">b</span>[<span class="tk-variable">j</span>:]  <span class="tk-comentario"># lo que sobra</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../mergesort/index.html">Siguiente: Mergesort →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/particion.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Temporizadores de una animación, para poder cortarla */
+  function relojes() {
+    var lista = [];
+    return {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+  }
+
+  var PAR1 = { a: [6, 11, 14, 20], b: [3, 9, 17] };
+
+  /* Líneas del código (desde 0) */
+  var L = { res: 1, i: 2, j: 3, mientras: 4, si: 5, appA: 6, masI: 7, sino: 8, appB: 9, masJ: 10, ret: 11, llamada: 13 };
+
+  function c(s) { return "<code>" + s + "</code>"; }
+  function lt(v) { return Lista.python(v); }
+  function iguales(x, y) { return JSON.stringify(x) === JSON.stringify(y); }
+  function ordenada(a, b) { return a.concat(b).sort(function (x, y) { return x - y; }); }
+
+  /* ---------- El código de mezclar, con sus variantes ---------- */
+  function kw(s) { return '<span class="tk-palabra">' + s + "</span>"; }
+  function fn(s) { return '<span class="tk-funcion">' + s + "</span>"; }
+  function va(s) { return '<span class="tk-variable">' + s + "</span>"; }
+  function nu(s) { return '<span class="tk-numero">' + s + "</span>"; }
+  function cambio(html) { return '<span class="pieza-cambio">' + html + "</span>"; }
+  function hueco(id) { return '<span class="hueco" id="' + id + '">?</span>'; }
+  function listaHTML(v) { return "[" + v.map(function (x) { return nu(x); }).join(", ") + "]"; }
+
+  /* o: { o: true (or en el while), sobra: false (return resultado), huecos: true, par: { a, b } | null } */
+  function codigoHTML(o) {
+    o = o || {};
+    var op = kw(o.o ? "or" : "and");
+    if (o.o) op = cambio(op);
+    var cond = o.huecos ? hueco("reto-h1") : va("a") + "[" + va("i") + "] &lt;= " + va("b") + "[" + va("j") + "]";
+    var masSi = o.huecos ? hueco("reto-h2") : va("i") + " += " + nu("1");
+    var masSino = o.huecos ? hueco("reto-h3") : va("j") + " += " + nu("1");
+    var ret = o.sobra === false
+      ? kw("return") + " " + cambio(va("resultado"))
+      : kw("return") + " " + va("resultado") + " + " + va("a") + "[" + va("i") + ":] + " + va("b") + "[" + va("j") + ":]";
+    var lineas = [
+      kw("def") + " " + fn("mezclar") + "(" + va("a") + ", " + va("b") + "):",
+      "    " + va("resultado") + " = []",
+      "    " + va("i") + " = " + nu("0"),
+      "    " + va("j") + " = " + nu("0"),
+      "    " + kw("while") + " " + va("i") + " &lt; " + fn("len") + "(" + va("a") + ") " + op + " " + va("j") + " &lt; " + fn("len") + "(" + va("b") + "):",
+      "        " + kw("if") + " " + cond + ":",
+      "            " + va("resultado") + "." + fn("append") + "(" + va("a") + "[" + va("i") + "])",
+      "            " + masSi,
+      "        " + kw("else") + ":",
+      "            " + va("resultado") + "." + fn("append") + "(" + va("b") + "[" + va("j") + "])",
+      "            " + masSino,
+      "    " + ret
+    ];
+    if (o.par) {
+      lineas.push("");
+      lineas.push(fn("print") + "(" + fn("mezclar") + "(" + '<span class="llamada">' + listaHTML(o.par.a) + ", " + listaHTML(o.par.b) + "</span>))");
+    }
+    return "<code>" + lineas.map(function (l, k) {
+      return '<span class="linea' + (k === L.llamada ? " linea--llamada" : "") + '">' + l + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function ponerLlamada(pre, par) {
+    var s = pre.querySelector(".llamada");
+    if (s) s.innerHTML = listaHTML(par.a) + ", " + listaHTML(par.b);
+  }
+
+  /* ---------- Simular mezclar(a, b), como Python, paso a paso ----------
+     v = { cond: "<=" | ">=" | "ij" (i <= j), si: "i" | "j" (el dedo que avanza tras tomar a[i]),
+           sino: "i" | "j" (tras tomar b[j]), o: true (or en el while), sobra: false (return resultado) }
+     Cada paso guarda una copia del estado: los dedos, lo que lleva resultado (y de dónde salió
+     cada valor, para que vuele desde ahí), las comparaciones y qué se marca. */
+  function trazar(A, B, v) {
+    v = Object.assign({ cond: "<=", si: "i", sino: "j", o: false, sobra: true }, v || {});
+    var na = A.length;
+    var nb = B.length;
+    var pasos = [];
+    var e = { i: null, j: null, res: null, src: [], comps: 0, mira: false, rango: false, error: null, perdidos: false };
+
+    function copia(extra) {
+      var s = Object.assign({}, e, extra || {});
+      s.res = e.res ? e.res.slice() : null;
+      s.src = e.src.slice();
+      return s;
+    }
+    function paso(linea, texto, extra, mas) {
+      pasos.push(Object.assign({ linea: linea, texto: texto, estado: copia(extra) }, mas || {}));
+    }
+    function nombre(dedo) { return dedo === "i" ? "a" : "b"; }
+    function avanzar(dedo, linea) {
+      e[dedo]++;
+      var n = dedo === "i" ? na : nb;
+      paso(linea, c(dedo + " += 1") + ": el dedo de " + c(nombre(dedo)) + " pasa a la siguiente (" + c(dedo + " = " + e[dedo]) + ")." +
+        (e[dedo] >= n ? " Ya no quedan notas en " + c(nombre(dedo)) + "." : ""));
+    }
+
+    paso(L.llamada, "Python llama a " + c("mezclar") + ": " + c(lt(A)) + " es " + c("a") + " y " + c(lt(B)) + " es " + c("b") + ". Las dos están ordenadas.");
+    e.res = [];
+    paso(L.res, c("resultado") + " empieza vacía: ahí irán las notas, mezcladas en orden.", null, { flecha: true });
+    e.i = 0;
+    paso(L.i, c("i") + " es el dedo de " + c("a") + ": marca su primera nota, " + c("a[0]") + ".");
+    e.j = 0;
+    paso(L.j, c("j") + " es el dedo de " + c("b") + ": marca " + c("b[0]") + ".");
+
+    var vueltas = 0;
+    while (vueltas < 40) {
+      var quedaA = e.i < na;
+      var quedaB = e.j < nb;
+      var sigue = v.o ? (quedaA || quedaB) : (quedaA && quedaB);
+      var cond = c(e.i + " &lt; " + na + (v.o ? " or " : " and ") + e.j + " &lt; " + nb);
+      if (!sigue) break;
+      vueltas++;
+      paso(L.mientras, "¿" + cond + "? <strong>True</strong>: " +
+        (quedaA && quedaB ? "quedan notas en las dos." : "con " + c("or") + " basta que queden en una."), null, { parada: true });
+
+      var ai = A[e.i];
+      var bj = B[e.j];
+      if (v.cond !== "ij" && (ai === undefined || bj === undefined)) {
+        var cual = ai === undefined ? "a" : "b";
+        var k = cual === "a" ? e.i : e.j;
+        var n = cual === "a" ? na : nb;
+        e.error = { l: cual, k: k };
+        paso(L.si, c(cual + "[" + k + "]") + " no existe: " + c(cual) + " tiene " + n + " notas (de la 0 a la " + (n - 1) + "). 💥 " + c("IndexError") + ".");
+        pasos.error = { l: cual, k: k };
+        pasos.resultado = null;
+        pasos.comps = e.comps;
+        return pasos;
+      }
+      var cumple = v.cond === "<=" ? ai <= bj : v.cond === ">=" ? ai >= bj : e.i <= e.j;
+      var txt = v.cond === "ij" ? e.i + " &lt;= " + e.j : ai + (v.cond === "<=" ? " &lt;= " : " &gt;= ") + bj;
+      e.comps++;
+      var expl = "¿" + c(txt) + "? <strong>" + (cumple ? "True" : "False") + "</strong>";
+      if (v.cond === "<=") {
+        if (cumple && ai === bj) expl += ": son iguales, y con " + c("&lt;=") + " toma primero la de " + c("a") + ".";
+        else expl += cumple ? ": la de " + c("a") + " es la menor." : ": la de " + c("b") + " es la menor.";
+      } else {
+        expl += ".";
+      }
+      paso(L.si, expl, { mira: true }, { pregunta: "¿" + c(txt) + "?", valor: cumple, ai: ai, bj: bj });
+      if (cumple) {
+        e.res.push(ai);
+        e.src.push({ l: "a", k: e.i });
+        paso(L.appA, c("resultado.append(a[i])") + ": el <strong>" + ai + "</strong> va al final de " + c("resultado") + ".");
+        avanzar(v.si, L.masI);
+      } else {
+        e.res.push(bj);
+        e.src.push({ l: "b", k: e.j });
+        paso(L.appB, "Por el " + c("else") + ": " + c("resultado.append(b[j])") + ", el <strong>" + bj + "</strong> va al final.");
+        avanzar(v.sino, L.masJ);
+      }
+    }
+
+    var condF = c(e.i + " &lt; " + na + (v.o ? " or " : " and ") + e.j + " &lt; " + nb);
+    var acabada = e.i >= na ? "a" : "b";
+    paso(L.mientras, "¿" + condF + "? <strong>False</strong>: " +
+      (e.i >= na && e.j >= nb ? "ya no quedan notas." : c(acabada) + " se acabó. El " + c("while") + " termina."), null, { parada: true });
+
+    var restoA = A.slice(e.i);
+    var restoB = B.slice(e.j);
+    if (v.sobra) {
+      e.rango = true;
+      restoA.forEach(function (x, k) { e.res.push(x); e.src.push({ l: "a", k: e.i + k }); });
+      restoB.forEach(function (x, k) { e.res.push(x); e.src.push({ l: "b", k: e.j + k }); });
+      paso(L.ret, "Lo que sobra se pega al final: " + c("a[" + e.i + ":]") + " es " + c(lt(restoA)) + " y " + c("b[" + e.j + ":]") + " es " + c(lt(restoB)) + "." +
+        (!restoA.length || !restoB.length ? " Una de las dos queda vacía." : ""));
+    } else {
+      e.perdidos = true;
+      var perdidos = restoA.concat(restoB);
+      paso(L.ret, c("return resultado") + ": devuelve lo que juntó el " + c("while") + "." +
+        (perdidos.length ? " ¿Y " + c(lt(perdidos)) + "? Se quedó fuera." : ""));
+    }
+    paso(L.llamada, c("print") + " muestra lo que devolvió " + c("mezclar") + ". Hizo " + e.comps + (e.comps === 1 ? " comparación." : " comparaciones."),
+      null, { salida: lt(e.res), flecha: true });
+    pasos.resultado = e.res.slice();
+    pasos.comps = e.comps;
+    pasos.error = null;
+    return pasos;
+  }
+
+  /* ---------- Lo que se ve: a y b con sus dedos, resultado, las cajas ----------
+     o = { a, b, res, bloque, par: { a, b }, cajas: { i, j }, comps } */
+  function contar(el, n) {
+    if (!el || el.textContent === String(n)) return;
+    el.textContent = String(n);
+    var p = el.parentNode;
+    p.classList.remove("contador--pulso");
+    void p.offsetWidth;
+    if (n) p.classList.add("contador--pulso");
+  }
+
+  function crearVista(o) {
+    var par = o.par;
+    var la = Lista.crear(o.a, par.a, { capacidad: 4 });
+    var lb = Lista.crear(o.b, par.b, { capacidad: 4 });
+    var lr = Lista.crear(o.res, [], { capacidad: 7 });
+    var ult = {};
+    var mostrados = 0;
+
+    function reiniciar(nuevo) {
+      if (nuevo) par = nuevo;
+      ult = {};
+      mostrados = 0;
+      [la, lb].forEach(function (l, k) {
+        l.valores(k ? par.b : par.a);
+        l.punteros(null);
+        l.punteros(k ? { j: { i: 0, color: "morado" } } : { i: { i: 0, color: "azul" } });
+        l.el.classList.add("lista--sin-dedo");
+        l.clases(null);
+        l.rango(null);
+        l.marcar(null);
+      });
+      lr.valores([]);
+      if (o.cajas) { Caja.vaciar(o.cajas.i); Caja.vaciar(o.cajas.j); }
+      if (o.bloque) o.bloque.classList.add("bloque-res--aun");
+      contar(o.comps, 0);
+    }
+
+    function pintar(e) {
+      // Los dedos
+      la.punteros({ i: { i: e.i === null ? 0 : e.i, color: "azul" } });
+      lb.punteros({ j: { i: e.j === null ? 0 : e.j, color: "morado" } });
+      la.el.classList.toggle("lista--sin-dedo", e.i === null);
+      lb.el.classList.toggle("lista--sin-dedo", e.j === null);
+      // Las ya tomadas se apagan; las que se perdieron (return resultado), naranja
+      [[la, e.i, par.a.length], [lb, e.j, par.b.length]].forEach(function (t) {
+        var dedo = t[1];
+        t[0].clases(function (k) {
+          if (dedo === null) return "";
+          if (k < dedo) return "lista__casilla--apagada";
+          if (e.perdidos) return "lista__casilla--distinta";
+          return "";
+        });
+      });
+      // Lo que sobra (a[i:] y b[j:]) se levanta
+      var rango = e.rango ? e.i + "," + e.j : "";
+      if (rango !== ult.rango) {
+        ult.rango = rango;
+        if (e.rango) { la.rango(e.i, par.a.length); lb.rango(e.j, par.b.length); }
+        else { la.rango(null); lb.rango(null); }
+      }
+      // Las dos que se comparan, o la que no existe
+      var marca = e.error ? "error" + e.error.l + e.error.k : e.mira ? "mira" + e.i + "," + e.j : "";
+      if (marca !== ult.marca) {
+        ult.marca = marca;
+        la.marcar(null);
+        lb.marcar(null);
+        if (e.error) (e.error.l === "a" ? la : lb).marcar(e.error.k);
+        else if (e.mira) { la.marcar(e.i); lb.marcar(e.j); }
+      }
+      // resultado: los valores nuevos llegan volando desde su casillero
+      if (o.bloque) o.bloque.classList.toggle("bloque-res--aun", e.res === null);
+      var res = e.res || [];
+      if (res.length < mostrados) { lr.valores(res); mostrados = res.length; }
+      while (mostrados < res.length) {
+        var s = e.src[mostrados];
+        var desde = s ? (s.l === "a" ? la : lb).valor(s.k) : null;
+        lr.agregar(res[mostrados], desde || undefined);
+        mostrados++;
+      }
+      // Las cajas: solo las que cambian (el valor viaja desde la línea activa)
+      if (o.cajas) {
+        ["i", "j"].forEach(function (k) {
+          var val = e[k] === undefined ? null : e[k];
+          if (val === ult[k]) return;
+          ult[k] = val;
+          if (val === null) Caja.vaciar(o.cajas[k]);
+          else Caja.poner(o.cajas[k], val);
+        });
+      }
+      contar(o.comps, e.comps || 0);
+    }
+
+    reiniciar();
+    return { la: la, lb: lb, lr: lr, reiniciar: reiniciar, pintar: pintar, get par() { return par; } };
+  }
+
+  /* Pasos de una traza reproducidos solos, deprisa (sin botones) */
+  function reproducirPasos(pre, consola, vista, pasos, ms, reloj, alTerminar) {
+    pasos.forEach(function (p, i) {
+      reloj.luego(function () {
+        if (pre) Codigo.marcar(pre, { activas: [p.linea] });
+        vista.pintar(p.estado);
+        if (consola && p.salida !== undefined) {
+          Codigo.agregar(consola, p.salida);
+          if (pre) Codigo.volarDesdeLinea(pre, consola.lastElementChild, p.salida, "vuelo--salida");
+        }
+        if (i === pasos.length - 1) {
+          if (consola && pasos.error) {
+            Codigo.agregar(consola, "IndexError: list index out of range");
+            consola.lastElementChild.classList.add("consola__linea--error");
+          }
+          if (alTerminar) alTerminar(p.estado);
+        }
+      }, i * ms);
+    });
+  }
+
+  function presionar(grupo, btn) {
+    grupo.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+  }
+
+  function comparaciones(n) { return n + (n === 1 ? " comparación" : " comparaciones"); }
+
+  /* ---------- 1. Dos montones ---------- */
+  var la1 = Lista.crear($("p1-a"), PAR1.a, { capacidad: 4 });
+  var lb1 = Lista.crear($("p1-b"), PAR1.b, { capacidad: 4 });
+  var lr1 = Lista.crear($("p1-res"), [], { capacidad: 7 });
+  var reloj1 = relojes();
+  var s1 = null;
+
+  function empezar1() {
+    reloj1.cortar();
+    s1 = { a: PAR1.a.slice(), b: PAR1.b.slice(), comps: 0, ocupado: false };
+    la1.valores(s1.a);
+    lb1.valores(s1.b);
+    lr1.valores([]);
+    la1.tapar(function (k) { return k > 0; });
+    lb1.tapar(function (k) { return k > 0; });
+    la1.marcar(0);
+    lb1.marcar(0);
+    contar($("p1-comps"), 0);
+    Pasos.limpiarFeedback($("p1-fb"));
+    $("p1-otra").hidden = true;
+    $("p1-pregunta").innerHTML = "Mira la primera de cada montón: ¿cuál es menor?";
+    botones1();
+  }
+
+  function botones1() {
+    var ba = $("p1-tomar-a");
+    var bb = $("p1-tomar-b");
+    var hayA = s1.a.length > 0;
+    var hayB = s1.b.length > 0;
+    function texto(btn, hay, otro, nombre, lista) {
+      btn.disabled = !hay || s1.ocupado;
+      if (!hay) btn.innerHTML = c(nombre) + " está vacío";
+      else if (!otro) btn.innerHTML = "Pasar lo que queda de " + c(nombre);
+      else btn.innerHTML = "Tomar el <strong>" + lista[0] + "</strong> de " + c(nombre);
+    }
+    texto(ba, hayA, hayB, "a", s1.a);
+    texto(bb, hayB, hayA, "b", s1.b);
+  }
+
+  function mover1(cual, cuantos, alTerminar) {
+    var l = cual === "a" ? la1 : lb1;
+    var lista = s1[cual];
+    s1.ocupado = true;
+    botones1();
+    for (var k = 0; k < cuantos; k++) {
+      reloj1.luego(function () {
+        var v = lista.shift();
+        l.destapar(0);
+        var rect = l.quitar(0);
+        lr1.agregar(v, rect);
+      }, k * 260);
+    }
+    reloj1.luego(function () {
+      s1.ocupado = false;
+      if (lista.length) { l.destapar(0); l.marcar(0); }
+      botones1();
+      alTerminar();
+    }, cuantos * 260 + 120);
+  }
+
+  function tomar1(cual) {
+    if (!s1 || s1.ocupado) return;
+    var otro = cual === "a" ? "b" : "a";
+    var x = s1[cual][0];
+    var y = s1[otro][0];
+    if (y === undefined) {
+      // El otro montón está vacío: lo que queda pasa sin comparar
+      mover1(cual, s1[cual].length, terminar1);
+      return;
+    }
+    if (x > y) {
+      Pasos.feedback($("p1-fb"), "pista", "El " + x + " es mayor que el " + y + ". Toma la menor de las dos primeras.");
+      return;
+    }
+    Pasos.limpiarFeedback($("p1-fb"));
+    s1.comps++;
+    contar($("p1-comps"), s1.comps);
+    mover1(cual, 1, function () {
+      if (!s1.a.length || !s1.b.length) {
+        var vacio = s1.a.length ? "b" : "a";
+        var lleno = s1.a.length ? "a" : "b";
+        $("p1-pregunta").innerHTML = c(vacio) + " se quedó vacío. Lo que queda en " + c(lleno) + " ya está ordenado y es mayor: pásalo sin comparar.";
+      } else {
+        $("p1-pregunta").innerHTML = "Bien: " + c(String(x)) + ". ¿Cuál es la menor ahora?";
+      }
+    });
+  }
+
+  function terminar1() {
+    $("p1-pregunta").innerHTML = c("resultado") + " = " + c(lt(lr1.lista));
+    Pasos.feedback($("p1-fb"), "ok", "¡Listo! Siete notas en orden con solo " + comparaciones(s1.comps) + ": cada vez miraste dos notas, nunca las de atrás. Y lo que sobró pasó sin comparar.");
+    $("p1-otra").hidden = false;
+    leccion.desbloquear();
+  }
+
+  $("p1-tomar-a").addEventListener("click", function () { tomar1("a"); });
+  $("p1-tomar-b").addEventListener("click", function () { tomar1("b"); });
+  $("p1-otra-btn").addEventListener("click", empezar1);
+
+  /* ---------- 2. ¿Por qué basta mirar la primera? ---------- */
+  var la2 = Lista.crear($("p2-a"), PAR1.a, { capacidad: 4 });
+  var lb2 = Lista.crear($("p2-b"), PAR1.b, { capacidad: 4 });
+  var lr2 = Lista.crear($("p2-res"), [], { capacidad: 7 });
+  var reloj2 = relojes();
+  var DESORDEN = [9, 3, 17];
+
+  function entrar2() {
+    reloj2.cortar();
+    la2.valores(PAR1.a);
+    lb2.valores(PAR1.b);
+    lr2.valores([]);
+    lr2.clases(null);
+    $("p2-nota").innerHTML = "Cada montón va de menor a mayor.";
+  }
+
+  /* Mezcla dos montones tomando siempre la menor de las primeras, sola */
+  function demo2() {
+    reloj2.cortar();
+    var a = PAR1.a.slice();
+    var b = DESORDEN.slice();
+    la2.valores(a);
+    lb2.valores(b);
+    lr2.valores([]);
+    lr2.clases(null);
+    lb2.clases(function () { return "lista__casilla--distinta"; });
+    $("p2-nota").innerHTML = "¿Y si <strong>b</strong> no estuviera ordenado? <code>b = [9, 3, 17]</code>";
+    var t = 900;
+    while (a.length || b.length) {
+      var deA = !b.length || (a.length && a[0] <= b[0]);
+      (function (deA) {
+        reloj2.luego(function () {
+          var l = deA ? la2 : lb2;
+          var v = l.lista[0];
+          var rect = l.quitar(0);
+          lr2.agregar(v, rect);
+        }, t);
+      })(deA);
+      (deA ? a : b).shift();
+      t += 480;
+    }
+    reloj2.luego(function () {
+      lr2.clases(function (k, v) { return v === 3 ? "lista__casilla--distinta" : ""; });
+      $("p2-nota").innerHTML = "El 3 estaba escondido detrás del 9 y salió tarde: <strong>¡desordenado!</strong>";
+    }, t + 200);
+  }
+
+  function comprobar2() {
+    var r = document.querySelector('input[name="p2"]:checked');
+    if (!r) return false;
+    document.querySelectorAll("#p2-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    var ok = r.value === "ordenado";
+    r.closest(".opcion").classList.add(ok ? "opcion--correcta" : "opcion--incorrecta");
+    if (ok) {
+      Pasos.feedback($("p2-fb"), "ok", "Eso es. Detrás de la primera solo hay notas mayores o iguales: la menor de todas tiene que ser una de las dos primeras. Mira qué pasa si un montón no está ordenado.");
+      demo2();
+      return true;
+    }
+    Pasos.feedback($("p2-fb"), "pista", r.value === "suerte"
+      ? "No fue suerte: con cualquier par de montones ordenados funciona igual. Piensa en qué hay detrás de la primera de cada montón."
+      : "La PC podría mirar todas, pero no le hace falta. ¿Qué sabes de las notas que están detrás de la primera?");
+    return false;
+  }
+
+  document.querySelectorAll('input[name="p2"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      document.querySelectorAll("#p2-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback($("p2-fb"));
+      leccion.listoParaComprobar(true);
+    });
+  });
+
+  /* ---------- 3. mezclar(a, b), línea a línea ---------- */
+  var PARES3 = [PAR1, { a: [5, 12], b: [8, 10, 19] }];
+  var par3 = PARES3[0];
+  $("p3-codigo").innerHTML = codigoHTML({ par: par3 });
+  var vista3 = crearVista({
+    a: $("p3-a"), b: $("p3-b"), res: $("p3-res"), bloque: $("p3-bloque"), par: par3,
+    cajas: { i: $("p3-i"), j: $("p3-j") }, comps: $("p3-comps")
+  });
+  var vistos3 = {};
+
+  var traza3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    saltar: $("p3-saltar"),
+    reiniciar: $("p3-reiniciar"),
+    intervalo: 1000,
+    intervaloSaltar: 260,
+    generar: function () { return trazar(par3.a, par3.b); },
+    alReiniciar: function () {
+      vista3.reiniciar(par3);
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: function (paso) { vista3.pintar(paso.estado); },
+    alTerminar: function () {
+      var p = trazar(par3.a, par3.b);
+      vistos3[PARES3.indexOf(par3)] = true;
+      var sobra = par3.a.length + par3.b.length - p.comps;
+      var extra = vistos3[0] && vistos3[1] ? "" : " Prueba el otro par de listas.";
+      Pasos.feedback($("p3-fb"), "ok", comparaciones(p.comps) + " para " + (par3.a.length + par3.b.length) + " notas: " +
+        (sobra === 1 ? "la última pasó" : "las últimas " + sobra + " pasaron") + " sin comparar, con la rebanada." + extra);
+      leccion.desbloquear();
+    }
+  });
+
+  $("p3-elegir").querySelectorAll("[data-par]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      presionar($("p3-elegir"), b);
+      par3 = PARES3[Number(b.getAttribute("data-par"))];
+      ponerLlamada($("p3-codigo"), par3);
+      traza3.reiniciar();
+    });
+  });
+
+  /* ---------- 4. Ahora decides tú ---------- */
+  var PARES4 = [{ a: [4, 13, 18], b: [7, 9, 20] }, { a: [8, 12, 16], b: [6, 12] }, PAR1];
+  $("p4-codigo").innerHTML = codigoHTML({ par: PARES4[0] });
+  var vista4 = crearVista({ a: $("p4-a"), b: $("p4-b"), res: $("p4-res"), bloque: $("p4-bloque"), par: PARES4[0], comps: $("p4-comps") });
+  var reloj4 = relojes();
+  var botones4 = Array.prototype.slice.call(document.querySelectorAll("[data-valor4]"));
+  var s4 = null;
+  var turno4 = 0;
+  var hechas4 = 0;
+
+  function pregunta4(html) { $("p4-pregunta").innerHTML = html; }
+  function activar4(si) { botones4.forEach(function (b) { b.disabled = !si; }); s4.esperando = si; }
+
+  function empezar4() {
+    reloj4.cortar();
+    var par = PARES4[turno4 % PARES4.length];
+    turno4++;
+    var pasos = trazar(par.a, par.b);
+    s4 = { par: par, pasos: pasos, k: 0, esperando: false };
+    activar4(false);
+    ponerLlamada($("p4-codigo"), par);
+    Codigo.limpiar($("p4-codigo"));
+    Codigo.consola($("p4-consola"), []);
+    vista4.reiniciar(par);
+    Pasos.limpiarFeedback($("p4-fb"));
+    $("p4-otra").hidden = true;
+    $("p4-acciones").hidden = false;
+    var textos = pasos.map(function (p) { return p.texto; }).concat(pasos.filter(function (p) { return p.pregunta; }).map(function (p) {
+      return p.pregunta + " ¿" + c("True") + " o " + c("False") + "?";
+    }));
+    Codigo.reservarAlto($("p4-pregunta"), textos, function (copia, t) { copia.innerHTML = t; });
+    pregunta4("Mezcla " + c(lt(par.a)) + " con " + c(lt(par.b)) + ".");
+    reloj4.luego(avanzar4, 900);
+  }
+
+  function avanzar4() {
+    if (s4.k >= s4.pasos.length) { terminar4(); return; }
+    var p = s4.pasos[s4.k];
+    Codigo.marcar($("p4-codigo"), { activas: [p.linea] });
+    if (p.pregunta) {
+      vista4.pintar(p.estado);
+      pregunta4(p.pregunta + " ¿" + c("True") + " o " + c("False") + "?");
+      activar4(true);
+      return;
+    }
+    vista4.pintar(p.estado);
+    pregunta4(p.texto);
+    if (p.salida !== undefined) {
+      Codigo.agregar($("p4-consola"), p.salida);
+      Codigo.volarDesdeLinea($("p4-codigo"), $("p4-consola").lastElementChild, p.salida, "vuelo--salida");
+    }
+    s4.k++;
+    reloj4.luego(avanzar4, p.linea === L.ret ? 1600 : 950);
+  }
+
+  function responder4(valor) {
+    if (!s4 || !s4.esperando) return;
+    var p = s4.pasos[s4.k];
+    if (valor !== p.valor) {
+      var t = p.ai === p.bj
+        ? "Son iguales: " + p.ai + " <= " + p.bj + " también es True (menor o igual)."
+        : p.valor
+          ? "El " + p.ai + " es menor que el " + p.bj + ": " + p.ai + " <= " + p.bj + " es True."
+          : "El " + p.ai + " es mayor que el " + p.bj + ": " + p.ai + " <= " + p.bj + " es False.";
+      Pasos.feedback($("p4-fb"), "pista", t);
+      return;
+    }
+    Pasos.limpiarFeedback($("p4-fb"));
+    activar4(false);
+    pregunta4(p.texto);
+    s4.k++;
+    reloj4.luego(avanzar4, 1100);
+  }
+
+  function terminar4() {
+    hechas4++;
+    var r = s4.pasos.resultado;
+    var texto = "¡Mezclado con " + comparaciones(s4.pasos.comps) + "!";
+    if (hechas4 >= 2) {
+      Pasos.feedback($("p4-fb"), "ok", texto + " Así decide mezclar: la menor de a[i] y b[j] va a resultado y su dedo avanza.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p4-fb"), "ok", texto + " Haz otra mezcla.");
+    }
+    $("p4-acciones").hidden = true;
+    $("p4-otra").hidden = false;
+    $("p4-otra-btn").focus({ preventScroll: true });
+  }
+
+  botones4.forEach(function (b) {
+    b.addEventListener("click", function () { responder4(b.getAttribute("data-valor4") === "true"); });
+  });
+  $("p4-otra-btn").addEventListener("click", empezar4);
+
+  /* ---------- 5 y 6. Predicciones: olvidar lo que sobra, or en el while ---------- */
+  function montarPrediccion(o) {
+    var reloj = relojes();
+    var vista = crearVista({ a: o.a, b: o.b, res: o.res, bloque: o.bloque, par: PAR1, comps: o.comps });
+    o.pre.innerHTML = codigoHTML(Object.assign({ par: PAR1 }, o.codigo));
+    var resuelto = false;
+
+    function limpiar() {
+      reloj.cortar();
+      vista.reiniciar(PAR1);
+      Codigo.limpiar(o.pre);
+      Codigo.consola(o.consola, []);
+    }
+
+    o.grupo.querySelectorAll("[data-r]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        presionar(o.grupo, b);
+        limpiar();
+        Pasos.limpiarFeedback(o.fb);
+        o.grupo.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+        var r = b.getAttribute("data-r");
+        var pasos = trazar(PAR1.a, PAR1.b, o.v);
+        reproducirPasos(o.pre, o.consola, vista, pasos, 210, reloj, function () {
+          o.grupo.querySelectorAll("button").forEach(function (x) { x.disabled = false; });
+          if (r === o.correcta) {
+            b.classList.add("btn--bien");
+            Pasos.feedback(o.fb, "ok", o.bien);
+            if (!resuelto) { resuelto = true; leccion.desbloquear(); }
+          } else {
+            b.classList.add("btn--mal");
+            Pasos.feedback(o.fb, "pista", o.pistas[r]);
+          }
+        });
+      });
+    });
+    return { limpiar: limpiar };
+  }
+
+  var pred5 = montarPrediccion({
+    pre: $("p5-codigo"), grupo: $("p5-elegir"), consola: $("p5-consola"), fb: $("p5-fb"),
+    a: $("p5-a"), b: $("p5-b"), res: $("p5-res"), bloque: $("p5-bloque"), comps: $("p5-comps"),
+    codigo: { sobra: false }, v: { sobra: false }, correcta: "falta",
+    bien: "Eso es: ¡se perdió el 20! El while termina cuando b se acaba, y lo que quedaba en a nunca entró a resultado. Por eso hace falta + a[i:] + b[j:].",
+    pistas: {
+      todo: "Mira el 20: cuando b se acabó, el while terminó y nadie lo agregó a resultado. Se perdió.",
+      error: "No hay error: el and del while nunca deja leer fuera de las listas. Pero mira qué le pasó al 20."
+    }
+  });
+
+  var pred6 = montarPrediccion({
+    pre: $("p6-codigo"), grupo: $("p6-elegir"), consola: $("p6-consola"), fb: $("p6-fb"),
+    a: $("p6-a"), b: $("p6-b"), res: $("p6-res"), bloque: $("p6-bloque"), comps: $("p6-comps"),
+    codigo: { o: true }, v: { o: true }, correcta: "error",
+    bien: "¡IndexError! Cuando b se acabó (j = 3), con or el while siguió porque quedaba el 20 en a. Pero el if igual lee b[3], que no existe. Con and, el while para justo antes.",
+    pistas: {
+      todo: "Casi: el while sí sigue para tomar el 20, pero antes el if compara a[3] con b[3]. ¿Existe b[3]?",
+      sinfin: "En cada vuelta, i o j sube 1: el bucle no puede ser sin fin. Mira qué lee el if cuando b ya se acabó."
+    }
+  });
+
+  /* ---------- 7. ¿Cuántas comparaciones? ---------- */
+  var PARES7 = [PAR1, { a: [2, 5, 8], b: [10, 13, 16, 19] }, { a: [4, 12, 18], b: [7, 15, 20] }];
+  var vista7 = crearVista({ a: $("p7-a"), b: $("p7-b"), res: $("p7-res"), bloque: $("p7-bloque"), par: PAR1, comps: $("p7-comps") });
+  var reloj7 = relojes();
+  var hechos7 = {};
+  var acierto7 = false;
+
+  function fila7(par, comps) {
+    var cuerpo = $("p7-tabla").tBodies[0];
+    var vacia = cuerpo.querySelector(".tabla-comps__vacia");
+    if (vacia) vacia.remove();
+    var tr = cuerpo.insertRow();
+    [par.a.length, par.b.length, comps].forEach(function (v) { tr.insertCell().textContent = String(v); });
+  }
+
+  function mezclar7(k, btn) {
+    reloj7.cortar();
+    var par = PARES7[k];
+    vista7.reiniciar(par);
+    var grupo = $("p7-elegir");
+    grupo.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    $("p7-pregunta").innerHTML = "Mezclando " + c(lt(par.a)) + " y " + c(lt(par.b)) + "…";
+    var pasos = trazar(par.a, par.b);
+    reproducirPasos(null, null, vista7, pasos, 150, reloj7, function () {
+      grupo.querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+      var n = par.a.length + par.b.length;
+      var comps = pasos.comps;
+      if (!hechos7[k]) fila7(par, comps);
+      hechos7[k] = true;
+      btn.classList.add("btn--bien");
+      $("p7-pregunta").innerHTML = comps === n - 1
+        ? "<strong>" + comparaciones(comps) + "</strong> para " + n + " notas: solo la última pasó sin comparar."
+        : "<strong>" + comparaciones(comps) + "</strong> para " + n + " notas: todas las de " + c("a") + " eran menores, así que " + c("b") + " pasó entera sin comparar.";
+      if (Object.keys(hechos7).length === 3 && $("p7-prediccion").hidden) {
+        $("p7-prediccion").hidden = false;
+      }
+    });
+  }
+
+  $("p7-elegir").querySelectorAll("[data-par]").forEach(function (b) {
+    b.addEventListener("click", function () { mezclar7(Number(b.getAttribute("data-par")), b); });
+  });
+
+  $("p7-respuestas").querySelectorAll("[data-r]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      presionar($("p7-respuestas"), b);
+      var r = b.getAttribute("data-r");
+      if (r === "99") {
+        b.classList.add("btn--bien");
+        Pasos.feedback($("p7-fb"), "ok", "¡99! Cada comparación pone una nota en resultado, y la última siempre pasa sin comparar: como mucho len(a) + len(b) - 1. Y como poco, 50: si todas las de a son menores.");
+        if (!acierto7) { acierto7 = true; leccion.desbloquear(); }
+        return;
+      }
+      b.classList.add("btn--mal");
+      Pasos.feedback($("p7-fb"), "pista", {
+        "50": "50 es lo menos que puede hacer (si todas las de a son menores). ¿Y lo más? Mira la tabla: 4 y 3 notas dieron 6.",
+        "100": "Casi: hay 100 notas, pero la última siempre pasa sin comparar, con lo que sobra.",
+        "2500": "No compara cada nota con todas: cada comparación pone una nota en resultado. Mira la tabla."
+      }[r]);
+    });
+  });
+
+  /* ---------- 8. Adelanto: partir hasta tener listas de un valor ---------- */
+  var p8 = Particion.crear($("p8-particion"), { n: 4, etiqueta: "La lista [14, 6, 20, 11] se parte a la mitad hasta tener listas de un valor, y se mezcla de a dos" });
+  var reloj8 = relojes();
+  var fase8 = 0;
+  var acabado8 = false;
+
+  function empezar8() {
+    reloj8.cortar();
+    p8.vaciar();
+    p8.trozo({ id: "todo", piso: 0, desde: 0, valores: [14, 6, 20, 11], rotulo: "desordenada" });
+    fase8 = 0;
+    $("p8-accion").textContent = "Partir a la mitad ▸";
+    $("p8-accion").disabled = false;
+    $("p8-elegir").hidden = true;
+    $("p8-elegir").querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); b.classList.remove("btn--bien", "btn--mal"); });
+    $("p8-pregunta").innerHTML = c("[14, 6, 20, 11]") + " no está ordenada: no se puede mezclar así.";
+    Pasos.limpiarFeedback($("p8-fb"));
+  }
+
+  function accion8() {
+    var b = $("p8-accion");
+    if (fase8 === 0) {
+      p8.trozo({ id: "i", piso: 1, desde: 0, valores: [14, 6], padre: "todo" });
+      p8.trozo({ id: "d", piso: 1, desde: 2, valores: [20, 11], padre: "todo" });
+      $("p8-pregunta").innerHTML = "Dos mitades: " + c("[14, 6]") + " y " + c("[20, 11]") + ". Todavía desordenadas. Otra vez.";
+      fase8 = 1;
+    } else if (fase8 === 1) {
+      [[14, "i"], [6, "i"], [20, "d"], [11, "d"]].forEach(function (t, k) {
+        p8.trozo({ id: "u" + k, piso: 2, desde: k, valores: [t[0]], padre: t[1] });
+      });
+      $("p8-pregunta").innerHTML = "Cuatro listas de un solo valor. Una lista de un solo valor, ¿ya está ordenada?";
+      $("p8-elegir").hidden = false;
+      b.disabled = true;
+      fase8 = 2;
+    } else if (fase8 === 3) {
+      p8.trozo({ id: "m0", piso: 3, desde: 0, valores: [6, 14], padre: ["u0", "u1"], clase: "particion__trozo--listo" });
+      $("p8-pregunta").innerHTML = c("mezclar([14], [6])") + " → " + c("[6, 14]");
+      fase8 = 4;
+    } else if (fase8 === 4) {
+      p8.trozo({ id: "m1", piso: 3, desde: 2, valores: [11, 20], padre: ["u2", "u3"], clase: "particion__trozo--listo" });
+      $("p8-pregunta").innerHTML = c("mezclar([20], [11])") + " → " + c("[11, 20]") + ". Y ahora, ¡dos listas ordenadas!";
+      fase8 = 5;
+    } else if (fase8 === 5) {
+      p8.trozo({ id: "fin", piso: 4, desde: 0, valores: [6, 11, 14, 20], padre: ["m0", "m1"], clase: "particion__trozo--listo" });
+      $("p8-pregunta").innerHTML = c("mezclar([6, 14], [11, 20])") + " → " + c("[6, 11, 14, 20]");
+      Pasos.feedback($("p8-fb"), "ok", "¡Ordenada! Partir a la mitad hasta tener listas de un valor y mezclarlas de a dos: eso es mergesort, la siguiente lección.");
+      b.textContent = "↺ Otra vez";
+      fase8 = 6;
+      if (!acabado8) { acabado8 = true; leccion.desbloquear(); }
+    } else if (fase8 === 6) {
+      empezar8();
+      return;
+    }
+  }
+
+  $("p8-accion").addEventListener("click", accion8);
+  $("p8-elegir").querySelectorAll("[data-r]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (fase8 !== 2) return;
+      presionar($("p8-elegir"), btn);
+      if (btn.getAttribute("data-r") === "no") {
+        btn.classList.add("btn--mal");
+        Pasos.feedback($("p8-fb"), "pista", "Con un solo valor no hay nada fuera de lugar: ya está ordenada.");
+        return;
+      }
+      btn.classList.add("btn--bien");
+      $("p8-elegir").hidden = true;
+      Pasos.limpiarFeedback($("p8-fb"));
+      ["u0", "u1", "u2", "u3"].forEach(function (id) { p8.estado(id, "listo"); });
+      $("p8-pregunta").innerHTML = "¡Sí! Cuatro listas ordenadas. Ahora mézclalas de a dos.";
+      $("p8-accion").textContent = "Mezclar ▸";
+      $("p8-accion").disabled = false;
+      $("p8-accion").focus();
+      fase8 = 3;
+    });
+  });
+
+  /* ---------- 9. Reto ---------- */
+  $("reto-codigo").innerHTML = codigoHTML({ huecos: true });
+  var vistaReto = crearVista({ a: $("reto-a"), b: $("reto-b"), res: $("reto-res"), bloque: $("reto-bloque"), par: PAR1, comps: $("reto-comps") });
+  var relojReto = relojes();
+  var PRUEBAS = [PAR1, { a: [1, 2], b: [5, 8, 13] }, { a: [10, 12, 19], b: [4, 15] }, { a: [7, 16], b: [7, 9] }];
+
+  function elegido(nombre) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    return r ? r.value : null;
+  }
+
+  function limpiarReto() {
+    relojReto.cortar();
+    vistaReto.reiniciar(PAR1);
+    Codigo.limpiar($("reto-codigo"));
+    $("reto-rotulo").textContent = "mezclar(a, b)";
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+    document.querySelectorAll("#paso-reto .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+  }
+
+  function entrarReto() {
+    limpiarReto();
+    ["reto-h1", "reto-h2", "reto-h3"].forEach(function (n) { $(n).textContent = elegidoTexto(n) || "?"; });
+    leccion.listoParaComprobar(!!(elegido("reto-h1") && elegido("reto-h2") && elegido("reto-h3")));
+  }
+
+  function elegidoTexto(nombre) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    return r ? r.closest(".opcion").textContent.trim() : null;
+  }
+
+  document.querySelectorAll("#paso-reto input[type=radio]").forEach(function (r) {
+    r.addEventListener("change", function () {
+      $(r.name).textContent = elegidoTexto(r.name);
+      limpiarReto();
+      leccion.listoParaComprobar(!!(elegido("reto-h1") && elegido("reto-h2") && elegido("reto-h3")));
+    });
+  });
+
+  function pistaReto(v) {
+    if (v.cond === ">=") return "Con a[i] >= b[j] toma la mayor de las dos primeras: resultado sale desordenado. Hay que tomar la menor.";
+    if (v.cond === "ij") return "i <= j compara los dedos (las posiciones), no las notas. Compara las notas que marcan: a[i] con b[j].";
+    if (v.si !== "i") return "Si tomaste a[i], el dedo que avanza es el de a: i += 1. Si no, el mismo a[i] se vuelve a tomar.";
+    return "En el else tomaste b[j]: el dedo que avanza es el de b, j += 1.";
+  }
+
+  function comprobarReto() {
+    var v = { cond: elegido("reto-h1"), si: elegido("reto-h2"), sino: elegido("reto-h3") };
+    if (!v.cond || !v.si || !v.sino) return false;
+    limpiarReto();
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var mala = null;
+    PRUEBAS.forEach(function (par) {
+      var r = trazar(par.a, par.b, v).resultado;
+      var esperado = ordenada(par.a, par.b);
+      var bien = iguales(r, esperado);
+      if (!bien && mala === null) mala = par;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      li.innerHTML = '<span></span><span class="prueba__res"></span>';
+      li.children[0].textContent = "mezclar(" + lt(par.a) + ", " + lt(par.b) + ")";
+      li.children[1].textContent = lt(r) + (bien ? " ✓" : " ✗");
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    // Se ve la prueba que falló (o la primera) con los dedos moviéndose
+    var ver = mala || PRUEBAS[0];
+    $("reto-rotulo").textContent = "mezclar(" + lt(ver.a) + ", " + lt(ver.b) + ")";
+    vistaReto.reiniciar(ver);
+    reproducirPasos($("reto-codigo"), null, vistaReto, trazar(ver.a, ver.b, v), 170, relojReto);
+    var malos = [];
+    if (v.cond !== "<=") malos.push("reto-h1");
+    if (v.si !== "i") malos.push("reto-h2");
+    if (v.sino !== "j") malos.push("reto-h3");
+    document.querySelectorAll("#paso-reto input:checked").forEach(function (r) {
+      r.closest(".opcion").classList.add(malos.indexOf(r.name) === -1 ? "opcion--correcta" : "opcion--incorrecta");
+    });
+    if (mala === null) {
+      Pasos.feedback($("reto-fb"), "ok", "¡Eso es! Si a[i] <= b[j], toma a[i] y avanza i; si no, toma b[j] y avanza j. Las cuatro mezclas salen ordenadas.");
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", pistaReto(v));
+    return false;
+  }
+
+  /* ---------- Pasos ---------- */
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-montones": function () { if (!s1) empezar1(); },
+      "paso-porque": function (paso, l, info) { if (!info.desbloqueado) entrar2(); },
+      "paso-codigo": function () { traza3.detener(); },
+      "paso-tu": function () { if (!s4) empezar4(); },
+      "paso-adelanto": function () { if (fase8 === 0 && !p8.trozos.todo) empezar8(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-porque": comprobar2, "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
