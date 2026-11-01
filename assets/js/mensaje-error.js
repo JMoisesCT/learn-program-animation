@@ -12,7 +12,10 @@
        marcos: [                       una entrada por llamada, de la más vieja a la última
          { linea: 3, codigo: "print(nmbre)", marca: "nmbre", funcion: "<module>" },
          …                             marca: el texto que señalan los ^^^ (o [desde, hasta]
-       ],                              en columnas del código, sin la sangría); sin marca, no hay ^
+       ],                              en columnas del código, sin la sangría); sin marca, no hay ^.
+                                       subrayado: "~~~~^~~~" (opcional) reemplaza los ^ por ese texto
+                                       exacto desde el inicio de marca (Python 3.12 subraya así las
+                                       operaciones: ~ los operandos, ^ el operador)
        archivo: "programa.py",
        sintaxis: true,                 (opcional) error de escritura (SyntaxError, IndentationError):
                                        sin «Traceback (most recent call last):» ni «, in <module>»
@@ -143,7 +146,7 @@
       if (rango) {
         var marca = renglon("traceback__marca");
         marca.insertBefore(nuevo("span", "traceback__texto",
-          "    " + " ".repeat(rango[0]) + "^".repeat(Math.max(1, rango[1] - rango[0]))), marca.firstChild);
+          "    " + " ".repeat(rango[0]) + (mc.subrayado || "^".repeat(Math.max(1, rango[1] - rango[0])))), marca.firstChild);
         raiz.appendChild(marca);
       }
     });
