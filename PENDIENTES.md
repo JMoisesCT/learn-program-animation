@@ -18,7 +18,12 @@ Por orden de prioridad:
    **Para unificar** (cada lección lo resolvió en su página): el subrayado con `~` (`subrayado` ya está en `mensaje-error.js`; Tipos, Traza, try y el proyecto aún reescriben ese renglón a mano), «Did you forget to import» (Leer un mensaje lo arma a mano), `romper` con un rango `[desde, hasta]` en vez del texto (cae en la primera aparición), los `^` en su propio span tocable, marcar una segunda línea que nombra el mensaje («on line 2», Errores al escribir usa `.linea--mira`), un estado «explotó aquí» en `pila.js` (Traza usa `marco--explota`), `lanzar` con una lista de `except` en orden y que se pueda cancelar, crear el mensaje reservado (invisible) para que la ficha vuele hasta él, la etiqueta «no se ejecuta» que se encima en líneas largas, el escáner de dos fases (Errores al escribir) y la consola con campo, misiones y la emulación de `int()` (Volver a pedir y el proyecto). En `bucle-input.js`: no recortar los espacios del dato (el mensaje debería decir `' veinte'`), cambiar la pregunta entre vueltas, terminar cuando el programa se corta por un error y esperar a las animaciones antes de pedir otro dato.
    **No cabe a 1366×657**: casi todos los pasos piden bajar entre 30 y 200 px tras mostrar un mensaje; el reto de Volver a pedir y el del proyecto (26 líneas), más.
    **Desvíos de las convenciones**: Leer un mensaje usa un cuarto grupo `lab__arreglo` (opciones bajo el código en escritorio, después del mensaje en el móvil).
-3. **Problemas resueltos (idea)**: una zona aparte con problemas resueltos y ejecutados línea a línea. Las ideas están en la conversación del 2026-11-01; falta decidir el formato (y si se escribe un intérprete de un subconjunto de Python en JS para poder cambiar los datos y el código).
+3. **Problemas resueltos: piloto con 2 casos** (ver el registro del 2026-11-01, «Problemas resueltos» y la sección en CLAUDE.md). **Probar con alumnos** antes de escribir más casos:
+   - si la página larga que se lee bajando (caso → conceptos → idea → código → ejecución → preguntas) se sigue, o si prefieren la ejecución antes;
+   - si usan la barra de tiempo para rebobinar, los rombos de capítulos y los datos de entrada preparados, o solo tocan ▶;
+   - si el rastro de las variables (valores tachados) y el mapa de calor de las líneas ayudan o distraen;
+   - en el móvil, el escenario es largo (escena, código, variables y consola apilados) y los controles quedan fijos abajo.
+   Siguientes casos (están como «Próximamente» en el catálogo): el torneo del salón y el mensaje secreto; también los asientos del cine, el dígito verificador del DNI y las Torres de Hanói.
 4. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
    **Probar con alumnos** en un móvil de verdad, sobre todo:
    - si la clave colgada encima del casillero (en vez del número) se entiende como «buscar por nombre»;
@@ -90,6 +95,14 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-01 · Problemas resueltos: la zona y un piloto con dos casos
+
+Una zona nueva, aparte de las lecciones y con su propio estilo (ver «Problemas resueltos» en CLAUDE.md): el alumno no programa; lee un caso más grande, entiende las ideas y al final ve el programa terminado correr con animaciones.
+- **Estilo de cuaderno** (`assets/css/problemas.css`): papel crema con renglones, títulos con serifa, tinta azul, notas al margen en lápiz rojo y un escenario oscuro para la ejecución. Página larga que se lee bajando, con índice al costado y raya de avance (`assets/js/problemas.js`).
+- **`assets/js/reproductor.js`**: la ejecución como un video: datos de entrada preparados (las líneas que cambian llevan raya amarilla), barra de tiempo para ir adelante y atrás, capítulos con rombos, momentos clave que pausan solos, velocidad, rastro de cada variable, mapa de calor de las líneas, nota de cada paso, consola y la escena propia del caso. Teclado: espacio, flechas, Inicio y Fin.
+- **Catálogo** `problemas/index.html` (fichas con dibujo, dificultad, temas, filtro y «✓ Resuelto») y una banda en la portada.
+- **Caso 01 · El vuelto de la cafetería** (`problemas/vuelto/`, `problema-vuelto`): `//` y `%` con una tira que se parte, recorrer la lista de valores, lo que falta se achica; la idea voraz en 4 pasos; la escena es una caja registradora (la pantalla «FALTA», el cajón con su ranura iluminada y los billetes que vuelan a la bandeja); 4 datos de entrada (87, 188, vuelto 0 y monedas raras 4, 3 y 1, donde la estrategia voraz no da lo mejor); 3 preguntas y «¿Siempre funciona?».
 
 ### 2026-11-01 · Errores: 7 lecciones
 
