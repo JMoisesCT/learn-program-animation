@@ -4,17 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Caso 02 · El laberinto · Problemas resueltos</title>
-  <meta name="description" content="Problema resuelto: un ratón robot encuentra el queso en un laberinto probando caminos y volviendo atrás (backtracking) con recursión y una lista de listas, con la ejecución animada.">
+  <meta name="description" content="Problema resuelto: un ratón robot encuentra el queso en un laberinto probando caminos y volviendo atrás (backtracking) con recursión y una lista de listas, con su diagrama de flujo y la ejecución animada.">
   <link rel="stylesheet" href="../../assets/css/base.css">
   <link rel="stylesheet" href="../../assets/css/problemas.css">
   <style>
-    /* ---------- Cuadrículas chicas (demos y sección 7) ---------- */
-    .mini { --t: 2.2rem; display: grid; grid-template-columns: repeat(var(--cols), var(--t)); grid-auto-rows: var(--t); gap: 2px; width: fit-content; margin: var(--esp-3) auto; }
-    .mini__celda { display: grid; place-items: center; padding: 0; border: 0; border-radius: 4px; background: #fffdf6; box-shadow: inset 0 0 0 1px var(--papel-borde); font: 700 0.8rem var(--fuente-codigo); color: var(--tinta); transition: background-color 200ms, box-shadow 200ms; }
+    /* ---------- Cuadrículas chicas (demos, detalles y bloque 6) ---------- */
+    .mini { --t: 2.2rem; display: grid; grid-template-columns: repeat(var(--cols), var(--t)); grid-auto-rows: var(--t); gap: 2px; width: fit-content; margin: var(--esp-2) auto; }
+    .mini__celda { display: grid; place-items: center; padding: 0; border: 0; border-radius: 4px; background: #fffdf6; box-shadow: inset 0 0 0 1px var(--papel-borde); font: 700 0.78rem var(--fuente-codigo); color: var(--tinta); transition: background-color 200ms, box-shadow 200ms; }
     .mini__celda--pared { background: #2f3a58; box-shadow: none; color: #c9d2e6; }
-    .mini__celda--rotulo { background: none; box-shadow: none; color: var(--tinta-suave); font-weight: 400; font-size: 0.75rem; }
-    .mini__celda--queso::after { content: "🧀"; font-size: 1.15rem; }
-    .mini__celda--raton::after { content: "🐭"; font-size: 1.2rem; }
+    .mini__celda--rotulo { background: none; box-shadow: none; color: var(--tinta-suave); font-weight: 400; font-size: 0.72rem; }
+    .mini__celda--queso::after { content: "🧀"; font-size: calc(var(--t) * 0.55); }
+    .mini__celda--raton::after { content: "🐭"; font-size: calc(var(--t) * 0.6); }
     .mini__celda--miga { background: #dfe7ff; color: var(--azul-tinta); }
     .mini__celda--callejon { background-color: #efe7d6; background-image: linear-gradient(45deg, transparent 46%, rgba(180, 64, 14, 0.55) 46% 54%, transparent 54%), linear-gradient(-45deg, transparent 46%, rgba(180, 64, 14, 0.55) 46% 54%, transparent 54%); }
     .mini__celda--camino { background: #bfeccd; color: var(--color-ok); }
@@ -27,56 +27,106 @@
     .mini__celda--elegida { box-shadow: inset 0 0 0 3px #ffb000 !important; }
     .mini__celda--rotulo.mini__celda--fila { box-shadow: none; color: var(--azul-tinta); font-weight: 700; }
     .mini__celda--rotulo.mini__celda--col { color: var(--lapiz); font-weight: 700; }
-    .lectura { display: grid; gap: 0.35rem; justify-items: center; margin: var(--esp-2) 0 0; }
-    .lectura__fila { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; }
-    .lectura__fila > code { font-size: var(--texto-md); }
-    .lectura__fila > span { color: var(--tinta-suave); font-family: var(--fuente); font-size: var(--texto-sm); }
+    .lectura { display: grid; gap: 0.25rem; justify-items: center; margin: 0; }
+    .lectura__fila { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0.1rem 0.5rem; font-size: var(--texto-xs); }
+    .lectura__fila > code { font-size: var(--texto-sm); }
+    .lectura__fila > span { color: var(--tinta-suave); }
     .c-fila { color: var(--azul-tinta); } .c-col { color: var(--lapiz); }
 
     /* Demo de los cuatro vecinos */
-    .vecinos { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-4) var(--esp-6); margin-top: var(--esp-3); }
-    .vecinos .mini { --t: 3.6rem; margin: 0; }
-    .vecinos .mini__celda { font-size: 0.72rem; font-weight: 400; color: var(--tinta-suave); }
+    .vecinos { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-3) var(--esp-4); }
+    .vecinos .mini { --t: 2.7rem; margin: 0; }
+    .vecinos .mini__celda { font-size: 0.66rem; font-weight: 400; color: var(--tinta-suave); }
     .vecinos .mini__celda--centro { background: #fff8e6; box-shadow: inset 0 0 0 2px #ffb000; }
-    .vecinos .mini__celda--centro::after { content: "🐭"; font-size: 1.5rem; }
+    .vecinos .mini__celda--centro::after { content: "🐭"; font-size: 1.3rem; }
     .vecinos .mini__celda--vecino { background: #dfe7ff; box-shadow: inset 0 0 0 2.5px var(--azul-tinta); color: var(--azul-tinta); font-weight: 700; }
     .vecinos .mini__celda--vacia { background: none; box-shadow: none; }
-    .vecinos__salida { min-width: 10rem; }
-    .vecinos__salida .rep__rotulo { color: var(--tinta-suave); }
-    .consola-mini { min-height: 7.2rem; margin: 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: #0b0e13; color: #d7f5dd; font: 700 var(--texto-sm) / 1.6 var(--fuente-codigo); }
+    .vecinos__salida { min-width: 6.5rem; }
+    .rotulo-mini { margin: 0 0 0.25rem !important; font-size: 0.68rem !important; font-weight: 700; letter-spacing: 0.06em; line-height: 1.3 !important; text-transform: uppercase; color: var(--tinta-suave); }
+    .consola-mini { margin: 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: #0b0e13; color: #d7f5dd; font: 700 var(--texto-xs) / 1.55 var(--fuente-codigo); }
+    p.consola-mini { font-size: var(--texto-xs) !important; line-height: 1.55 !important; }
+    #d2-consola { min-height: 6.6em; }
     .consola-mini span { display: block; animation: aparecer 300ms ease both; }
-    .chips-elegir--tuplas button { font-size: var(--texto-xs); }
-    @media (max-width: 480px) { #d2-codigo { font-size: 0.78rem; } }
+    .consola-mini .error { color: #ff9c94; }
+    .consola-mini .gris { color: #8b96a3; font-weight: 400; }
+    .chips-elegir--chicos { gap: 0.3rem; }
+    .chips-elegir--chicos button { min-width: 0; min-height: 2rem; padding: 0 0.5rem; font-size: 0.74rem; }
+    #t-chips button { padding: 0 0.4rem; font-size: 0.7rem; }
+    .concepto .codigo { font-size: 0.8rem; padding: var(--esp-2) 0; margin: 0 0 var(--esp-2); }
+    .concepto .codigo .linea { padding-right: var(--esp-3); padding-left: 2.6rem; min-height: 1.55em; }
+    .concepto .codigo .linea::before { width: 1.8rem; }
+    .concepto h3 { font-size: 1.05rem; }
+    .concepto p { margin-bottom: var(--esp-2); }
 
     /* Demo de las migas */
-    .migas { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: var(--esp-4) var(--esp-6); }
-    .migas .mini { --t: 2.6rem; margin: 0; }
-    .pila-mini { display: flex; flex-direction: column; gap: 3px; min-width: 9rem; margin: 0; padding: 0; list-style: none; }
-    .pila-mini li { padding: 0.2rem 0.5rem; border: 1.5px solid var(--papel-borde); border-radius: 7px; background: #fff; font: 700 0.8rem var(--fuente-codigo); animation: aparecer 260ms ease both; }
-    .pila-mini li:first-child { border-color: #ffb000; background: #fff8e6; }
-    .pila-mini .vacia { border-style: dashed; color: var(--tinta-suave); font-weight: 400; font-style: italic; animation: none; }
-    .pila-mini__titulo { margin: 0 0 0.3rem; font-size: 0.72rem !important; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-suave); }
-    .migas__texto { min-height: 3.4em; margin: var(--esp-3) 0 0 !important; text-align: center; }
-    .migas__botones { display: flex; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .migas { display: flex; align-items: flex-start; justify-content: center; gap: var(--esp-3) var(--esp-4); }
+    .migas .mini { --t: 1.9rem; margin: 0; }
+    .pila-mini { display: flex; flex-direction: column; gap: 3px; min-width: 7.6rem; margin: 0; padding: 0; list-style: none; }
+    .concepto .pila-mini li { padding: 0.12rem 0.45rem; border: 1.5px solid var(--papel-borde); border-radius: 7px; background: #fff; font: 700 0.76rem / 1.4 var(--fuente-codigo); animation: aparecer 260ms ease both; white-space: nowrap; }
+    .concepto .pila-mini li:first-child { border-color: #ffb000; background: #fff8e6; }
+    .concepto .pila-mini .vacia, .concepto .pila-mini .mas { border-style: dashed; color: var(--tinta-suave); font-weight: 400; font-style: italic; animation: none; }
+    .concepto .pila-mini li.mas:first-child { border-color: var(--papel-borde); background: #fff; }
+    .migas__texto { min-height: 3.2em; margin: var(--esp-2) 0 0 !important; text-align: center; font-size: var(--texto-xs) !important; line-height: 1.5 !important; }
+    .botones-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .botones-fila .btn { min-height: 2.4rem; padding: 0.3rem 1rem; font-size: var(--texto-sm); }
+
+    /* ---------- 3. La idea: el diagrama de buscar(f, c) ---------- */
+    #flujo .flujo__nodo { font-size: 0.84rem; }
+    #flujo .flujo__nodo--decision { padding: 0.72em 1.45em; }
+    #flujo .flujo__nodo--fin { padding: 0.25em 0.75em; font-size: 0.8rem; }
+    #flujo .flujo__nodo--fin code { color: #fff; }
+    #flujo .flujo__nodo--fin.ret-si { border-color: var(--color-ok); background: var(--color-ok); }
+    #flujo .flujo__nodo--fin.ret-no { border-color: var(--color-error); background: var(--color-error); }
+    #flujo .flujo__nodo--inicio code { color: #fff; }
+    /* La llamada recursiva: el símbolo de «subproceso» (doble raya a los lados) */
+    #flujo .flujo__nodo.llamada { border-style: solid double; border-width: 2px 7px; background: #f4f0ff; }
+    #flujo .flujo__nodo.llamada small { display: block; font-size: 0.7rem; font-weight: 600; color: var(--tinta-suave); }
+    #flujo .flecha-llamada path { stroke: var(--c-idea-3); stroke-dasharray: 0.022 0.016; }
+    #flujo .flecha-llamada .flujo__punta { fill: var(--c-idea-3); }
+    #flujo .flecha-llamada.flujo__flecha--activa path { stroke: var(--azul-tinta); }
+    @media (max-width: 640px) {
+      #flujo .flujo__nodo { font-size: 0.72rem; }
+      #flujo .flujo__nodo--decision { padding: 0.65em 1.05em; }
+      #flujo .flujo__nodo--fin { font-size: 0.68rem; padding: 0.2em 0.5em; }
+      #flujo .flujo__nodo.llamada small { font-size: 0.62rem; }
+    }
+    .recorrido { flex-wrap: nowrap; margin-top: var(--esp-2); }
+    .recorrido .btn { flex: 0 0 auto; }
+    .recorrido .mini { --t: 1.05rem; gap: 1px; margin: 0; flex: 0 0 auto; }
+    .recorrido .mini__celda { border-radius: 3px; }
+    .recorrido__nota { line-height: 1.45; }
+    .idea-bloque .idea li { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+    .idea-intro { margin: 0 0 var(--esp-3); }
+    .idea-nota { margin: var(--esp-3) 0 0; }
+    @media (max-width: 1023.98px) {
+      .recorrido { flex-wrap: wrap; }
+    }
 
     /* ---------- La escena del reproductor: el laberinto y la pila ---------- */
-    .lb { display: grid; gap: var(--esp-2); }
-    .lb__arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2); }
-    .lb__marcador { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; margin: 0; font-size: 0.78rem !important; font-weight: 700; color: var(--tinta-suave); }
-    .lb__marcador b { font: 700 0.95rem var(--fuente-codigo); color: var(--tinta); }
-    .lb__camara { min-height: 2rem; padding: 0 0.7rem; border: 1.5px solid var(--papel-borde); border-radius: 999px; background: #fff; color: var(--tinta); font: 700 0.75rem var(--fuente); cursor: pointer; }
+    .lb { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--esp-2); }
+    .lb__arriba { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-2); }
+    .lb__marcador { display: flex; flex-wrap: wrap; gap: 0.1rem 0.8rem; margin: 0; font-size: 0.74rem !important; font-weight: 700; line-height: 1.5 !important; color: var(--tinta-suave); }
+    .lb__marcador b { font: 700 0.9rem var(--fuente-codigo); color: var(--tinta); }
+    .lb__marcador i { display: inline-block; width: 0.85em; height: 0.85em; margin-right: 0.3em; vertical-align: -0.08em; border-radius: 3px; }
+    .lb__marcador .l-miga { background: #dfe7ff; box-shadow: inset 0 0 0 1px #9fb3ec; }
+    .lb__marcador .l-x { background-color: #ece4d2; background-image: linear-gradient(45deg, transparent 40%, #b4400e 40% 60%, transparent 60%); }
+    .lb__marcador .l-luz { background: #b9eac8; box-shadow: inset 0 0 0 1px #8fd3a6; }
+    .lb__camara { min-height: 1.9rem; padding: 0 0.7rem; border: 1.5px solid var(--papel-borde); border-radius: 999px; background: #fff; color: var(--tinta); font: 700 0.72rem var(--fuente); cursor: pointer; }
     .lb__camara[aria-pressed="true"] { border-color: var(--azul-tinta); background: var(--azul-tinta-suave); color: var(--azul-tinta); }
     .lb__camara:focus-visible { outline: 3px solid var(--azul-tinta); outline-offset: 2px; }
-    .lb__cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 10.6rem; gap: var(--esp-3); align-items: start; }
-    .lb__vista { position: relative; overflow: hidden; border-radius: 10px; background: #efe8d6; box-shadow: inset 0 0 0 1px var(--papel-borde); }
-    .lb__mapa { --celda: 32px; position: relative; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); width: 100%; aspect-ratio: var(--cols) / var(--filas); transform-origin: 0 0; transition: transform 750ms cubic-bezier(0.4, 0, 0.2, 1); }
-    .lb__celda { position: relative; display: grid; place-items: center; min-width: 0; font: 700 calc(var(--celda) * 0.3) var(--fuente-codigo); transition: background-color 300ms, color 300ms; }
-    .lb__celda--rotulo { color: var(--tinta-suave); font-weight: 400; font-size: calc(var(--celda) * 0.34); }
+    .lb__cuerpo { flex: 1 1 auto; min-height: 0; display: flex; justify-content: center; align-items: flex-start; gap: var(--esp-3); overflow: hidden; }
+    .lb--abajo .lb__cuerpo { flex-direction: column; align-items: center; }
+    .lb:not(.lb--abajo) .lb__vista { align-self: center; }
+    .lb__vista { position: relative; flex: 0 0 auto; overflow: hidden; border-radius: 10px; background: #efe8d6; box-shadow: inset 0 0 0 1px var(--papel-borde); }
+    .lb__mapa { --celda: 32px; position: relative; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-template-rows: repeat(var(--filas), minmax(0, 1fr)); width: 100%; height: 100%; transform-origin: 0 0; transition: transform 750ms cubic-bezier(0.4, 0, 0.2, 1); }
+    .lb__celda { position: relative; display: grid; place-items: center; min-width: 0; font: 700 calc(var(--celda) * 0.32) var(--fuente-codigo); transition: background-color 300ms, color 300ms; }
+    .lb__celda--rotulo { color: var(--tinta-suave); font-weight: 400; font-size: calc(var(--celda) * 0.36); }
     .lb__celda--pared { background: #2f3a58; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.07); }
     .lb__celda--libre, .lb__celda--queso { background: #fffdf6; box-shadow: inset 0 0 0 0.5px #e6dcc6; }
     .lb__celda--queso::after { content: "🧀"; font-size: calc(var(--celda) * 0.6); }
     .lb__celda--miga { background: #dfe7ff; box-shadow: inset 0 0 0 0.5px #c6d2f5; color: var(--azul-tinta); }
     .lb__celda--miga::before { content: ""; position: absolute; width: 22%; height: 22%; border-radius: 50%; background: var(--azul-tinta); opacity: 0.35; }
+    .lb__celda--miga:has(.lb__num)::before { display: none; }
     .lb__celda--callejon { background-color: #ece4d2; background-image: linear-gradient(45deg, transparent 45%, rgba(180, 64, 14, 0.6) 45% 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, rgba(180, 64, 14, 0.6) 45% 55%, transparent 55%); box-shadow: inset 0 0 0 0.5px #d8ccb2; }
     .lb__celda--luz { background: #b9eac8; color: var(--color-ok); box-shadow: inset 0 0 0 0.5px #8fd3a6; }
     .lb__celda--luz::before { background: var(--color-ok); opacity: 0.5; }
@@ -99,10 +149,11 @@
     @keyframes lb-fiesta { 30% { transform: translateY(-30%) rotate(-12deg) scale(1.15); } 60% { transform: rotate(10deg); } }
     .lb--salto .lb__mapa, .lb--salto .lb__pieza, .lb--salto .lb__celda { transition: none !important; }
 
-    .lb__pila { min-width: 0; }
-    .lb__pila-titulo { margin: 0 0 0.3rem !important; font-size: 0.68rem !important; font-weight: 700; letter-spacing: 0.06em; line-height: 1.3 !important; text-transform: uppercase; color: var(--tinta-suave); }
+    .lb__pila { flex: 0 0 10.4rem; width: 10.4rem; min-width: 0; align-self: stretch; overflow: hidden; }
+    .lb--abajo .lb__pila { flex: 1 1 auto; align-self: center; }
+    .lb__pila-titulo { margin: 0 0 0.3rem !important; font-size: 0.66rem !important; font-weight: 700; letter-spacing: 0.06em; line-height: 1.3 !important; text-transform: uppercase; color: var(--tinta-suave); }
     .lb__fichas { position: relative; display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-    .lb__fichas > .lb__ficha { display: flex; align-items: center; gap: 0.3rem; min-width: 0; padding: 0.12rem 0.35rem; border: 1.5px solid var(--papel-borde); border-radius: 7px; background: #fff; font: 600 0.74rem / 1.35 var(--fuente-codigo); white-space: nowrap; }
+    .lb__fichas > .lb__ficha { display: flex; align-items: center; gap: 0.3rem; min-width: 0; padding: 0.1rem 0.35rem; border: 1.5px solid var(--papel-borde); border-radius: 7px; background: #fff; font: 600 0.74rem / 1.35 var(--fuente-codigo); white-space: nowrap; }
     .lb__ficha code { padding: 0; background: none; color: inherit; font-size: 1em; }
     .lb__ficha-n { display: inline-grid; place-items: center; flex: 0 0 auto; min-width: 1.15rem; height: 1.15rem; border-radius: 999px; background: #dfe7ff; color: var(--azul-tinta); font-size: 0.66rem; }
     .lb__ficha-fin { margin-left: auto; font-weight: 700; }
@@ -117,42 +168,71 @@
     .lb__ficha--sale { position: absolute; left: 0; right: 0; top: 0; z-index: 2; animation: lb-sale 420ms ease forwards; }
     @keyframes lb-entra { from { opacity: 0; transform: translateY(-10px) scale(0.92); } }
     @keyframes lb-sale { to { opacity: 0; transform: translateY(-16px) scale(0.95); } }
-    .lb__fichas > .lb__mas, .lb__fichas > .lb__vacia { padding: 0.12rem 0.35rem; font-size: 0.7rem; color: var(--tinta-suave); text-align: center; }
+    .lb__fichas > .lb__mas, .lb__fichas > .lb__vacia { padding: 0.1rem 0.35rem; font-size: 0.7rem; line-height: 1.35; color: var(--tinta-suave); text-align: center; }
     .lb__vacia { border: 1.5px dashed var(--papel-borde); border-radius: 7px; font-style: italic; }
-    .lb__leyenda { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; margin: 0 !important; font-size: 0.74rem !important; line-height: 1.5 !important; color: var(--tinta-suave); }
-    .lb__leyenda i { display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.3em; vertical-align: -0.12em; border-radius: 3px; }
-    .lb__leyenda .l-miga { background: #dfe7ff; box-shadow: inset 0 0 0 1px #9fb3ec; }
-    .lb__leyenda .l-x { background-color: #ece4d2; background-image: linear-gradient(45deg, transparent 40%, #b4400e 40% 60%, transparent 60%); }
-    .lb__leyenda .l-luz { background: #b9eac8; box-shadow: inset 0 0 0 1px #8fd3a6; }
-    .lb__leyenda .l-pared { background: #2f3a58; }
-    @media (max-width: 640px) {
-      .lb__cuerpo { grid-template-columns: minmax(0, 1fr); }
+
+    /* El reproductor del laberinto: más lugar para el dibujo, el código a su medida */
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(22.5rem, 1fr) minmax(0, 1.5fr) minmax(10.5rem, 0.5fr); grid-template-rows: minmax(0, 1fr); }
     }
-    /* El código del laberinto es largo: un poco más chico en el reproductor */
-    #reproductor .rep__codigo .codigo { font-size: 0.86rem; line-height: 1.55; }
-    #reproductor .rep__codigo .codigo .linea { min-height: 1.55em; }
+    #reproductor .rep__codigo .codigo { font-size: 0.84rem; line-height: 1.5; }
+    #reproductor .rep__codigo .codigo .linea { min-height: 1.5em; }
     @media (max-width: 640px) {
       #reproductor .rep__codigo .codigo { font-size: 0.74rem; }
+      #reproductor .rep__codigo .codigo .linea { padding-left: 2.7rem; }
+      #reproductor .rep__codigo .codigo .linea::before { width: 1.9rem; }
     }
 
-    /* ---------- Sección 7: dos caminos ---------- */
-    .dos-caminos { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-4) var(--esp-6); margin: var(--esp-4) 0; }
+    /* ---------- 5. Detalles del algoritmo ---------- */
+    .detalle-fila { display: flex; align-items: center; justify-content: center; gap: var(--esp-3); flex-wrap: wrap; }
+    .barras { display: grid; gap: 0.35rem; margin-top: var(--esp-2); }
+    .barra { display: grid; grid-template-columns: 5.4rem minmax(0, 1fr) 2.4rem; align-items: center; gap: var(--esp-2); font-size: var(--texto-xs); color: var(--tinta-suave); }
+    .barra__pista { height: 0.75rem; border-radius: 999px; background: var(--papel-2); overflow: hidden; }
+    .barra__pista i { display: block; height: 100%; border-radius: 999px; background: #c9d3ef; transition: width 600ms ease; }
+    .barra--real .barra__pista i { background: var(--azul-tinta); }
+    .barra b { font: 700 var(--texto-sm) var(--fuente-codigo); color: var(--tinta); text-align: right; }
+    .formula { margin: var(--esp-2) 0 0 !important; text-align: center; font-size: var(--texto-xs) !important; }
+    .formula code { font-size: 0.86rem; white-space: nowrap; }
+    .contador-grande { min-width: 4.2rem; margin: 0; font: 700 var(--texto-lg) / 1.2 var(--fuente-codigo) !important; color: var(--azul-tinta); text-align: center; }
+    .contador-grande small { display: block; font: 600 0.68rem var(--fuente); letter-spacing: 0.05em; text-transform: uppercase; color: var(--tinta-suave); }
+    .linea-tachada .linea--sin { text-decoration: line-through; text-decoration-color: var(--color-error); text-decoration-thickness: 2px; opacity: 0.55; }
+    .detalle-salida { margin-top: var(--esp-2); min-height: 3.2em; }
+    .probar-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+    .probar-fila .btn { min-height: 2.3rem; padding: 0.25rem 0.9rem; font-size: var(--texto-sm); }
+    .detalle-fila--pila { flex-wrap: nowrap; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .detalle-fila--pila .mini { margin: 0; flex: 0 0 auto; }
+    .detalle-fila--pila .pila-mini { flex: 0 1 8rem; min-width: 0; }
+    .detalle-fila--pila .contador-grande { flex: 0 0 auto; min-width: 0; }
+    .orden-codigo { margin-top: var(--esp-1) !important; }
+    .resultado-orden { margin: var(--esp-2) 0 0 !important; text-align: center; font-size: var(--texto-sm) !important; }
+    .resultado-orden strong { font-family: var(--serif); font-size: var(--texto-md); }
+
+    /* ---------- 6. ¿Es el camino más corto? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1.1fr 1fr; } }
+    .mas p { margin: 0 0 var(--esp-3); }
+    .mas__dibujo { padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); text-align: center; }
+    .dos-caminos { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-3) var(--esp-5); }
     .dos-caminos figure { margin: 0; text-align: center; }
-    .dos-caminos .mini { --t: 1.55rem; gap: 1px; margin: 0 auto; }
-    .dos-caminos .mini__celda { font-size: 0.68rem; }
+    .dos-caminos .mini { --t: 1.45rem; gap: 1px; margin: 0 auto; }
+    .dos-caminos .mini__celda { font-size: 0.66rem; }
     .dos-caminos figcaption { margin-top: var(--esp-2); font-size: var(--texto-sm); }
-
-    .notas-codigo code { white-space: pre; }
-    .lb__celda--miga:has(.lb__num)::before { display: none; }
-    /* El índice fijo del costado no debe tapar la portada (más ancha que las secciones) */
-    @media (min-width: 1240px) {
-      .caso-portada { max-width: min(54rem, calc(100vw - 26rem)) !important; }
+    #corto .caso-fin { margin-top: var(--esp-4); }
+    @media (max-width: 640px) {
+      .dos-caminos { gap: var(--esp-3); flex-wrap: nowrap; }
+      .dos-caminos .mini { --t: 0.95rem; }
+      .dos-caminos figcaption { font-size: var(--texto-xs); }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #corto .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #corto .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
     }
+    /* En el móvil, las tarjetas del carrusel que aún no se ven no deben bajar (harían scroll dentro) */
+    @media (max-width: 1023.98px) {
+      .carrusel > .aparece, .carrusel-movil > .aparece, .carrusel-movil .enunciado__hojas > .aparece { transform: none; }
+    }
+    #corto .visto { margin-top: var(--esp-3); }
 
-    /* ---------- Sello de resuelto ---------- */
-    .sello { display: none; width: fit-content; margin: var(--esp-5) auto 0; padding: 0.3em 1em; border: 4px double var(--color-ok); border-radius: 8px; color: var(--color-ok); font: 700 var(--texto-xl) var(--serif); letter-spacing: 0.12em; text-transform: uppercase; transform: rotate(-6deg); }
-    .sello--puesto { display: block; animation: sello 500ms var(--curva-rebote) both; }
-    @keyframes sello { from { transform: rotate(-6deg) scale(2.2); opacity: 0; } }
   </style>
 </head>
 <body class="caso">
@@ -163,190 +243,287 @@
     <span class="caso-avance" aria-hidden="true"></span>
   </header>
 
-  <nav class="caso-indice" aria-label="Partes del caso">
+  <nav class="caso-indice" aria-label="Bloques del caso">
     <ol>
-      <li><a href="#caso">El caso</a></li>
-      <li><a href="#saber">Lo que necesitas</a></li>
-      <li><a href="#idea">La idea</a></li>
-      <li><a href="#codigo">El código</a></li>
-      <li><a href="#ejecucion">La ejecución</a></li>
-      <li><a href="#entendiste">¿Lo entendiste?</a></li>
-      <li><a href="#corto">¿El más corto?</a></li>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#corto"><span>6 · ¿Es el camino más corto?</span></a></li>
     </ol>
   </nav>
 
   <main class="caso-hoja" data-caso="problema-laberinto">
 
-    <section class="caso-portada">
-      <div>
-        <p class="caso-num">Caso 02</p>
-        <h1>El laberinto</h1>
-        <p class="caso-bajada">Un ratón robot busca el queso probando caminos y volviendo atrás cuando se mete en un callejón.</p>
-        <div class="caso-ficha">
-          <span class="caso-dificultad" aria-label="Dificultad: 3 de 3">★★★</span>
-          <ul class="caso-temas" aria-label="Temas que usa">
-            <li><a href="../../lecciones/listas/anidadas/index.html">listas de listas</a></li>
-            <li><a href="../../lecciones/estructuras/index.html">tuplas</a></li>
-            <li><a href="../../lecciones/recursion/index.html">recursión</a></li>
-            <li><a href="../../lecciones/funciones/return/index.html">return True / False</a></li>
-          </ul>
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso 02</p>
+          <h1>El laberinto</h1>
+          <p class="caso-bajada">Un ratón robot busca el queso probando caminos y volviendo atrás cuando se mete en un callejón.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 3">★★★</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/listas/anidadas/index.html">listas de listas</a></li>
+              <li><a href="../../lecciones/estructuras/index.html">tuplas</a></li>
+              <li><a href="../../lecciones/recursion/index.html">recursión</a></li>
+              <li><a href="../../lecciones/funciones/return/index.html">return True / False</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
         </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 180" role="img" aria-label="Un laberinto visto desde arriba: un camino de migas lleva al ratón hasta el queso y dos callejones están tachados">
+          <rect x="21" y="13" width="198" height="154" rx="6" fill="#fffdf6"/>
+          <path fill="#1f2a44" d="M21 13h198v22h-198zM21 145h198v22h-198zM21 35h22v110h-22zM197 35h22v110h-22zM65 35h22v44h-22zM153 35h22v22h-22zM109 57h22v44h-22zM153 79h22v66h-22zM65 101h66v22h-66zM109 123h22v22h-22zM175 123h22v22h-22z"/>
+          <path d="M48 40L60 52M60 40L48 52M180 40L192 52M192 40L180 52M48 62L60 74M60 62L48 74" stroke="#b4400e" stroke-width="2.5" stroke-linecap="round"/>
+          <g fill="#2445b0"><circle cx="98" cy="46" r="3.2"/><circle cx="120" cy="46" r="3.2"/><circle cx="142" cy="46" r="3.2"/><circle cx="98" cy="68" r="3.2"/><circle cx="142" cy="68" r="3.2"/><circle cx="164" cy="68" r="3.2"/><circle cx="186" cy="68" r="3.2"/><circle cx="54" cy="90" r="3.2"/><circle cx="76" cy="90" r="3.2"/><circle cx="98" cy="90" r="3.2"/><circle cx="54" cy="112" r="3.2"/><circle cx="54" cy="134" r="3.2"/></g>
+          <path d="M177 120l18-14 0 14z" fill="#f2c94c" stroke="#c99a1c" stroke-width="1.5" stroke-linejoin="round"/>
+          <circle cx="187" cy="116" r="1.8" fill="#c99a1c"/><circle cx="192" cy="112" r="1.3" fill="#c99a1c"/>
+          <g transform="translate(186 90)">
+            <path d="M8 4q10 2 8 10" fill="none" stroke="#8a8f99" stroke-width="1.6" stroke-linecap="round"/>
+            <ellipse cx="0" cy="2" rx="9" ry="7" fill="#9aa1ad"/>
+            <circle cx="-6" cy="-5" r="4" fill="#9aa1ad"/><circle cx="-6" cy="-5" r="2.2" fill="#f2a7b8"/>
+            <circle cx="3" cy="-6" r="4" fill="#9aa1ad"/><circle cx="3" cy="-6" r="2.2" fill="#f2a7b8"/>
+            <circle cx="-3" cy="0" r="1.2" fill="#1f2a44"/><circle cx="-8.5" cy="3" r="1.4" fill="#f2a7b8"/>
+          </g>
+        </svg>
       </div>
-      <svg class="caso-ilustracion" viewBox="0 0 240 180" role="img" aria-label="Un laberinto visto desde arriba: un camino de migas lleva al ratón hasta el queso y dos callejones están tachados">
-        <rect x="21" y="13" width="198" height="154" rx="6" fill="#fffdf6"/>
-        <path fill="#1f2a44" d="M21 13h198v22h-198zM21 145h198v22h-198zM21 35h22v110h-22zM197 35h22v110h-22zM65 35h22v44h-22zM153 35h22v22h-22zM109 57h22v44h-22zM153 79h22v66h-22zM65 101h66v22h-66zM109 123h22v22h-22zM175 123h22v22h-22z"/>
-        <path d="M48 40L60 52M60 40L48 52M180 40L192 52M192 40L180 52M48 62L60 74M60 62L48 74" stroke="#b4400e" stroke-width="2.5" stroke-linecap="round"/>
-        <g fill="#2445b0"><circle cx="98" cy="46" r="3.2"/><circle cx="120" cy="46" r="3.2"/><circle cx="142" cy="46" r="3.2"/><circle cx="98" cy="68" r="3.2"/><circle cx="142" cy="68" r="3.2"/><circle cx="164" cy="68" r="3.2"/><circle cx="186" cy="68" r="3.2"/><circle cx="54" cy="90" r="3.2"/><circle cx="76" cy="90" r="3.2"/><circle cx="98" cy="90" r="3.2"/><circle cx="54" cy="112" r="3.2"/><circle cx="54" cy="134" r="3.2"/></g>
-        <!-- El queso -->
-        <path d="M177 120l18-14 0 14z" fill="#f2c94c" stroke="#c99a1c" stroke-width="1.5" stroke-linejoin="round"/>
-        <circle cx="187" cy="116" r="1.8" fill="#c99a1c"/><circle cx="192" cy="112" r="1.3" fill="#c99a1c"/>
-        <!-- El ratón -->
-        <g transform="translate(186 90)">
-          <path d="M8 4q10 2 8 10" fill="none" stroke="#8a8f99" stroke-width="1.6" stroke-linecap="round"/>
-          <ellipse cx="0" cy="2" rx="9" ry="7" fill="#9aa1ad"/>
-          <circle cx="-6" cy="-5" r="4" fill="#9aa1ad"/><circle cx="-6" cy="-5" r="2.2" fill="#f2a7b8"/>
-          <circle cx="3" cy="-6" r="4" fill="#9aa1ad"/><circle cx="3" cy="-6" r="2.2" fill="#f2a7b8"/>
-          <circle cx="-3" cy="0" r="1.2" fill="#1f2a44"/><circle cx="-8.5" cy="3" r="1.4" fill="#f2a7b8"/>
-        </g>
-      </svg>
     </section>
 
     <!-- 1. El caso -->
-    <section class="caso-seccion" id="caso">
-      <h2><span class="caso-n">1</span> El caso</h2>
-      <p class="aparece">En la feria de ciencias del colegio, el equipo de robótica armó un laberinto de cartón y un ratón robot. El robot no ve el laberinto desde arriba: solo sabe mirar <strong>la casilla de al lado</strong>.</p>
-      <p class="aparece">Su misión: llegar al queso. Si se mete en un callejón, tiene que <span class="resalta">darse cuenta y volver atrás</span> hasta el último cruce donde le quedaba otro camino por probar.</p>
-      <div class="ticket aparece" aria-label="Ficha del robot">
-        <h3>RATÓN ROBOT · FICHA</h3>
-        <div class="ticket__fila"><span>Ve</span><span>1 casilla a la vez</span></div>
-        <div class="ticket__fila"><span>Se mueve</span><span>↑ → ↓ ←</span></div>
-        <div class="ticket__fila"><span>Lleva</span><span>migas de pan</span></div>
-        <div class="ticket__fila ticket__fila--total"><span>Meta</span><span>🧀</span></div>
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>En la feria de ciencias, el equipo de robótica armó un laberinto de cartón y un ratón robot. El robot no ve el laberinto desde arriba: solo mira <strong>la casilla de al lado</strong>.</p>
+            <p>Si se mete en un callejón, tiene que <span class="resalta">darse cuenta y volver atrás</span> hasta el último cruce donde le quedaba otro camino. <span class="nota-margen">¿Cómo se escribe «probar y, si falla, volver» sin perderse?</span></p>
+            <div class="ticket" aria-label="Ficha del robot">
+              <h3>RATÓN ROBOT · FICHA</h3>
+              <div class="ticket__fila"><span>Ve</span><span>1 casilla a la vez</span></div>
+              <div class="ticket__fila"><span>Se mueve</span><span>↑ → ↓ ←</span></div>
+              <div class="ticket__fila"><span>Lleva</span><span>migas de pan</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Meta</span><span>🧀</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+            <article class="hoja-enunciado" aria-label="Enunciado del problema">
+              <h3>Problema</h3>
+              <p>Escribe una función <code>buscar(f, c)</code> que diga si desde la casilla <code>(f, c)</code> se puede llegar al queso, moviéndose de una casilla libre a otra vecina (arriba, derecha, abajo o izquierda; sin diagonales).</p>
+              <h3>Entrada</h3>
+              <ul>
+                <li><code>lab</code>: una lista de listas, una por fila. Cada casilla es <code>"#"</code> (pared), <code>" "</code> (libre) o <code>"Q"</code> (el queso). El borde es todo pared.</li>
+                <li>La casilla de inicio <code>(f, c)</code>: fila y columna de una casilla libre.</li>
+              </ul>
+              <h3>Salida</h3>
+              <p><code>¡Llegué al queso!</code> si hay camino; si no, <code>No hay salida</code>. En <code>lab</code> quedan marcadas con <code>"·"</code> las casillas del camino.</p>
+            </article>
+            <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+              <h3>Ejemplos</h3>
+              <table class="ejemplos">
+                <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+                <tbody>
+                  <tr><td>#####
+# #Q#
+#   #
+#####
+inicio (1, 1)</td><td>¡Llegué al queso!
+
+lab al final:
+#####
+#·#Q#
+#···#
+#####</td></tr>
+                  <tr><td>######
+#  #Q#
+######
+inicio (1, 1)</td><td>No hay salida</td></tr>
+                </tbody>
+              </table>
+            </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
       </div>
-      <p class="aparece">El laberinto se guarda como una cuadrícula de casillas: <code>"#"</code> es pared, <code>" "</code> es libre y <code>"Q"</code> es el queso. <span class="nota-margen">¿Cómo se escribe «probar un camino y, si falla, volver» sin perderse?</span></p>
     </section>
 
     <!-- 2. Lo que necesitas saber -->
-    <section class="caso-seccion" id="saber">
-      <h2><span class="caso-n">2</span> Lo que necesitas saber</h2>
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Una casilla: <code>lab[f][c]</code></h3>
+            <p>Una <a href="../../lecciones/listas/anidadas/index.html">lista de listas</a>: primero la fila, luego la columna. Toca una casilla.</p>
+            <div class="mini" id="d1-mapa" style="--t: 1.7rem" role="group" aria-label="Laberinto chico: toca una casilla (o muévete con las flechas) para ver su fila y su columna"></div>
+            <p class="lectura" id="d1-lectura" aria-live="polite"></p>
+          </div>
 
-      <div class="concepto aparece">
-        <h3>Una casilla: <code>lab[f][c]</code></h3>
-        <p>El laberinto es una <a href="../../lecciones/listas/anidadas/index.html">lista de listas</a>: <code>lab[f]</code> es la fila <code>f</code> y <code>lab[f][c]</code>, la casilla <code>c</code> de esa fila. Primero la fila, luego la columna. Toca una casilla.</p>
-        <div class="mini" id="d1-mapa" role="group" aria-label="Laberinto chico: toca una casilla (o muévete con las flechas) para ver su fila y su columna"></div>
-        <p class="lectura" id="d1-lectura" aria-live="polite"></p>
-      </div>
+          <div class="concepto aparece">
+            <h3>Los cuatro vecinos</h3>
+            <p>Una lista de <a href="../../lecciones/estructuras/index.html">tuplas</a> guarda cuánto cambian la fila y la columna; el <code>for</code> las desempaqueta.</p>
+            <pre class="codigo" id="d2-codigo"></pre>
+            <div class="chips-elegir chips-elegir--chicos" id="d2-chips" role="group" aria-label="Elige una vuelta del for"></div>
+            <div class="vecinos" style="margin-top: var(--esp-2)">
+              <div class="mini" id="d2-mapa" aria-hidden="true"></div>
+              <div class="vecinos__salida">
+                <p class="rotulo-mini">Consola</p>
+                <p class="consola-mini" id="d2-consola" aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
 
-      <div class="concepto aparece">
-        <h3>Los cuatro vecinos</h3>
-        <p>Desde <code>(f, c)</code>, arriba es la fila anterior y a la derecha, la columna siguiente. Una lista de <a href="../../lecciones/estructuras/index.html">tuplas</a> guarda los cuatro cambios y el <code>for</code> los desempaqueta en <code>df</code> y <code>dc</code>.</p>
-        <pre class="codigo" id="d2-codigo"></pre>
-        <div class="chips-elegir chips-elegir--tuplas" id="d2-chips" role="group" aria-label="Elige una vuelta del for" style="margin-top: var(--esp-3)"></div>
-        <div class="vecinos">
-          <div class="mini" id="d2-mapa" aria-hidden="true"></div>
-          <div class="vecinos__salida">
-            <p class="rep__rotulo">Consola</p>
-            <p class="consola-mini" id="d2-consola" aria-live="polite"></p>
+          <div class="concepto aparece">
+            <h3>Dejar una miga y volver por ella</h3>
+            <p>Cada paso es una <a href="../../lecciones/recursion/index.html">llamada recursiva</a> que deja una miga. En un callejón, la llamada de arriba se quita y el ratón vuelve a la miga anterior.</p>
+            <div class="migas">
+              <div class="mini" id="d3-mapa" aria-hidden="true"></div>
+              <div>
+                <p class="rotulo-mini">Pila de llamadas</p>
+                <ol class="pila-mini" id="d3-pila" aria-label="Pila de llamadas, la de arriba es la que corre"></ol>
+              </div>
+            </div>
+            <p class="migas__texto" id="d3-texto" aria-live="polite"></p>
+            <div class="botones-fila">
+              <button type="button" class="btn btn-secundario" id="d3-reiniciar">↺ Otra vez</button>
+              <button type="button" class="btn btn-primario" id="d3-avanzar">Avanzar ▸</button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="concepto aparece">
-        <h3>Dejar una miga y volver por ella</h3>
-        <p>Cada paso del ratón es una <a href="../../lecciones/recursion/index.html">llamada recursiva</a>: deja una miga y le pide a una nueva llamada que siga desde la casilla de al lado. Las llamadas se apilan. En un callejón, la de arriba se quita y el ratón vuelve a la miga anterior.</p>
-        <div class="migas">
-          <div class="mini" id="d3-mapa" aria-hidden="true"></div>
-          <div>
-            <p class="pila-mini__titulo">Pila de llamadas</p>
-            <ol class="pila-mini" id="d3-pila" aria-label="Pila de llamadas, la de arriba es la que corre"></ol>
-          </div>
-        </div>
-        <p class="migas__texto" id="d3-texto" aria-live="polite"></p>
-        <div class="migas__botones">
-          <button type="button" class="btn btn-secundario" id="d3-reiniciar">↺ Otra vez</button>
-          <button type="button" class="btn btn-primario" id="d3-avanzar">Avanzar ▸</button>
-        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
       </div>
     </section>
 
     <!-- 3. La idea -->
-    <section class="caso-seccion" id="idea">
-      <h2><span class="caso-n">3</span> La idea</h2>
-      <p class="aparece">Una sola función, <code>buscar(f, c)</code>, responde «¿desde esta casilla se llega al queso?». Para contestar, se pregunta lo mismo desde las casillas vecinas:</p>
-      <ol class="idea aparece">
-        <li class="idea--1" data-idea="1"><strong>¿Es el queso? ¡Llegaste!</strong> Devuelve <code>True</code>.</li>
-        <li class="idea--2" data-idea="2"><strong>¿Es pared o ya pasaste por aquí? No sirve</strong> Devuelve <code>False</code> sin moverse.</li>
-        <li class="idea--3" data-idea="3"><strong>Deja una miga y prueba los cuatro vecinos</strong> Arriba, derecha, abajo, izquierda. Si desde alguno se llega, desde aquí también: devuelve <code>True</code>.</li>
-        <li class="idea--4" data-idea="4"><strong>Ninguno sirvió: es un callejón</strong> Cambia la miga por una <code>x</code> y vuelve atrás con <code>False</code>.</li>
-      </ol>
-      <p class="aparece nota-margen">Probar un camino y, si falla, deshacer el último paso y probar otro se llama <em>vuelta atrás</em> (en inglés, <em>backtracking</em>).</p>
-    </section>
-
-    <!-- 4. El código -->
-    <section class="caso-seccion codigo-ancho" id="codigo">
-      <h2><span class="caso-n">4</span> El código</h2>
-      <p class="aparece">Cada bloque tiene el color del paso de la idea que resuelve. Pasa el mouse por un paso o por una línea.</p>
-      <div class="codigo-comentado aparece">
-        <pre class="codigo" id="codigo-comentado" aria-label="El programa completo"></pre>
-        <ul class="notas-codigo nota-margen">
-          <li><code>list("# #   # #")</code> convierte cada fila de texto en una lista: así se puede cambiar una casilla.</li>
-          <li>Los dos primeros <code>if</code> son los casos base: sin ellos, la recursión nunca pararía.</li>
-          <li>La miga <code>"·"</code> evita volver a pisar una casilla: sin ella, el ratón daría vueltas en círculo hasta el <code>RecursionError</code>.</li>
-          <li><code>return True</code> dentro del <code>for</code>: si un vecino llegó, ya no prueba los demás.</li>
-          <li>El borde es todo pared: <code>f + df</code> nunca se sale de la lista, así que no hay <code>IndexError</code>.</li>
-        </ul>
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama</button>
+              <div class="mini" id="r-mapa" aria-hidden="true"></div>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite">Con este laberinto chico: empieza en <code>(2, 1)</code>.</p>
+            </div>
+          </div>
+          <div>
+            <p class="idea-intro">Una sola función, <code>buscar(f, c)</code>, responde «¿desde aquí se llega al queso?». Para contestar, <strong>se hace la misma pregunta desde las casillas vecinas</strong>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>¿Es el queso? ¡Llegaste!</strong> Devuelve <code>True</code>.</li>
+              <li data-idea="2"><strong>¿Pared o ya pisada? No sirve</strong> Devuelve <code>False</code> sin moverse.</li>
+              <li data-idea="3"><strong>Deja una miga y prueba los vecinos</strong> Si desde alguno se llega, desde aquí también: <code>True</code>.</li>
+              <li data-idea="4"><strong>Ninguno sirvió: es un callejón</strong> Cambia la miga por una <code>x</code> y vuelve con <code>False</code>.</li>
+            </ol>
+            <p class="idea-nota nota-margen">Probar un camino y, si falla, deshacer el último paso y probar otro se llama <em>vuelta atrás</em> (<em>backtracking</em>).</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
       </div>
     </section>
 
-    <!-- 5. La ejecución -->
-    <section class="caso-seccion caso-ancha" id="ejecucion">
-      <div class="escenario-titulo">
-        <h2><span class="caso-n">5</span> La ejecución</h2>
-        <p class="aparece">Elige un laberinto y mira al ratón buscar. Cada ficha de la pila es una llamada que espera; la cámara sigue al ratón y se aleja en los momentos clave. Los rombos de la barra marcan esos momentos.</p>
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
       </div>
-      <div id="reproductor"></div>
     </section>
 
-    <!-- 6. ¿Lo entendiste? -->
-    <section class="caso-seccion" id="entendiste">
-      <h2><span class="caso-n">6</span> ¿Lo entendiste?</h2>
-      <p class="aparece">Responde mirando la ejecución con el laberinto <strong>«Con callejones»</strong>. Si dudas, vuelve a ella.</p>
-      <div class="pregunta aparece" id="q1"><h3>Al terminar, ¿cuántas casillas quedaron tachadas con <code>"x"</code>?</h3></div>
-      <div class="pregunta aparece" id="q2"><h3>Después de tachar la casilla <code>(1, 1)</code>, ¿en qué casilla siguió probando un camino nuevo?</h3></div>
-      <div class="pregunta aparece" id="q3"><h3>Cuando el <code>True</code> del queso bajó por la pila, ¿por qué ninguna llamada probó las direcciones que le faltaban?</h3></div>
-      <p class="sello" id="sello" role="status">Caso resuelto</p>
-    </section>
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuántas llamadas, como mucho?</h3>
+            <p>Cada casilla libre se pisa <strong>una sola vez</strong>: la segunda, ya tiene miga o <code>x</code>. Y cada casilla pisada llama a sus 4 vecinos.</p>
+            <div class="chips-elegir chips-elegir--chicos" id="t-chips" role="group" aria-label="Elige un laberinto"></div>
+            <div class="mini" id="t-mapa" style="--t: 1.2rem" aria-hidden="true"></div>
+            <p class="formula" id="t-formula" aria-live="polite"></p>
+            <div class="barras" aria-hidden="true">
+              <div class="barra"><span>como mucho</span><div class="barra__pista"><i id="t-max" style="width: 100%"></i></div><b id="t-max-n"></b></div>
+              <div class="barra barra--real"><span>hizo</span><div class="barra__pista"><i id="t-real"></i></div><b id="t-real-n"></b></div>
+            </div>
+          </div>
 
-    <!-- 7. ¿Es el camino más corto? -->
-    <section class="caso-seccion" id="corto">
-      <h2><span class="caso-n">7</span> ¿Es el camino más corto?</h2>
-      <p class="aparece">No siempre. El ratón se queda con <strong>el primer camino que funciona</strong>, en el orden en que prueba las direcciones. En el laberinto «Dos caminos», como prueba arriba primero, subió y dio la vuelta larga:</p>
-      <div class="dos-caminos aparece">
-        <figure>
-          <div class="mini" id="c7-largo" aria-hidden="true"></div>
-          <figcaption>El programa: <strong>10 casillas</strong></figcaption>
-        </figure>
-        <figure>
-          <div class="mini" id="c7-ola" aria-hidden="true"></div>
-          <figcaption id="c7-texto">El más corto: <strong>6 casillas</strong></figcaption>
-        </figure>
+          <div class="concepto aparece">
+            <h3>¿Y sin la miga?</h3>
+            <p>Sin la miga, dos casillas vecinas se llaman una a otra para siempre.</p>
+            <pre class="codigo linea-tachada" id="s-codigo" aria-label="Las líneas de buscar que dejan la miga"></pre>
+            <div class="probar-fila">
+              <div class="chips-elegir chips-elegir--chicos" id="s-chips" role="group" aria-label="Con o sin la miga">
+                <button type="button" data-miga="si" aria-pressed="true">Con la miga</button>
+                <button type="button" data-miga="no" aria-pressed="false">Sin la miga</button>
+              </div>
+              <button type="button" class="btn btn-primario" id="s-probar">▶ Probar</button>
+            </div>
+            <div class="detalle-fila detalle-fila--pila">
+              <div class="mini" id="s-mapa" style="--t: 1.8rem" aria-hidden="true"></div>
+              <ol class="pila-mini" id="s-pila" aria-label="Pila de llamadas"></ol>
+              <p class="contador-grande" id="s-cuenta"><small>esperando</small>0</p>
+            </div>
+            <div class="consola-mini detalle-salida" id="s-salida" aria-live="polite"></div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>El orden cambia el camino</h3>
+            <p>El ratón se queda con <strong>el primer camino que funciona</strong>. Si cambia el orden de la lista <code>direcciones</code>, encuentra otro.</p>
+            <div class="chips-elegir chips-elegir--chicos" id="o-chips" role="group" aria-label="Orden de las direcciones">
+              <button type="button" data-orden="0" aria-pressed="true">↑ → ↓ ←</button>
+              <button type="button" data-orden="1" aria-pressed="false">← ↓ → ↑</button>
+            </div>
+            <pre class="codigo orden-codigo" id="o-codigo"></pre>
+            <div class="mini" id="o-mapa" style="--t: 1.9rem" aria-hidden="true"></div>
+            <p class="resultado-orden" id="o-resultado" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
       </div>
-      <p class="aparece">Si probara la derecha primero, aquí encontraría el corto, pero en otro laberinto fallaría igual. Para encontrar <span class="resalta">siempre</span> el más corto se usa otra idea: avanzar como una ola, un paso en todas las direcciones a la vez (se llama <em>búsqueda en anchura</em>). La primera vez que la ola toca el queso, ese camino es el más corto.</p>
-      <p class="aparece" style="text-align:center">
-        <button type="button" class="btn btn-secundario" id="c7-ver-ola">Ver la ola 🌊</button>
-        <button type="button" class="btn btn-secundario" id="ver-dos">Verlo en la ejecución ↑</button>
-      </p>
     </section>
 
-    <div class="caso-fin">
-      <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
-      <a class="btn btn-secundario" href="../vuelto/index.html">← Caso anterior: El vuelto</a>
-    </div>
+    <!-- 6. ¿Es el camino más corto? -->
+    <section class="panel" id="corto">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Es el camino más corto?</h2>
+        <div class="mas">
+          <div class="aparece">
+            <p>No siempre: el ratón se queda con el primer camino que funciona. En «Dos caminos», como prueba arriba primero, subió y dio <strong>la vuelta larga</strong>.</p>
+            <p>Para encontrar <span class="resalta">siempre</span> el más corto se usa otra idea: avanzar como una ola, un paso en todas las direcciones a la vez (<em>búsqueda en anchura</em>). La primera vez que la ola toca el queso, ese camino es el más corto.</p>
+            <p class="botones-fila" style="justify-content: flex-start">
+              <button type="button" class="btn btn-secundario" id="c7-ver-ola">Ver la ola 🌊</button>
+              <button type="button" class="btn btn-secundario" id="ver-dos">Verlo en la ejecución ↑</button>
+            </p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="dos-caminos">
+              <figure>
+                <div class="mini" id="c7-largo" aria-hidden="true"></div>
+                <figcaption>El programa: <strong>10 casillas</strong></figcaption>
+              </figure>
+              <figure>
+                <div class="mini" id="c7-ola" aria-hidden="true"></div>
+                <figcaption id="c7-texto">El más corto: <strong>6 casillas</strong></figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../vuelto/index.html">← Caso anterior: El vuelto</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
   </main>
 
 <script src="../../assets/js/progreso.js"></script>
 <script src="../../assets/js/codigo.js"></script>
 <script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
 <script src="../../assets/js/reproductor.js"></script>
 <script src="../../assets/js/problemas.js"></script>
 <script>
@@ -355,8 +532,6 @@
 
   function $(id) { return document.getElementById(id); }
   var reducir = Problemas.reducir;
-
-  Problemas.iniciar({ id: "problema-laberinto" });
 
   /* ---------- Los laberintos ---------- */
   var SENCILLO = { plano: [
@@ -404,7 +579,7 @@
     '    if lab[f][c] != " ":',
     "        return False",
     '    lab[f][c] = "·"',
-    "    for df, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:",
+    "    for df, dc in direcciones:",
     "        if buscar(f + df, c + dc):",
     "            return True",
     '    lab[f][c] = "x"',
@@ -414,6 +589,8 @@
     var l = d.plano.map(function (fila, k) {
       return (k === 0 ? "lab = [" : "       ") + 'list("' + fila + '")' + (k === d.plano.length - 1 ? "]" : ",");
     });
+    l.push("direcciones = [(-1, 0), (0, 1),");
+    l.push("               (1, 0), (0, -1)]");
     l.push("");
     l = l.concat(CUERPO);
     l.push("");
@@ -425,15 +602,15 @@
   }
   // Número de cada línea (desde 0), según cuántas filas tiene el laberinto
   function lineasDe(d) {
-    var b = d.plano.length + 1;
-    return { lab: 0, def: b, q: b + 1, qret: b + 2, libre: b + 3, libreret: b + 4, miga: b + 5, para: b + 6,
+    var n = d.plano.length, b = n + 3;
+    return { lab: 0, dir: n, def: b, q: b + 1, qret: b + 2, libre: b + 3, libreret: b + 4, miga: b + 5, para: b + 6,
       si: b + 7, siret: b + 8, x: b + 9, xret: b + 10, llamada: b + 12, ok: b + 13, no: b + 15 };
   }
   function ideasDe(d) {
     var L = lineasDe(d), a = [];
     a[L.q] = a[L.qret] = 1;
     a[L.libre] = a[L.libreret] = 2;
-    a[L.miga] = a[L.para] = a[L.si] = a[L.siret] = 3;
+    a[L.dir] = a[L.dir + 1] = a[L.miga] = a[L.para] = a[L.si] = a[L.siret] = 3;
     a[L.x] = a[L.xret] = 4;
     return a;
   }
@@ -443,6 +620,30 @@
       if (c !== -1) return { f: f, c: c };
     }
     return null;
+  }
+
+  // El mismo programa, sin animación: para los detalles (cuántas llamadas, el orden)
+  function correr(plano, ini, dirs) {
+    var lab = plano.map(function (s) { return s.split(""); });
+    var llamadas = 0, pisadas = 0, fotos = [];
+    function foto() { fotos.push(lab.map(function (r) { return r.join(""); })); }
+    function buscar(f, c) {
+      llamadas++;
+      if (lab[f][c] === "Q") return true;
+      if (lab[f][c] !== " ") return false;
+      lab[f][c] = "·";
+      pisadas++;
+      foto();
+      for (var k = 0; k < dirs.length; k++) if (buscar(f + dirs[k][0], c + dirs[k][1])) return true;
+      lab[f][c] = "x";
+      foto();
+      return false;
+    }
+    var hay = buscar(ini[0], ini[1]);
+    var grid = lab.map(function (r) { return r.join(""); });
+    var camino = 0;
+    grid.forEach(function (r) { for (var k = 0; k < r.length; k++) if (r[k] === "·") camino++; });
+    return { hay: hay, llamadas: llamadas, pisadas: pisadas, grid: grid, fotos: fotos, camino: camino };
   }
 
   // Largo del camino más corto (casillas pisadas antes del queso), con una ola desde la entrada
@@ -474,6 +675,12 @@
     el.textContent = "";
     var celdas = [];
     var rotF = [], rotC = [];
+    function celda(tag, clase, texto) {
+      var e = document.createElement(tag);
+      e.className = clase;
+      e.textContent = texto;
+      return e;
+    }
     if (rotulos) {
       el.appendChild(celda("span", "mini__celda mini__celda--rotulo", ""));
       for (var c = 0; c < cols; c++) rotC.push(el.appendChild(celda("span", "mini__celda mini__celda--rotulo", String(c))));
@@ -488,22 +695,22 @@
         celdas[f].push(x);
       }
     }
-    function celda(tag, clase, texto) {
-      var e = document.createElement(tag);
-      e.className = clase;
-      e.textContent = texto;
-      return e;
-    }
     function pintar(p) {
       p.forEach(function (fila, f) {
         fila.split("").forEach(function (ch, c) {
           var x = celdas[f][c];
           x.className = "mini__celda mini__celda--" + (CLASE[ch] || "libre");
+          x.textContent = "";
         });
       });
     }
     pintar(plano);
     return { celdas: celdas, rotF: rotF, rotC: rotC, pintar: pintar };
+  }
+
+  // Unos chips que se eligen de a uno (aria-pressed)
+  function elegirChip(grupo, boton) {
+    grupo.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === boton)); });
   }
 
   /* ---------- 2. Demo: lab[f][c] ---------- */
@@ -552,9 +759,10 @@
   (function () {
     var F = 2, C = 3;
     Python.escribir($("d2-codigo"), [
-      "f, c = " + F + ", " + C,
-      "for df, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:",
-      "    print(f + df, c + dc)"
+      "direcciones = [(-1, 0), (0, 1),",
+      "               (1, 0), (0, -1)]",
+      "for df, dc in direcciones:",
+      "    print(" + F + " + df, " + C + " + dc)"
     ]);
     var mapa = $("d2-mapa");
     mapa.style.setProperty("--cols", 3);
@@ -569,7 +777,6 @@
         celdas.push(x);
       }
     }
-    // Índice de la celda de cada vecino en la cuadrícula de 3 × 3
     var DONDE = DIRS.map(function (d) { return (1 + d[0]) * 3 + (1 + d[1]); });
     var chips = DIRS.map(function (d, k) {
       var b = document.createElement("button");
@@ -583,34 +790,24 @@
     });
     function mostrar(k) {
       chips.forEach(function (b, m) { b.setAttribute("aria-pressed", String(m === k)); });
-      celdas.forEach(function (x, m) {
-        var esVecino = DONDE.indexOf(m) !== -1;
-        x.classList.toggle("mini__celda--vecino", esVecino && m === DONDE[k]);
-      });
+      celdas.forEach(function (x, m) { x.classList.toggle("mini__celda--vecino", m === DONDE[k]); });
       var lineas = "";
       for (var m = 0; m <= k; m++) lineas += "<span>" + (F + DIRS[m][0]) + " " + (C + DIRS[m][1]) + "</span>";
       $("d2-consola").innerHTML = lineas;
     }
     var timer = null, k = 0;
     function parar() { if (timer) clearInterval(timer); timer = null; }
-    if (reducir || !window.IntersectionObserver) { mostrar(3); return; }
+    if (reducir) { mostrar(3); return; }
     mostrar(0);
-    var obs = new IntersectionObserver(function (es) {
-      if (!es[0].isIntersecting) return;
-      obs.disconnect();
-      timer = setInterval(function () {
-        k = (k + 1) % 4;
-        mostrar(k);
-      }, 1400);
-    }, { threshold: 0.6 });
-    obs.observe(mapa);
+    Problemas.alVer(mapa, function () {
+      timer = setInterval(function () { k = (k + 1) % 4; mostrar(k); }, 1400);
+    });
   })();
 
   /* ---------- 2. Demo: las migas ---------- */
   (function () {
     var plano = ["#######", "#   ###", "# #####", "#  Q###", "#######"];
     var m = mini($("d3-mapa"), plano);
-    // La búsqueda, solo con los pasos de verdad (sin las paredes)
     var estados = [];
     var lab = plano.map(function (s) { return s.split(""); });
     var pila = [];
@@ -620,7 +817,7 @@
     function ir(f, c) {
       if (lab[f][c] === "Q") {
         pila.push([f, c]);
-        foto("¡Queso! La llamada de arriba devuelve <code>True</code>, y cada una de abajo también: el camino son las migas que quedaron.");
+        foto("¡Queso! Devuelve <code>True</code> y cada llamada de abajo también: el camino son las migas que quedaron.");
         return true;
       }
       if (lab[f][c] !== " ") return false;
@@ -633,9 +830,9 @@
         if (ir(f + DIRS[k][0], c + DIRS[k][1])) return true;
       }
       lab[f][c] = "x";
-      foto("Desde <code>(" + f + ", " + c + ")</code> no hay a dónde ir: es un callejón. Cambia la miga por una <code>x</code>.");
+      foto("En <code>(" + f + ", " + c + ")</code> no hay a dónde ir: es un callejón. La miga se cambia por una <code>x</code>.");
       pila.pop();
-      foto("Vuelve atrás: la ficha de arriba se quita y el ratón regresa a la miga anterior.", pila[pila.length - 1]);
+      foto("Vuelve atrás: la llamada de arriba se quita y el ratón regresa a la miga anterior.", pila[pila.length - 1]);
       return false;
     }
     ir(1, 1);
@@ -644,8 +841,6 @@
     function pintar() {
       var e = estados[i];
       m.pintar(e.grid);
-      m.celdas.forEach(function (fila) { fila.forEach(function (x) { x.textContent = ""; }); });
-      // Cada miga lleva el número de su ficha en la pila
       e.pila.forEach(function (p, k) {
         var enRaton = p[0] === e.raton[0] && p[1] === e.raton[1];
         if (e.grid[p[0]][p[1]] === "·" && !enRaton) m.celdas[p[0]][p[1]].textContent = String(k + 1);
@@ -653,11 +848,18 @@
       m.celdas[e.raton[0]][e.raton[1]].classList.add("mini__celda--raton");
       var ol = $("d3-pila");
       ol.textContent = "";
-      e.pila.slice().reverse().forEach(function (p) {
+      var muestra = e.pila.slice().reverse();
+      muestra.slice(0, 4).forEach(function (p) {
         var li = document.createElement("li");
         li.textContent = "buscar(" + p[0] + ", " + p[1] + ")";
         ol.appendChild(li);
       });
+      if (muestra.length > 4) {
+        var mas = document.createElement("li");
+        mas.className = "mas";
+        mas.textContent = "⋮ y " + (muestra.length - 4) + " más";
+        ol.appendChild(mas);
+      }
       if (!e.pila.length) {
         var v = document.createElement("li");
         v.className = "vacia";
@@ -672,10 +874,135 @@
     pintar();
   })();
 
-  /* ---------- 4. El código comentado ---------- */
-  Problemas.codigo($("codigo-comentado"), programa(CALLEJONES), ideasDe(CALLEJONES));
+  /* ---------- 3. La idea: el diagrama de flujo de buscar(f, c) ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 50,
+    anchoNodo: 230,
+    columnas: [0.42, 1.55, 1],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "<code>buscar(f, c)</code>", col: 1, fila: 0 },
+      { id: "q", tipo: "decision", texto: "¿es el queso?", col: 1, fila: 1, idea: 1 },
+      { id: "rT1", tipo: "fin", texto: "<code>return True</code>", col: 2, fila: 1 },
+      { id: "libre", tipo: "decision", texto: "¿pared o ya pisada?", col: 1, fila: 2, idea: 2 },
+      { id: "rF1", tipo: "fin", texto: "<code>return False</code>", col: 2, fila: 2 },
+      { id: "miga", tipo: "proceso", texto: "deja una miga <code>\"·\"</code>", col: 1, fila: 3, idea: 3 },
+      { id: "hay", tipo: "decision", texto: "¿falta un vecino?", col: 1, fila: 4, idea: 3 },
+      { id: "x", tipo: "proceso", texto: "callejón: marca <code>\"x\"</code>", col: 2, fila: 4, idea: 4 },
+      { id: "llama", tipo: "proceso", texto: "<code>buscar(vecino)</code> ↺<small>la misma función</small>", col: 1, fila: 5, idea: 3 },
+      { id: "rF2", tipo: "fin", texto: "<code>return False</code>", col: 2, fila: 5 },
+      { id: "dio", tipo: "decision", texto: "¿devolvió True?", col: 1, fila: 6, idea: 3 },
+      { id: "rT2", tipo: "fin", texto: "<code>return True</code>", col: 2, fila: 6 }
+    ],
+    flechas: [
+      { de: "ini", a: "q" },
+      { de: "q", a: "rT1", texto: "sí" },
+      { de: "q", a: "libre", texto: "no" },
+      { de: "libre", a: "rF1", texto: "sí" },
+      { de: "libre", a: "miga", texto: "no" },
+      { de: "miga", a: "hay" },
+      { de: "hay", a: "llama", texto: "sí" },
+      { de: "hay", a: "x", texto: "no" },
+      { de: "x", a: "rF2" },
+      { de: "llama", a: "dio" },
+      { de: "dio", a: "rT2", texto: "sí" },
+      { de: "dio", a: "hay", texto: "no", por: "izquierda", carril: 0 },
+      { de: "llama", a: "ini", por: "izquierda", carril: 1 }
+    ]
+  });
+  (function () {
+    var nodos = $("flujo").querySelectorAll(".flujo__nodo");
+    [2, 11].forEach(function (k) { nodos[k].classList.add("ret-si"); });
+    [4, 9].forEach(function (k) { nodos[k].classList.add("ret-no"); });
+    nodos[8].classList.add("llamada");
+    var flechas = $("flujo").querySelectorAll(".flujo__flecha");
+    flechas[12].classList.add("flecha-llamada");
+  })();
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
 
-  /* ---------- 5. La ejecución ---------- */
+  // El recorrido: buscar(2, 1) en un laberinto de 4 × 4, nivel por nivel
+  var R_PLANO = ["####", "# ##", "# Q#", "####"], R_INICIO = [2, 1];
+  var rMapa = mini($("r-mapa"), R_PLANO);
+  function pasosRecorrido() {
+    var lab = R_PLANO.map(function (s) { return s.split(""); });
+    var p = [], nivel = 0, rapido = false;
+    var pila = [];
+    function paso(nodo, nota, mira) {
+      var r = pila[pila.length - 1] || R_INICIO;
+      p.push({ nodo: nodo, nota: "Nivel " + nivel + " · " + nota, grid: lab.map(function (x) { return x.join(""); }), raton: r, mira: mira });
+    }
+    function buscar(f, c) {
+      var v = lab[f][c];
+      var llam = "<code>buscar(" + f + ", " + c + ")</code>";
+      if (rapido && v !== " " && v !== "Q") {
+        // Ya se vio una vez paso a paso: ahora la llamada que vuelve enseguida va en un paso
+        paso("llama", "llama " + llam + ": " + (v === "#" ? "es pared" : "ya tiene miga") + ", <code>False</code> enseguida", [f, c]);
+        return false;
+      }
+      nivel++;
+      paso("ini", "empieza " + llam, [f, c]);
+      paso("q", "¿(" + f + ", " + c + ") es el queso? " + (v === "Q" ? "sí" : "no"), [f, c]);
+      if (v === "Q") {
+        paso("rT1", "<code>return True</code>: vuelve al nivel " + (nivel - 1), [f, c]);
+        nivel--;
+        return true;
+      }
+      paso("libre", "¿pared o ya pisada? " + (v === " " ? "no, está libre" : "sí, es pared"), [f, c]);
+      if (v !== " ") {
+        rapido = true;
+        paso("rF1", "<code>return False</code>: vuelve al nivel " + (nivel - 1), [f, c]);
+        nivel--;
+        return false;
+      }
+      lab[f][c] = "·";
+      pila.push([f, c]);
+      paso("miga", "deja una miga en (" + f + ", " + c + ")");
+      for (var k = 0; k < 4; k++) {
+        var nf = f + DIRS[k][0], nc = c + DIRS[k][1];
+        paso("hay", "¿falta un vecino? sí: " + FLECHA[k] + " " + HACIA[k], [nf, nc]);
+        if (!rapido || lab[nf][nc] === " " || lab[nf][nc] === "Q") paso("llama", "llama <code>buscar(" + nf + ", " + nc + ")</code> y espera", [nf, nc]);
+        var ok = buscar(nf, nc);
+        paso("dio", "¿devolvió True? " + (ok ? "sí" : "no"), [nf, nc]);
+        if (ok) {
+          paso("rT2", "<code>return True</code>" + (nivel > 1 ? ": vuelve al nivel " + (nivel - 1) : ": ¡hay camino!"));
+          pila.pop();
+          nivel--;
+          return true;
+        }
+      }
+      paso("hay", "¿falta un vecino? no: probó los cuatro");
+      lab[f][c] = "x";
+      paso("x", "(" + f + ", " + c + ") es un callejón: marca <code>x</code>");
+      paso("rF2", "<code>return False</code>: vuelve al nivel " + (nivel - 1));
+      pila.pop();
+      nivel--;
+      return false;
+    }
+    buscar(R_INICIO[0], R_INICIO[1]);
+    return p;
+  }
+  function pintarRecorrido(p) {
+    rMapa.pintar(p ? p.grid : R_PLANO);
+    var r = p ? p.raton : R_INICIO;
+    rMapa.celdas[r[0]][r[1]].classList.add("mini__celda--raton");
+    if (p && p.mira) rMapa.celdas[p.mira[0]][p.mira[1]].classList.add("mini__celda--elegida");
+  }
+  pintarRecorrido(null);
+  var recorrido = null;
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = "▶ Seguir el diagrama"; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(pasosRecorrido(), {
+      intervalo: reducir ? 1500 : 850,
+      alPaso: function (p) { $("recorrido-nota").innerHTML = p.nota; pintarRecorrido(p); },
+      alTerminar: function () {
+        recorrido = null;
+        $("recorrer").textContent = "↺ Seguirlo otra vez";
+        $("recorrido-nota").innerHTML = "Llegó: el camino es <code>(2, 1)</code> → <code>(2, 2)</code>, y <code>(1, 1)</code> quedó tachada.";
+      }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
   function cod(t) { return "<code>" + t + "</code>"; }
   function pos(f, c) { return "(" + f + ", " + c + ")"; }
   function llam(f, c) { return cod("buscar(" + f + ", " + c + ")"); }
@@ -758,12 +1085,12 @@
         nota: fr.fantasma
           ? cod('"' + v + '"') + " no es " + cod('" "') + ": " + (v === "#" ? "es una pared." : "no está libre.")
           : primeraReal
-            ? "¿Está libre? " + cod('" "') + " sí: puede pisarla. Si fuera una pared, una miga o una " + cod("x") + ", no seguiría."
+            ? "¿Está libre? " + cod('" "') + " sí: puede pisarla. Estos dos " + cod("if") + " son los casos base: sin ellos, la recursión nunca pararía."
             : "¿Está libre? Sí." });
       if (v !== " ") {
         fr.devuelve = false;
         paso({ linea: L.libreret, prueba: prueba, capitulo: "Una pared", pausa: true,
-          nota: cod("return False") + ": por ahí no se puede. La llamada termina enseguida, su ficha se quita de la pila y el ratón se queda donde estaba." });
+          nota: cod("return False") + ": por ahí no se puede. La llamada termina enseguida y su ficha se quita de la pila. Como el borde es todo pared, " + cod("f + df") + " nunca se sale de la lista: no hay " + cod("IndexError") + "." });
         pila.pop();
         return false;
       }
@@ -772,7 +1099,7 @@
       paso({ linea: L.miga, escribe: "lab[f][c]",
         nota: vio.miga
           ? "Deja una miga en " + cod(pos(f, c)) + "."
-          : "Deja una miga " + cod('"·"') + " en " + cod(pos(f, c)) + ": es parte del camino que está probando, y así no vuelve a pisarla." });
+          : "Deja una miga " + cod('"·"') + " en " + cod(pos(f, c)) + ": es parte del camino que está probando, y así no vuelve a pisarla ni da vueltas en círculo." });
       vio.miga = true;
 
       for (var k = 0; k < 4; k++) {
@@ -819,7 +1146,7 @@
           vio.luz = true;
           paso({ linea: L.siret, raton: { f: queso.f, c: queso.c }, camara: "lejos", flecha: false,
             nota: primeraLuz
-              ? llam(nf, nc) + " devolvió <strong>True</strong>, así que " + llam(f, c) + " también: " + cod("return True") + ". No prueba las direcciones que le faltaban. Su miga se enciende: es parte del camino."
+              ? llam(nf, nc) + " devolvió <strong>True</strong>, así que " + llam(f, c) + " también: " + cod("return True") + " dentro del " + cod("for") + " termina la llamada, sin probar las direcciones que le faltaban. Su miga se enciende: es parte del camino."
               : llam(f, c) + " recibe <strong>True</strong> y devuelve " + cod("True") + "." });
           pila.pop();
           return true;
@@ -846,7 +1173,9 @@
     }
 
     paso({ linea: L.lab, capitulo: "Empieza", camara: "lejos",
-      nota: "Arma el laberinto: una lista de " + d.plano.length + " filas, y cada fila, con " + cod("list()") + ", una lista de " + d.plano[0].length + " casillas." });
+      nota: "Arma el laberinto: una lista de " + d.plano.length + " filas. " + cod("list()") + " convierte cada fila de texto en una lista de " + d.plano[0].length + " casillas: así se puede cambiar una casilla." });
+    paso({ linea: L.dir, camara: "lejos",
+      nota: "Las cuatro direcciones, en una lista de tuplas: arriba, derecha, abajo e izquierda. El ratón las probará en ese orden." });
     paso({ linea: L.def, camara: "lejos",
       nota: cod("def") + " guarda la función " + cod("buscar") + ". Todavía no se ejecuta nada de adentro." });
     paso({ linea: L.llamada, camara: "lejos", mira: { f: d.inicio[0], c: d.inicio[1] },
@@ -857,8 +1186,8 @@
     var masCorto = o.meta ? o.dist[o.meta.join()] : 0;
     if (hay) {
       paso({ linea: L.ok, salida: "¡Llegué al queso!", capitulo: "Fin", pausa: true, fin: true, camara: "lejos", raton: { f: queso.f, c: queso.c },
-        nota: "El " + cod("True") + " llegó hasta abajo e imprime el mensaje. El camino tiene <strong>" + camino + " casillas</strong> (las migas encendidas); se probaron " + llamadas + " llamadas en total." +
-          (camino > masCorto ? " Pero había uno de <strong>" + masCorto + "</strong>: mira la sección 7." : "") });
+        nota: "El " + cod("True") + " llegó hasta abajo e imprime el mensaje. El camino tiene <strong>" + camino + " casillas</strong> (las migas encendidas); hubo " + llamadas + " llamadas en total." +
+          (camino > masCorto ? " Pero había uno de <strong>" + masCorto + "</strong>: mira el bloque 6." : "") });
     } else {
       paso({ linea: L.no, salida: "No hay salida", pausa: true, fin: true, camara: "lejos",
         nota: cod("buscar") + " devolvió " + cod("False") + ": el queso está encerrado. Hubo " + llamadas + " llamadas y el ratón terminó donde empezó." });
@@ -866,15 +1195,16 @@
     return pasos;
   }
 
-  /* La escena: el laberinto visto desde arriba, con la pila de llamadas al lado */
+  /* La escena: el laberinto visto desde arriba, con la pila de llamadas al lado (o debajo).
+     La cuadrícula se escala para caber en el alto y el ancho de .rep__escena. */
   var escena = (function () {
-    var cont, raiz, mapa, vista, fichas, marcador, bCamara;
+    var cont, raiz, arriba, cuerpo, mapa, vista, lado, titulo, fichas, marcador, bCamara;
     var celdas = [], filas = 0, cols = 0, datos = null, L = null;
     var raton, anillo, mira;
     var seguir = !reducir;
     var antes = { n: 0, top: null };
     var ultimo = null;
-    var tAntes = 0;
+    var maxFichas = 8;
     var ZOOM = 1.65;
 
     function nuevo(tag, clase, html) {
@@ -886,7 +1216,7 @@
     function crear(c) {
       cont = c;
       raiz = nuevo("div", "lb");
-      var arriba = nuevo("div", "lb__arriba");
+      arriba = nuevo("div", "lb__arriba");
       marcador = nuevo("p", "lb__marcador");
       arriba.appendChild(marcador);
       bCamara = nuevo("button", "lb__camara", "🎥 Seguir al ratón");
@@ -900,32 +1230,53 @@
       });
       arriba.appendChild(bCamara);
       raiz.appendChild(arriba);
-      var cuerpo = nuevo("div", "lb__cuerpo");
+      cuerpo = nuevo("div", "lb__cuerpo");
       vista = nuevo("div", "lb__vista");
       vista.setAttribute("role", "img");
       mapa = nuevo("div", "lb__mapa");
       vista.appendChild(mapa);
       cuerpo.appendChild(vista);
-      var lado = nuevo("div", "lb__pila");
-      lado.appendChild(nuevo("p", "lb__pila-titulo", "Pila de llamadas<br>(arriba, la que corre)"));
+      lado = nuevo("div", "lb__pila");
+      titulo = nuevo("p", "lb__pila-titulo", "Pila de llamadas<br>(arriba, la que corre)");
+      lado.appendChild(titulo);
       fichas = nuevo("ol", "lb__fichas");
       fichas.setAttribute("aria-label", "Pila de llamadas");
       lado.appendChild(fichas);
       cuerpo.appendChild(lado);
       raiz.appendChild(cuerpo);
-      raiz.appendChild(nuevo("p", "lb__leyenda",
-        "<span>🐭 ratón</span><span><i class=\"l-miga\"></i>miga: el camino que prueba</span><span><i class=\"l-x\"></i>callejón</span>" +
-        "<span><i class=\"l-luz\"></i>camino al queso</span><span><i class=\"l-pared\"></i>pared</span>"));
       c.appendChild(raiz);
-      if (window.ResizeObserver) new ResizeObserver(medir).observe(vista);
+      if (window.ResizeObserver) new ResizeObserver(function () { medir(); }).observe(c);
       window.addEventListener("resize", function () {
         clearTimeout(crear.t);
-        crear.t = setTimeout(function () { medir(); }, 250);
+        crear.t = setTimeout(medir, 200);
       });
     }
+    // El tamaño de cada casilla: el mayor que quepa, con la pila al lado o debajo
     function medir() {
-      if (!cols) return;
-      mapa.style.setProperty("--celda", (vista.clientWidth / (cols + 1)) + "px");
+      if (!cols || !cont.clientHeight) return;
+      var cs = getComputedStyle(cont);
+      var rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      var gap = 0.75 * rem;
+      var W = cont.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      var H = cont.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - arriba.offsetHeight - 0.5 * rem;
+      var C = cols + 1, F = filas + 1;
+      var anchoPila = 10.4 * rem;
+      var alLado = Math.min((W - anchoPila - gap) / C, H / F);
+      var debajo = Math.min(W / C, (H - 6.2 * rem - gap) / F);
+      var abajo = debajo > alLado * 1.12;
+      var t = Math.floor(Math.max(12, Math.min(58, abajo ? debajo : alLado)));
+      vista.style.width = t * C + "px";
+      vista.style.height = t * F + "px";
+      mapa.style.setProperty("--celda", t + "px");
+      raiz.classList.toggle("lb--abajo", abajo);
+      lado.style.width = abajo ? Math.min(W, Math.max(t * C, 10.4 * rem)) + "px" : "";
+      // Cuántas fichas caben en la pila
+      var altoFicha = 1.25 * rem + 6;
+      var muestra = fichas.querySelector(".lb__ficha");
+      if (muestra && muestra.offsetHeight) altoFicha = muestra.offsetHeight + 3;
+      var altoPila = (abajo ? H - t * F - gap : H) - titulo.offsetHeight - 4;
+      maxFichas = Math.max(2, Math.floor(altoPila / altoFicha) - 1);
+      if (ultimo) pintarPila(ultimo.p, false);
     }
     function reiniciar(d) {
       datos = d;
@@ -965,18 +1316,18 @@
       }
       mapa.style.transform = "translate(" + (tx * 100).toFixed(2) + "%, " + (ty * 100).toFixed(2) + "%) scale(" + s + ")";
     }
-    function textoFicha(x, arriba) {
+    function textoFicha(x, enCima) {
       var fin = "";
       if (x.devuelve === true) fin = '<span class="lb__ficha-fin lb__dev lb__dev--si">True</span>';
       else if (x.devuelve === false) fin = '<span class="lb__ficha-fin lb__dev lb__dev--no">False</span>';
       else if (x.fantasma) fin = '<span class="lb__ficha-fin">' + (x.fantasma === "pared" ? "#" : x.fantasma === "miga" ? "·" : "x") + "</span>";
-      else if (!arriba && x.k >= 0) fin = '<span class="lb__ficha-fin lb__ficha-dir" title="Espera la respuesta de ' + HACIA[x.k] + '">' + FLECHA[x.k] + "</span>";
+      else if (!enCima && x.k >= 0) fin = '<span class="lb__ficha-fin lb__ficha-dir" title="Espera la respuesta de ' + HACIA[x.k] + '">' + FLECHA[x.k] + "</span>";
       return '<code>buscar(' + x.f + ", " + x.c + ")</code>" + fin;
     }
     function pintarPila(p, animar) {
       var pila = p ? p.pila : [];
       var n = pila.length;
-      var max = window.innerWidth <= 640 ? 4 : 10;
+      var max = n > maxFichas + 1 ? maxFichas : maxFichas + 1;   // si sobra una, se ve entera
       fichas.textContent = "";
       var desde = Math.max(0, n - max);
       for (var m = n - 1; m >= desde; m--) {
@@ -986,7 +1337,7 @@
         if (animar && m === n - 1 && n > antes.n) li.classList.add("lb__ficha--entra");
         fichas.appendChild(li);
       }
-      if (desde > 0) fichas.appendChild(nuevo("li", "lb__mas", "⋮ y " + desde + (desde === 1 ? " más abajo" : " más abajo")));
+      if (desde > 0) fichas.appendChild(nuevo("li", "lb__mas", "⋮ y " + desde + " más abajo"));
       if (!n) fichas.appendChild(nuevo("li", "lb__vacia", "(vacía)"));
       // La ficha que se quita sale volando hacia arriba
       if (animar && n < antes.n && antes.top) {
@@ -1001,13 +1352,10 @@
     function pintar(p, op) {
       ultimo = { p: p, op: op };
       // Las piezas se mueven más rápido si la reproducción va rápida (2×, 4×)
-      var ahora = Date.now();
-      if (op.animar) raiz.style.setProperty("--lb-dur", Math.round(Math.max(120, Math.min(380, (ahora - tAntes) * 0.75))) + "ms");
-      tAntes = ahora;
+      if (op.intervalo) raiz.style.setProperty("--lb-dur", Math.round(Math.max(120, Math.min(380, op.intervalo * 0.55))) + "ms");
       var animar = op.animar;
       if (!animar) raiz.classList.add("lb--salto");
       var grid = p ? p.grid : datos.plano;
-      // Números de las migas: su lugar en la pila
       var num = {};
       if (p) p.pila.forEach(function (x, m) { if (!x.fantasma) num[x.f + "," + x.c] = m + 1; });
       var luz = {};
@@ -1023,7 +1371,6 @@
           if (el.innerHTML !== t) el.innerHTML = t;
         }
       }
-      // El ratón, el anillo de la llamada que corre y la casilla que se prueba
       poner(raton, r.f + (r.asoma ? r.asoma[0] * 0.42 : 0), r.c + (r.asoma ? r.asoma[1] * 0.42 : 0));
       var reales = p ? p.pila.filter(function (x) { return !x.fantasma; }) : [];
       var corre = reales[reales.length - 1];
@@ -1037,16 +1384,17 @@
       if (animar && p && p.prueba && p.prueba.golpe) { mira.classList.remove("lb__mira--golpe"); void mira.offsetWidth; mira.classList.add("lb__mira--golpe"); }
       raton.classList.remove("lb__raton--vuelve");
       if (animar && p && p.vuelve) { void raton.offsetWidth; raton.classList.add("lb__raton--vuelve"); }
-      var enQueso = !!(p && (p.linea === L.qret));
-      raiz.classList.toggle("lb--queso", animar && enQueso);
+      raiz.classList.toggle("lb--queso", !!(animar && p && p.linea === L.qret));
       camara(ultimo);
       pintarPila(p, animar);
-      // El marcador
       var migas = 0, xs = 0;
       grid.forEach(function (fila) {
         for (var k = 0; k < fila.length; k++) { if (fila[k] === "·") migas++; else if (fila[k] === "x") xs++; }
       });
-      marcador.innerHTML = "<span>Llamadas <b>" + (p ? p.llamadas : 0) + "</b></span><span>Migas <b>" + migas + "</b></span><span>Tachadas <b>" + xs + "</b></span>";
+      marcador.innerHTML = "<span>Llamadas <b>" + (p ? p.llamadas : 0) + "</b></span>" +
+        '<span><i class="l-miga"></i>Migas <b>' + migas + "</b></span>" +
+        '<span><i class="l-x"></i>Tachadas <b>' + xs + "</b></span>" +
+        '<span><i class="l-luz"></i>Camino <b>' + (p ? p.luz.length : 0) + "</b></span>";
       vista.setAttribute("aria-label", "Laberinto: el ratón está en la fila " + r.f + ", columna " + r.c + ". " + migas + " migas y " + xs + " casillas tachadas.");
       if (!animar) { void raiz.offsetWidth; raiz.classList.remove("lb--salto"); }
     }
@@ -1059,60 +1407,224 @@
     { nombre: "Sin salida", datos: SIN_SALIDA },
     { nombre: "Dos caminos", datos: DOS_CAMINOS }
   ];
+  var LD = lineasDe(SENCILLO);
+  var lineasDatos = [];
+  for (var k = 0; k < SENCILLO.plano.length; k++) lineasDatos.push(k);
+  lineasDatos.push(LD.llamada);
 
   var rep = Reproductor.crear($("reproductor"), {
     entradas: ENTRADAS,
     codigo: programa,
-    lineasDatos: [0, 1, 2, 3, 4, 5, 6, 20],
+    ideas: ideasDe,
+    lineasDatos: lineasDatos,
     variables: ["f", "c", "df", "dc", "lab[f][c]"],
     generar: generar,
     escena: escena,
     intervalo: 750
   });
 
-  /* ---------- 6. Preguntas ---------- */
-  var acertadas = {};
-  function acierto(k) {
-    acertadas[k] = true;
-    if (acertadas.q1 && acertadas.q2 && acertadas.q3) {
-      $("sello").classList.add("sello--puesto");
-      Problemas.completar("problema-laberinto");
-    }
-  }
-  Problemas.pregunta($("q1"), {
-    opciones: ["2", "3", "4"], correcta: "3",
-    ok: "3: las dos casillas del callejón de la izquierda, (1, 1) y (2, 1), y la de arriba a la derecha, (1, 7). El marcador «Tachadas» lo dice al final.",
-    pistas: { "2": "Hubo dos callejones, pero uno tenía dos casillas de largo. Cuenta las casillas tachadas al final.", "4": "Mira el marcador «Tachadas» en el último paso." },
-    alAcertar: function () { acierto("q1"); }
-  });
-  Problemas.pregunta($("q2"), {
-    opciones: ["(2, 1)", "(3, 1)", "(5, 1)"], correcta: "(3, 1)",
-    ok: "Volvió a (2, 1), pero ahí tampoco quedaba nada: la tachó y volvió otra vez. En (3, 1) le faltaba probar la derecha, y por ahí siguió.",
-    pistas: { "(2, 1)": "Volvió a (2, 1), sí, pero ¿le quedaba alguna dirección libre ahí? Busca el rombo «Primer callejón» y avanza unos pasos.", "(5, 1)": "No tuvo que volver hasta el principio. Mira dónde está el ratón cuando la pila deja de achicarse." },
-    alAcertar: function () { acierto("q2"); }
-  });
-  Problemas.pregunta($("q3"), {
-    opciones: ["Porque return True termina la llamada enseguida", "Porque ya estaban tachadas con x", "Porque el for solo da una vuelta"],
-    correcta: "Porque return True termina la llamada enseguida",
-    ok: "Exacto: cada llamada que recibe True ejecuta return True dentro del for, y return termina la función al instante. Por eso la pila se vacía de golpe, una ficha por paso.",
-    pistas: { "Porque ya estaban tachadas con x": "Las casillas del camino tienen migas, no x. Mira qué línea se ejecuta en cada llamada mientras baja el True.", "Porque el for solo da una vuelta": "El for da hasta cuatro vueltas, una por dirección. ¿Qué hace la línea return True?" },
-    alAcertar: function () { acierto("q3"); }
-  });
-  if (window.Progreso && (Progreso.obtener("problema-laberinto") || {}).completada) $("sello").classList.add("sello--puesto");
-
-  /* ---------- 7. Dos caminos ---------- */
+  /* ---------- 5. Detalles: cuántas llamadas como mucho ---------- */
   (function () {
-    // El camino que encontró el programa (ver la ejecución «Dos caminos»)
-    var encontrado = ["#########", "#·······#", "#·#####·#", "#·     Q#", "# ##### #", "#       #", "#########"];
-    var largo = mini($("c7-largo"), encontrado);
-    largo.celdas.forEach(function (fila, f) { fila.forEach(function (x, c) {
-      if (encontrado[f][c] === "·") x.className = "mini__celda mini__celda--miga";
-    }); });
-    largo.celdas[3][1].classList.add("mini__celda--raton");
+    var tMapa = null, actual = -1;
+    var resultados = ENTRADAS.map(function (e) { return correr(e.datos.plano, e.datos.inicio, DIRS); });
+    var maxGlobal = 0;
+    var libresDe = ENTRADAS.map(function (e) {
+      var n = 0;
+      e.datos.plano.forEach(function (r) { for (var k = 0; k < r.length; k++) if (r[k] === " ") n++; });
+      maxGlobal = Math.max(maxGlobal, 1 + 4 * n);
+      return n;
+    });
+    var chips = ENTRADAS.map(function (e, k) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = e.nombre.replace("Con callejones", "Callejones");
+      b.setAttribute("aria-pressed", "false");
+      b.setAttribute("aria-label", e.nombre);
+      b.addEventListener("click", function () { mostrar(k); });
+      $("t-chips").appendChild(b);
+      return b;
+    });
+    function mostrar(k) {
+      if (k === actual) return;
+      actual = k;
+      elegirChip($("t-chips"), chips[k]);
+      var r = resultados[k], libres = libresDe[k], max = 1 + 4 * libres;
+      tMapa = mini($("t-mapa"), r.grid);
+      var ini = ENTRADAS[k].datos.inicio;
+      tMapa.celdas[ini[0]][ini[1]].classList.add("mini__celda--raton");
+      $("t-formula").innerHTML = "<strong>" + libres + "</strong> casillas libres → como mucho <code>1 + 4 × " + libres + " = " + max + "</code> llamadas. " +
+        "Pisó " + r.pisadas + " y hizo <strong>" + r.llamadas + "</strong>.";
+      $("t-max").style.width = (max / maxGlobal * 100) + "%";
+      $("t-real").style.width = (r.llamadas / maxGlobal * 100) + "%";
+      $("t-max-n").textContent = max;
+      $("t-real-n").textContent = r.llamadas;
+    }
+    mostrar(1);
+  })();
+
+  /* ---------- 5. Detalles: sin la miga ---------- */
+  (function () {
+    var PLANO = ["####", "#  #", "####"];
+    var m = mini($("s-mapa"), PLANO);
+    Python.escribir($("s-codigo"), ['    if lab[f][c] != " ":', "        return False", '    lab[f][c] = "·"']);
+    var lineaMiga = $("s-codigo").querySelectorAll(".linea")[2];
+    var conMiga = true, timers = [];
+
+    // Con la miga: lo que hace el programa de verdad
+    function pasosCon() {
+      var lab = PLANO.map(function (s) { return s.split(""); });
+      var pila = [], p = [];
+      function foto(texto) { p.push({ grid: lab.map(function (r) { return r.join(""); }), pila: pila.slice(), texto: texto }); }
+      function buscar(f, c) {
+        if (lab[f][c] === "Q") return true;
+        if (lab[f][c] !== " ") {
+          if (lab[f][c] === "·") foto("<code>buscar(" + f + ", " + c + ")</code> encuentra una miga: <code>False</code>.");
+          return false;
+        }
+        lab[f][c] = "·";
+        pila.push([f, c]);
+        foto("<code>buscar(" + f + ", " + c + ")</code> deja una miga.");
+        for (var k = 0; k < 4; k++) if (buscar(f + DIRS[k][0], c + DIRS[k][1])) return true;
+        lab[f][c] = "x";
+        pila.pop();
+        foto("<code>(" + f + ", " + c + ")</code> es un callejón: <code>x</code> y <code>False</code>.");
+        return false;
+      }
+      buscar(1, 1);
+      return p;
+    }
+    function pintarPila(n, arriba) {
+      var ol = $("s-pila");
+      ol.textContent = "";
+      var muestra = Math.min(n, 3);
+      for (var k = 0; k < muestra; k++) {
+        var li = document.createElement("li");
+        var lugar = arriba.length ? arriba[k] : null;
+        li.textContent = lugar ? "buscar(" + lugar[0] + ", " + lugar[1] + ")" : "";
+        ol.appendChild(li);
+      }
+      if (n > muestra) {
+        var mas = document.createElement("li");
+        mas.className = "mas";
+        mas.textContent = "⋮ y " + (n - muestra) + " más";
+        ol.appendChild(mas);
+      }
+      if (!n) {
+        var v = document.createElement("li");
+        v.className = "vacia";
+        v.textContent = "(vacía)";
+        ol.appendChild(v);
+      }
+      $("s-cuenta").innerHTML = "<small>esperando</small>" + n;
+    }
+    function salida(html) { $("s-salida").innerHTML = html; }
+    function reiniciar() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      m.pintar(PLANO);
+      m.celdas[1][1].classList.add("mini__celda--raton");
+      pintarPila(0, []);
+      salida('<span class="gris">Toca «Probar».</span>');
+      lineaMiga.classList.toggle("linea--sin", !conMiga);
+    }
+    function despues(ms, fn) { timers.push(setTimeout(fn, reducir ? 0 : ms)); }
+    function probarCon() {
+      var ps = pasosCon();
+      ps.forEach(function (p, k) {
+        despues(k * 700, function () {
+          m.pintar(p.grid);
+          var r = p.pila[p.pila.length - 1] || [1, 1];
+          m.celdas[r[0]][r[1]].classList.add("mini__celda--raton");
+          pintarPila(p.pila.length, p.pila.slice().reverse());
+          salida("<span>" + p.texto + "</span>");
+        });
+      });
+      despues(ps.length * 700, function () {
+        salida("<span>No hay salida</span><span class=\"gris\">Termina: cada casilla se pisó una vez.</span>");
+      });
+    }
+    function probarSin() {
+      // Sin la miga, (1, 1) llama a (1, 2) y (1, 2) a (1, 1), una y otra vez
+      var hondos = [1, 2, 3, 4, 5, 6, 7, 8, 12, 20, 40, 80, 160, 320, 640, 1000];
+      var t = 0;
+      hondos.forEach(function (n, k) {
+        t += k < 8 ? 600 : 160;
+        despues(t, function () {
+          var arriba = [];
+          for (var j = 0; j < 3 && n - j > 0; j++) arriba.push((n - j) % 2 ? [1, 1] : [1, 2]);
+          m.pintar(PLANO);
+          var r = arriba[0];
+          m.celdas[r[0]][r[1]].classList.add("mini__celda--raton");
+          pintarPila(n, arriba);
+          salida(n < 1000
+            ? "<span>" + (n % 2 ? "<code>(1, 1)</code> llama a <code>(1, 2)</code>…" : "<code>(1, 2)</code> llama a <code>(1, 1)</code>…") + "</span>"
+            : "<span class=\"error\">RecursionError: maximum recursion depth exceeded</span><span class=\"gris\">En español: demasiadas llamadas esperando.</span>");
+        });
+      });
+    }
+    $("s-chips").querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        conMiga = b.getAttribute("data-miga") === "si";
+        elegirChip($("s-chips"), b);
+        reiniciar();
+      });
+    });
+    $("s-probar").addEventListener("click", function () {
+      reiniciar();
+      if (conMiga) probarCon(); else probarSin();
+    });
+    reiniciar();
+  })();
+
+  /* ---------- 5. Detalles: el orden de las direcciones ---------- */
+  (function () {
+    var PLANO = ["#######", "#     #", "# ###Q#", "#     #", "#######"], INI = [3, 1];
+    var ORDENES = [DIRS, [[0, -1], [1, 0], [0, 1], [-1, 0]]];
+    var CODIGOS = [
+      ["direcciones = [(-1, 0), (0, 1),", "               (1, 0), (0, -1)]"],
+      ["direcciones = [(0, -1), (1, 0),", "               (0, 1), (-1, 0)]"]
+    ];
+    var m = mini($("o-mapa"), PLANO);
+    var timers = [];
+    function pintarGrid(g) {
+      m.pintar(g);
+      m.celdas[INI[0]][INI[1]].classList.add("mini__celda--raton");
+    }
+    function mostrar(k) {
+      timers.forEach(clearTimeout);
+      timers = [];
+      var r = correr(PLANO, INI, ORDENES[k]);
+      Python.escribir($("o-codigo"), CODIGOS[k]);
+      $("o-resultado").innerHTML = "&nbsp;";
+      var fin = function () {
+        pintarGrid(r.grid);
+        $("o-resultado").innerHTML = "Camino de <strong>" + r.camino + " casillas</strong> · " + r.llamadas + " llamadas";
+      };
+      if (reducir) { fin(); return; }
+      r.fotos.forEach(function (g, j) { timers.push(setTimeout(function () { pintarGrid(g); }, j * 160)); });
+      timers.push(setTimeout(fin, r.fotos.length * 160 + 100));
+    }
+    $("o-chips").querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        elegirChip($("o-chips"), b);
+        mostrar(Number(b.getAttribute("data-orden")));
+      });
+    });
+    // Se ve el resultado de golpe; al elegir un orden, se anima
+    var r0 = correr(PLANO, INI, ORDENES[0]);
+    Python.escribir($("o-codigo"), CODIGOS[0]);
+    pintarGrid(r0.grid);
+    $("o-resultado").innerHTML = "Camino de <strong>" + r0.camino + " casillas</strong> · " + r0.llamadas + " llamadas";
+  })();
+
+  /* ---------- 6. Dos caminos ---------- */
+  (function () {
+    var r = correr(DOS_CAMINOS.plano, DOS_CAMINOS.inicio, DIRS);
+    var largo = mini($("c7-largo"), r.grid);
+    largo.celdas[DOS_CAMINOS.inicio[0]][DOS_CAMINOS.inicio[1]].classList.add("mini__celda--raton");
 
     var plano = DOS_CAMINOS.plano, ini = DOS_CAMINOS.inicio;
     var ola = mini($("c7-ola"), plano);
-    // La ola: búsqueda en anchura desde la entrada
     var o = ola_(DOS_CAMINOS);
     var dist = o.dist, padre = o.padre, orden = o.orden, meta = o.meta;
     var corto = [];
@@ -1124,39 +1636,32 @@
     }
     final();
     var timers = [];
+    function numero(q) {
+      if (plano[q[0]][q[1]] === "Q") return;
+      var x = ola.celdas[q[0]][q[1]];
+      x.className = "mini__celda mini__celda--ola";
+      x.textContent = dist[q.join()];
+    }
     $("c7-ver-ola").addEventListener("click", function () {
       timers.forEach(clearTimeout);
       timers = [];
       ola.pintar(plano);
-      var caja = $("c7-ola").getBoundingClientRect();
-      if (caja.top < 60) $("c7-ola").scrollIntoView({ block: "center", behavior: reducir ? "auto" : "smooth" });
       if (reducir) {
-        orden.forEach(function (q) {
-          if (plano[q[0]][q[1]] === "Q") return;
-          var x = ola.celdas[q[0]][q[1]];
-          x.className = "mini__celda mini__celda--ola";
-          x.textContent = dist[q.join()];
-        });
-        setTimeout(function () { limpiarNumeros(); final(); }, 1600);
+        orden.forEach(numero);
+        timers.push(setTimeout(final, 1800));
         return;
       }
-      orden.forEach(function (q) {
-        timers.push(setTimeout(function () {
-          if (plano[q[0]][q[1]] === "Q") return;
-          var x = ola.celdas[q[0]][q[1]];
-          x.className = "mini__celda mini__celda--ola";
-          x.textContent = dist[q.join()];
-        }, dist[q.join()] * 320));
-      });
-      timers.push(setTimeout(function () { limpiarNumeros(); final(); }, (dist[meta.join()] + 2) * 320));
+      orden.forEach(function (q) { timers.push(setTimeout(function () { numero(q); }, dist[q.join()] * 320)); });
+      timers.push(setTimeout(final, (dist[meta.join()] + 2) * 320));
     });
-    function limpiarNumeros() { ola.celdas.forEach(function (fila) { fila.forEach(function (x) { x.textContent = ""; }); }); }
   })();
 
   $("ver-dos").addEventListener("click", function () {
     rep.entrada(3);
     $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
   });
+
+  Problemas.iniciar({ id: "problema-laberinto" });
 })();
 </script>
 </body>
