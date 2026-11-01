@@ -9,6 +9,8 @@
      lineasDatos: [0, 1],                 (opcional) las líneas que cambian con los datos:
                                           llevan la marca «datos» y se iluminan al cambiar
      variables: ["vuelto", "valor"],      las cajas, en orden (aparecen cuando nacen)
+     ideas: [1, 1, 2, 3, …],              (opcional) el paso de la idea que resuelve cada línea:
+                                          la línea lleva su color (data-idea, problemas.css)
      generar: function (datos) {          la ejecución completa: un paso por línea ejecutada
        return [{
          linea: 4,                        índice desde 0 de la línea que se ejecuta
@@ -44,6 +46,8 @@
    - el mapa de calor: cuántas veces se ejecutó cada línea hasta ahora,
    - la nota del paso, y en los momentos clave la reproducción se pausa sola.
    Teclado (con el foco dentro): espacio reproduce o pausa, ← → paso a paso, Inicio / Fin.
+   En pantallas angostas (CSS) se ve una parte a la vez, con pestañas: Dibujo, Código y
+   Variables; la nota y los controles quedan siempre a la vista.
 */
 (function () {
   "use strict";
@@ -108,17 +112,35 @@
     nota.setAttribute("aria-live", "polite");
     raiz.appendChild(nota);
 
+    /* ---------- Pestañas (pantallas angostas: se ve una parte a la vez) ---------- */
+    var pestanas = nuevo("div", "rep__pestanas");
+    pestanas.setAttribute("role", "tablist");
+    pestanas.setAttribute("aria-label", "Qué mirar");
+    var VISTAS = [["escena", "🎬 Dibujo"], ["codigo", "📄 Código"], ["lado", "📦 Variables"]];
+    var botonesVista = {};
+    VISTAS.forEach(function (v) {
+      if (v[0] === "escena" && !(o.escena && o.escena.crear)) return;
+      var b = nuevo("button", "rep__pestana", v[1]);
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.addEventListener("click", function () { vista(v[0]); });
+      pestanas.appendChild(b);
+      botonesVista[v[0]] = b;
+    });
+    raiz.appendChild(pestanas);
+
     /* ---------- Cuerpo: código, escena, cajas y consola ---------- */
     var cuerpo = nuevo("div", "rep__cuerpo");
     var colCodigo = nuevo("div", "rep__codigo");
+    var rotCodigo = nuevo("p", "rep__rotulo rep__rotulo--codigo");
+    rotCodigo.innerHTML = 'Código <span class="rep__rotulo-ayuda">la barra de cada línea: cuántas veces corrió</span>';
+    colCodigo.appendChild(rotCodigo);
     var pre = nuevo("pre", "codigo");
     pre.setAttribute("aria-label", "Código del programa");
     colCodigo.appendChild(pre);
     var calores = nuevo("div", "rep__calores");
     calores.setAttribute("aria-hidden", "true");
     colCodigo.appendChild(calores);
-    var leyendaCalor = nuevo("p", "rep__leyenda", "La barra a la derecha de cada línea crece cada vez que se ejecuta.");
-    colCodigo.appendChild(leyendaCalor);
 
     var colEscena = nuevo("div", "rep__escena");
     if (o.escena && o.escena.crear) o.escena.crear(colEscena);
@@ -302,7 +324,7 @@
       // La línea activa, a la vista dentro del código (si el código se desplaza)
       var activa = paso ? lineas()[paso.linea] : null;
       if (activa && colCodigo.scrollHeight > colCodigo.clientHeight) {
-        var arriba = activa.offsetTop - colCodigo.clientHeight / 2;
+        var arriba = pre.offsetTop + activa.offsetTop - colCodigo.clientHeight / 2;
         colCodigo.scrollTo({ top: arriba, behavior: animar && !reducir() ? "smooth" : "auto" });
       }
       pintarVars(animar);
@@ -385,6 +407,17 @@
       return pasos.length - 1;
     }
 
+    /* ---------- Vista (pestañas) ---------- */
+    function vista(v) {
+      raiz.setAttribute("data-vista", v);
+      Object.keys(botonesVista).forEach(function (k2) {
+        botonesVista[k2].setAttribute("aria-selected", String(k2 === v));
+        botonesVista[k2].classList.toggle("rep__pestana--activa", k2 === v);
+      });
+      // Lo que estaba oculto se mide y se pinta de nuevo
+      requestAnimationFrame(function () { medirCalores(); pintar(false); });
+    }
+
     /* ---------- Datos de entrada ---------- */
     function entrada(n) {
       detener();
@@ -396,6 +429,11 @@
         c.classList.toggle("rep__chip--activo", m === k);
       });
       Python.escribir(pre, o.codigo(datos));
+      // Cada línea con el color del paso de la idea que resuelve
+      if (o.ideas) lineas().forEach(function (l, m) {
+        var n = typeof o.ideas === "function" ? o.ideas(datos)[m] : o.ideas[m];
+        if (n) l.setAttribute("data-idea", String(n));
+      });
       (o.lineasDatos || []).forEach(function (m) {
         var l = lineas()[m];
         if (!l) return;
@@ -437,6 +475,8 @@
       esperaMedir = setTimeout(medirCalores, 150);
     });
 
+    raiz.setAttribute("data-vista", botonesVista.escena ? "escena" : "codigo");
+    (botonesVista.escena || botonesVista.codigo).classList.add("rep__pestana--activa");
     entrada(0);
 
     return {
