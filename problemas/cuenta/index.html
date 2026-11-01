@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caso 03 · La cuenta del restaurante · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: dividir la cuenta de un restaurante con la propina incluida usando variables, fórmulas y f-strings con :.2f, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- Las personas de la mesa ---------- */
+    .gente { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-3); }
+    .persona { display: grid; justify-items: center; gap: 0.15rem; min-width: 3.6rem; }
+    .persona__cara { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border-radius: 50%; background: var(--c, #cfd5dd); color: #1f2a44; font: 700 0.95rem var(--fuente); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.18); }
+    .persona__nombre { font-size: 0.68rem; font-weight: 700; color: var(--tinta-suave); }
+    .persona__paga { min-width: 3.6rem; min-height: 1.45rem; padding: 0.05em 0.4em; border: 1.5px solid var(--papel-borde); border-radius: 6px; background: #fff; text-align: center; font: 700 0.76rem/1.45rem var(--fuente-codigo); color: var(--tinta); white-space: nowrap; transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .persona__paga:empty { border-style: dashed; background: transparent; }
+    .persona__paga--extra { border-color: var(--lapiz); background: #fde6d8; color: var(--lapiz); }
+    .persona--llega { animation: persona-llega 420ms var(--curva-rebote) both; animation-delay: var(--retraso, 0ms); }
+    @keyframes persona-llega { from { opacity: 0; transform: translateY(10px) scale(0.6); } }
+    .c0 { --c: #9cc0e8; } .c1 { --c: #f2bf86; } .c2 { --c: #9fd1a8; } .c3 { --c: #eaa6c0; } .c4 { --c: #b9a3dc; } .c5 { --c: #e3d39a; }
+    .c6 { --c: #a7d8de; } .c7 { --c: #f0b5a0; } .c8 { --c: #c9d39a; } .c9 { --c: #d6c7b3; }
+    .paga-vuela { position: fixed; z-index: 60; margin: 0; pointer-events: none; padding: 0.05em 0.4em; border-radius: 6px; background: #ffd479; color: #2b1d00; font: 700 0.76rem/1.45rem var(--fuente-codigo); white-space: nowrap; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
+
+    /* ---------- La mesa (escena del reproductor) ---------- */
+    .mesa { flex: 1; display: grid; gap: var(--esp-3); align-content: center; }
+    .mesa__arriba { display: flex; align-items: flex-start; justify-content: center; gap: var(--esp-3); flex-wrap: wrap; }
+    .cuenta-ticket { position: relative; flex: 1 1 13rem; max-width: 17rem; padding: 0.45rem 0.8rem 0.6rem; background: #fff; font: 0.78rem var(--fuente-codigo); box-shadow: 0 3px 10px rgba(31, 42, 68, 0.15); transform: rotate(-1deg); }
+    .cuenta-ticket::after { content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: radial-gradient(circle at 5px 0, #fff 5px, transparent 5.5px) 0 0 / 10px 8px repeat-x; }
+    .cuenta-ticket h4 { margin: 0 0 0.25rem; font: 700 0.68rem var(--fuente-codigo); text-align: center; letter-spacing: 0.16em; }
+    .cuenta-ticket__fila { display: flex; justify-content: space-between; gap: var(--esp-2); padding: 0.1em 0.2em; border-bottom: 1px dashed #d8d0bf; transition: opacity 300ms; }
+    .cuenta-ticket__fila--vacia { opacity: 0.35; }
+    .cuenta-ticket__fila--total { border-bottom: 0; font-weight: 700; font-size: 0.86rem; }
+    .cuenta-ticket__fila--nueva { animation: fila-nueva 900ms ease; }
+    @keyframes fila-nueva { 25% { background-color: #ffe58f; } }
+    .mesa__cuenta { align-self: center; min-height: 1.7rem; padding: 0.1em 0.6em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .mesa__cuenta:empty { opacity: 0; }
+    .barra-cuenta { position: relative; display: flex; height: 2rem; border: 2px solid var(--tinta); border-radius: 8px; overflow: hidden; background: #fff; }
+    .barra-cuenta__consumo, .barra-cuenta__propina { flex: 0 0 0; flex-grow: 0; transition: flex-grow 700ms ease; }
+    .barra-cuenta__consumo { background: var(--azul-tinta); }
+    .barra-cuenta__propina { background: repeating-linear-gradient(45deg, #f2a75e 0 6px, #f8d2a6 6px 12px); }
+    .barra-cuenta__cortes { position: absolute; inset: 0; pointer-events: none; }
+    .barra-cuenta__corte { position: absolute; top: -2px; bottom: -2px; border-left: 3px solid #f8f4ea; transform: scaleY(0); transition: transform 400ms ease; transition-delay: var(--retraso, 0ms); }
+    .barra-cuenta--partida .barra-cuenta__corte { transform: scaleY(1); }
+    .barra-leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2rem var(--esp-4); margin: -0.4rem 0 0; font: 700 0.72rem var(--fuente); color: var(--tinta-suave); }
+    .barra-leyenda span::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.35em; vertical-align: -0.05em; border-radius: 2px; }
+    .barra-leyenda .l-consumo::before { background: var(--azul-tinta); }
+    .barra-leyenda .l-propina::before { background: repeating-linear-gradient(45deg, #f2a75e 0 3px, #f8d2a6 3px 6px); }
+    .mesa .gente { gap: var(--esp-2); }
+    .mesa .persona { min-width: 3.2rem; }
+    .mesa .persona__paga { min-width: 3.2rem; }
+    .mesa__vacia { margin: 0; text-align: center; font-size: var(--texto-xs); font-style: italic; color: var(--tinta-suave); }
+    .mesa__juntan { min-height: 1.4em; margin: 0; text-align: center; font: 700 0.82rem var(--fuente); color: var(--tinta-suave); }
+    .mesa__juntan--ok { color: var(--color-ok); }
+    .mesa__juntan--falta { color: var(--lapiz); }
+
+    /* El código de este caso tiene líneas largas (f-strings): su columna, más ancha */
+    @media (min-width: 1180px) {
+      .rep__cuerpo { grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.95fr) minmax(12rem, 0.8fr); }
+    }
+
+    /* ---------- Demos ---------- */
+    .cien { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; margin: var(--esp-2) 0; }
+    .cien span { aspect-ratio: 1; border-radius: 2px; background: #dfe5f5; transition: background-color 200ms; }
+    .cien span.si { background: #f2a75e; }
+    .orden-demo { display: grid; gap: var(--esp-2); }
+    #d2-codigo { font-size: 0.72rem; }
+    .consola-mini { margin: 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs)/1.5 var(--fuente-codigo); white-space: pre-wrap; }
+    .consola-mini--error { font-size: 0.7rem; white-space: pre; overflow-x: auto; }
+    .consola-mini .gris { color: #8b96a3; font-weight: 400; }
+    .consola-mini .rojo { color: #ff9b9b; }
+    .salidas-dec { display: grid; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .salidas-dec div { display: grid; gap: 0.1rem; }
+    .salidas-dec code { justify-self: start; font-size: 0.78rem; }
+    .salidas-dec samp { padding: 0.15em 0.6em; border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs) var(--fuente-codigo); overflow-wrap: anywhere; }
+
+    /* ---------- Detalles ---------- */
+    .reparto { display: flex; height: 6.5rem; margin: var(--esp-2) 0; border: 2px solid var(--tinta); border-radius: 8px; overflow: hidden; }
+    .reparto__col { flex: 1; display: flex; flex-direction: column; border-left: 3px solid #fff; }
+    .reparto__col:first-child { border-left: 0; }
+    .reparto__c { flex: var(--c) 0 0; display: grid; place-items: center; background: var(--azul-tinta); color: #fff; font: 700 0.62rem var(--fuente-codigo); }
+    .reparto__p { flex: var(--p) 0 0; display: grid; place-items: center; background: repeating-linear-gradient(45deg, #f2a75e 0 6px, #f8d2a6 6px 12px); color: #3d2a00; font: 700 0.62rem var(--fuente-codigo); }
+    .reparto--angosta .reparto__c, .reparto--angosta .reparto__p { font-size: 0; }
+    .cuenta-linea { margin: 0; font: 700 var(--texto-xs) var(--fuente-codigo); }
+    .cuenta-linea .c-azul { color: var(--azul-tinta); }
+    .cuenta-linea .c-naranja { color: #a4520e; }
+
+    /* ---------- ¿Siempre cierra? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1.05fr 1fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .mas__dibujo h3 { margin: 0; font-size: var(--texto-md); }
+    .mas__dibujo .persona__nombre { display: none; }
+    .mas__dibujo .gente { gap: var(--esp-2); }
+    .dibujo-rotulo { margin: 0; font-size: var(--texto-xs) !important; font-weight: 700; color: var(--tinta-suave); }
+    .cierra { margin: 0; text-align: center; font: 700 var(--texto-sm) var(--fuente); }
+    .cierra--falta { color: var(--lapiz); }
+    .cierra--ok { color: var(--color-ok); }
+    .mas .codigo { font-size: 0.85rem; }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); gap: var(--esp-2); }
+      #siempre .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #siempre .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso 03</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#siempre"><span>6 · ¿Siempre cierra la cuenta?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso 03</p>
+          <h1>La cuenta del restaurante</h1>
+          <p class="caso-bajada">Un programa que reparte la cuenta entre amigos, con la propina incluida.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 1 de 3">★☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/index.html">variables</a></li>
+              <li><a href="../../lecciones/variables/formulas/index.html">fórmulas</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings y :.2f</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 190" role="img" aria-label="Cinco amigos alrededor de una mesa con la cuenta en el centro">
+          <ellipse cx="120" cy="100" rx="88" ry="54" fill="#5b4636"/>
+          <ellipse cx="120" cy="96" rx="82" ry="49" fill="#8a6a50"/>
+          <g transform="rotate(-6 120 92)">
+            <rect x="92" y="62" width="56" height="62" fill="#fff"/>
+            <g fill="#c9c2b2"><rect x="99" y="72" width="42" height="3"/><rect x="99" y="81" width="30" height="3"/><rect x="99" y="90" width="36" height="3"/></g>
+            <text x="120" y="112" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#1f2a44">151.25</text>
+          </g>
+          <g font-family="sans-serif" font-size="13" font-weight="700" fill="#1f2a44" text-anchor="middle">
+            <circle cx="120" cy="26" r="15" fill="#9cc0e8"/><text x="120" y="31">A</text>
+            <circle cx="214" cy="80" r="15" fill="#f2bf86"/><text x="214" y="85">B</text>
+            <circle cx="186" cy="164" r="15" fill="#9fd1a8"/><text x="186" y="169">C</text>
+            <circle cx="54" cy="164" r="15" fill="#eaa6c0"/><text x="54" y="169">D</text>
+            <circle cx="26" cy="80" r="15" fill="#b9a3dc"/><text x="26" y="85">E</text>
+          </g>
+          <g font-family="monospace" font-size="9" font-weight="700" fill="#ffe9b8" text-anchor="middle">
+            <text x="120" y="54">30.25</text><text x="180" y="72">30.25</text><text x="166" y="140">30.25</text><text x="74" y="140">30.25</text><text x="60" y="72">30.25</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Ana celebra su cumpleaños en una pollería con Beto, Caro, Dani y Eli. Al final llega la cuenta: <strong>137.50 soles</strong>, y quieren dejar <strong>10% de propina</strong>.</p>
+            <p>Beto divide 137.50 entre 5 y dice «27.50 cada uno». Pero se olvidó de la propina: faltan 13.75 soles. <span class="nota-margen">¿Cuánto paga cada uno, con todo incluido?</span></p>
+            <div class="ticket" aria-label="La cuenta de la pollería">
+              <h3>POLLERÍA · CUENTA</h3>
+              <div class="ticket__fila"><span>2 pollos a la brasa</span><span>S/ 96.00</span></div>
+              <div class="ticket__fila"><span>Gaseosas y postre</span><span>S/ 41.50</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Consumo</span><span>S/ 137.50</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dado lo que se consumió, el porcentaje de propina y cuántas personas son, diga <strong>cuánto es la propina, cuánto es el total y cuánto paga cada uno</strong>.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>consumo</code>: lo que se consumió, en soles (puede tener decimales).</li>
+              <li><code>porcentaje</code>: el porcentaje de propina, un número entero (<code>10</code> es 10%).</li>
+              <li><code>personas</code>: cuántos pagan, un entero mayor que 0. Todos pagan lo mismo.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Tres líneas, con los montos en soles y <strong>dos decimales</strong>: <code>Propina: S/ …</code>, <code>Total: S/ …</code> y <code>Cada uno paga S/ …</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>consumo = 137.50
+porcentaje = 10
+personas = 5</td><td>Propina: S/ 13.75
+Total: S/ 151.25
+Cada uno paga S/ 30.25</td></tr>
+                <tr><td>consumo = 84
+porcentaje = 15
+personas = 4</td><td>Propina: S/ 12.60
+Total: S/ 96.60
+Cada uno paga S/ 24.15</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Un porcentaje es una fórmula</h3>
+            <p>10% quiere decir <strong>10 de cada 100</strong>. Para sacarlo, se multiplica y se divide entre 100.</p>
+            <div class="control-fila">
+              <label for="d1-pct">Propina: <span id="d1-num">10</span>%</label>
+              <input type="range" id="d1-pct" min="0" max="25" value="10">
+            </div>
+            <div class="cien" id="d1-cien" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Cada línea usa las de arriba</h3>
+            <p>Python ejecuta de arriba abajo. Una línea solo puede usar las variables que ya se crearon antes.</p>
+            <div class="orden-demo">
+              <div class="chips-elegir" id="d2-orden" role="group" aria-label="Orden de las líneas">
+                <button type="button" data-orden="bien" aria-pressed="true">En orden</button>
+                <button type="button" data-orden="mal" aria-pressed="false">Cambiadas</button>
+              </div>
+              <pre class="codigo" id="d2-codigo"></pre>
+              <div class="consola-mini" id="d2-salida" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Dos decimales con <code>:.2f</code></h3>
+            <p>Una división puede dar muchos decimales. En la f-string, <code>:.2f</code> escribe solo dos, como se escribe el dinero.</p>
+            <div class="chips-elegir" id="d3-chips" role="group" aria-label="Elige una cuenta">
+              <button type="button" data-k="0" aria-pressed="true">151.25 / 5</button>
+              <button type="button" data-k="1" aria-pressed="false">100 / 3</button>
+              <button type="button" data-k="2" aria-pressed="false">45.9 + 4.59</button>
+            </div>
+            <div class="salidas-dec" aria-live="polite">
+              <div><code id="d3-c1"></code><samp id="d3-s1"></samp></div>
+              <div><code id="d3-c2"></code><samp id="d3-s2"></samp></div>
+            </div>
+            <p class="nota-margen" style="margin-top:auto">:.2f solo cambia cómo se escribe: la variable guarda el número completo.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con la pollería</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Es lo que haría cualquiera con una calculadora: <strong>primero la propina, después el total y al final el reparto</strong>. Cada cuenta usa la anterior.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota los datos</strong> Lo que se consumió, el porcentaje de propina y cuántos son.</li>
+              <li data-idea="2"><strong>Calcula la propina</strong> El porcentaje del consumo: multiplica y divide entre 100.</li>
+              <li data-idea="3"><strong>Suma y reparte</strong> El total es el consumo más la propina; cada uno paga el total entre las personas.</li>
+              <li data-idea="4"><strong>Muéstralo como dinero</strong> Con dos decimales, gracias a <code>:.2f</code>.</li>
+            </ol>
+            <p class="nota-margen">Sin decisiones ni vueltas: el programa baja en línea recta y cada línea corre una sola vez.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Siempre el mismo trabajo</h3>
+            <p>Sea la cuenta chica o grande, para 2 o para 12, el programa hace <strong>3 cuentas y 3 <code>print</code></strong>. Prueba:</p>
+            <div class="control-fila">
+              <label for="t-consumo">Consumo: S/ <span id="t-num">137.50</span></label>
+              <input type="range" id="t-consumo" min="20" max="600" step="0.5" value="137.5">
+            </div>
+            <div class="control-fila">
+              <label for="t-personas">Personas: <span id="t-pnum">5</span></label>
+              <input type="range" id="t-personas" min="1" max="12" value="5">
+            </div>
+            <table class="mini-tabla" aria-live="polite">
+              <thead><tr><th>línea</th><th>cuenta</th><th>da</th></tr></thead>
+              <tbody id="t-filas"></tbody>
+            </table>
+            <p class="nota-margen" style="margin-top:auto">Por eso, en la ejecución, cada línea del mapa de calor dice ×1.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Repartir antes o después da lo mismo</h3>
+            <p>Cada uno paga su parte del consumo <strong>y</strong> su parte de la propina. Juntas, dan el total entre las personas:</p>
+            <div class="control-fila">
+              <label for="r-personas">Personas: <span id="r-num">5</span></label>
+              <input type="range" id="r-personas" min="1" max="8" value="5">
+            </div>
+            <div class="reparto" id="r-barra" aria-hidden="true"></div>
+            <p class="cuenta-linea" id="r-cuenta" aria-live="polite"></p>
+            <p class="nota-margen" style="margin-top:auto">Por eso alcanza con repartir el total una sola vez.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Y si <code>personas</code> es 0?</h3>
+            <p>Nadie puede repartir entre cero. Python se detiene en la línea del reparto:</p>
+            <div class="consola-mini consola-mini--error"><span class="gris">  File "cuenta.py", line 6, in &lt;module&gt;</span>
+    cada_uno = total / personas
+               ~~~~~~^~~~~~~~~~
+<span class="rojo">ZeroDivisionError: float division by zero</span></div>
+            <p>En cambio, <code>porcentaje = 0</code> sí funciona: imprime <code>Propina: S/ 0.00</code>. El enunciado pide <code>personas</code> mayor que 0; un programa más cuidadoso lo revisaría antes con un <code>if</code>.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Siempre cierra la cuenta? -->
+    <section class="panel" id="siempre">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Siempre cierra la cuenta?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Una cuenta de 100 soles entre 3: el programa dice <code>33.33</code>. Pero 3 × 33.33 = 99.99: <span class="resalta">falta un céntimo</span>. Y entre 6, cada uno paga 16.67 y sobran 2 céntimos.</p>
+            <p>Para que cierre, se cuenta en <strong>céntimos</strong>, que son enteros, y se usan <code>//</code> y <code>%</code>, de <a href="../../lecciones/variables/formulas/index.html">Fórmulas</a>:</p>
+            <pre class="codigo" id="m-codigo"></pre>
+            <p><button type="button" class="btn btn-secundario" id="ver-tres">Ver 100 entre 3 en la ejecución ↑</button></p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <h3>100 soles entre…</h3>
+            <div class="chips-elegir" id="m-chips" role="group" aria-label="Cuántas personas">
+              <button type="button" data-n="3" aria-pressed="true">3</button>
+              <button type="button" data-n="4" aria-pressed="false">4</button>
+              <button type="button" data-n="6" aria-pressed="false">6</button>
+              <button type="button" data-n="7" aria-pressed="false">7</button>
+            </div>
+            <p class="dibujo-rotulo">Con <code>:.2f</code>, cada uno paga lo mismo:</p>
+            <div class="gente" id="m-antes"></div>
+            <p class="cierra" id="m-antes-total" aria-live="polite"></p>
+            <p class="dibujo-rotulo">Con céntimos, <span id="m-extra-txt"></span>:</p>
+            <div class="gente" id="m-despues"></div>
+            <p class="cierra cierra--ok" id="m-despues-total" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los céntimos →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-primario" href="../final/index.html">Siguiente caso: ¿Cuánto necesito en el final? →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+
+  /* ---------- Números como los escribe Python ---------- */
+  // Un float con valor entero se escribe con «.0» (100.0); JavaScript da el mismo
+  // número más corto que Python para el resto (33.333333333333336).
+  function py(v, esFloat) {
+    var s = String(v);
+    if (esFloat && Number.isInteger(v)) s += ".0";
+    return s;
+  }
+  function f2(v) { return v.toFixed(2); }          // lo que escribe {v:.2f}
+  function soles(v) { return "S/ " + f2(v); }
+  function centimos(v) { return Math.round(Number(f2(v)) * 100); }
+
+  var NOMBRES = ["Ana", "Beto", "Caro", "Dani", "Eli", "Fito", "Gaby", "Hugo", "Iris", "Juan"];
+
+  function persona(k, paga, clase) {
+    var p = document.createElement("div");
+    p.className = "persona" + (clase ? " " + clase : "");
+    p.innerHTML = '<span class="persona__cara c' + (k % 10) + '" aria-hidden="true">' + NOMBRES[k % 10][0] + "</span>" +
+      '<span class="persona__nombre">' + NOMBRES[k % 10] + "</span>" +
+      '<span class="persona__paga"></span>';
+    p.querySelector(".persona__paga").textContent = paga || "";
+    return p;
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "consumo = " + d.consumo,
+      "porcentaje = " + d.propina,
+      "personas = " + d.personas,
+      "propina = consumo * porcentaje / 100",
+      "total = consumo + propina",
+      "cada_uno = total / personas",
+      'print(f"Propina: S/ {propina:.2f}")',
+      'print(f"Total: S/ {total:.2f}")',
+      'print(f"Cada uno paga S/ {cada_uno:.2f}")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 2, 3, 3, 4, 4, 4];
+  var BASE = { consumo: "137.50", propina: 10, personas: 5 };
+
+  /* ---------- 2. Demos ---------- */
+  var cien = $("d1-cien");
+  for (var c = 0; c < 100; c++) cien.appendChild(document.createElement("span"));
+  function pintarD1() {
+    var p = Number($("d1-pct").value);
+    $("d1-num").textContent = p;
+    cien.querySelectorAll("span").forEach(function (s, k) { s.classList.toggle("si", k < p); });
+    var m = 137.5 * p / 100;
+    $("d1-cuenta").innerHTML = "137.5 * " + p + " / 100 = <span class=\"c-resto\">" + py(m, true) + "</span>";
+  }
+  $("d1-pct").addEventListener("input", pintarD1);
+  pintarD1();
+
+  var ORDEN = {
+    bien: ["propina = consumo * porcentaje / 100", "total = consumo + propina", "cada_uno = total / personas", 'print(f"Cada uno paga S/ {cada_uno:.2f}")'],
+    mal: ["total = consumo + propina", "propina = consumo * porcentaje / 100", "cada_uno = total / personas", 'print(f"Cada uno paga S/ {cada_uno:.2f}")']
+  };
+  function pintarD2(cual) {
+    Python.escribir($("d2-codigo"), ORDEN[cual]);
+    var lineas = $("d2-codigo").querySelectorAll(".linea");
+    if (cual === "bien") {
+      $("d2-salida").innerHTML = "Cada uno paga S/ 30.25";
+    } else {
+      lineas[0].classList.add("linea--error");
+      lineas[0].style.background = "rgba(255, 99, 88, 0.22)";
+      for (var k = 1; k < lineas.length; k++) lineas[k].style.opacity = "0.4";
+      $("d2-salida").innerHTML = '<span class="rojo">NameError: name \'propina\' is not defined</span>\n<span class="gris">Se usó antes de crearla: Python no la conoce todavía.</span>';
+    }
+  }
+  $("d2-orden").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("d2-orden").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD2(b.getAttribute("data-orden"));
+    });
+  });
+  pintarD2("bien");
+
+  var DEC = [
+    { codigo: "total / personas", valor: 151.25 / 5, antes: "total = 151.25", ver: "151.25 / 5" },
+    { codigo: "100 / 3", valor: 100 / 3 },
+    { codigo: "45.9 + 4.59", valor: 45.9 + 4.59 }
+  ];
+  function pintarD3(k) {
+    var d = DEC[k];
+    var expr = d.ver || d.codigo;
+    $("d3-c1").textContent = "print(" + expr + ")";
+    $("d3-s1").textContent = py(d.valor, true);
+    $("d3-c2").textContent = 'print(f"{' + expr + ':.2f}")';
+    $("d3-s2").textContent = f2(d.valor);
+  }
+  $("d3-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("d3-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD3(Number(b.getAttribute("data-k")));
+    });
+  });
+  pintarD3(0);
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 54,
+    anchoNodo: 300,
+    columnas: [0.3, 2, 0.3],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota <code>consumo</code>, <code>porcentaje</code> y <code>personas</code>", col: 1, fila: 1, idea: 1 },
+      { id: "propina", tipo: "proceso", texto: "<code>propina = consumo × porcentaje / 100</code>", col: 1, fila: 2, idea: 2 },
+      { id: "total", tipo: "proceso", texto: "<code>total = consumo + propina</code>", col: 1, fila: 3, idea: 3 },
+      { id: "reparte", tipo: "proceso", texto: "<code>cada_uno = total / personas</code>", col: 1, fila: 4, idea: 3 },
+      { id: "imprime", tipo: "datos", texto: "imprime los tres con dos decimales", col: 1, fila: 5, idea: 4 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 1, fila: 6 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "propina" },
+      { de: "propina", a: "total" },
+      { de: "total", a: "reparte" },
+      { de: "reparte", a: "imprime" },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Llega la cuenta de la pollería" },
+    { nodo: "datos", nota: "consumo = 137.50 · porcentaje = 10 · personas = 5" },
+    { nodo: "propina", nota: "137.5 × 10 / 100 = 13.75" },
+    { nodo: "total", nota: "137.5 + 13.75 = 151.25" },
+    { nodo: "reparte", nota: "151.25 / 5 = 30.25" },
+    { nodo: "imprime", nota: "Propina: S/ 13.75 · Total: S/ 151.25 · Cada uno paga S/ 30.25" },
+    { nodo: "fin", nota: "Fin: cada uno paga 30.25 soles" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con la pollería";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  var datosActuales = BASE;
+  function consumoEsFloat(d) { return String(d.consumo).indexOf(".") !== -1; }
+  function esFloat(nombre) {
+    if (nombre === "consumo") return consumoEsFloat(datosActuales);
+    return nombre === "propina" || nombre === "total" || nombre === "cada_uno";
+  }
+
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = { personas: null };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var cf = consumoEsFloat(d);
+    var c = Number(d.consumo), pr = d.propina, n = d.personas;
+    var cTxt = py(c, cf);
+
+    vars.consumo = c; est.consumo = c;
+    paso({ linea: 0, escribe: "consumo", capitulo: "Los datos",
+      nota: cf && cTxt !== d.consumo
+        ? "Guardamos lo que se consumió. En el código dice <code>" + d.consumo + "</code>, pero la caja muestra <code>" + cTxt + "</code>: para Python es el mismo número, el cero del final no cambia nada."
+        : "Guardamos lo que se consumió: <code>consumo</code> vale " + cTxt + (cf ? "." : ", un número entero.") });
+    vars.porcentaje = pr; est.pct = pr;
+    paso({ linea: 1, escribe: "porcentaje",
+      nota: pr === 0 ? "<code>porcentaje = 0</code>: esta vez no dejan propina." : "El porcentaje de propina: <code>" + pr + "</code> quiere decir " + pr + " soles de cada 100." });
+    vars.personas = n; est.personas = n;
+    paso({ linea: 2, escribe: "personas",
+      nota: n === 1 ? "Paga una sola persona." : "Son <strong>" + n + "</strong> los que pagan. Ya están sentados a la mesa." });
+
+    var m = c * pr / 100;
+    vars.propina = m; est.monto = m;
+    var mTxt = py(m, true);
+    paso({ linea: 3, escribe: "propina", lee: ["consumo", "porcentaje"], capitulo: "La propina", pausa: true,
+      cuenta: cTxt + " * " + pr + " / 100 = " + mTxt,
+      nota: "<code>" + cTxt + " * " + pr + " / 100</code> da <strong>" + mTxt + "</strong>: el " + pr + "% del consumo. " +
+        (pr === 0 ? "Con 0%, la propina es <code>0.0</code>: la <code>/</code> siempre da un número con decimales." : "En la barra, la parte rayada es la propina.") });
+
+    var t = c + m;
+    vars.total = t; est.total = t;
+    var tTxt = py(t, true);
+    var cola = tTxt.length > f2(t).length + 3;
+    paso({ linea: 4, escribe: "total", lee: ["consumo", "propina"], capitulo: "El total", pausa: cola,
+      cuenta: cTxt + " + " + mTxt + " = " + tTxt,
+      nota: cola
+        ? "<code>total</code> vale <strong>" + tTxt + "</strong> y no " + f2(t) + ": la computadora guarda los decimales en binario y a veces queda una colita. Por eso el dinero se muestra con <code>:.2f</code>."
+        : "El total es el consumo más la propina: <strong>" + tTxt + "</strong>. La línea usa <code>propina</code>, que se calculó justo arriba." });
+
+    var e = t / n;
+    vars.cada_uno = e; est.cada = e;
+    var eTxt = py(e, true);
+    var exacta = eTxt.length <= f2(e).length;
+    paso({ linea: 5, escribe: "cada_uno", lee: ["total", "personas"], capitulo: "El reparto", pausa: true, reparte: true,
+      cuenta: tTxt + " / " + n + " = " + eTxt,
+      nota: exacta
+        ? "<code>" + tTxt + " / " + n + "</code> da <strong>" + eTxt + "</strong>. La barra se corta en " + n + " partes iguales y cada uno recibe la suya."
+        : "<code>" + tTxt + " / " + n + "</code> da <strong>" + eTxt + "</strong>: la división no es exacta. Nadie paga con tantos decimales; la mesa ya lo muestra redondeado." });
+
+    paso({ linea: 6, salida: "Propina: " + soles(m), lee: ["propina"], capitulo: "Mostrar",
+      nota: "<code>{propina:.2f}</code> escribe el número con dos decimales: <strong>" + f2(m) + "</strong>." });
+    paso({ linea: 7, salida: "Total: " + soles(t), lee: ["total"],
+      nota: cola ? "Aquí la colita desaparece: <code>" + tTxt + "</code> se escribe <strong>" + f2(t) + "</strong>." : "El total, también con dos decimales: <strong>" + f2(t) + "</strong>." });
+
+    var junta = n * centimos(e), debe = Math.round(t * 100);
+    var dif = junta - debe;
+    paso({ linea: 8, salida: "Cada uno paga " + soles(e), lee: ["cada_uno"], capitulo: "Fin", pausa: true, fin: true, flecha: false,
+      junta: junta, dif: dif,
+      nota: dif === 0
+        ? "Listo: cada uno paga <strong>" + soles(e) + "</strong>" + (n > 1 ? " y entre los " + n + " juntan " + soles(t) + "." : ".") + " El mapa de calor dice ×1 en cada línea: sin decisiones ni vueltas."
+        : "Cada uno paga <strong>" + soles(e) + "</strong>, pero " + n + " × " + f2(e) + " = " + f2(junta / 100) + ": " +
+          (dif < 0 ? "<strong>falta " + (dif === -1 ? "un céntimo" : -dif + " céntimos") + "</strong>" : "<strong>sobran " + dif + " céntimos</strong>") +
+          ". El bloque 6 cuenta cómo arreglarlo." });
+    return pasos;
+  }
+
+  /* La escena: la mesa con la cuenta */
+  var escena = (function () {
+    var filas = {}, cuentaEl, barra, segC, segP, cortes, leyenda, gente, vacia, juntan;
+    var n = 0;
+    function crear(cont) {
+      cont.innerHTML =
+        '<div class="mesa">' +
+        '  <div class="mesa__arriba">' +
+        '    <div class="cuenta-ticket" aria-label="La cuenta"><h4>CUENTA</h4>' +
+        '      <div class="cuenta-ticket__fila" data-f="consumo"><span>Consumo</span><span></span></div>' +
+        '      <div class="cuenta-ticket__fila" data-f="propina"><span>Propina</span><span></span></div>' +
+        '      <div class="cuenta-ticket__fila cuenta-ticket__fila--total" data-f="total"><span>Total</span><span></span></div>' +
+        "    </div>" +
+        '    <span class="mesa__cuenta"></span>' +
+        "  </div>" +
+        '  <div class="barra-cuenta" aria-hidden="true"><span class="barra-cuenta__consumo"></span><span class="barra-cuenta__propina"></span><div class="barra-cuenta__cortes"></div></div>' +
+        '  <p class="barra-leyenda"><span class="l-consumo">consumo</span><span class="l-propina">propina</span></p>' +
+        '  <p class="mesa__vacia">Todavía no sabemos cuántos son.</p>' +
+        '  <div class="gente" aria-label="Las personas de la mesa"></div>' +
+        '  <p class="mesa__juntan" aria-live="polite"></p>' +
+        "</div>";
+      cont.querySelectorAll(".cuenta-ticket__fila").forEach(function (f) { filas[f.getAttribute("data-f")] = f; });
+      cuentaEl = cont.querySelector(".mesa__cuenta");
+      barra = cont.querySelector(".barra-cuenta");
+      segC = cont.querySelector(".barra-cuenta__consumo");
+      segP = cont.querySelector(".barra-cuenta__propina");
+      cortes = cont.querySelector(".barra-cuenta__cortes");
+      leyenda = cont.querySelector(".barra-leyenda");
+      gente = cont.querySelector(".gente");
+      vacia = cont.querySelector(".mesa__vacia");
+      juntan = cont.querySelector(".mesa__juntan");
+    }
+    function reiniciar(d) {
+      datosActuales = d;
+      n = 0;
+      gente.textContent = "";
+      cortes.textContent = "";
+    }
+    function fila(nombre, etiqueta, valor, nueva) {
+      var f = filas[nombre];
+      f.firstChild.textContent = etiqueta;
+      f.lastChild.textContent = valor === undefined ? "…" : soles(valor);
+      f.classList.toggle("cuenta-ticket__fila--vacia", valor === undefined);
+      f.classList.remove("cuenta-ticket__fila--nueva");
+      if (nueva) { void f.offsetWidth; f.classList.add("cuenta-ticket__fila--nueva"); }
+    }
+    function volar(desde, hacia, texto, retraso) {
+      if (!document.body.animate) return;
+      var a = desde.getBoundingClientRect(), b = hacia.getBoundingClientRect();
+      var v = document.createElement("span");
+      v.className = "paga-vuela";
+      v.textContent = texto;
+      v.style.left = b.left + "px";
+      v.style.top = b.top + "px";
+      document.body.appendChild(v);
+      hacia.style.visibility = "hidden";
+      var dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2);
+      var anim = v.animate([
+        { transform: "translate(" + dx + "px, " + dy + "px) scale(0.7)", opacity: 0.4 },
+        { transform: "translate(" + dx * 0.5 + "px, " + (dy * 0.5 - 30) + "px) scale(1.1)", opacity: 1, offset: 0.5 },
+        { transform: "none", opacity: 1 }
+      ], { duration: 700, delay: retraso, easing: "ease-in-out", fill: "both" });
+      anim.onfinish = function () { hacia.style.visibility = ""; v.remove(); };
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : {};
+      var animar = op.animar;
+      var linea = p ? p.linea : -1;
+      fila("consumo", "Consumo", e.consumo, animar && linea === 0);
+      fila("propina", e.pct === undefined ? "Propina" : "Propina (" + e.pct + "%)", e.monto, animar && linea === 3);
+      fila("total", "Total", e.total, animar && linea === 4);
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+
+      // La barra: el consumo y la propina, a escala del total
+      var tope = e.consumo === undefined ? 1 : e.consumo + (e.monto || 0);
+      segC.style.flexGrow = e.consumo === undefined ? 0 : e.consumo / tope;
+      segP.style.flexGrow = e.monto ? e.monto / tope : 0;
+      barra.style.opacity = e.consumo === undefined ? "0.35" : "1";
+      leyenda.style.visibility = e.consumo === undefined ? "hidden" : "visible";
+
+      // Las personas
+      var cuantas = e.personas || 0;
+      if (cuantas !== n) {
+        gente.textContent = "";
+        cortes.textContent = "";
+        for (var k = 0; k < cuantas; k++) {
+          var pe = persona(k, "", animar ? "persona--llega" : "");
+          pe.style.setProperty("--retraso", (k * 90) + "ms");
+          gente.appendChild(pe);
+          if (k > 0) {
+            var co = document.createElement("span");
+            co.className = "barra-cuenta__corte";
+            co.style.left = (k / cuantas * 100) + "%";
+            co.style.setProperty("--retraso", (k * 70) + "ms");
+            cortes.appendChild(co);
+          }
+        }
+        n = cuantas;
+      }
+      vacia.hidden = cuantas > 0;
+      var partida = e.cada !== undefined;
+      barra.classList.toggle("barra-cuenta--partida", partida);
+      var pagas = gente.querySelectorAll(".persona__paga");
+      pagas.forEach(function (pg, k) {
+        var nuevo = partida ? f2(e.cada) : "";
+        if (pg.textContent === nuevo) return;
+        pg.textContent = nuevo;
+        if (partida && animar && p.reparte) {
+          // Cada parte de la barra vuela a su dueño
+          var r = barra.getBoundingClientRect();
+          var trozo = { getBoundingClientRect: function () {
+            var w = r.width / cuantas;
+            return { left: r.left + w * k, top: r.top, width: w, height: r.height };
+          } };
+          volar(trozo, pg, nuevo, 250 + k * 120);
+        }
+      });
+
+      // Al final: ¿juntan el total?
+      juntan.className = "mesa__juntan";
+      if (p && p.fin && cuantas > 1) {
+        juntan.textContent = cuantas + " × " + f2(e.cada) + " = S/ " + f2(p.junta / 100) +
+          (p.dif === 0 ? " ✓ cierra" : p.dif < 0 ? " · falta S/ " + f2(-p.dif / 100) : " · sobra S/ " + f2(p.dif / 100));
+        juntan.classList.add(p.dif === 0 ? "mesa__juntan--ok" : "mesa__juntan--falta");
+      } else {
+        juntan.textContent = "";
+      }
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Pollería: 137.50 · 10% · 5", datos: BASE },
+    { nombre: "Pizza: 84 · 15% · 4", datos: { consumo: "84", propina: 15, personas: 4 } },
+    { nombre: "Menú: 45.90 · 10% · 3", datos: { consumo: "45.90", propina: 10, personas: 3 } },
+    { nombre: "100 entre 3, sin propina", datos: { consumo: "100", propina: 0, personas: 3 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1, 2],
+    variables: ["consumo", "porcentaje", "personas", "propina", "total", "cada_uno"],
+    formato: function (nombre, v) { return py(v, esFloat(nombre)); },
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  function pintarTabla() {
+    var c = Number($("t-consumo").value), n = Number($("t-personas").value);
+    $("t-num").textContent = f2(c);
+    $("t-pnum").textContent = n;
+    var m = c * 10 / 100, t = c + m, e = t / n;
+    var cTxt = py(c, true);
+    $("t-filas").innerHTML =
+      "<tr><td>4</td><td>" + cTxt + " * 10 / 100</td><td>" + f2(m) + "</td></tr>" +
+      "<tr><td>5</td><td>" + cTxt + " + " + f2(m) + "</td><td>" + f2(t) + "</td></tr>" +
+      "<tr><td>6</td><td>" + f2(t) + " / " + n + "</td><td>" + f2(e) + "</td></tr>";
+  }
+  $("t-consumo").addEventListener("input", pintarTabla);
+  $("t-personas").addEventListener("input", pintarTabla);
+  pintarTabla();
+
+  function pintarReparto() {
+    var n = Number($("r-personas").value);
+    $("r-num").textContent = n;
+    var barra = $("r-barra");
+    barra.textContent = "";
+    barra.classList.toggle("reparto--angosta", n > 5);
+    for (var k = 0; k < n; k++) {
+      var col = document.createElement("div");
+      col.className = "reparto__col";
+      col.innerHTML = '<span class="reparto__p" style="--p:13.75">' + f2(13.75 / n) + '</span><span class="reparto__c" style="--c:137.5">' + f2(137.5 / n) + "</span>";
+      barra.appendChild(col);
+    }
+    $("r-cuenta").innerHTML = '<span class="c-azul">' + f2(137.5 / n) + '</span> + <span class="c-naranja">' + f2(13.75 / n) + "</span> = " + f2(151.25 / n) + " = 151.25 / " + n;
+  }
+  $("r-personas").addEventListener("input", pintarReparto);
+  pintarReparto();
+
+  /* ---------- 6. ¿Siempre cierra la cuenta? ---------- */
+  function codigoCentimos(n) {
+    return [
+      "centimos = 10000      # 100 soles",
+      "cada_uno = centimos // " + n + "   # " + Math.floor(10000 / n),
+      "sobran = centimos % " + n + "      # " + (10000 % n)
+    ];
+  }
+  function pintarCierra(n) {
+    Python.escribir($("m-codigo"), codigoCentimos(n));
+    var e = 100 / n, junta = n * centimos(e), dif = junta - 10000;
+    var antes = $("m-antes");
+    antes.textContent = "";
+    for (var k = 0; k < n; k++) antes.appendChild(persona(k, f2(e)));
+    var t = $("m-antes-total");
+    t.className = "cierra " + (dif === 0 ? "cierra--ok" : "cierra--falta");
+    t.textContent = n + " × " + f2(e) + " = " + f2(junta / 100) +
+      (dif === 0 ? " ✓ cierra" : dif < 0 ? " · falta " + (-dif === 1 ? "1 céntimo" : -dif + " céntimos") : " · sobran " + dif + " céntimos");
+
+    var base = Math.floor(10000 / n), sobran = 10000 % n;
+    $("m-extra-txt").textContent = sobran === 0
+      ? "no sobra ningún céntimo"
+      : (sobran === 1 ? "el céntimo que sobra lo paga 1 persona" : "los " + sobran + " céntimos que sobran los pagan " + sobran + " personas, uno cada una");
+    var despues = $("m-despues");
+    despues.textContent = "";
+    var suma = 0;
+    for (var j = 0; j < n; j++) {
+      var cent = base + (j < sobran ? 1 : 0);
+      suma += cent;
+      var pe = persona(j, f2(cent / 100));
+      if (j < sobran) pe.querySelector(".persona__paga").classList.add("persona__paga--extra");
+      despues.appendChild(pe);
+    }
+    $("m-despues-total").textContent = "Juntan " + f2(suma / 100) + " ✓ cierra";
+  }
+  $("m-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("m-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarCierra(Number(b.getAttribute("data-n")));
+    });
+  });
+  pintarCierra(3);
+
+  $("ver-tres").addEventListener("click", function () {
+    rep.entrada(3);
+    $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
+  });
+
+  Problemas.iniciar({ id: "problema-cuenta" });
+})();
+</script>
+</body>
+</html>
