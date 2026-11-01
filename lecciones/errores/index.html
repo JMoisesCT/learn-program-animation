@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leer un mensaje de error · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: el programa corre hasta la línea que falla y se detiene. Las partes de un mensaje de error de Python, que se lee de abajo arriba, y el primer error: NameError.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo code { text-transform: none; letter-spacing: 0; }
+    .error-zona:empty { display: none; }
+    .lab__resultado .consola { margin-top: 0; }
+
+    /* ---------- Cajas ---------- */
+    .cajas--fila { gap: var(--esp-2) 2.6rem; padding: var(--esp-3) 0 0; }
+    .lab .cajas--fila { padding: var(--esp-2) 0 0; }
+    .cajas--fila .caja { gap: var(--esp-1); }
+    .cajas--fila .caja__cuerpo { width: 5.4rem; height: 3.4rem; padding-bottom: var(--esp-2); }
+    .cajas--fila .caja__valor { max-width: 5rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-md); }
+    /* La caja que Python busca y no encuentra */
+    .caja--falta .caja__cuerpo { border-color: var(--color-error); border-style: dashed; background: linear-gradient(to bottom, transparent 30%, #fdecea 30%); }
+    .caja--falta .caja__cuerpo::before, .caja--falta .caja__cuerpo::after { background: var(--color-error); opacity: 0.55; }
+    .caja--falta .caja__valor { border-color: var(--color-error); border-style: dashed; color: var(--color-error); }
+    .caja--falta .caja__nombre { color: var(--color-error); background: #fdecea; }
+    .caja__aviso { font-size: var(--texto-xs); font-weight: 700; line-height: 1.2; color: var(--color-error); }
+    .caja--sacude { animation: sacudir 420ms ease; }
+    .caja[hidden] { display: none; }
+
+    /* ---------- Checklist de partes y orden ---------- */
+    .marcas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .marcas li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .marcas li::before { content: ""; flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .marcas--orden { counter-reset: orden; }
+    .marcas--orden li { counter-increment: orden; }
+    .marcas--orden li::before { content: counter(orden); color: var(--color-texto-suave); }
+    .marcas li.marca--actual { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .marcas li.marca--actual::before { border-color: var(--color-azul); color: var(--color-azul); }
+    .marcas li.marca--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .marcas li.marca--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+    @media (min-width: 1024px) {
+      .marcas--fila { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .marcas--fila li { padding: var(--esp-2); font-size: var(--texto-xs); }
+      .marcas--fila small { display: none; }
+    }
+    .cajas--fijas { min-height: 6.6rem; align-content: flex-start; }
+    .lab__visual--cajas .cajas--fila { padding: 0; }
+    @media (min-width: 1024px) {
+      .paso .lab__visual--cajas { padding-block: var(--esp-3) var(--esp-2); }
+    }
+    .marcas small { margin-left: auto; font-weight: 400; color: var(--color-texto-suave); }
+    .marcas li.marca--hecha small { color: var(--color-ok); }
+    .marca-carets { border-radius: 3px; transition: background-color var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .traceback__marca.marca--resaltada .marca-carets { background: #ffe58f; box-shadow: 0 0 0 3px #ffe58f; color: #5c2a00; }
+    .codigo .pieza--senalada { animation: pieza-senala 900ms ease 2; border-radius: 3px; }
+    @keyframes pieza-senala { 50% { background: rgba(255, 212, 121, 0.4); } }
+    .traceback .traceback__traduccion--nueva { animation: aparecer var(--dur) ease; }
+
+    /* ---------- ¿Qué queda en la consola? ---------- */
+    .opciones--salida { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .opciones--salida .opcion span { height: 100%; padding: var(--esp-3); white-space: pre-line; font-size: var(--texto-md); line-height: 1.45; }
+    .opciones--salida .opcion span.op-vacia { display: grid; place-items: center; font-family: var(--fuente); font-style: italic; font-weight: 600; }
+
+    /* ---------- Escribir un nombre ---------- */
+    .escribir { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin-top: var(--esp-4); }
+    .escribir__linea { display: flex; align-items: center; gap: 0.15em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; }
+    .escribir input { width: 9.5rem; font: inherit; font-weight: 600; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .escribir input:focus-visible { outline: none; border-color: var(--color-azul); box-shadow: var(--foco); }
+    .escribir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .sugerencias { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .sugerencias button { margin: 0.15rem; padding: 0.1rem 0.6rem; border: 1px solid var(--color-borde); border-radius: 999px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto); cursor: pointer; }
+    .sugerencias button:hover { border-color: #b8c0ca; }
+    .sugerencias button:focus-visible { outline: none; box-shadow: var(--foco); }
+
+    /* ---------- Predicciones ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); }
+    .predicciones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-3); align-items: start; }
+    @media (min-width: 1024px) {
+      .predicciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .prediccion { display: grid; gap: var(--esp-2); align-content: start; padding: var(--esp-3); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .codigo--mini { padding: var(--esp-2) 0; font-size: 0.95rem; line-height: 1.6; }
+    .prediccion .feedback { margin-top: 0; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion .elegir { justify-content: flex-start; gap: var(--esp-2); }
+    .prediccion .elegir .btn { min-height: 2.25rem; padding: var(--esp-1) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion__salida { margin: 0; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-xs); overflow-wrap: anywhere; }
+    .prediccion__salida--error { color: var(--color-error); }
+    .prediccion__salida:empty { display: none; }
+
+    /* ---------- ¿Por qué no existe? ---------- */
+    .contador-msj { margin: 0 0 var(--esp-3); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .causas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin-top: var(--esp-4); }
+    .causas .btn { min-height: 3rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); line-height: 1.25; }
+    .causas .btn.causa--ok { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .causas .btn.causa--mal { border-color: var(--color-pista); color: var(--color-pista); animation: sacudir 360ms ease; }
+    .pregunta { margin: var(--esp-4) 0 0; font-weight: 700; text-align: center; }
+
+    /* ---------- Reto ---------- */
+    .arreglo { margin-top: var(--esp-4); }
+    .arreglo .opciones { margin: var(--esp-2) 0 0; grid-template-columns: 1fr; gap: var(--esp-2); }
+    .arreglo .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); text-align: left; }
+    .arreglo legend { margin-bottom: var(--esp-2); padding: 0; font-weight: 700; }
+    .arreglo legend code { font-size: 0.95em; }
+    @media (min-width: 1024px) {
+      .arreglo { margin-top: var(--esp-3); }
+      .arreglo .opcion span { padding: 0.3rem var(--esp-3); }
+      .arreglo legend { margin-bottom: var(--esp-1); }
+    }
+    @media (min-width: 1024px) {
+      .reto-abajo { display: none; }
+      /* Un cuarto grupo (.lab__arreglo): en el móvil va después del mensaje; aquí, bajo el código */
+      #paso-reto, #paso-causa { grid-template-rows: auto auto 1fr; grid-template-areas: "intro resultado" "principal resultado" "arreglo resultado"; }
+      .lab__arreglo { grid-area: arreglo; min-width: 0; }
+      #paso-reto .lab__arreglo > .arreglo, #paso-causa .lab__arreglo > .pregunta { margin-top: var(--esp-4); }
+    }
+    .codigo .linea--cambiada { animation: linea-cambiada 900ms ease; }
+    @keyframes linea-cambiada { 30% { background: rgba(110, 231, 160, 0.28); } }
+
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual, .lab__principal + .lab__resultado { margin-top: var(--esp-4); }
+      .lab__arreglo > .pregunta:first-child { margin-top: var(--esp-5); }
+      .lab__visual + .lab__resultado { margin-top: var(--esp-2); }
+    }
+    @media (max-width: 480px) {
+      .cajas--fila .caja__cuerpo { width: 4.4rem; height: 3.4rem; }
+      .cajas--fila .caja__valor { font-size: var(--texto-md); }
+      .opciones--salida { gap: var(--esp-2); }
+      .opciones--salida .opcion span { padding: var(--esp-2); font-size: var(--texto-sm); }
+      .causas { grid-template-columns: 1fr; }
+      .escribir__linea { font-size: var(--texto-md); }
+      .escribir input { width: 8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="errores">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. El programa corre hasta la línea que falla -->
+    <section class="paso" id="paso-corre" data-requiere aria-labelledby="h-corre">
+      <span class="paso__etiqueta">Errores 1/7 · Leer un mensaje de error</span>
+      <h1 class="paso__titulo" id="h-corre">Hasta aquí llegó</h1>
+      <p>Este programa tiene un error escondido. Ejecútalo y mira la consola.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="s1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="s1-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual lab__visual--cajas">
+          <div class="cajas cajas--fila cajas--fijas" id="s1-cajas" aria-label="Variables"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="s1-error" aria-live="polite"></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Lo de antes queda, lo de abajo no se ejecuta -->
+    <section class="paso" id="paso-consola" data-comprobar aria-labelledby="h-consola">
+      <h2 class="paso__titulo" id="h-consola">¿Qué queda en la consola?</h2>
+      <p>La línea 3 tiene un error: <code>tres</code> no existe. ¿Qué se ve en la consola cuando el programa termina?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Código"></pre>
+          <fieldset class="opciones opciones--salida" id="s2-opciones">
+            <legend class="visualmente-oculto">Lo que queda en la consola</legend>
+            <label class="opcion"><input type="radio" name="s2" value="todo"><span>Uno
+Dos
+Cuatro</span></label>
+            <label class="opcion"><input type="radio" name="s2" value="nada"><span class="op-vacia">(sin salida)</span></label>
+            <label class="opcion"><input type="radio" name="s2" value="dos"><span>Uno
+Dos</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="s2-error" aria-live="polite"></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Las partes del mensaje -->
+    <section class="paso" id="paso-partes" data-requiere aria-labelledby="h-partes">
+      <h2 class="paso__titulo" id="h-partes">Las partes del mensaje</h2>
+      <p>El mensaje de Python no es un castigo: te dice <strong>dónde mirar</strong>. Toca cada parte del mensaje para ver qué dice. Empieza por abajo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Código"></pre>
+          <ul class="marcas marcas--fila" id="s3-marcas" aria-label="Partes que encontraste">
+            <li data-marca="paso">Qué pasó <small>abajo del todo</small></li>
+            <li data-marca="linea">En qué línea <small>line …</small></li>
+            <li data-marca="pedazo">Qué pedazo <small>los ^^^</small></li>
+          </ul>
+          <p class="explicacion" id="s3-explicacion" aria-live="polite">Toca una parte del mensaje.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="s3-error"></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. De abajo arriba, en orden -->
+    <section class="paso" id="paso-orden" data-requiere aria-labelledby="h-orden">
+      <h2 class="paso__titulo" id="h-orden">De abajo arriba</h2>
+      <p>Otro programa, otro mensaje, ahora sin rótulos. Léelo como un programador: toca, <strong>en orden</strong>, las tres partes.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"></pre>
+          <div class="cajas cajas--fila" id="s4-cajas" aria-label="Variables"></div>
+          <ol class="marcas marcas--orden marcas--fila" id="s4-orden" aria-label="Orden para leer el mensaje">
+            <li>Qué pasó</li>
+            <li>En qué línea</li>
+            <li>Qué pedazo</li>
+          </ol>
+          <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="s4-error"></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Did you mean: Python sugiere un nombre parecido -->
+    <section class="paso" id="paso-sugiere" data-requiere aria-labelledby="h-sugiere">
+      <h2 class="paso__titulo" id="h-sugiere">¿Quisiste decir…?</h2>
+      <p>Escribe un nombre dentro del <code>print</code> y ejecútalo. Cumple las tres misiones.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Código"></pre>
+          <div class="cajas cajas--fila" id="s5-cajas" aria-label="Variables"></div>
+          <div class="escribir">
+            <span class="escribir__linea">
+              <span aria-hidden="true">print(</span>
+              <input type="text" id="s5-nombre" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Lo que va dentro de print( )">
+              <span aria-hidden="true">)</span>
+            </span>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">▶ Ejecutar</button>
+          </div>
+          <p class="sugerencias" id="s5-ideas">Ideas: <button type="button">nombre</button><button type="button">nmbre</button><button type="button">Nota</button><button type="button">apellido</button></p>
+          <ul class="marcas marcas--fila" id="s5-misiones" aria-label="Misiones">
+            <li data-marca="existe">Un nombre que existe</li>
+            <li data-marca="sugiere">Uno mal escrito</li>
+            <li data-marca="nada">Uno que no se parece a nada</li>
+          </ul>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="s5-error" aria-live="polite"></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. ¿Dónde se corta? -->
+    <section class="paso" id="paso-donde" data-requiere aria-labelledby="h-donde">
+      <h2 class="paso__titulo" id="h-donde">¿Dónde se corta?</h2>
+      <p>Tres programas tienen un <code>NameError</code> y uno funciona. Para cada uno: ¿funciona o en qué línea se corta?</p>
+
+      <div class="tarjeta">
+        <ol class="predicciones" id="s6-predicciones"></ol>
+        <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 7. ¿Por qué no existe? -->
+    <section class="paso" id="paso-causa" data-requiere aria-labelledby="h-causa">
+      <h2 class="paso__titulo" id="h-causa">¿Por qué no existe?</h2>
+      <p>Un <code>NameError</code> puede venir de cuatro descuidos. Lee el mensaje, mira la línea que señala y elige la causa.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="contador-msj" id="s7-contador" aria-live="polite">Mensaje 1 de 4</p>
+          <pre class="codigo" id="s7-codigo" aria-label="Código"></pre>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="s7-error"></div>
+        </div>
+        <!-- En el móvil, la pregunta va después del mensaje; en escritorio, bajo el código -->
+        <div class="lab__arreglo">
+          <p class="pregunta" id="s7-pregunta">¿Por qué Python no encuentra ese nombre?</p>
+          <div class="causas" id="s7-causas" role="group" aria-labelledby="s7-pregunta">
+            <button type="button" class="btn btn-secundario" data-causa="mal">Nombre mal escrito</button>
+            <button type="button" class="btn btn-secundario" data-causa="mayus">Una mayúscula de más</button>
+            <button type="button" class="btn btn-secundario" data-causa="comillas">Le faltan las comillas</button>
+            <button type="button" class="btn btn-secundario" data-causa="antes">Se usa antes de crearla</button>
+          </div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="s7-seguir" hidden>
+            <button type="button" class="btn btn-secundario" id="s7-siguiente">Siguiente mensaje →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto: arreglar hasta que funcione -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">Arréglalo hasta que funcione</h2>
+      <p>Este programa debe imprimir <code>Alumno: Luis</code> y <code>Aprobado</code>. Ejecútalo, lee el mensaje y elige el arreglo. Repite hasta que funcione.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Código"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="reto-otra" hidden>↺ Empezar de nuevo</button>
+            <button type="button" class="btn btn-secundario" id="reto-ejecutar">▶ Ejecutar</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="error-zona" id="reto-error" aria-live="polite"></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+        <!-- En el móvil, los arreglos van después del mensaje; en escritorio, bajo el código -->
+        <div class="lab__arreglo">
+          <div class="arreglo" id="reto-arreglo3" hidden>
+            <fieldset class="opciones opciones--codigo">
+              <legend>Cambia la línea 3 por:</legend>
+              <label class="opcion"><input type="radio" name="reto-l3" value="may"><span>print("Alumno:", Nombre)</span></label>
+              <label class="opcion"><input type="radio" name="reto-l3" value="com"><span>print("Alumno:", "nmbre")</span></label>
+              <label class="opcion"><input type="radio" name="reto-l3" value="ok"><span>print("Alumno:", nombre)</span></label>
+            </fieldset>
+          </div>
+          <div class="arreglo" id="reto-arreglo5" hidden>
+            <fieldset class="opciones opciones--codigo">
+              <legend>Cambia la línea 5 por:</legend>
+              <label class="opcion"><input type="radio" name="reto-l5" value="com"><span>print(Aprobado)</span></label>
+              <label class="opcion"><input type="radio" name="reto-l5" value="ok"><span>print("Aprobado")</span></label>
+              <label class="opcion"><input type="radio" name="reto-l5" value="may"><span>PRINT("Aprobado")</span></label>
+            </fieldset>
+          </div>
+          <div class="fila-botones reto-abajo" id="reto-abajo" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-ejecutar2">▶ Ejecutar otra vez</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Un error no es un castigo: el programa se detiene en la línea que falla, y el mensaje, leído de abajo arriba, te dice qué pasó, en qué línea y qué pedazo.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="sintaxis/index.html">Siguiente: Errores al escribir →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/caja.js"></script>
+<script src="../../assets/js/traza.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/mensaje-error.js"></script>
+<script src="../../assets/js/opciones-codigo.js"></script>
+<script src="../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function esc(t) { return Python.escapar(t); }
+
+  // Temporizadores de un paso, para cortarlos al reiniciar
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) { ids.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  /* Lo que imprime print: la línea sale volando desde donde se indique (o desde la línea activa) */
+  function imprimir(consola, texto, desde, pre) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+    else if (pre) Codigo.volarDesdeLinea(pre, linea, texto, "vuelo--salida");
+  }
+
+  /* Una caja de variable; con falta, la caja que Python busca y no existe */
+  function nuevaCaja(nombre, falta) {
+    var caja = document.createElement("div");
+    caja.className = "caja" + (falta ? " caja--falta" : "");
+    caja.innerHTML = '<div class="caja__cuerpo"><span class="caja__valor' + (falta ? "" : " caja__valor--vacia") + '">' +
+      (falta ? "?" : "") + '</span></div><code class="caja__nombre"></code>' +
+      (falta ? '<span class="caja__aviso">' + falta + "</span>" : "");
+    caja.querySelector(".caja__nombre").textContent = nombre;
+    return caja;
+  }
+
+  function sacudir(el, clase) {
+    clase = clase || "caja--sacude";
+    el.classList.remove(clase);
+    void el.offsetWidth;
+    el.classList.add(clase);
+  }
+
+  function valorDe(caja) { return caja.querySelector(".caja__valor:not(.caja__valor--saliendo)"); }
+
+  /* Datos de un NameError, como lo escribe Python */
+  function nameError(nombre, linea, codigo, opciones) {
+    opciones = opciones || {};
+    var sug = opciones.sugerencia || null;
+    var traduccion = "El nombre <code>" + esc(nombre) + "</code> no está definido" +
+      (sug ? ". ¿Quisiste decir <code>" + esc(sug) + "</code>?" : (opciones.explicacion || ": Python no conoce ninguna variable ni función con ese nombre."));
+    return {
+      tipo: "NameError",
+      mensaje: "name '" + nombre + "' is not defined",
+      sugerencia: sug,
+      marcos: [{ linea: linea, codigo: codigo, marca: opciones.marca || nombre }],
+      traduccion: traduccion
+    };
+  }
+
+  /* Pone el mensaje en su zona (después de lo impreso) y lo muestra */
+  function mostrarError(zona, datos, extra) {
+    zona.textContent = "";
+    var o = {};
+    Object.keys(datos).forEach(function (k) { o[k] = datos[k]; });
+    if (extra) Object.keys(extra).forEach(function (k) { o[k] = extra[k]; });
+    var m = MensajeError.crear(zona, o);
+    envolverCarets(m);
+    m.mostrar();
+    return m;
+  }
+
+  /* Los ^^^ del mensaje en su propio span, para iluminarlos sin los espacios de delante */
+  function envolverCarets(m) {
+    var t = m.el.querySelector(".traceback__marca .traceback__texto");
+    if (!t) return;
+    var partes = /^(\s*)(\^+)$/.exec(t.textContent);
+    if (!partes) return;
+    t.textContent = partes[1];
+    var c = document.createElement("span");
+    c.className = "marca-carets";
+    c.textContent = partes[2];
+    t.appendChild(c);
+  }
+
+  /* La línea i del programa se corta: el pedazo marca (o la aparición n de un nombre) */
+  function cortar(pre, i, marca, aparicion) {
+    Codigo.marcar(pre, {});
+    if (!aparicion) { MensajeError.romper(pre, i, { marca: marca }); return; }
+    MensajeError.romper(pre, i, {});
+    var piezas = Array.prototype.filter.call(Python.linea(pre, i).querySelectorAll("span"), function (s) {
+      return s.textContent === marca;
+    });
+    var s = piezas[aparicion];
+    if (!s) return;
+    var envoltura = document.createElement("span");
+    envoltura.className = "pieza--error";
+    s.parentNode.insertBefore(envoltura, s);
+    envoltura.appendChild(s);
+  }
+
+  function marcarHecha(lista, clave) {
+    var li = lista.querySelector('[data-marca="' + clave + '"]');
+    if (li) li.classList.add("marca--hecha");
+  }
+
+  /* ---------- 1. Hasta aquí llegó ---------- */
+  var P1 = ['nombre = "Ana"', 'print("Hola")', "nota = 17", 'print(nmbre, "sacó", nota)', 'print("Fin")'];
+  var M1 = nameError("nmbre", 4, 'print(nmbre, "sacó", nota)', { sugerencia: "nombre" });
+  Python.escribir($("s1-codigo"), P1);
+  var cajas1 = { nombre: nuevaCaja("nombre"), nota: nuevaCaja("nota"), nmbre: nuevaCaja("nmbre", "no existe") };
+  Object.keys(cajas1).forEach(function (k) { $("s1-cajas").appendChild(cajas1[k]); });
+
+  function trazaCorre() {
+    return [
+      { linea: 0, hacer: "nombre", texto: "Nace la caja <code>nombre</code> con <code>\"Ana\"</code>." },
+      { linea: 1, salida: "Hola", texto: "<code>print</code> muestra Hola en la consola." },
+      { linea: 2, hacer: "nota", texto: "Nace <code>nota</code> con 17." },
+      { linea: 3, hacer: "error", texto: "Python busca una caja llamada <code>nmbre</code>… y no hay ninguna. <strong>El programa se detiene aquí</strong> y deja un mensaje." }
+    ];
+  }
+
+  /* ---------- 2. ¿Qué queda en la consola? ---------- */
+  var P2 = ['print("Uno")', 'print("Dos")', "print(tres)", 'print("Cuatro")'];
+  var M2 = nameError("tres", 3, "print(tres)", { explicacion: ": Python busca una variable llamada <code>tres</code> y no existe. Con comillas, <code>\"tres\"</code> sería un texto." });
+  Python.escribir($("s2-codigo"), P2);
+  var r2 = reloj();
+  var PISTAS2 = {
+    todo: "Casi: «Cuatro» no sale. Cuando la línea 3 falla, el programa se detiene y la línea 4 ya no se ejecuta.",
+    nada: "Las líneas 1 y 2 no tienen nada malo: se ejecutan antes de llegar a la 3, y lo que imprimen se queda en la consola."
+  };
+
+  function limpiar2() {
+    r2.cortar();
+    Codigo.limpiar($("s2-codigo"));
+    Codigo.consola($("s2-consola"), []);
+    $("s2-error").textContent = "";
+    Pasos.limpiarFeedback($("s2-fb"));
+    document.querySelectorAll('#s2-opciones .opcion').forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+  }
+
+  function ejecutar2() {
+    var pre = $("s2-codigo");
+    var consola = $("s2-consola");
+    Codigo.marcar(pre, { activas: [0] });
+    imprimir(consola, "Uno", null, pre);
+    r2.luego(function () { Codigo.marcar(pre, { activas: [1] }); imprimir(consola, "Dos", null, pre); }, 550);
+    r2.luego(function () { Codigo.marcar(pre, { activas: [2] }); }, 1100);
+    r2.luego(function () {
+      cortar(pre, 2, "tres");
+      mostrarError($("s2-error"), M2);
+    }, 1450);
+  }
+
+  function comprobar2() {
+    var r = document.querySelector('input[name="s2"]:checked');
+    if (!r) return false;
+    limpiar2();
+    ejecutar2();
+    var op = r.closest(".opcion");
+    if (r.value === "dos") {
+      op.classList.add("opcion--correcta");
+      Pasos.feedback($("s2-fb"), "ok", "¡Eso! Uno y Dos ya se imprimieron y se quedan. En la línea 3 el programa se detiene, así que Cuatro nunca sale.");
+      return true;
+    }
+    op.classList.add("opcion--incorrecta");
+    Pasos.feedback($("s2-fb"), "pista", PISTAS2[r.value]);
+    return false;
+  }
+
+  /* ---------- 3. Las partes del mensaje ---------- */
+  Python.escribir($("s3-codigo"), P1);
+  var vistos3 = {};
+  var m3 = null;
+  var TEXTOS3 = {
+    tipo: { marca: "paso", html: "<code>NameError</code> es el tipo: un <strong>error de nombre</strong>. Python no conoce un nombre que usaste." },
+    mensaje: { marca: "paso", html: "<code>name 'nmbre' is not defined</code>: el nombre <code>nmbre</code> no está definido. Y <code>Did you mean: 'nombre'?</code>: ¿quisiste decir <code>nombre</code>? Python encontró uno parecido." },
+    linea: { marca: "linea", html: "<code>line 4</code>: el error está en la <strong>línea 4</strong>. Mira: se iluminó en el programa." },
+    codigo: { marca: "pedazo", html: "Python copia la línea que falló, y los <code>^^^^^</code> de debajo señalan el <strong>pedazo exacto</strong>: <code>nmbre</code>." },
+    archivo: { html: "<code>programa.py</code> es el nombre del archivo del programa. Con un solo archivo, siempre es el mismo: puedes saltarlo." }
+  };
+
+  function preparar3() {
+    var pre = $("s3-codigo");
+    cortar(pre, 3, "nmbre");
+    Codigo.consola($("s3-consola"), ["Hola"]);
+    if (!m3) {
+      m3 = MensajeError.crear($("s3-error"), Object.assign({}, M1, { partes: true, codigo: pre, alTocar: tocar3 }));
+      envolverCarets(m3);
+    }
+    m3.mostrar();
+  }
+
+  function tocar3(parte, i) {
+    var datos = TEXTOS3[parte];
+    if (!datos) return;
+    m3.resaltar(parte, i);
+    var marcaRenglon = m3.el.querySelector(".traceback__marca");
+    if (marcaRenglon) marcaRenglon.classList.toggle("marca--resaltada", parte === "codigo");
+    if (parte === "codigo") {
+      var pieza = $("s3-codigo").querySelector(".pieza--error");
+      if (pieza) sacudir(pieza, "pieza--senalada");
+    }
+    $("s3-explicacion").innerHTML = datos.html;
+    if (!datos.marca) return;
+    vistos3[datos.marca] = true;
+    marcarHecha($("s3-marcas"), datos.marca);
+    var faltan = ["paso", "linea", "pedazo"].filter(function (k) { return !vistos3[k]; });
+    if (!faltan.length) {
+      Pasos.feedback($("s3-fb"), "ok", "Así se lee: abajo, qué pasó; arriba, en qué línea y qué pedazo. La primera línea, «Traceback (most recent call last):», solo avisa que empieza el mensaje.");
+      leccion.desbloquear();
+    }
+  }
+
+  /* ---------- 4. De abajo arriba ---------- */
+  var P4 = ["nota = 15", 'print("Empezamos")', "total = nota + bonus", "bonus = 2", "print(total)"];
+  Python.escribir($("s4-codigo"), P4);
+  var M4 = nameError("bonus", 3, "total = nota + bonus");
+  delete M4.traduccion;
+  var cajas4 = { nota: nuevaCaja("nota"), bonus: nuevaCaja("bonus", "todavía no existe") };
+  $("s4-cajas").appendChild(cajas4.nota);
+  $("s4-cajas").appendChild(cajas4.bonus);
+  var m4 = null;
+  var paso4 = 0;
+  var ORDEN4 = [["tipo", "mensaje"], ["linea"], ["codigo"]];
+  var TEXTOS4 = [
+    "1. <code>NameError: name 'bonus' is not defined</code>: el nombre <code>bonus</code> no existe.",
+    "2. <code>line 3</code>: en la línea 3, <code>total = nota + bonus</code>.",
+    "3. Los <code>^^^^^</code> señalan <code>bonus</code>: ese es el pedazo."
+  ];
+  var CONSIGNAS4 = [
+    "Primero, <strong>qué pasó</strong>.",
+    "Ahora, <strong>en qué línea</strong>.",
+    "Por último, <strong>qué pedazo</strong>."
+  ];
+
+  function pista4(parte) {
+    if (paso4 === 0) {
+      if (parte === "linea") return "Eso dice en qué línea: va después. Primero, qué pasó: es la última línea, abajo del todo.";
+      if (parte === "codigo") return "Esa es la línea copiada: va después. Primero, qué pasó: abajo del todo.";
+      return "Eso es el nombre del archivo. Qué pasó está abajo del todo.";
+    }
+    if (paso4 === 1) {
+      if (parte === "codigo") return "Esa es la línea copiada, pero ¿qué número de línea es? Busca «line …» un poco más arriba.";
+      if (parte === "archivo") return "Eso es el nombre del archivo. El número de línea está en el mismo renglón: «line …».";
+      return "Qué pasó ya lo tienes. Ahora sube un poco: ¿en qué línea?";
+    }
+    if (parte === "archivo") return "Eso es el nombre del archivo. El pedazo es la línea copiada, la que tiene los ^^^ debajo.";
+    return "Eso ya lo leíste. Falta qué pedazo: la línea copiada, con los ^^^ debajo.";
+  }
+
+  function pintarOrden4() {
+    $("s4-orden").querySelectorAll("li").forEach(function (li, k) {
+      li.classList.toggle("marca--hecha", k < paso4);
+      li.classList.toggle("marca--actual", k === paso4);
+    });
+  }
+
+  function preparar4() {
+    var pre = $("s4-codigo");
+    cortar(pre, 2, "bonus");
+    Codigo.consola($("s4-consola"), ["Empezamos"]);
+    if (!m4) {
+      m4 = MensajeError.crear($("s4-error"), Object.assign({}, M4, { codigo: pre, alTocar: tocar4 }));
+      envolverCarets(m4);
+      Caja.actualizar(cajas4.nota, 15);
+    }
+    m4.mostrar();
+    pintarOrden4();
+    if (paso4 < 3) $("s4-explicacion").innerHTML = CONSIGNAS4[paso4];
+  }
+
+  function tocar4(parte, i) {
+    if (paso4 >= 3) { m4.resaltar(parte, i); return; }
+    var fb = $("s4-fb");
+    if (ORDEN4[paso4].indexOf(parte) === -1) {
+      m4.marcar(parte, "mal", i);
+      Pasos.feedback(fb, "pista", pista4(parte));
+      return;
+    }
+    Pasos.limpiarFeedback(fb);
+    ORDEN4[paso4].forEach(function (p) { m4.marcar(p, "ok"); });
+    m4.resaltar(parte, i);
+    var hecho = TEXTOS4[paso4];
+    paso4++;
+    pintarOrden4();
+    $("s4-explicacion").innerHTML = hecho + (paso4 < 3 ? " " + CONSIGNAS4[paso4] : "");
+    if (paso4 < 3) return;
+    var trad = document.createElement("p");
+    trad.className = "traceback__traduccion traceback__traduccion--nueva";
+    trad.innerHTML = '<span class="traceback__es">En español</span> El nombre <code>bonus</code> no está definido: cuando Python llega a la línea 3, <code>bonus</code> todavía no existe.';
+    m4.el.appendChild(trad);
+    sacudir(cajas4.bonus);
+    Pasos.feedback(fb, "ok", "¡En orden! bonus nace en la línea 4, pero la 3 ya lo usa: cuando Python llega ahí, esa caja todavía no existe. El arreglo: crearla antes.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 5. ¿Quisiste decir…? ---------- */
+  // Los nombres que Python conoce en este programa (como en Python 3.12 y 3.13)
+  var GLOBALES = ["__name__", "__doc__", "__package__", "__loader__", "__spec__", "__annotations__", "__builtins__", "__file__", "__cached__", "nombre", "nota"];
+  var INTERNOS = ["__name__", "__doc__", "__package__", "__loader__", "__spec__", "__build_class__", "__import__", "abs", "all", "any", "ascii", "bin", "breakpoint", "callable", "chr", "compile", "delattr", "dir", "divmod", "eval", "exec", "format", "getattr", "globals", "hasattr", "hash", "hex", "id", "input", "isinstance", "issubclass", "iter", "aiter", "len", "locals", "max", "min", "next", "anext", "oct", "ord", "pow", "print", "repr", "round", "setattr", "sorted", "sum", "vars", "None", "Ellipsis", "NotImplemented", "False", "True", "bool", "memoryview", "bytearray", "bytes", "classmethod", "complex", "dict", "enumerate", "filter", "float", "frozenset", "property", "int", "list", "map", "object", "range", "reversed", "set", "slice", "staticmethod", "str", "super", "tuple", "type", "zip", "__debug__", "BaseException", "BaseExceptionGroup", "Exception", "GeneratorExit", "KeyboardInterrupt", "SystemExit", "ArithmeticError", "AssertionError", "AttributeError", "BufferError", "EOFError", "ImportError", "LookupError", "MemoryError", "NameError", "OSError", "ReferenceError", "RuntimeError", "StopAsyncIteration", "StopIteration", "SyntaxError", "SystemError", "TypeError", "ValueError", "Warning", "FloatingPointError", "OverflowError", "ZeroDivisionError", "BytesWarning", "DeprecationWarning", "EncodingWarning", "FutureWarning", "ImportWarning", "PendingDeprecationWarning", "ResourceWarning", "RuntimeWarning", "SyntaxWarning", "UnicodeWarning", "UserWarning", "BlockingIOError", "ChildProcessError", "ConnectionError", "FileExistsError", "FileNotFoundError", "InterruptedError", "IsADirectoryError", "NotADirectoryError", "PermissionError", "ProcessLookupError", "TimeoutError", "IndentationError", "IndexError", "KeyError", "ModuleNotFoundError", "NotImplementedError", "RecursionError", "UnboundLocalError", "UnicodeError", "BrokenPipeError", "ConnectionAbortedError", "ConnectionRefusedError", "ConnectionResetError", "TabError", "UnicodeDecodeError", "UnicodeEncodeError", "UnicodeTranslateError", "ExceptionGroup", "EnvironmentError", "IOError", "open", "quit", "exit", "copyright", "credits", "license", "help"];
+  var MODULOS = ["abc", "antigravity", "argparse", "array", "ast", "asyncio", "atexit", "base64", "bdb", "binascii", "bisect", "builtins", "bz2", "cProfile", "calendar", "cmath", "cmd", "code", "codecs", "codeop", "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib", "contextvars", "copy", "copyreg", "csv", "ctypes", "curses", "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "doctest", "email", "encodings", "ensurepip", "enum", "errno", "faulthandler", "fcntl", "filecmp", "fileinput", "fnmatch", "fractions", "ftplib", "functools", "gc", "genericpath", "getopt", "getpass", "gettext", "glob", "graphlib", "grp", "gzip", "hashlib", "heapq", "hmac", "html", "http", "idlelib", "imaplib", "importlib", "inspect", "io", "ipaddress", "itertools", "json", "keyword", "linecache", "locale", "logging", "lzma", "mailbox", "marshal", "math", "mimetypes", "mmap", "modulefinder", "msvcrt", "multiprocessing", "netrc", "nt", "ntpath", "nturl2path", "numbers", "opcode", "operator", "optparse", "os", "pathlib", "pdb", "pickle", "pickletools", "pkgutil", "platform", "plistlib", "poplib", "posix", "posixpath", "pprint", "profile", "pstats", "pty", "pwd", "py_compile", "pyclbr", "pydoc", "pydoc_data", "pyexpat", "queue", "quopri", "random", "re", "readline", "reprlib", "resource", "rlcompleter", "runpy", "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal", "site", "smtplib", "socket", "socketserver", "sqlite3", "sre_compile", "sre_constants", "sre_parse", "ssl", "stat", "statistics", "string", "stringprep", "struct", "subprocess", "symtable", "sys", "sysconfig", "syslog", "tabnanny", "tarfile", "tempfile", "termios", "textwrap", "this", "threading", "time", "timeit", "tkinter", "token", "tokenize", "tomllib", "trace", "traceback", "tracemalloc", "tty", "turtle", "turtledemo", "types", "typing", "unicodedata", "unittest", "urllib", "uuid", "venv", "warnings", "wave", "weakref", "webbrowser", "winreg", "winsound", "wsgiref", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib", "zoneinfo"];
+  var FUNCIONES = ["abs", "all", "any", "ascii", "bin", "breakpoint", "callable", "chr", "compile", "delattr", "dir", "divmod", "eval", "exec", "format", "getattr", "globals", "hasattr", "hash", "hex", "id", "input", "isinstance", "issubclass", "iter", "aiter", "len", "locals", "max", "min", "next", "anext", "oct", "ord", "pow", "print", "repr", "round", "setattr", "sorted", "sum", "vars"];
+  var CLASES = ["bool", "memoryview", "bytearray", "bytes", "classmethod", "complex", "dict", "enumerate", "filter", "float", "frozenset", "property", "int", "list", "map", "object", "range", "reversed", "set", "slice", "staticmethod", "str", "super", "tuple", "type", "zip"];
+  var PALABRAS = ["and", "as", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield"];
+  var VALORES5 = { nombre: "Ana", nota: "17" };
+
+  // El «Did you mean» de Python: el nombre conocido más parecido (distancia de edición en la que
+  // cambiar una letra cuesta 2 y cambiar solo la mayúscula, 1), como Python/suggestions.c
+  var MOVER = 2, MAYUS = 1, MAX_LARGO = 40;
+  function costo(a, b) { if (a === b) return 0; if (a.toLowerCase() === b.toLowerCase()) return MAYUS; return MOVER; }
+  function distancia(a, b, max) {
+    if (a === b) return 0;
+    var pre = 0;
+    while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++;
+    a = a.slice(pre); b = b.slice(pre);
+    var post = 0;
+    while (post < a.length && post < b.length && a[a.length - 1 - post] === b[b.length - 1 - post]) post++;
+    a = a.slice(0, a.length - post); b = b.slice(0, b.length - post);
+    if (!a.length || !b.length) return MOVER * (a.length + b.length);
+    if (a.length > MAX_LARGO || b.length > MAX_LARGO) return max + 1;
+    if (b.length < a.length) { var t = a; a = b; b = t; }
+    if ((b.length - a.length) * MOVER > max) return max + 1;
+    var fila = [];
+    for (var k = 0; k < a.length; k++) fila.push((k + 1) * MOVER);
+    var resultado = 0;
+    for (var bi = 0; bi < b.length; bi++) {
+      var dist = resultado = bi * MOVER;
+      var minimo = Infinity;
+      for (var i = 0; i < a.length; i++) {
+        var sust = dist + costo(b[bi], a[i]);
+        dist = fila[i];
+        resultado = Math.min(Math.min(resultado, dist) + MOVER, sust);
+        fila[i] = resultado;
+        if (resultado < minimo) minimo = resultado;
+      }
+      if (minimo > max) return max + 1;
+    }
+    return resultado;
+  }
+  function sugerir(mal) {
+    if (mal.length > MAX_LARGO) return null;
+    var mejor = Infinity, sug = null;
+    GLOBALES.concat(INTERNOS).forEach(function (c) {
+      if (c === mal) return;
+      var max = Math.min(Math.floor((c.length + mal.length + 3) * MOVER / 6), mejor - 1);
+      var d = distancia(mal, c, max);
+      if (d > max) return;
+      if (!sug || d < mejor) { sug = c; mejor = d; }
+    });
+    return sug;
+  }
+
+  // Qué hace print(texto) en este programa
+  function evaluar(texto) {
+    if (!texto) return { pista: "Escribe algo entre los paréntesis: un nombre, un número o un texto entre comillas." };
+    if (/^"[^"\\]*"$|^'[^'\\]*'$/.test(texto)) return { salida: texto.slice(1, -1), tipo: "texto" };
+    if (/^-?(0|[1-9]\d*)$/.test(texto)) return { salida: String(Number(texto)), tipo: "numero" };
+    if (!/^[\p{L}_][\p{L}\p{N}_]*$/u.test(texto)) {
+      return { pista: "Escribe un solo nombre (como nombre), un número o un texto entre comillas, sin espacios ni signos." };
+    }
+    if (PALABRAS.indexOf(texto) !== -1) {
+      return { pista: texto + " es una palabra reservada de Python: no puede ser el nombre de una variable (sería otro error, de escritura). Prueba con otro." };
+    }
+    if (VALORES5[texto] !== undefined) return { salida: VALORES5[texto], tipo: "existe" };
+    if (texto === "True" || texto === "False" || texto === "None") return { salida: texto, tipo: "python" };
+    if (FUNCIONES.indexOf(texto) !== -1) return { salida: "<built-in function " + texto + ">", tipo: "python" };
+    if (CLASES.indexOf(texto) !== -1 || (/^[A-Z]/.test(texto) && INTERNOS.indexOf(texto) !== -1 && texto !== "Ellipsis" && texto !== "NotImplemented")) {
+      return { salida: "<class '" + texto + "'>", tipo: "python" };
+    }
+    if (GLOBALES.indexOf(texto) !== -1 || INTERNOS.indexOf(texto) !== -1) {
+      return { pista: texto + " es un nombre que Python ya trae, no una variable tuya. Prueba con otro." };
+    }
+    var sug = sugerir(texto);
+    var modulo = MODULOS.indexOf(texto) !== -1;
+    var mensaje = "name '" + texto + "' is not defined";
+    if (sug) mensaje += ". Did you mean: '" + sug + "'?";
+    if (modulo) mensaje += sug ? " Or did you forget to import '" + texto + "'?" : ". Did you forget to import '" + texto + "'?";
+    var traduccion = "El nombre <code>" + esc(texto) + "</code> no está definido" +
+      (sug ? ". ¿Quisiste decir <code>" + esc(sug) + "</code>?" : "") +
+      (modulo ? (sug ? " ¿O olvidaste" : ". ¿Olvidaste") + " traerlo con <code>import " + esc(texto) + "</code>?" : "") +
+      (!sug && !modulo ? ": no se parece a ningún nombre que Python conozca." : "");
+    return {
+      tipo: sug ? "sugiere" : (modulo ? "modulo" : "nada"),
+      sugerencia: sug,
+      error: {
+        tipo: "NameError",
+        mensaje: mensaje,
+        marcos: [{ linea: 3, codigo: "print(" + texto + ")", marca: texto }],
+        traduccion: traduccion
+      }
+    };
+  }
+
+  var cajas5 = { nombre: nuevaCaja("nombre"), nota: nuevaCaja("nota") };
+  $("s5-cajas").appendChild(cajas5.nombre);
+  $("s5-cajas").appendChild(cajas5.nota);
+  var misiones5 = {};
+  var r5 = reloj();
+  var NOMBRES_MISION5 = { existe: "un nombre que existe", sugiere: "uno mal escrito (Python te sugiere el bueno)", nada: "uno que no se parece a nada" };
+
+  function escribir5(texto) {
+    Python.escribir($("s5-codigo"), ['nombre = "Ana"', "nota = 17", "print(" + (texto === null ? "▢" : texto) + ")"]);
+  }
+
+  function preparar5() {
+    r5.cortar();
+    if (!valorDe(cajas5.nombre).textContent) {
+      Caja.actualizar(cajas5.nombre, '"Ana"');
+      Caja.actualizar(cajas5.nota, 17);
+    }
+  }
+
+  function ejecutar5() {
+    var entrada = $("s5-nombre");
+    var texto = entrada.value.trim();
+    var res = evaluar(texto);
+    var fb = $("s5-fb");
+    if (res.pista) {
+      entrada.setAttribute("aria-invalid", "true");
+      Pasos.feedback(fb, "pista", res.pista);
+      return;
+    }
+    entrada.removeAttribute("aria-invalid");
+    r5.cortar();
+    var pre = $("s5-codigo");
+    escribir5(texto);
+    Codigo.consola($("s5-consola"), []);
+    $("s5-error").textContent = "";
+    Pasos.limpiarFeedback(fb);
+    Object.keys(cajas5).forEach(function (k) { cajas5[k].classList.remove("caja--resaltada"); });
+    $("s5-ejecutar").disabled = true;
+    Codigo.marcar(pre, { activas: [0] });
+    r5.luego(function () { Codigo.marcar(pre, { activas: [1] }); }, 200);
+    r5.luego(function () { Codigo.marcar(pre, { activas: [2] }); }, 400);
+    r5.luego(function () {
+      $("s5-ejecutar").disabled = false;
+      if (res.error) {
+        cortar(pre, 2, texto);
+        mostrarError($("s5-error"), res.error);
+        if (cajas5[res.sugerencia]) cajas5[res.sugerencia].classList.add("caja--resaltada");
+      } else {
+        var desde = cajas5[texto] ? valorDe(cajas5[texto]) : null;
+        imprimir($("s5-consola"), res.salida, desde, pre);
+      }
+      responder5(texto, res);
+    }, 650);
+  }
+
+  function responder5(texto, res) {
+    var textos = {
+      existe: texto + " existe: print muestra lo que guarda su caja.",
+      sugiere: texto + " no existe, pero se parece a " + res.sugerencia + (cajas5[res.sugerencia] ? "" : ", que Python ya trae") + ": te lo sugiere en la última línea, «Did you mean».",
+      nada: texto + " no existe y no se parece a ningún nombre conocido: Python no puede sugerirte nada.",
+      modulo: texto + " es un módulo de Python: el mensaje te recuerda que hay que traerlo con import.",
+      texto: "Entre comillas es un texto: se imprime tal cual, sin buscar ninguna caja.",
+      numero: "Un número se imprime tal cual, sin buscar ninguna caja.",
+      python: texto + " ya viene con Python: existe, así que no hay error. print te muestra qué es."
+    };
+    var nueva = (res.tipo === "existe" || res.tipo === "sugiere" || res.tipo === "nada") && !misiones5[res.tipo];
+    if (NOMBRES_MISION5[res.tipo]) {
+      misiones5[res.tipo] = true;
+      marcarHecha($("s5-misiones"), res.tipo);
+    }
+    var faltan = Object.keys(NOMBRES_MISION5).filter(function (k) { return !misiones5[k]; });
+    var fb = $("s5-fb");
+    if (!faltan.length) {
+      Pasos.feedback(fb, "ok", nueva ? "¡Las tres misiones! Si un nombre está mal escrito, la última línea del mensaje muchas veces ya trae el arreglo." : textos[res.tipo]);
+      if (nueva) leccion.desbloquear();
+      return;
+    }
+    Pasos.feedback(fb, nueva ? "ok" : "pista", textos[res.tipo] + " Te falta: " + faltan.map(function (k) { return NOMBRES_MISION5[k]; }).join(" y ") + ".");
+  }
+
+  /* ---------- 6. ¿Dónde se corta? ---------- */
+  var PRED6 = [
+    {
+      codigo: ['print("Hola")', 'Print("Chau")'], correcta: "Línea 2",
+      error: { linea: 1, marca: "Print", texto: "NameError: name 'Print' is not defined. Did you mean: 'print'?" },
+      ok: "Print con mayúscula no existe: Python distingue mayúsculas de minúsculas. «Hola» sí alcanzó a salir.",
+      pistas: { "Funciona": "Mira las mayúsculas: ¿print y Print son el mismo nombre para Python?", "Línea 1": "La línea 1 está bien escrita. Mira la 2 letra por letra." }
+    },
+    {
+      codigo: ["print(edad)", "edad = 12"], correcta: "Línea 1",
+      error: { linea: 0, marca: "edad", texto: "NameError: name 'edad' is not defined" },
+      ok: "edad se crea en la línea 2, pero la 1 la usa antes. Python va de arriba abajo.",
+      pistas: { "Funciona": "Python ejecuta de arriba abajo. Cuando llega a la línea 1, ¿ya existe edad?", "Línea 2": "La línea 2 crea edad: eso no falla. ¿Y la línea 1, que la usa antes?" }
+    },
+    {
+      codigo: ['saludo = "hola"', "print(saludo)"], correcta: "Funciona",
+      salida: "hola",
+      ok: "Funciona: saludo ya existe cuando se imprime, y \"hola\" lleva sus comillas.",
+      pistas: { "Línea 1": "saludo = \"hola\" crea la variable con un texto entre comillas: está bien.", "Línea 2": "saludo se creó en la línea 1, justo antes: ya existe." }
+    },
+    {
+      codigo: ["total = 0", "print(totl + 5)"], correcta: "Línea 2",
+      error: { linea: 1, marca: "totl", texto: "NameError: name 'totl' is not defined. Did you mean: 'total'?" },
+      ok: "totl no es total: le falta una letra. Python encuentra el parecido y te lo sugiere.",
+      pistas: { "Funciona": "Lee el nombre de la línea 2 letra por letra. ¿Es el mismo de la línea 1?", "Línea 1": "total = 0 está bien. ¿La línea 2 usa el mismo nombre?" }
+    }
+  ];
+  var OPCIONES6 = ["Funciona", "Línea 1", "Línea 2"];
+  var ETIQUETAS6 = { "Funciona": "✓ Funciona", "Línea 1": "💥 Línea 1", "Línea 2": "💥 Línea 2" };
+
+  function armarPredicciones() {
+    var ol = $("s6-predicciones");
+    var aciertos = PRED6.map(function () { return false; });
+    PRED6.forEach(function (p, k) {
+      var li = document.createElement("li");
+      li.className = "prediccion";
+      li.innerHTML = '<pre class="codigo codigo--mini" aria-label="Programa ' + (k + 1) + '"></pre>' +
+        '<div class="elegir" role="group" aria-label="¿Funciona o en qué línea se corta el programa ' + (k + 1) + '?"></div>' +
+        '<p class="prediccion__salida" aria-live="polite"></p>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>';
+      var pre = li.querySelector("pre");
+      Python.escribir(pre, p.codigo);
+      var grupo = li.querySelector(".elegir");
+      OPCIONES6.forEach(function (op) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("data-valor", op);
+        b.textContent = ETIQUETAS6[op];
+        grupo.appendChild(b);
+      });
+      var botones = grupo.querySelectorAll("button");
+      var fbFila = li.querySelector(".feedback");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var valor = btn.getAttribute("data-valor");
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          if (valor !== p.correcta) { Pasos.feedback(fbFila, "pista", p.pistas[valor]); return; }
+          Pasos.limpiarFeedback(fbFila);
+          li.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          var salida = li.querySelector(".prediccion__salida");
+          if (p.error) {
+            cortar(pre, p.error.linea, p.error.marca);
+            salida.textContent = p.error.texto;
+            salida.classList.add("prediccion__salida--error");
+          } else {
+            salida.textContent = "Salida: " + p.salida;
+          }
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) {
+            Pasos.feedback($("s6-fb"), "ok", p.ok + " ¡Todos bien! Python va de arriba abajo y se detiene en la primera línea que no puede ejecutar.");
+            leccion.desbloquear();
+          } else {
+            Pasos.feedback($("s6-fb"), "ok", p.ok);
+          }
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  /* ---------- 7. ¿Por qué no existe? ---------- */
+  var C7 = [
+    {
+      codigo: ["color = azul", "print(color)"], causa: "comillas",
+      error: nameError("azul", 1, "color = azul", { explicacion: ": Python busca una variable llamada <code>azul</code> y no la encuentra." }), corte: 0,
+      ok: "azul quería ser un texto, pero sin comillas Python lo busca como un nombre. El arreglo: color = \"azul\".",
+      pistas: {
+        mal: "¿Hay alguna variable parecida a azul? Python no sugirió ninguna. ¿Qué es azul aquí: un nombre o un color escrito?",
+        mayus: "azul está todo en minúsculas. ¿Qué quería ser azul?",
+        antes: "azul no se crea en ninguna parte, ni antes ni después. ¿Quería ser una variable o un texto?"
+      }
+    },
+    {
+      codigo: ["notas = 18", 'print("Nota:", nota)'], causa: "mal",
+      error: nameError("nota", 2, 'print("Nota:", nota)', { sugerencia: "notas" }), corte: 1,
+      ok: "nota no es notas: le falta la s. Python encontró el nombre parecido y te lo sugiere.",
+      pistas: {
+        mayus: "Las mayúsculas están bien. Compara nota con notas, letra por letra.",
+        comillas: "Aquí nota es una variable, no un texto. Mira el «Did you mean»: ¿qué nombre parecido sí existe?",
+        antes: "No hay ninguna nota creada más abajo. Mira el «Did you mean»: ¿qué nombre parecido sí existe?"
+      }
+    },
+    {
+      codigo: ["puntos = puntos + 10", "print(puntos)"], causa: "antes",
+      error: nameError("puntos", 1, "puntos = puntos + 10", { marca: [9, 15], explicacion: ": para calcular <code>puntos + 10</code>, Python necesita el valor de <code>puntos</code>, y todavía no tiene ninguno." }),
+      corte: 0, pieza: "puntos", aparicion: 1,
+      ok: "Para calcular puntos + 10, Python necesita el valor de puntos, y todavía no existe. El arreglo: antes, puntos = 0.",
+      pistas: {
+        mal: "puntos está escrito igual en todas partes. ¿Existe cuando Python calcula puntos + 10?",
+        mayus: "No hay mayúsculas. ¿Existe puntos cuando Python calcula puntos + 10?",
+        comillas: "puntos es una variable (se le suma 10), no un texto. ¿Ya tenía un valor?"
+      }
+    },
+    {
+      codigo: ['nombre = "Eva"', "Print(nombre)"], causa: "mayus",
+      error: nameError("Print", 2, "Print(nombre)", { sugerencia: "print" }), corte: 1,
+      ok: "Print con P mayúscula no existe: la función es print, en minúsculas. Python distingue mayúsculas de minúsculas.",
+      pistas: {
+        mal: "Cerca: las letras son las mismas y solo cambia una. Compara Print con el «Did you mean»: ¿qué tiene de distinto?",
+        comillas: "Print quería ser una función, no un texto. Compara con el «Did you mean».",
+        antes: "print no se crea: viene con Python. Compara Print con el «Did you mean»."
+      }
+    }
+  ];
+  var actual7 = 0;
+  var hechos7 = 0;
+
+  function mostrar7(k) {
+    actual7 = k;
+    var c = C7[k];
+    var pre = $("s7-codigo");
+    Python.escribir(pre, c.codigo);
+    cortar(pre, c.corte, c.pieza || c.error.marcos[0].marca, c.aparicion);
+    Codigo.consola($("s7-consola"), []);
+    mostrarError($("s7-error"), c.error, { codigo: pre });
+    $("s7-contador").textContent = "Mensaje " + (k + 1) + " de " + C7.length;
+    $("s7-causas").querySelectorAll("button").forEach(function (b) {
+      b.disabled = false;
+      b.classList.remove("causa--ok", "causa--mal");
+      b.setAttribute("aria-pressed", "false");
+    });
+    $("s7-seguir").hidden = true;
+    Pasos.limpiarFeedback($("s7-fb"));
+  }
+
+  function elegir7(btn) {
+    var c = C7[actual7];
+    var causa = btn.getAttribute("data-causa");
+    var fb = $("s7-fb");
+    var botones = $("s7-causas").querySelectorAll("button");
+    botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); b.classList.remove("causa--mal"); });
+    if (causa !== c.causa) {
+      void btn.offsetWidth;
+      btn.classList.add("causa--mal");
+      Pasos.feedback(fb, "pista", c.pistas[causa]);
+      return;
+    }
+    btn.classList.add("causa--ok");
+    botones.forEach(function (b) { b.disabled = true; });
+    hechos7 = Math.max(hechos7, actual7 + 1);
+    if (actual7 < C7.length - 1) {
+      Pasos.feedback(fb, "ok", c.ok);
+      $("s7-seguir").hidden = false;
+      $("s7-siguiente").focus();
+      return;
+    }
+    Pasos.feedback(fb, "ok", c.ok + " ¡Los cuatro! Mal escrito, mayúscula, sin comillas o antes de crearla: el mensaje y la línea te dan la pista.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 8. Reto ---------- */
+  var L3 = { orig: 'print("Alumno:", nmbre)', ok: 'print("Alumno:", nombre)', may: 'print("Alumno:", Nombre)', com: 'print("Alumno:", "nmbre")' };
+  var L5 = { orig: '    Print("Aprobado")', ok: '    print("Aprobado")', may: '    PRINT("Aprobado")', com: "    print(Aprobado)" };
+  var E3 = { orig: ["nmbre", "nombre"], may: ["Nombre", "nombre"] };
+  var E5 = { orig: ["Print", "print"], may: ["PRINT", null], com: ["Aprobado", null] };
+  var reto = { l3: "orig", l5: "orig", resuelto: false };
+  var r8 = reloj();
+
+  function escribirReto(cambiada) {
+    var pre = $("reto-codigo");
+    Python.escribir(pre, ['nombre = "Luis"', "nota = 12", L3[reto.l3], "if nota >= 11:", L5[reto.l5]]);
+    if (cambiada !== undefined) sacudir(Python.linea(pre, cambiada), "linea--cambiada");
+  }
+
+  function limpiarReto() {
+    r8.cortar();
+    Codigo.limpiar($("reto-codigo"));
+    Codigo.consola($("reto-consola"), []);
+    $("reto-error").textContent = "";
+  }
+
+  function marcarOpciones(nombre, estado) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    document.querySelectorAll('input[name="' + nombre + '"]').forEach(function (i) {
+      i.closest(".opcion").classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    if (r && estado) r.closest(".opcion").classList.add("opcion--" + estado);
+  }
+
+  function errorReto(linea, datos) {
+    var codigo = linea === 3 ? L3[reto.l3] : L5[reto.l5];
+    var e = nameError(datos[0], linea, codigo.trim(), { sugerencia: datos[1] });
+    if (datos[0] === "Aprobado") e.traduccion = "El nombre <code>Aprobado</code> no está definido: sin comillas, Python lo busca como una variable.";
+    return e;
+  }
+
+  // Ejecuta el programa como está: devuelve dónde falló (o null) después de animarlo
+  function ejecutarReto() {
+    if (reto.resuelto) return;
+    limpiarReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+    $("reto-ejecutar").disabled = true;
+    $("reto-ejecutar2").disabled = true;
+    var pre = $("reto-codigo");
+    var consola = $("reto-consola");
+    var t = 0;
+    function paso(fn, ms) { t += ms; r8.luego(fn, t); }
+    var falla = null;
+    Codigo.marcar(pre, { activas: [0] });
+    paso(function () { Codigo.marcar(pre, { activas: [1] }); }, 350);
+    paso(function () { Codigo.marcar(pre, { activas: [2] }); }, 350);
+    if (E3[reto.l3]) falla = 3;
+    else {
+      paso(function () { imprimir(consola, "Alumno: " + (reto.l3 === "ok" ? "Luis" : "nmbre"), null, pre); }, 250);
+      paso(function () { Codigo.marcar(pre, { activas: [3] }); }, 450);
+      paso(function () { Codigo.marcar(pre, { activas: [4] }); }, 400);
+      if (E5[reto.l5]) falla = 5;
+      else paso(function () { imprimir(consola, "Aprobado", null, pre); }, 250);
+    }
+    paso(function () {
+      $("reto-ejecutar").disabled = false;
+      $("reto-ejecutar2").disabled = false;
+      $("reto-ejecutar").textContent = "▶ Ejecutar otra vez";
+      if (falla) {
+        var datos = falla === 3 ? E3[reto.l3] : E5[reto.l5];
+        cortar(pre, falla - 1, datos[0]);
+        mostrarError($("reto-error"), errorReto(falla, datos), { codigo: pre });
+      } else {
+        Codigo.marcar(pre, {});
+      }
+      despuesReto(falla);
+    }, falla ? 350 : 500);
+  }
+
+  function despuesReto(falla) {
+    var fb = $("reto-fb");
+    var a3 = $("reto-arreglo3");
+    var a5 = $("reto-arreglo5");
+    if (falla === 3) {
+      a3.hidden = false;
+      a5.hidden = true;
+      if (reto.l3 === "orig") {
+        Pasos.feedback(fb, "pista", "Lee el mensaje de abajo arriba: ¿qué nombre no existe y qué te sugiere Python? Elige el arreglo.");
+      } else {
+        marcarOpciones("reto-l3", "incorrecta");
+        Pasos.feedback(fb, "pista", "Otro mensaje: ahora no existe Nombre. Las mayúsculas cuentan: mira el «Did you mean».");
+      }
+      return;
+    }
+    if (reto.l3 === "ok") marcarOpciones("reto-l3", "correcta");
+    if (falla === 5) {
+      a5.hidden = false;
+      a3.hidden = true;
+      var aviso = reto.l3 === "com" ? " Ojo: la salida dice «Alumno: nmbre»." : "";
+      if (reto.l5 === "orig") {
+        Pasos.feedback(fb, "pista", "¡La línea 3 ya no da error! El programa avanzó: ahora el mensaje apunta a la línea 5." + aviso);
+      } else {
+        marcarOpciones("reto-l5", "incorrecta");
+        Pasos.feedback(fb, "pista", (reto.l5 === "may"
+          ? "Otro mensaje: PRINT tampoco existe, y Python no sugiere nada. print va en minúsculas."
+          : "Otro mensaje: sin comillas, Aprobado es un nombre, no un texto.") + aviso);
+      }
+      return;
+    }
+    marcarOpciones("reto-l5", "correcta");
+    if (reto.l3 === "com") {
+      a3.hidden = false;
+      a5.hidden = true;
+      marcarOpciones("reto-l3", "incorrecta");
+      Pasos.feedback(fb, "pista", "¡Sin errores! Pero la salida dice «Alumno: nmbre»: entre comillas, \"nmbre\" es un texto, no la variable. Arregla la línea 3.");
+      return;
+    }
+    reto.resuelto = true;
+    a3.hidden = true;
+    a5.hidden = true;
+    $("reto-abajo").hidden = true;
+    $("reto-ejecutar").hidden = true;
+    $("reto-otra").hidden = false;
+    Pasos.feedback(fb, "ok", "¡Funciona! Leíste cada mensaje, fuiste a la línea que decía y arreglaste el pedazo que marcaban los ^^^. Así se depura un programa.");
+    leccion.desbloquear();
+  }
+
+  function cambiarReto(e) {
+    var r = e.target;
+    var linea = r.name === "reto-l3" ? 3 : 5;
+    reto[linea === 3 ? "l3" : "l5"] = r.value;
+    marcarOpciones(r.name, null);
+    r8.cortar();
+    escribirReto(linea - 1);
+    $("reto-abajo").hidden = false;
+    Pasos.feedback($("reto-fb"), "ok", "La línea " + linea + " cambió. Ahora ejecútalo otra vez.");
+  }
+
+  function reiniciarReto() {
+    reto = { l3: "orig", l5: "orig", resuelto: false };
+    document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) { r.checked = false; });
+    marcarOpciones("reto-l3", null);
+    marcarOpciones("reto-l5", null);
+    $("reto-arreglo3").hidden = true;
+    $("reto-arreglo5").hidden = true;
+    $("reto-abajo").hidden = true;
+    $("reto-otra").hidden = true;
+    $("reto-ejecutar").disabled = false;
+    $("reto-ejecutar").hidden = false;
+    $("reto-ejecutar").textContent = "▶ Ejecutar";
+    escribirReto();
+    limpiarReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  /* ---------- Resumen ---------- */
+  Python.escribir($("resumen-codigo"), [
+'print("Hola")   # se ejecuta y queda',
+    "print(nmbre)    # NameError: se detiene",
+    'print("Fin")    # no se ejecuta',
+    "# El mensaje, de abajo arriba:",
+    "# NameError: …  qué pasó",
+    "# line 2        en qué línea",
+    "# ^^^^^         qué pedazo"
+  ]);
+
+  /* ---------- Conexiones ---------- */
+  var leccion = null;
+
+  var traza1 = Traza.crear({
+    codigo: $("s1-codigo"),
+    explicacion: $("s1-explicacion"),
+    consola: $("s1-consola"),
+    ejecutar: $("s1-ejecutar"),
+    reproducir: $("s1-reproducir"),
+    reiniciar: $("s1-reiniciar"),
+    generar: trazaCorre,
+    intervalo: 1300,
+    alReiniciar: function () {
+      Object.keys(cajas1).forEach(function (k) {
+        cajas1[k].hidden = true;
+        if (k !== "nmbre") Caja.vaciar(cajas1[k]);
+      });
+      $("s1-error").textContent = "";
+      Pasos.limpiarFeedback($("s1-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.hacer === "nombre") { cajas1.nombre.hidden = false; Caja.poner(cajas1.nombre, '"Ana"'); }
+      else if (paso.hacer === "nota") { cajas1.nota.hidden = false; Caja.poner(cajas1.nota, 17); }
+      else if (paso.hacer === "error") {
+        cortar($("s1-codigo"), 3, "nmbre");
+        cajas1.nmbre.hidden = false;
+        sacudir(cajas1.nmbre);
+        mostrarError($("s1-error"), M1);
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s1-fb"), "ok", "«Hola» se quedó en la consola; «Fin» nunca salió: lo que va después de la línea que falla no se ejecuta.");
+      if (leccion) leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('input[name="s2"]').forEach(function (r) {
+    r.addEventListener("change", function () { limpiar2(); leccion.listoParaComprobar(true); });
+  });
+
+  armarPredicciones();
+
+  $("s5-ejecutar").addEventListener("click", ejecutar5);
+  $("s5-nombre").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); ejecutar5(); }
+  });
+  $("s5-ideas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { $("s5-nombre").value = b.textContent; ejecutar5(); });
+  });
+  escribir5(null);
+
+  $("s7-causas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegir7(b); });
+  });
+  $("s7-siguiente").addEventListener("click", function () {
+    mostrar7(actual7 + 1);
+    $("s7-causas").querySelector("button").focus();
+  });
+
+  document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-ejecutar").addEventListener("click", ejecutarReto);
+  $("reto-ejecutar2").addEventListener("click", function () {
+    ejecutarReto();
+    $("reto-consola").scrollIntoView({ block: "center", behavior: Pasos.reducirMovimiento ? "auto" : "smooth" });
+  });
+  $("reto-otra").addEventListener("click", function () { reiniciarReto(); $("reto-ejecutar").focus(); });
+  escribirReto();
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-corre": function () { traza1.detener(); },
+      "paso-consola": function () {
+        document.querySelectorAll('input[name="s2"]').forEach(function (r) { r.checked = false; });
+        limpiar2();
+      },
+      "paso-partes": preparar3,
+      "paso-orden": preparar4,
+      "paso-sugiere": preparar5,
+      "paso-causa": function () { mostrar7(Math.min(hechos7, C7.length - 1)); },
+      "paso-reto": function () { if (!reto.resuelto) reiniciarReto(); }
+    },
+    comprobar: { "paso-consola": comprobar2 }
+  });
+})();
+</script>
+</body>
+</html>
