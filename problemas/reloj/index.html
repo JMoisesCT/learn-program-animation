@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El reloj que da la vuelta · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: qué hora marca un reloj de agujas después de muchas horas, usando // y % como una cuenta que da la vuelta, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- Ruedas (el reloj y sus parientes) ---------- */
+    .rueda { display: block; width: 100%; height: auto; overflow: visible; }
+    .rueda__borde { fill: #fff; stroke: var(--tinta); stroke-width: 4; }
+    .rueda__num { font: 700 15px var(--fuente); fill: var(--tinta); text-anchor: middle; transition: fill 200ms; }
+    .rueda__num--chico { font-size: 11px; }
+    .rueda__marca { fill: var(--azul-tinta-suave); stroke: none; opacity: 0; transition: opacity 200ms; }
+    .rueda__marca--si { opacity: 1; }
+    .rueda__marca--mal { fill: #fde0d2; }
+    .rueda__palito { stroke: #9aa4b2; stroke-width: 2; }
+    .rueda__aguja line { stroke: var(--lapiz); stroke-width: 5; stroke-linecap: round; }
+    .rueda__aguja circle { fill: var(--tinta); }
+    .rueda__aguja { transition: transform 600ms ease; transform-origin: 100px 100px; }
+    .rueda--sin-transicion .rueda__aguja { transition: none; }
+    .rueda__centro { font: 700 13px var(--fuente-codigo); fill: var(--azul-tinta); text-anchor: middle; }
+
+    /* ---------- La escena: el reloj de la estación ---------- */
+    .estacion { flex: 1; display: grid; gap: var(--esp-3); align-content: center; }
+    .estacion__arriba { display: grid; grid-template-columns: minmax(8rem, 11.5rem) minmax(0, 1fr); gap: var(--esp-3); align-items: center; }
+    .estacion__datos { display: grid; gap: var(--esp-2); justify-items: start; }
+    .contador-vueltas { display: grid; gap: 0.1rem; }
+    .contador-vueltas span { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-suave); }
+    .contador-vueltas strong { font: 700 var(--texto-xl) var(--fuente-codigo); color: var(--azul-tinta); line-height: 1.1; }
+    .estacion__cuenta { min-height: 1.7rem; padding: 0.1em 0.6em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .estacion__cuenta:empty { opacity: 0; }
+    .estacion__aviso { margin: 0; min-height: 1.3em; font: 700 0.8rem var(--fuente); color: var(--lapiz); }
+    .tira-horas { position: relative; height: 1.9rem; border: 2px solid var(--tinta); border-radius: 8px; background: #fff; overflow: hidden; transition: opacity 300ms; }
+    .tira-horas--vacia { opacity: 0.3; }
+    .tira-horas > span { position: absolute; top: 0; bottom: 0; display: grid; place-items: center; overflow: hidden; font: 700 0.66rem var(--fuente-codigo); white-space: nowrap; transition: opacity 400ms; }
+    .th-hora { background: #c9d0dc; color: var(--tinta); }
+    .th-pasan { background: #9cc0e8; color: var(--tinta); }
+    .th-bloque { background: var(--azul-tinta); color: #fff; border-right: 2px solid #fff; animation: aparecer 300ms ease both; animation-delay: var(--retraso, 0ms); }
+    .th-resto { background: repeating-linear-gradient(45deg, #f2a75e 0 6px, #f8d2a6 6px 12px); color: #3d2a00; }
+    .tira-horas__marcas { position: relative; height: 1rem; margin-top: -0.55rem; font: 700 0.62rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .tira-horas__marcas span { position: absolute; transform: translateX(-50%); }
+    .tira-leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2rem var(--esp-4); margin: -0.3rem 0 0; min-height: 1.1em; font: 700 0.72rem var(--fuente); color: var(--tinta-suave); }
+    .tira-leyenda span::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.35em; vertical-align: -0.05em; border-radius: 2px; background: var(--c); }
+
+    /* ---------- Demos ---------- */
+    .demo-rueda { width: min(11rem, 70%); margin: var(--esp-2) auto; }
+    .tira { display: flex; height: 2.1rem; margin: var(--esp-2) 0; border-radius: 8px; overflow: hidden; border: 2px solid var(--tinta); background: #fff; }
+    .tira__bloque { display: grid; place-items: center; flex: 0 0 auto; border-right: 2px solid #fff; background: var(--azul-tinta); color: #fff; font: 700 0.7rem var(--fuente-codigo); animation: aparecer 300ms ease both; }
+    .tira__resto { display: grid; place-items: center; flex: 0 0 auto; background: repeating-linear-gradient(45deg, #fde6d8 0 6px, #fff 6px 12px); color: var(--lapiz); font: 700 0.7rem var(--fuente-codigo); }
+    .tira__vacio { flex: 1; background: var(--papel); }
+    .dos-relojes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); margin: var(--esp-2) 0; }
+    .dos-relojes figure { margin: 0; text-align: center; }
+    .dos-relojes figcaption { margin-top: 0.2rem; font-size: var(--texto-xs); font-weight: 700; color: var(--tinta-suave); }
+
+    /* ---------- Detalles ---------- */
+    .trabajo { display: grid; gap: var(--esp-2); margin: var(--esp-2) 0; }
+    .trabajo__fila { display: grid; gap: 0.15rem; }
+    .trabajo__fila span { font-size: var(--texto-xs); font-weight: 700; color: var(--tinta-suave); }
+    .trabajo__barra { height: 1rem; border-radius: 4px; background: var(--azul-tinta); transition: width 250ms ease; min-width: 4px; }
+    .trabajo__barra--mano { background: repeating-linear-gradient(45deg, #f2a75e 0 6px, #f8d2a6 6px 12px); }
+    .pasos-arreglo { display: grid; gap: 0.25rem; margin: var(--esp-2) 0 0; font: 700 var(--texto-xs) var(--fuente-codigo); }
+    .pasos-arreglo .c-resto { color: var(--lapiz); }
+    .pasos-arreglo .c-ok { color: var(--color-ok); }
+
+    /* ---------- Todo lo que da vueltas ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1.05fr 1fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .mas__fila { display: grid; grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr); gap: var(--esp-3); align-items: center; }
+    .mas .codigo { font-size: 0.82rem; }
+    .vueltas-resultado { margin: 0; font: 700 var(--texto-sm) var(--fuente); color: var(--azul-tinta); }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      .mas__fila { grid-template-columns: 7rem minmax(0, 1fr); }
+      #vueltas .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #vueltas .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .estacion__arriba { grid-template-columns: 8.5rem minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Variables</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#vueltas"><span>6 · Todo lo que da vueltas</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Variables</p>
+          <h1>El reloj que da la vuelta</h1>
+          <p class="caso-bajada">Un programa que dice qué hora marcará un reloj de agujas, aunque pasen cientos de horas.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 2 de 5"><span class="estrellas__llenas">★★</span>☆☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/index.html">variables</a></li>
+              <li><a href="../../lecciones/variables/formulas/index.html">// y %</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Un reloj de agujas con una flecha que da varias vueltas">
+          <circle cx="120" cy="100" r="86" fill="none" stroke="#2445b0" stroke-width="3" stroke-dasharray="6 8" opacity="0.5"/>
+          <path d="M120 6 A94 94 0 0 1 210 72" fill="none" stroke="#b4400e" stroke-width="4" stroke-linecap="round"/>
+          <path d="M204 60 l8 13 l-14 2" fill="none" stroke="#b4400e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="120" cy="100" r="72" fill="#fff" stroke="#1f2a44" stroke-width="5"/>
+          <g font-family="sans-serif" font-size="15" font-weight="700" fill="#1f2a44" text-anchor="middle">
+            <text x="120" y="47">12</text><text x="174" y="105">3</text><text x="120" y="163">6</text><text x="66" y="105">9</text>
+          </g>
+          <g fill="#9aa4b2"><circle cx="147" cy="53" r="3"/><circle cx="167" cy="73" r="3"/><circle cx="167" cy="127" r="3"/><circle cx="147" cy="147" r="3"/><circle cx="93" cy="147" r="3"/><circle cx="73" cy="127" r="3"/><circle cx="73" cy="73" r="3"/><circle cx="93" cy="53" r="3"/></g>
+          <line x1="120" y1="100" x2="158" y2="100" stroke="#b4400e" stroke-width="6" stroke-linecap="round"/>
+          <line x1="120" y1="100" x2="120" y2="48" stroke="#1f2a44" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="120" cy="100" r="6" fill="#1f2a44"/>
+          <text x="218" y="190" text-anchor="end" font-family="monospace" font-size="14" font-weight="700" fill="#2445b0">9 + 30 h</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Tomás sale de viaje en bus a las <strong>9</strong>. El viaje dura <strong>30 horas</strong>. Su reloj es de agujas: solo tiene los números del 1 al 12.</p>
+            <p>Podría contar hora por hora: 10, 11, 12, 1, 2… treinta veces. Pero la aguja da vueltas completas que no cambian nada. <span class="nota-margen">¿Cómo sabe la computadora dónde queda la aguja, sin contar?</span></p>
+            <div class="ticket" aria-label="El boleto del bus">
+              <h3>BOLETO · BUS</h3>
+              <div class="ticket__fila"><span>Sale</span><span>9:00</span></div>
+              <div class="ticket__fila"><span>Duración</span><span>30 horas</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Llega</span><span>¿?</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dada la hora de un reloj de agujas y cuántas horas pasan, diga <strong>cuántas vueltas completas da la aguja</strong> y <strong>qué hora marcará</strong>.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>hora</code>: la hora de ahora, un entero de 1 a 12.</li>
+              <li><code>pasan</code>: cuántas horas pasan, un entero mayor o igual que 0.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Dos líneas: <code>Vueltas: N</code> y <code>Serán las H</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>hora = 9
+pasan = 30</td><td>Vueltas: 3
+Serán las 3</td></tr>
+                <tr><td>hora = 9
+pasan = 5</td><td>Vueltas: 1
+Serán las 2</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3><code>%</code> es una cuenta que da la vuelta</h3>
+            <p>Cuenta de 0 a 11 y vuelve a empezar. <code>n % 12</code> dice dónde queda <code>n</code> en esta rueda.</p>
+            <div class="control-fila">
+              <label for="d1-n">n = <span id="d1-num">14</span></label>
+              <input type="range" id="d1-n" min="0" max="40" value="14">
+            </div>
+            <div class="demo-rueda" id="d1-rueda"></div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3><code>//</code> cuenta las vueltas completas</h3>
+            <p>Si se parte <code>n</code> en trozos de 12, <code>//</code> dice cuántos trozos enteros hay y <code>%</code>, cuánto sobra.</p>
+            <div class="control-fila">
+              <label for="d2-n">n = <span id="d2-num">39</span></label>
+              <input type="range" id="d2-n" min="0" max="60" value="39">
+            </div>
+            <div class="tira" id="d2-tira" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d2-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>El reloj no tiene 0</h3>
+            <p><code>%</code> da de 0 a 11; el reloj marca de 1 a 12. Donde <code>%</code> da 0, el reloj marca <strong>12</strong>.</p>
+            <div class="chips-elegir" id="d3-chips" role="group" aria-label="Elige un total">
+              <button type="button" data-n="11" aria-pressed="false">11</button>
+              <button type="button" data-n="12" aria-pressed="true">12</button>
+              <button type="button" data-n="13" aria-pressed="false">13</button>
+              <button type="button" data-n="24" aria-pressed="false">24</button>
+            </div>
+            <div class="dos-relojes">
+              <figure><div id="d3-mod"></div><figcaption id="d3-mod-txt"></figcaption></figure>
+              <figure><div id="d3-reloj"></div><figcaption id="d3-reloj-txt"></figcaption></figure>
+            </div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 9 + 30</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>En vez de mover la aguja hora por hora, <strong>se suma todo de una vez y se quitan las vueltas completas</strong>: no cambian dónde queda la aguja.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota la hora y cuántas pasan</strong> Son las 9 y pasan 30 horas.</li>
+              <li data-idea="2"><strong>Suma todo</strong> Como si el reloj no diera la vuelta: 9 + 30 = 39.</li>
+              <li data-idea="3"><strong>Quita las vueltas completas</strong> <code>//</code> las cuenta (3) y <code>%</code> se queda con lo que sobra (3).</li>
+              <li data-idea="4"><strong>Muestra la hora</strong> Lo que sobra es dónde queda la aguja.</li>
+            </ol>
+            <p class="nota-margen">Sin decisiones ni vueltas del programa: cada línea corre una sola vez, aunque pasen mil horas.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Mil horas, el mismo trabajo</h3>
+            <p>Contando a mano, cada hora es un paso de la aguja. Con <code>//</code> y <code>%</code>, son siempre 3 cuentas.</p>
+            <div class="control-fila">
+              <label for="t-pasan">Pasan: <span id="t-num">30</span> horas</label>
+              <input type="range" id="t-pasan" min="0" max="1000" value="30">
+            </div>
+            <div class="trabajo" aria-live="polite">
+              <div class="trabajo__fila"><span id="t-mano"></span><div class="trabajo__barra trabajo__barra--mano" id="t-mano-barra"></div></div>
+              <div class="trabajo__fila"><span>Con <code>//</code> y <code>%</code>: 3 cuentas</span><div class="trabajo__barra" id="t-formula-barra"></div></div>
+            </div>
+            <p class="cuenta-grande" id="t-cuenta"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Arreglar el 0</h3>
+            <p>Se corre todo un lugar hacia atrás, se da la vuelta y se vuelve a correr hacia adelante:</p>
+            <pre class="codigo" id="a-codigo"></pre>
+            <div class="control-fila">
+              <label for="a-total">total = <span id="a-num">12</span></label>
+              <input type="range" id="a-total" min="1" max="48" value="12">
+            </div>
+            <div class="pasos-arreglo" id="a-pasos" aria-live="polite"></div>
+            <p class="nota-margen" style="margin-top:auto">Así la cuenta va de 1 a 12, como el reloj.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Y hacia atrás?</h3>
+            <p>¿Qué hora era hace unas horas? Se resta. En Python, <code>%</code> con un número negativo igual da de 0 a 11:</p>
+            <div class="control-fila">
+              <label for="b-hace">Hace <span id="b-num">15</span> horas</label>
+              <input type="range" id="b-hace" min="0" max="40" value="15">
+            </div>
+            <div class="demo-rueda" id="b-rueda"></div>
+            <p class="cuenta-grande" id="b-cuenta" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. Todo lo que da vueltas -->
+    <section class="panel" id="vueltas">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> Todo lo que da vueltas</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>La misma idea sirve para todo lo que vuelve a empezar: <strong>los días de la semana</strong> (de 7 en 7), <strong>los minutos</strong> (de 60 en 60) y <strong>el reloj de 24 horas</strong>.</p>
+            <p>Solo cambia el número que va después del <code>%</code>. En el reloj de 24 horas, el 0 sí existe: es la medianoche.</p>
+            <p class="nota-margen">Para que el programa escriba «miércoles» en vez de 2, hay que elegir entre 7 nombres: eso llega con <a href="../../lecciones/condicionales/index.html">Condicionales</a>.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="chips-elegir" id="m-chips" role="group" aria-label="¿Qué da vueltas?">
+              <button type="button" data-m="dias" aria-pressed="true">Días</button>
+              <button type="button" data-m="minutos" aria-pressed="false">Minutos</button>
+              <button type="button" data-m="h24" aria-pressed="false">24 horas</button>
+            </div>
+            <div class="control-fila">
+              <label for="m-pasan" id="m-label">Pasan: 100 días</label>
+              <input type="range" id="m-pasan" min="0" max="400" value="100">
+            </div>
+            <div class="mas__fila">
+              <div id="m-rueda"></div>
+              <pre class="codigo" id="m-codigo"></pre>
+            </div>
+            <p class="vueltas-resultado" id="m-resultado" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../final/index.html">← <span class="largo">Caso anterior: </span>¿Cuánto necesito en el final?</a>
+          <a class="btn btn-primario" href="../vuelto/index.html"><span class="largo">Siguiente caso: </span>El vuelto →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function mod(a, n) { return ((a % n) + n) % n; }   // el % de Python (con negativos, de 0 a n-1)
+
+  /* ---------- Una rueda: n lugares en círculo, con una aguja ---------- */
+  function rueda(cont, o) {
+    var n = o.n, R = o.r || 74, cada = o.cada || 1;
+    var etiqueta = o.etiqueta || function (k) { return String(k); };
+    var s = '<svg viewBox="0 0 200 200" class="rueda" aria-hidden="true"><circle cx="100" cy="100" r="96" class="rueda__borde"/>';
+    for (var k = 0; k < n; k++) {
+      var a = k / n * 2 * Math.PI;
+      var x = 100 + R * Math.sin(a), y = 100 - R * Math.cos(a);
+      if (k % cada === 0) {
+        s += '<circle class="rueda__marca" data-k="' + k + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (o.radioMarca || 15) + '"/>';
+        s += '<text class="rueda__num' + (o.chico ? " rueda__num--chico" : "") + '" data-k="' + k + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" dy=".35em">' + etiqueta(k) + "</text>";
+      } else {
+        var x1 = 100 + 92 * Math.sin(a), y1 = 100 - 92 * Math.cos(a), x2 = 100 + 86 * Math.sin(a), y2 = 100 - 86 * Math.cos(a);
+        s += '<line class="rueda__palito" x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '"/>';
+      }
+    }
+    s += '<g class="rueda__aguja"><line x1="100" y1="100" x2="100" y2="' + (100 - (o.aguja || 46)) + '"/><circle cx="100" cy="100" r="6"/></g>';
+    if (o.centro) s += '<text class="rueda__centro" x="100" y="132"></text>';
+    s += "</svg>";
+    cont.innerHTML = s;
+    var svg = cont.querySelector("svg"), aguja = cont.querySelector(".rueda__aguja"), centro = cont.querySelector(".rueda__centro");
+    var giro = 0;   // en lugares, acumulado: la aguja siempre avanza
+    return {
+      svg: svg,
+      // Pone la aguja en el lugar k; con adelante, avanza hasta él (nunca retrocede)
+      apuntar: function (k, adelante) {
+        var actual = mod(giro, n);
+        var nuevo = adelante ? giro + mod(k - actual, n) : k;
+        giro = nuevo;
+        aguja.style.transform = "rotate(" + (nuevo / n * 360) + "deg)";
+      },
+      // Gira a una posición acumulada (en lugares), sin transición CSS
+      girarA: function (pos) {
+        giro = pos;
+        svg.classList.add("rueda--sin-transicion");
+        aguja.style.transform = "rotate(" + (pos / n * 360) + "deg)";
+      },
+      marcar: function (k, clase) {
+        svg.querySelectorAll(".rueda__marca").forEach(function (m) {
+          var si = k !== null && m.getAttribute("data-k") === String(k);
+          m.classList.toggle("rueda__marca--si", si);
+          m.classList.toggle("rueda__marca--mal", si && clase === "mal");
+        });
+      },
+      centro: function (t) { if (centro) centro.textContent = t; }
+    };
+  }
+  function etiquetaReloj(k) { return k === 0 ? "12" : String(k); }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "hora = " + d.hora,
+      "pasan = " + d.pasan,
+      "total = hora + pasan",
+      "vueltas = total // 12",
+      "nueva = total % 12",
+      'print(f"Vueltas: {vueltas}")',
+      'print(f"Serán las {nueva}")'
+    ];
+  }
+  var IDEAS = [1, 1, 2, 3, 3, 4, 4];
+
+  /* ---------- 2. Demos ---------- */
+  var r1 = rueda($("d1-rueda"), { n: 12, centro: true });
+  function pintarD1() {
+    var n = Number($("d1-n").value), r = n % 12;
+    $("d1-num").textContent = n;
+    r1.apuntar(r, false);
+    r1.marcar(r);
+    r1.centro(Math.floor(n / 12) ? "+" + Math.floor(n / 12) + " vuelta" + (Math.floor(n / 12) > 1 ? "s" : "") : "");
+    $("d1-cuenta").innerHTML = n + " % 12 = <span class=\"c-resto\">" + r + "</span>";
+  }
+  $("d1-n").addEventListener("input", pintarD1);
+  pintarD1();
+
+  function pintarD2() {
+    var n = Number($("d2-n").value), q = Math.floor(n / 12), r = n % 12;
+    $("d2-num").textContent = n;
+    var tira = $("d2-tira");
+    tira.textContent = "";
+    for (var k = 0; k < q; k++) {
+      var b = document.createElement("span");
+      b.className = "tira__bloque";
+      b.style.width = (12 / 60 * 100) + "%";
+      b.textContent = "12";
+      tira.appendChild(b);
+    }
+    if (r) {
+      var s = document.createElement("span");
+      s.className = "tira__resto";
+      s.style.width = (r / 60 * 100) + "%";
+      s.textContent = r >= 2 ? r : "";
+      tira.appendChild(s);
+    }
+    var v = document.createElement("span");
+    v.className = "tira__vacio";
+    tira.appendChild(v);
+    $("d2-cuenta").innerHTML = n + " // 12 = <span class=\"c-cociente\">" + q + "</span>&nbsp;·&nbsp;" + n + " % 12 = <span class=\"c-resto\">" + r + "</span>";
+  }
+  $("d2-n").addEventListener("input", pintarD2);
+  pintarD2();
+
+  var r3a = rueda($("d3-mod"), { n: 12, chico: true, radioMarca: 13 });
+  var r3b = rueda($("d3-reloj"), { n: 12, chico: true, radioMarca: 13, etiqueta: etiquetaReloj });
+  function pintarD3(n) {
+    var r = n % 12;
+    r3a.apuntar(r, false); r3a.marcar(r, r === 0 ? "mal" : null);
+    r3b.apuntar(r, false); r3b.marcar(r);
+    $("d3-mod-txt").innerHTML = "<code>" + n + " % 12</code> da " + r;
+    $("d3-reloj-txt").textContent = "el reloj marca " + (r === 0 ? 12 : r);
+  }
+  $("d3-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("d3-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD3(Number(b.getAttribute("data-n")));
+    });
+  });
+  pintarD3(12);
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 54,
+    anchoNodo: 280,
+    columnas: [0.3, 2, 0.3],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota <code>hora</code> y <code>pasan</code>", col: 1, fila: 1, idea: 1 },
+      { id: "total", tipo: "proceso", texto: "<code>total = hora + pasan</code>", col: 1, fila: 2, idea: 2 },
+      { id: "vueltas", tipo: "proceso", texto: "<code>vueltas = total // 12</code>", col: 1, fila: 3, idea: 3 },
+      { id: "nueva", tipo: "proceso", texto: "<code>nueva = total % 12</code>", col: 1, fila: 4, idea: 3 },
+      { id: "imprime", tipo: "datos", texto: "imprime las vueltas y la hora", col: 1, fila: 5, idea: 4 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 1, fila: 6 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "total" },
+      { de: "total", a: "vueltas" },
+      { de: "vueltas", a: "nueva" },
+      { de: "nueva", a: "imprime" },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Tomás sube al bus" },
+    { nodo: "datos", nota: "hora = 9 · pasan = 30" },
+    { nodo: "total", nota: "9 + 30 = 39" },
+    { nodo: "vueltas", nota: "39 // 12 = 3 vueltas completas" },
+    { nodo: "nueva", nota: "39 % 12 = 3: sobran 3" },
+    { nodo: "imprime", nota: "Vueltas: 3 · Serán las 3" },
+    { nodo: "fin", nota: "Fin: el reloj marcará las 3" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 9 + 30";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = {};
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var h = d.hora, p = d.pasan;
+    vars.hora = h; est.hora = h; est.pos = h;
+    paso({ linea: 0, escribe: "hora", capitulo: "Los datos",
+      nota: "Son las <strong>" + h + "</strong>: la aguja apunta al " + h + "." });
+    vars.pasan = p; est.pasan = p;
+    paso({ linea: 1, escribe: "pasan",
+      nota: "Pasan <strong>" + p + "</strong> horas. Contarlas una por una sería mover la aguja " + p + " veces." });
+
+    var t = h + p;
+    vars.total = t; est.total = t; est.pos = t;
+    paso({ linea: 2, escribe: "total", lee: ["hora", "pasan"], capitulo: "Sumar todo", pausa: true, gira: true,
+      cuenta: h + " + " + p + " = " + t,
+      nota: "<code>" + h + " + " + p + "</code> da <strong>" + t + "</strong>. " + t + " no es una hora del reloj: es contar como si el reloj no diera la vuelta. Mira cuántas veces la aguja pasa por las 12." });
+
+    var v = Math.floor(t / 12);
+    vars.vueltas = v; est.vueltas = v;
+    paso({ linea: 3, escribe: "vueltas", lee: ["total"], capitulo: "Las vueltas",
+      cuenta: t + " // 12 = " + v,
+      nota: "<code>" + t + " // 12</code> da <strong>" + v + "</strong>: en " + t + " horas caben " + v + (v === 1 ? " vuelta completa" : " vueltas completas") + " de 12. En la tira, cada trozo azul es una vuelta." });
+
+    var r = t % 12;
+    vars.nueva = r; est.nueva = r;
+    paso({ linea: 4, escribe: "nueva", lee: ["total"], capitulo: "Lo que sobra", pausa: true,
+      cuenta: t + " % 12 = " + r,
+      nota: "<code>" + t + " % 12</code> da <strong>" + r + "</strong>. Las vueltas completas dejan la aguja donde estaba; lo que sobra, no: " +
+        (r === 0 ? "aquí no sobra nada." : "la aguja queda en el " + r + ".") });
+
+    paso({ linea: 5, salida: "Vueltas: " + v, lee: ["vueltas"], capitulo: "Mostrar",
+      nota: "Imprime cuántas vueltas dio la aguja." });
+    var cero = r === 0;
+    paso({ linea: 6, salida: "Serán las " + r, lee: ["nueva"], capitulo: "Fin", pausa: true, fin: true, cero: cero,
+      nota: cero
+        ? "El programa dice <strong>«Serán las 0»</strong>, pero el reloj marca <strong>12</strong>: <code>%</code> da de 0 a 11 y el reloj va de 1 a 12. En los detalles está cómo arreglarlo."
+        : "Listo: serán las <strong>" + r + "</strong>. El mapa de calor dice ×1 en cada línea: no hizo falta contar hora por hora." });
+    return pasos;
+  }
+
+  /* La escena: el reloj de Tomás y la tira de horas */
+  var escena = (function () {
+    var reloj, contador, cuentaEl, aviso, tira, marcas, leyenda;
+    var pos = 0, anim = null;
+    function crear(cont) {
+      cont.innerHTML =
+        '<div class="estacion">' +
+        '  <div class="estacion__arriba">' +
+        '    <div class="estacion__reloj"></div>' +
+        '    <div class="estacion__datos">' +
+        '      <div class="contador-vueltas"><span>pasó por las 12</span><strong>0</strong></div>' +
+        '      <span class="estacion__cuenta"></span>' +
+        '      <p class="estacion__aviso" aria-live="polite"></p>' +
+        "    </div>" +
+        "  </div>" +
+        '  <div class="tira-horas tira-horas--vacia" aria-hidden="true"></div>' +
+        '  <div class="tira-horas__marcas" aria-hidden="true"></div>' +
+        '  <p class="tira-leyenda"></p>' +
+        "</div>";
+      reloj = rueda(cont.querySelector(".estacion__reloj"), { n: 12, etiqueta: etiquetaReloj, aguja: 50 });
+      contador = cont.querySelector(".contador-vueltas strong");
+      cuentaEl = cont.querySelector(".estacion__cuenta");
+      aviso = cont.querySelector(".estacion__aviso");
+      tira = cont.querySelector(".tira-horas");
+      marcas = cont.querySelector(".tira-horas__marcas");
+      leyenda = cont.querySelector(".tira-leyenda");
+    }
+    function detener() { if (anim) cancelAnimationFrame(anim); anim = null; }
+    function ponerPos(x) {
+      pos = x;
+      reloj.girarA(x);
+      contador.textContent = Math.floor(x / 12 + 1e-9);
+    }
+    function reiniciar(d) { detener(); ponerPos(d.hora); }
+    function girar(hasta, duracion) {
+      detener();
+      var desde = pos, t0 = null;
+      function cuadro(t) {
+        if (t0 === null) t0 = t;
+        var f = Math.min(1, (t - t0) / duracion);
+        var e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+        ponerPos(desde + (hasta - desde) * e);
+        if (f < 1) anim = requestAnimationFrame(cuadro); else { anim = null; ponerPos(hasta); }
+      }
+      anim = requestAnimationFrame(cuadro);
+    }
+    function span(clase, izq, ancho, texto) {
+      var s = document.createElement("span");
+      s.className = clase;
+      s.style.left = izq + "%";
+      s.style.width = ancho + "%";
+      s.textContent = texto || "";
+      return s;
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : {};
+      var objetivo = e.pos !== undefined ? e.pos : (op.datos ? op.datos.hora : 0);
+      if (p && p.gira && op.animar) girar(objetivo, Math.min(2800, 500 + 55 * Math.abs(objetivo - pos)));
+      else { detener(); ponerPos(objetivo); }
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      var marcada = e.nueva !== undefined ? e.nueva : null;
+      reloj.marcar(marcada, p && p.cero ? "mal" : null);
+      aviso.textContent = p && p.cero ? "El reloj marca 12, no 0" : "";
+
+      // La tira: todas las horas en fila
+      tira.textContent = "";
+      marcas.textContent = "";
+      var t = e.total;
+      tira.classList.toggle("tira-horas--vacia", t === undefined);
+      if (t === undefined) { leyenda.innerHTML = ""; return; }
+      var u = 100 / Math.max(t, 1);
+      if (e.vueltas === undefined) {
+        tira.appendChild(span("th-hora", 0, e.hora * u, e.hora));
+        tira.appendChild(span("th-pasan", e.hora * u, e.pasan * u, e.pasan));
+        leyenda.innerHTML = '<span style="--c:#c9d0dc">hora: ' + e.hora + '</span><span style="--c:#9cc0e8">pasan: ' + e.pasan + "</span>";
+        return;
+      }
+      for (var k = 0; k < e.vueltas; k++) {
+        var b = span("th-bloque", k * 12 * u, 12 * u, "12");
+        if (op.animar && p.linea === 3) b.style.setProperty("--retraso", (k * 90) + "ms");
+        else b.style.animation = "none";
+        tira.appendChild(b);
+      }
+      var resto = t - e.vueltas * 12;
+      if (e.nueva !== undefined) {
+        if (resto) tira.appendChild(span("th-resto", e.vueltas * 12 * u, resto * u, resto));
+      } else if (resto) {
+        tira.appendChild(span("th-pasan", e.vueltas * 12 * u, resto * u, resto));
+      }
+      var paso = e.vueltas > 12 ? 24 : 12;
+      for (var m = 0; m <= e.vueltas * 12; m += paso) {
+        var mk = document.createElement("span");
+        mk.style.left = (m * u) + "%";
+        mk.textContent = m;
+        marcas.appendChild(mk);
+      }
+      leyenda.innerHTML = '<span style="--c:#2445b0">' + e.vueltas + (e.vueltas === 1 ? " vuelta" : " vueltas") + " de 12</span>" +
+        (e.nueva !== undefined ? '<span style="--c:#f2a75e">sobran: ' + e.nueva + "</span>" : "");
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Sale a las 9 · 30 horas", datos: { hora: 9, pasan: 30 } },
+    { nombre: "9 + 5 horas", datos: { hora: 9, pasan: 5 } },
+    { nombre: "10 + 100 horas", datos: { hora: 10, pasan: 100 } },
+    { nombre: "9 + 3: ¿las 0?", datos: { hora: 9, pasan: 3 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1],
+    variables: ["hora", "pasan", "total", "vueltas", "nueva"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  function pintarTrabajo() {
+    var p = Number($("t-pasan").value), t = 9 + p;
+    $("t-num").textContent = p;
+    $("t-mano").textContent = "Contando a mano: " + p + (p === 1 ? " paso" : " pasos") + " de la aguja";
+    var tope = Math.max(p, 3);
+    $("t-mano-barra").style.width = (p / tope * 100) + "%";
+    $("t-formula-barra").style.width = (3 / tope * 100) + "%";
+    $("t-cuenta").innerHTML = "9 + " + p + " = " + t + " → <span class=\"c-resto\">" + (t % 12) + "</span>";
+  }
+  $("t-pasan").addEventListener("input", pintarTrabajo);
+  pintarTrabajo();
+
+  Python.escribir($("a-codigo"), ["nueva = (total - 1) % 12 + 1"]);
+  function pintarArreglo() {
+    var t = Number($("a-total").value), a = t - 1, b = mod(a, 12), c = b + 1;
+    $("a-num").textContent = t;
+    $("a-pasos").innerHTML =
+      "<span>total - 1 = " + a + "</span>" +
+      "<span>" + a + " % 12 = " + b + "</span>" +
+      "<span class=\"c-ok\">" + b + " + 1 = " + c + "</span>" +
+      "<span class=\"c-resto\">(sin arreglo: " + t + " % 12 = " + (t % 12) + ")</span>";
+  }
+  $("a-total").addEventListener("input", pintarArreglo);
+  pintarArreglo();
+
+  var rb = rueda($("b-rueda"), { n: 12, centro: true });
+  function pintarAtras() {
+    var hace = Number($("b-hace").value), x = 9 - hace, r = mod(x, 12);
+    $("b-num").textContent = hace;
+    rb.apuntar(r, false);
+    rb.marcar(r);
+    rb.centro("");
+    $("b-cuenta").innerHTML = "(9 - " + hace + ") % 12 = " + (x < 0 ? "(" + x + ")" : x) + " % 12 = <span class=\"c-resto\">" + r + "</span>";
+  }
+  $("b-hace").addEventListener("input", pintarAtras);
+  pintarAtras();
+
+  /* ---------- 6. Todo lo que da vueltas ---------- */
+  var DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+  var MODOS = {
+    dias: { n: 7, max: 400, valor: 100, chico: true, etiqueta: function (k) { return k + " " + DIAS[k]; },
+      rotulo: function (p) { return "Pasan: " + p + " días"; },
+      codigo: function (p) { return ["hoy = 0   # lunes", "pasan = " + p, "dia = (hoy + pasan) % 7"]; },
+      resultado: function (p) { var r = p % 7; return { k: r, texto: "dia = " + r + ": " + ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][r] + " (en la rueda)" }; } },
+    minutos: { n: 60, cada: 5, max: 300, valor: 130, chico: true,
+      rotulo: function (p) { return "Pasan: " + p + " minutos"; },
+      codigo: function (p) { return ["minuto = 45   # 10:45", "pasan = " + p, "extra = (minuto + pasan) // 60", "nuevo = (minuto + pasan) % 60"]; },
+      resultado: function (p) {
+        var extra = Math.floor((45 + p) / 60), nuevo = (45 + p) % 60, hora = 10 + extra;
+        return { k: nuevo, texto: "Pasan " + extra + (extra === 1 ? " hora" : " horas") + " más: serán las " + hora + ":" + (nuevo < 10 ? "0" : "") + nuevo };
+      } },
+    h24: { n: 24, cada: 3, max: 100, valor: 30, chico: true,
+      rotulo: function (p) { return "Pasan: " + p + " horas"; },
+      codigo: function (p) { return ["hora = 20", "pasan = " + p, "nueva = (hora + pasan) % 24"]; },
+      resultado: function (p) { var r = (20 + p) % 24; return { k: r, texto: "Serán las " + r + ":00" + (r === 0 ? " (la medianoche)" : "") }; } }
+  };
+  var modo = "dias", rm = null;
+  function elegirModo(m) {
+    modo = m;
+    var o = MODOS[m];
+    rm = rueda($("m-rueda"), { n: o.n, cada: o.cada || 1, chico: o.chico, etiqueta: o.etiqueta, radioMarca: o.n === 7 ? 20 : 13, r: o.n === 7 ? 70 : 76 });
+    $("m-pasan").max = String(o.max);
+    $("m-pasan").value = String(o.valor);
+    pintarModo();
+  }
+  function pintarModo() {
+    var o = MODOS[modo], p = Number($("m-pasan").value);
+    $("m-label").textContent = o.rotulo(p);
+    Python.escribir($("m-codigo"), o.codigo(p));
+    var res = o.resultado(p);
+    rm.apuntar(res.k, false);
+    rm.marcar(res.k % (o.cada || 1) === 0 ? res.k : null);
+    $("m-resultado").textContent = res.texto;
+  }
+  $("m-pasan").addEventListener("input", pintarModo);
+  $("m-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("m-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      elegirModo(b.getAttribute("data-m"));
+    });
+  });
+  elegirModo("dias");
+
+  Problemas.iniciar({ id: "problema-reloj" });
+})();
+</script>
+</body>
+</html>
