@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Es año bisiesto? · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: decidir si un año es bisiesto con if, elif y else, preguntando de lo más particular a lo más general, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- La escena: los tres coladores y la hoja de febrero ---------- */
+    .feb { flex: 1; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--esp-3); align-content: center; }
+    .feb__cuenta { justify-self: center; min-height: 1.8rem; margin: 0; padding: 0.1em 0.8em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.8rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .feb__cuenta:empty { opacity: 0; }
+    .feb__cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--esp-3); align-items: center; }
+
+    .coladores { display: grid; gap: 0.35rem; }
+    .colador { display: grid; grid-template-columns: minmax(0, 1fr) 4.4rem; align-items: center; gap: var(--esp-2); min-height: 2.6rem; padding: 0.15rem 0.4rem; border-radius: 10px; transition: background-color 250ms, opacity 250ms; }
+    .colador__nombre { display: grid; gap: 0.05rem; font: 700 0.78rem var(--fuente-codigo); color: var(--tinta); line-height: 1.2; }
+    .colador__res { min-height: 1.1em; font: 700 0.66rem var(--fuente); color: var(--tinta-suave); }
+    .colador__lugar { position: relative; display: grid; place-items: end center; height: 2.3rem; border-bottom: 4px dashed #b9c1cf; transition: border-color 250ms; }
+    .colador--arriba .colador__lugar { border-bottom-color: transparent; }
+    .colador--arriba .colador__nombre { font-family: var(--fuente); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-suave); }
+    .colador--piso .colador__lugar { border-bottom: 4px solid #b9c1cf; }
+    .colador--activo { background: rgba(255, 212, 121, 0.35); }
+    .colador--pasa .colador__lugar { border-bottom-color: #d6dbe4; }
+    .colador--pasa .colador__res { color: var(--tinta-suave); }
+    .colador--atrapa .colador__lugar { border-bottom: 4px solid var(--azul-tinta); }
+    .colador--atrapa .colador__res { color: var(--azul-tinta); }
+    .colador--si .colador__lugar { border-bottom: 4px solid var(--color-ok); }
+    .colador--si .colador__res { color: var(--color-ok); }
+    .colador--no .colador__lugar { border-bottom: 4px solid var(--lapiz); }
+    .colador--no .colador__res { color: var(--lapiz); }
+    .colador--saltado { opacity: 0.38; }
+    .colador--saltado .colador__res { font-style: italic; }
+
+    .ficha-anio { display: inline-grid; place-items: center; min-width: 3.6rem; height: 1.85rem; margin-bottom: 0.2rem; padding: 0 0.4em; border-radius: 8px; background: var(--tinta); color: #fff; font: 700 0.9rem var(--fuente-codigo); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); transition: background-color 250ms; }
+    .ficha-anio--atrapa { background: var(--azul-tinta); }
+    .ficha-anio--si { background: var(--color-ok); }
+    .ficha-anio--no { background: var(--lapiz); }
+
+    .hoja-feb { position: relative; padding: 0.9rem 0.6rem 0.5rem; border: 1px solid var(--papel-borde); border-radius: 6px; background: #fff; box-shadow: var(--sombra); }
+    .hoja-feb::before { content: ""; position: absolute; left: 22%; right: 22%; top: -0.35rem; height: 0.7rem; background: radial-gradient(circle, #9aa4b2 0 0.22rem, transparent 0.25rem) 0 0 / 25% 100% repeat-x; }
+    .hoja-feb__mes { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 0.35rem; padding-bottom: 0.25rem; border-bottom: 2px solid var(--lapiz); font: 700 0.86rem var(--serif); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lapiz); }
+    .hoja-feb__mes span { font-family: var(--fuente-codigo); letter-spacing: 0; color: var(--tinta); }
+    .hoja-feb__dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+    .hoja-feb__dias span { display: grid; place-items: center; aspect-ratio: 1.15; border-radius: 3px; font: 600 0.7rem var(--fuente); color: var(--tinta); background: var(--papel); }
+    .hoja-feb__dias .cab { background: none; font-weight: 700; color: var(--tinta-suave); aspect-ratio: auto; padding-bottom: 0.1rem; }
+    .hoja-feb__dias .vacio { background: none; }
+    .hoja-feb__dias .domingo { color: var(--lapiz); }
+    .dia29 { position: relative; outline: 2px dashed #b9c1cf; outline-offset: -2px; background: #fff !important; color: #9aa4b2 !important; }
+    .dia29--si { outline: 0; background: var(--color-ok) !important; color: #fff !important; font-weight: 700 !important; }
+    .dia29--si.dia29--entra { animation: dia-entra 520ms var(--curva-rebote) both; }
+    .dia29--no { outline-color: var(--lapiz); color: var(--lapiz) !important; opacity: 0.75; }
+    .dia29--no::after { content: ""; position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; background: var(--lapiz); transform: rotate(-35deg); }
+    .dia29--no.dia29--entra::after { animation: tachar 400ms ease both; }
+    @keyframes dia-entra { from { transform: scale(0.2); opacity: 0; } }
+    @keyframes tachar { from { right: 88%; } }
+    .hoja-feb__pie { margin: 0.35rem 0 0; min-height: 1.2em; font: 700 0.74rem var(--fuente); text-align: center; color: var(--tinta-suave); }
+    .hoja-feb__pie--si { color: var(--color-ok); }
+    .hoja-feb__pie--no { color: var(--lapiz); }
+    @media (max-width: 640px) {
+      .rep[data-vista="escena"] .rep__escena { padding: var(--esp-2); }
+      .feb { grid-template-rows: auto auto; align-content: start; gap: var(--esp-2); }
+      .feb__cuerpo { grid-template-columns: minmax(0, 1fr); gap: var(--esp-2); }
+      .coladores { gap: 0.1rem; }
+      .colador { grid-template-columns: minmax(0, 1fr) 4.4rem; min-height: 1.9rem; padding: 0 0.4rem; }
+      .colador__nombre { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 0.6rem; }
+      .colador__lugar { height: 1.9rem; }
+      .ficha-anio { height: 1.6rem; margin-bottom: 0.15rem; }
+      .hoja-feb { width: 100%; max-width: 16rem; justify-self: center; box-sizing: border-box; padding: 0.6rem 0.5rem 0.35rem; }
+      .hoja-feb__mes { margin-bottom: 0.2rem; }
+      .hoja-feb__dias span { aspect-ratio: 1.6; }
+      .hoja-feb__pie { margin-top: 0.2rem; }
+      #p-codigo { white-space: pre-wrap; }
+      /* El código: un poco menos de margen para los números de línea */
+      .rep__codigo .codigo .linea { padding-left: 2.15rem; }
+      .rep__codigo .codigo .linea::before { width: 1.45rem; }
+    }
+
+    /* El diagrama deja lugar a su derecha para las flechas que vuelven al rombo */
+    @media (min-width: 701px) { #flujo-caja { padding-right: 3.2rem; } }
+
+    /* ---------- Demos ---------- */
+    .tira-anios { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 3px; margin: var(--esp-2) 0; }
+    .tira-anios span { display: grid; place-items: center; height: 2rem; border-radius: 6px; background: var(--papel); border: 1.5px solid var(--papel-borde); font: 700 0.62rem var(--fuente-codigo); color: var(--tinta-suave); transition: background-color 200ms, color 200ms; }
+    .tira-anios .multiplo { background: var(--azul-tinta); border-color: var(--azul-tinta); color: #fff; }
+    .tira-anios .actual { outline: 3px solid #ffd479; outline-offset: 1px; }
+    .tira-leyenda { margin: 0; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .tira-leyenda b { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.3em; border-radius: 2px; background: var(--azul-tinta); vertical-align: -0.05em; }
+    .concepto .codigo { margin: var(--esp-2) 0; }
+    .concepto .codigo .linea { position: relative; }
+    .marca-cond { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0 0.45em; border-radius: 999px; font: 700 0.66rem var(--fuente); line-height: 1.5; }
+    .marca-cond--si { background: rgba(80, 200, 130, 0.25); color: #9ff0bf; }
+    .marca-cond--no { background: rgba(255, 255, 255, 0.1); color: #c7ced8; }
+    .marca-cond--nada { background: none; color: #8b96a3; font-style: italic; font-weight: 400; }
+    .consola-mini { margin: 0 0 var(--esp-2); padding: 0.35rem var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs) var(--fuente-codigo); min-height: 1.4em; }
+    .consola-mini::before { content: "Consola  "; color: #8b96a3; font-weight: 400; font-size: 0.85em; }
+    .resultado-demo { margin: 0 !important; font-size: var(--texto-xs) !important; }
+
+    /* ---------- Detalles ---------- */
+    .mapa-400 { display: grid; grid-template-columns: repeat(40, minmax(0, 1fr)); gap: 1.5px; margin: var(--esp-2) 0; }
+    .mapa-400 span { aspect-ratio: 1; border-radius: 1.5px; background: #c9d0dc; }
+    .mapa-400 .p1 { background: var(--c-idea-2); }
+    .mapa-400 .p2 { background: var(--lapiz); }
+    .mapa-400 .p3 { background: var(--azul-tinta); }
+    .mapa-400 .actual { outline: 2.5px solid #ffb000; outline-offset: 1px; position: relative; z-index: 1; }
+    .leyenda-400 { display: grid; gap: 0.15rem; margin: 0 0 var(--esp-2); padding: 0; list-style: none; }
+    .leyenda-400 li { font-size: var(--texto-xs) !important; line-height: 1.4 !important; }
+    .leyenda-400 i { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.35em; border-radius: 2px; vertical-align: -0.05em; background: var(--c); }
+    .orden-filas { display: grid; gap: var(--esp-2); margin: var(--esp-2) 0; }
+    .orden-fila { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--papel); }
+    .orden-fila__titulo { display: flex; justify-content: space-between; gap: var(--esp-2); margin-bottom: 0.3rem; font-size: var(--texto-xs); font-weight: 700; color: var(--tinta-suave); }
+    .orden-fila__pildoras { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+    .pildora { padding: 0.15em 0.55em; border-radius: 999px; border: 1.5px solid var(--papel-borde); background: #fff; font: 700 0.72rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .pildora--no { color: var(--tinta-suave); }
+    .pildora--si { border-color: var(--azul-tinta); background: var(--azul-tinta-suave); color: var(--azul-tinta); }
+    .pildora--nada { opacity: 0.4; text-decoration: line-through; }
+    .orden-fila__veredicto { margin: 0.35rem 0 0 !important; font: 700 var(--texto-sm) var(--serif) !important; }
+    .veredicto--ok { color: var(--color-ok); }
+    .veredicto--mal { color: var(--lapiz); }
+    .linea-eval { display: grid; gap: 0.2rem; margin: var(--esp-2) 0 0; font: 700 0.76rem var(--fuente-codigo); }
+    .linea-eval span { display: block; }
+    .linea-eval .gris { color: var(--tinta-suave); font-weight: 400; }
+    #p-codigo { font-size: 0.76rem; }
+
+    /* ---------- 6. ¿Por qué tantas reglas? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-3); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .desfase { display: grid; gap: 0.2rem; }
+    .desfase__cab { display: flex; justify-content: space-between; align-items: baseline; gap: var(--esp-2); font-size: var(--texto-xs); font-weight: 700; }
+    .desfase__cab code { font-size: 0.95em; }
+    .desfase__dias { font: 700 var(--texto-sm) var(--fuente-codigo); white-space: nowrap; }
+    .desfase__pista { position: relative; height: 1.1rem; border-radius: 6px; background: var(--papel); border: 1px solid var(--papel-borde); overflow: hidden; }
+    .desfase__barra { position: absolute; left: 0; top: 0; bottom: 0; min-width: 3px; border-radius: 5px; background: var(--c); transition: width 250ms ease; }
+    .desfase__barra--tope { background: repeating-linear-gradient(45deg, var(--c) 0 8px, #fff6 8px 12px); }
+    .desfase__nota { font-size: 0.72rem; color: var(--tinta-suave); }
+    .mas__dibujo .control-fila { margin: 0; }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); gap: var(--esp-2); }
+      #reglas .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #reglas .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Condicionales</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#reglas"><span>6 · ¿Por qué tantas reglas?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Condicionales</p>
+          <h1>¿Es año bisiesto?</h1>
+          <p class="caso-bajada">Un programa que dice si febrero tendrá 29 días, con una regla que tiene una excepción… que tiene otra excepción.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 2 de 5"><span class="estrellas__llenas">★★</span>☆☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/formulas/index.html">%</a></li>
+              <li><a href="../../lecciones/condicionales/index.html">if, elif y else</a></li>
+              <li><a href="../../lecciones/condicionales/logicos/index.html">and, or y not</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="La hoja de febrero de un calendario con el 29 encerrado en un círculo, y un año que cae por tres coladores">
+          <g font-family="monospace" font-weight="700" font-size="11">
+            <rect x="8" y="14" width="48" height="20" rx="5" fill="#1f2a44"/>
+            <text x="32" y="28" text-anchor="middle" fill="#fff">1900</text>
+            <line x1="6" y1="62" x2="58" y2="62" stroke="#9aa4b2" stroke-width="4" stroke-dasharray="6 4"/>
+            <text x="32" y="56" text-anchor="middle" fill="#556074">÷400</text>
+            <line x1="6" y1="100" x2="58" y2="100" stroke="#b4400e" stroke-width="4"/>
+            <text x="32" y="94" text-anchor="middle" fill="#556074">÷100</text>
+            <line x1="6" y1="138" x2="58" y2="138" stroke="#9aa4b2" stroke-width="4" stroke-dasharray="6 4" opacity="0.45"/>
+            <text x="32" y="132" text-anchor="middle" fill="#556074" opacity="0.45">÷4</text>
+            <path d="M32 38 v8" stroke="#1f2a44" stroke-width="2" stroke-linecap="round"/>
+            <path d="M28 42 l4 5 l4 -5" fill="none" stroke="#1f2a44" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <rect x="72" y="22" width="156" height="164" rx="8" fill="#fff" stroke="#1f2a44" stroke-width="3"/>
+          <rect x="72" y="22" width="156" height="30" rx="8" fill="#b4400e"/>
+          <rect x="72" y="42" width="156" height="10" fill="#b4400e"/>
+          <text x="150" y="43" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="700" fill="#fff" letter-spacing="2">FEBRERO</text>
+          <g fill="#9aa4b2"><circle cx="110" cy="22" r="4"/><circle cx="190" cy="22" r="4"/></g>
+          <g fill="#f3ecdc">
+            <rect x="80" y="62" width="17" height="17" rx="3"/><rect x="100" y="62" width="17" height="17" rx="3"/><rect x="120" y="62" width="17" height="17" rx="3"/><rect x="140" y="62" width="17" height="17" rx="3"/><rect x="160" y="62" width="17" height="17" rx="3"/><rect x="180" y="62" width="17" height="17" rx="3"/><rect x="200" y="62" width="17" height="17" rx="3"/>
+            <rect x="80" y="85" width="17" height="17" rx="3"/><rect x="100" y="85" width="17" height="17" rx="3"/><rect x="120" y="85" width="17" height="17" rx="3"/><rect x="140" y="85" width="17" height="17" rx="3"/><rect x="160" y="85" width="17" height="17" rx="3"/><rect x="180" y="85" width="17" height="17" rx="3"/><rect x="200" y="85" width="17" height="17" rx="3"/>
+            <rect x="80" y="108" width="17" height="17" rx="3"/><rect x="100" y="108" width="17" height="17" rx="3"/><rect x="120" y="108" width="17" height="17" rx="3"/><rect x="140" y="108" width="17" height="17" rx="3"/><rect x="160" y="108" width="17" height="17" rx="3"/><rect x="180" y="108" width="17" height="17" rx="3"/><rect x="200" y="108" width="17" height="17" rx="3"/>
+            <rect x="80" y="131" width="17" height="17" rx="3"/><rect x="100" y="131" width="17" height="17" rx="3"/><rect x="120" y="131" width="17" height="17" rx="3"/><rect x="140" y="131" width="17" height="17" rx="3"/><rect x="160" y="131" width="17" height="17" rx="3"/><rect x="180" y="131" width="17" height="17" rx="3"/><rect x="200" y="131" width="17" height="17" rx="3"/>
+          </g>
+          <rect x="80" y="154" width="17" height="17" rx="3" fill="#fff" stroke="#9aa4b2" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <text x="88.5" y="167" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#1f2a44">29</text>
+          <ellipse cx="88.5" cy="162.5" rx="15" ry="13" fill="none" stroke="#b4400e" stroke-width="2.5" transform="rotate(-12 88.5 162.5)"/>
+          <text x="112" y="167" font-family="Georgia, serif" font-style="italic" font-size="14" font-weight="700" fill="#b4400e">¿sí o no?</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Lucía nació un <strong>29 de febrero</strong>. Ese día solo existe en los años bisiestos, así que casi siempre celebra el 28. En 2026 tampoco le toca.</p>
+            <p>Ella creía que bastaba con dividir entre 4. Pero su abuelo le contó que <span class="resalta">1900 no fue bisiesto y 2000 sí</span>, aunque los dos se dividen entre 4. <span class="nota-margen">¿Qué regla sigue el calendario, y cómo la escribe un programa?</span></p>
+            <div class="ticket" aria-label="Los cumpleaños de Lucía">
+              <h3>CUMPLEAÑOS DE LUCÍA</h3>
+              <div class="ticket__fila"><span>Nació</span><span>29 feb 2012</span></div>
+              <div class="ticket__fila"><span>2024</span><span>29 feb ✓</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>2100</span><span>¿?</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dado un año, diga <strong>si es bisiesto</strong> y cuántos días tiene febrero. La regla: es bisiesto si se divide entre 4, <strong>salvo</strong> si se divide entre 100, <strong>salvo</strong> si se divide entre 400.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>anio</code>: el año, un entero mayor que 0 (se escribe sin ñ).</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Dos líneas: <code>N es bisiesto</code> y <code>Febrero tiene 29 días</code>, o <code>N no es bisiesto</code> y <code>Febrero tiene 28 días</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>anio = 2024</td><td>2024 es bisiesto
+Febrero tiene 29 días</td></tr>
+                <tr><td>anio = 1900</td><td>1900 no es bisiesto
+Febrero tiene 28 días</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3><code>%</code> dice si se divide exacto</h3>
+            <p><code>anio % 4</code> es lo que sobra al repartir el año de 4 en 4. Si sobra 0, se divide exacto.</p>
+            <div class="control-fila">
+              <label for="d1-anio">anio = <span id="d1-num">2026</span></label>
+              <input type="range" id="d1-anio" min="1880" max="2120" value="2026">
+            </div>
+            <div class="chips-elegir" id="d1-div" role="group" aria-label="Dividir entre">
+              <button type="button" data-d="4" aria-pressed="true">% 4</button>
+              <button type="button" data-d="100" aria-pressed="false">% 100</button>
+              <button type="button" data-d="400" aria-pressed="false">% 400</button>
+            </div>
+            <div class="tira-anios" id="d1-tira" aria-hidden="true"></div>
+            <p class="tira-leyenda" id="d1-leyenda"></p>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3><code>elif</code> se queda con la primera verdadera</h3>
+            <p>Python pregunta de arriba abajo. Con la primera condición <code>True</code>, corre su bloque y <strong>salta el resto</strong>.</p>
+            <div class="control-fila">
+              <label for="d2-nota">nota = <span id="d2-num">19</span></label>
+              <input type="range" id="d2-nota" min="0" max="20" value="19">
+            </div>
+            <pre class="codigo" id="d2-codigo"></pre>
+            <p class="consola-mini" id="d2-salida" aria-live="polite"></p>
+            <p class="resultado-demo" id="d2-res"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Una variable con <code>True</code> o <code>False</code></h3>
+            <p>Una variable puede guardar la respuesta a una pregunta. Luego, <code>if bisiesto:</code> pregunta lo mismo que <code>if bisiesto == True:</code>.</p>
+            <div class="chips-elegir" id="d3-chips" role="group" aria-label="Valor de bisiesto">
+              <button type="button" data-v="true" aria-pressed="true">True</button>
+              <button type="button" data-v="false" aria-pressed="false">False</button>
+            </div>
+            <pre class="codigo" id="d3-codigo"></pre>
+            <p class="consola-mini" id="d3-salida" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo-caja"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 1900</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Si se pregunta primero «¿se divide entre 4?», 1900 diría que sí y ya no se miraría lo demás. Por eso <strong>se pregunta de lo más particular a lo más general</strong>: 400, luego 100, luego 4.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota el año</strong> Por ejemplo, 1900.</li>
+              <li data-idea="2"><strong>Primero, las excepciones</strong> ¿Se divide entre 400? Sí es bisiesto. ¿Entre 100? No lo es.</li>
+              <li data-idea="3"><strong>Después, la regla general</strong> ¿Entre 4? Es bisiesto. Si nada se cumplió, no lo es.</li>
+              <li data-idea="4"><strong>Muestra el resultado</strong> Según lo que guardó <code>bisiesto</code>, 29 o 28 días.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuántas preguntas hace?</h3>
+            <p>Entre 1 y 3, según el año. Estos son los 400 años del 2001 al 2400, cada uno con su color:</p>
+            <div class="mapa-400" id="t-mapa" aria-hidden="true"></div>
+            <ul class="leyenda-400">
+              <li><i style="--c: var(--c-idea-2)"></i>1 pregunta (de 400): <strong>1</strong> año</li>
+              <li><i style="--c: var(--lapiz)"></i>2 preguntas (de 100): <strong>3</strong> años</li>
+              <li><i style="--c: var(--azul-tinta)"></i>3 preguntas, bisiesto: <strong>96</strong> años</li>
+              <li><i style="--c: #c9d0dc"></i>3 preguntas y el <code>else</code>: <strong>300</strong> años</li>
+            </ul>
+            <div class="control-fila">
+              <label for="t-anio">anio = <span id="t-num">2100</span></label>
+              <input type="range" id="t-anio" min="2001" max="2400" value="2100">
+            </div>
+            <p class="nota-margen" id="t-texto" aria-live="polite" style="margin:0"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué en este orden?</h3>
+            <p>Con <code>% 4</code> primero, el <code>elif</code> se queda con esa y las excepciones nunca se preguntan.</p>
+            <div class="chips-elegir" id="o-chips" role="group" aria-label="Elige un año">
+              <button type="button" data-a="2024" aria-pressed="false">2024</button>
+              <button type="button" data-a="1900" aria-pressed="true">1900</button>
+              <button type="button" data-a="2000" aria-pressed="false">2000</button>
+              <button type="button" data-a="2100" aria-pressed="false">2100</button>
+            </div>
+            <div class="orden-filas" aria-live="polite">
+              <div class="orden-fila">
+                <div class="orden-fila__titulo"><span>El programa: 400, 100, 4</span></div>
+                <div class="orden-fila__pildoras" id="o-bien"></div>
+                <p class="orden-fila__veredicto" id="o-bien-v"></p>
+              </div>
+              <div class="orden-fila">
+                <div class="orden-fila__titulo"><span>Al revés: 4, 100, 400</span></div>
+                <div class="orden-fila__pildoras" id="o-mal"></div>
+                <p class="orden-fila__veredicto" id="o-mal-v"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Y en una sola línea?</h3>
+            <p>Con <code>and</code>, <code>or</code> y <code>not</code> también se puede. Pero Python hace el <code>and</code> antes que el <code>or</code>, como <code>*</code> antes que <code>+</code>:</p>
+            <div class="chips-elegir" id="p-forma" role="group" aria-label="Con o sin paréntesis">
+              <button type="button" data-p="con" aria-pressed="true">con paréntesis</button>
+              <button type="button" data-p="sin" aria-pressed="false">sin paréntesis</button>
+            </div>
+            <pre class="codigo" id="p-codigo"></pre>
+            <div class="chips-elegir" id="p-anios" role="group" aria-label="Elige un año">
+              <button type="button" data-a="2024" aria-pressed="false">2024</button>
+              <button type="button" data-a="2026" aria-pressed="true">2026</button>
+              <button type="button" data-a="1900" aria-pressed="false">1900</button>
+              <button type="button" data-a="2000" aria-pressed="false">2000</button>
+            </div>
+            <div class="linea-eval" id="p-eval" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Por qué tantas reglas? -->
+    <section class="panel" id="reglas">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Por qué tantas reglas?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Una vuelta de la Tierra al Sol dura unos <strong>365,2422 días</strong>. El calendario solo tiene días enteros, así que cada tanto agrega uno: el 29 de febrero.</p>
+            <p>Con solo la regla del 4, el año dura 365,25 en promedio: un poquito de más, y el calendario <strong>se adelanta unos 3 días cada 400 años</strong>. Quitando los bisiestos de 100 que no son de 400 (3 de cada 400 años), dura 365,2425: <span class="resalta">un día de error en más de 3000 años</span>.</p>
+            <p class="nota-margen">En 1582 el calendario ya se había corrido 10 días: se saltó del jueves 4 al viernes 15 de octubre.</p>
+            <p><button type="button" class="btn btn-secundario" id="ver-1900">Ver 1900 en la ejecución ↑</button></p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="control-fila">
+              <label for="r-anios">Pasan <span id="r-num">400</span> años</label>
+              <input type="range" id="r-anios" min="100" max="4000" step="100" value="400">
+            </div>
+            <div class="desfase" style="--c: #9aa4b2">
+              <div class="desfase__cab"><span>Sin bisiestos · <code>365</code></span><span class="desfase__dias" id="r-0"></span></div>
+              <div class="desfase__pista"><span class="desfase__barra" id="r-0-barra"></span></div>
+              <span class="desfase__nota">se atrasa casi un cuarto de día por año</span>
+            </div>
+            <div class="desfase" style="--c: #f2a75e">
+              <div class="desfase__cab"><span>Solo la regla del 4 · <code>365,25</code></span><span class="desfase__dias" id="r-1"></span></div>
+              <div class="desfase__pista"><span class="desfase__barra" id="r-1-barra"></span></div>
+              <span class="desfase__nota">100 bisiestos cada 400 años</span>
+            </div>
+            <div class="desfase" style="--c: var(--color-ok)">
+              <div class="desfase__cab"><span>Las tres reglas · <code>365,2425</code></span><span class="desfase__dias" id="r-2"></span></div>
+              <div class="desfase__pista"><span class="desfase__barra" id="r-2-barra"></span></div>
+              <span class="desfase__nota">97 bisiestos cada 400 años</span>
+            </div>
+            <p class="tira-leyenda">Cada barra llega hasta un mes (30 días) de desfase.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../reloj/index.html">← <span class="largo">Caso anterior: </span>El reloj que da la vuelta</a>
+          <a class="btn btn-primario" href="../podio/index.html"><span class="largo">Siguiente caso: </span>El podio de la carrera →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function py(b) { return b ? "True" : "False"; }
+  function bool(b) { return '<span class="booleano booleano--' + (b ? "true" : "false") + '">' + py(b) + "</span>"; }
+  function esBisiesto(a) { return a % 400 === 0 ? true : a % 100 === 0 ? false : a % 4 === 0; }
+  // Qué pregunta decide: 0 (÷400), 1 (÷100), 2 (÷4) o 3 (el else)
+  function quienDecide(a) { return a % 400 === 0 ? 0 : a % 100 === 0 ? 1 : a % 4 === 0 ? 2 : 3; }
+  function elegir(grupo, alElegir) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        grupo.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        alElegir(b);
+      });
+    });
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "anio = " + d.anio,
+      "",
+      "if anio % 400 == 0:",
+      "    bisiesto = True",
+      "elif anio % 100 == 0:",
+      "    bisiesto = False",
+      "elif anio % 4 == 0:",
+      "    bisiesto = True",
+      "else:",
+      "    bisiesto = False",
+      "",
+      "if bisiesto:",
+      '    print(f"{anio} es bisiesto")',
+      '    print("Febrero tiene 29 días")',
+      "else:",
+      '    print(f"{anio} no es bisiesto")',
+      '    print("Febrero tiene 28 días")'
+    ];
+  }
+  var IDEAS = [1, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 4, 4, 4, 4, 4, 4];
+
+  /* ---------- 2. Demos ---------- */
+  var d1Div = 4;
+  function pintarD1() {
+    var a = Number($("d1-anio").value), r = a % d1Div;
+    $("d1-num").textContent = a;
+    var tira = $("d1-tira");
+    tira.textContent = "";
+    for (var y = a - 4; y <= a + 4; y++) {
+      var s = document.createElement("span");
+      s.textContent = y;
+      if (y % d1Div === 0) s.className = "multiplo";
+      if (y === a) s.classList.add("actual");
+      tira.appendChild(s);
+    }
+    $("d1-leyenda").innerHTML = "<b></b>se dividen exacto entre " + d1Div;
+    $("d1-cuenta").innerHTML = a + " % " + d1Div + " = <span class=\"c-resto\">" + r + "</span> → " + bool(r === 0);
+  }
+  $("d1-anio").addEventListener("input", pintarD1);
+  elegir($("d1-div"), function (b) { d1Div = Number(b.getAttribute("data-d")); pintarD1(); });
+  pintarD1();
+
+  Python.escribir($("d2-codigo"), [
+    "if nota >= 18:",
+    '    print("Excelente")',
+    "elif nota >= 11:",
+    '    print("Aprobado")',
+    "else:",
+    '    print("Desaprobado")'
+  ]);
+  function marcaCond(linea, clase, texto) {
+    var m = linea.querySelector(".marca-cond");
+    if (!m) { m = document.createElement("span"); linea.appendChild(m); }
+    m.className = "marca-cond marca-cond--" + clase;
+    m.textContent = texto;
+  }
+  function pintarD2() {
+    var n = Number($("d2-nota").value);
+    $("d2-num").textContent = n;
+    var ls = $("d2-codigo").querySelectorAll(".linea");
+    var c1 = n >= 18, c2 = n >= 11;
+    var corre = c1 ? 1 : c2 ? 3 : 5;
+    var activas = c1 ? [0, 1] : c2 ? [0, 2, 3] : [0, 2, 4, 5];
+    var saltadas = [0, 1, 2, 3, 4, 5].filter(function (k) { return activas.indexOf(k) === -1; });
+    Codigo.marcar($("d2-codigo"), { activas: [corre], saltadas: saltadas });
+    marcaCond(ls[0], c1 ? "si" : "no", py(c1));
+    if (c1) marcaCond(ls[2], "nada", "ni se pregunta");
+    else marcaCond(ls[2], c2 ? "si" : "no", py(c2));
+    $("d2-salida").textContent = c1 ? "Excelente" : c2 ? "Aprobado" : "Desaprobado";
+    $("d2-res").innerHTML = c1 && c2
+      ? "<code>" + n + " &gt;= 11</code> también es <code>True</code>, pero esa pregunta ya no se hace."
+      : c1 || c2 ? "Corre el primer bloque con condición <code>True</code>; el <code>else</code> se salta."
+      : "Ninguna fue <code>True</code>: corre el <code>else</code>.";
+  }
+  $("d2-nota").addEventListener("input", pintarD2);
+  pintarD2();
+
+  Python.escribir($("d3-codigo"), [
+    "bisiesto = True",
+    "if bisiesto:",
+    '    print("29 días")',
+    "else:",
+    '    print("28 días")'
+  ]);
+  function pintarD3(v) {
+    Python.escribir($("d3-codigo"), [
+      "bisiesto = " + py(v),
+      "if bisiesto:",
+      '    print("29 días")',
+      "else:",
+      '    print("28 días")'
+    ]);
+    Codigo.marcar($("d3-codigo"), { activas: [v ? 2 : 4], saltadas: v ? [3, 4] : [2] });
+    $("d3-salida").textContent = v ? "29 días" : "28 días";
+  }
+  elegir($("d3-chips"), function (b) { pintarD3(b.getAttribute("data-v") === "true"); });
+  pintarD3(true);
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 700px)");
+  function opcionesFlujo(chico) {
+    var t = chico
+      ? { datos: "anota <code>anio</code>", d400: "¿÷ 400?", d100: "¿÷ 100?", d4: "¿÷ 4?", si: "<code>True</code>", no: "<code>False</code>",
+          bis: "¿<code>bisiesto</code>?", out1: "29 días", out0: "28 días" }
+      : { datos: "anota <code>anio</code>", d400: "¿<code>anio % 400 == 0</code>?", d100: "¿<code>anio % 100 == 0</code>?", d4: "¿<code>anio % 4 == 0</code>?",
+          si: "<code>bisiesto = True</code>", no: "<code>bisiesto = False</code>",
+          bis: "¿<code>bisiesto</code>?", out1: "«es bisiesto» · 29 días", out0: "«no es bisiesto» · 28 días" };
+    return {
+      fila: chico ? 40 : 44,
+      anchoNodo: chico ? 120 : 230,
+      columnas: chico ? [0.95, 1.1, 0.8] : [1.3, 1.2, 1],
+      nodos: [
+        { id: "ini", tipo: "inicio", texto: "Inicio", col: 0, fila: 0 },
+        { id: "datos", tipo: "datos", texto: t.datos, col: 1, fila: 0, idea: 1 },
+        { id: "d400", tipo: "decision", texto: t.d400, col: 1, fila: 1, idea: 2 },
+        { id: "t400", tipo: "proceso", texto: t.si, col: 2, fila: 1, idea: 2 },
+        { id: "d100", tipo: "decision", texto: t.d100, col: 1, fila: 2, idea: 2 },
+        { id: "f100", tipo: "proceso", texto: t.no, col: 2, fila: 2, idea: 2 },
+        { id: "d4", tipo: "decision", texto: t.d4, col: 1, fila: 3, idea: 3 },
+        { id: "t4", tipo: "proceso", texto: t.si, col: 2, fila: 3, idea: 3 },
+        { id: "fe", tipo: "proceso", texto: t.no, col: 1, fila: 4, idea: 3 },
+        { id: "bis", tipo: "decision", texto: t.bis, col: 1, fila: 5, idea: 4 },
+        { id: "no", tipo: "datos", texto: t.out0, col: 0, fila: 5, idea: 4 },
+        { id: "si", tipo: "datos", texto: t.out1, col: 1, fila: 6, idea: 4 },
+        { id: "fin", tipo: "fin", texto: "Fin", col: 0, fila: 6 }
+      ],
+      flechas: [
+        { de: "ini", a: "datos" },
+        { de: "datos", a: "d400" },
+        { de: "d400", a: "t400", texto: "sí" },
+        { de: "d400", a: "d100", texto: "no" },
+        { de: "d100", a: "f100", texto: "sí" },
+        { de: "d100", a: "d4", texto: "no" },
+        { de: "d4", a: "t4", texto: "sí" },
+        { de: "d4", a: "fe", texto: "no" },
+        { de: "t400", a: "bis", por: "derecha", carril: 2 },
+        { de: "f100", a: "bis", por: "derecha", carril: 1 },
+        { de: "t4", a: "bis", por: "derecha", carril: 0 },
+        { de: "fe", a: "bis" },
+        { de: "bis", a: "si", texto: "sí" },
+        { de: "bis", a: "no", texto: "no" },
+        { de: "no", a: "fin" },
+        { de: "si", a: "fin" }
+      ]
+    };
+  }
+  var flujo = null, flujoVisto = false;
+  function armarFlujo() {
+    var caja = $("flujo-caja");
+    caja.textContent = "";
+    var el = document.createElement("div");
+    el.id = "flujo";
+    caja.appendChild(el);
+    flujo = Flujo.crear(el, opcionesFlujo(movil.matches));
+    if (flujoVisto) flujo.dibujar();
+  }
+  armarFlujo();
+  if (movil.addEventListener) movil.addEventListener("change", function () { detenerRecorrido(); armarFlujo(); });
+  Problemas.alVer($("flujo-caja"), function () { flujoVisto = true; flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Lucía pregunta por 1900" },
+    { nodo: "datos", nota: "anio = 1900" },
+    { nodo: "d400", nota: "1900 % 400 = 300 → no" },
+    { nodo: "d100", nota: "1900 % 100 = 0 → sí" },
+    { nodo: "f100", nota: "bisiesto = False: la pregunta del 4 ni se hace" },
+    { nodo: "bis", nota: "¿bisiesto? → no" },
+    { nodo: "no", nota: "1900 no es bisiesto · Febrero tiene 28 días" },
+    { nodo: "fin", nota: "Fin: en 1900 no hubo 29 de febrero" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 1900";
+  function detenerRecorrido() {
+    if (recorrido) { recorrido.detener(); recorrido = null; }
+    $("recorrer").textContent = TEXTO_RECORRER;
+  }
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { detenerRecorrido(); return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  var DIVS = [400, 100, 4];
+  var LINEA_IF = [2, 4, 6], LINEA_ASIG = [3, 5, 7], VALOR = [true, false, true];
+
+  function generar(d) {
+    var A = d.anio;
+    var pasos = [];
+    var vars = {};
+    var est = { anio: A, en: -1, estado: ["", "", "", ""], sobra: [null, null, null], dia29: "duda" };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    vars.anio = A;
+    paso({ linea: 0, escribe: "anio", capitulo: "El año",
+      nota: "Lucía pregunta por <strong>" + A + "</strong>. El año va a pasar por tres preguntas, de la más particular a la más general." });
+
+    var decide = 3;
+    for (var k = 0; k < 3; k++) {
+      var r = A % DIVS[k];
+      est.en = k;
+      est.sobra[k] = r;
+      est.estado[k] = r === 0 ? "atrapa" : "pasa";
+      var nota;
+      if (r !== 0) {
+        nota = "<code>" + A + " % " + DIVS[k] + "</code> da <strong>" + r + "</strong>: no se divide exacto, la condición es <code>False</code>. " +
+          (k < 2 ? "El año pasa este colador y sigue a la siguiente pregunta." : "No quedan preguntas: le toca al <code>else</code>.");
+      } else if (k === 0) {
+        nota = "<code>" + A + " % 400</code> da <strong>0</strong>: <code>True</code>. Es la excepción de la excepción: los años que se dividen entre 400 <strong>sí</strong> son bisiestos.";
+      } else if (k === 1) {
+        nota = "<code>" + A + " % 100</code> da <strong>0</strong>: <code>True</code>. " + A + " también se divide entre 4, pero esta pregunta va antes: los años de 100 (que no son de 400) <strong>no</strong> son bisiestos.";
+      } else {
+        nota = "<code>" + A + " % 4</code> da <strong>0</strong>: <code>True</code>. Ya pasó las dos excepciones, así que vale la regla general: es bisiesto.";
+      }
+      paso({ linea: LINEA_IF[k], lee: ["anio"], capitulo: k === 0 ? "Las preguntas" : undefined, pausa: r === 0,
+        cuenta: A + " % " + DIVS[k] + " = " + r + " → " + py(r === 0), nota: nota });
+      if (r === 0) { decide = k; break; }
+    }
+
+    var ultima;
+    if (decide < 3) {
+      for (var m = decide + 1; m < 4; m++) est.estado[m] = "saltado";
+      vars.bisiesto = VALOR[decide];
+      est.bisiesto = vars.bisiesto;
+      paso({ linea: LINEA_ASIG[decide], escribe: "bisiesto", cuenta: "bisiesto = " + py(vars.bisiesto),
+        nota: "<code>bisiesto = " + py(vars.bisiesto) + "</code>. El <code>elif</code> ya encontró una condición verdadera: " +
+          (decide < 2 ? "las preguntas de abajo <strong>ni se hacen</strong>." : "el <code>else</code> <strong>se salta</strong>.") });
+      ultima = LINEA_ASIG[decide];
+    } else {
+      est.en = 3;
+      est.estado[3] = "atrapa";
+      vars.bisiesto = false;
+      est.bisiesto = false;
+      paso({ linea: 9, ejecuta: [8, 9], escribe: "bisiesto", pausa: true, cuenta: "ninguna fue True → else",
+        nota: "Ninguna condición fue <code>True</code>, así que corre el <code>else</code>: <code>bisiesto = False</code>." });
+      ultima = 9;
+    }
+
+    var b = vars.bisiesto;
+    est.dia29 = b ? "si" : "no";
+    paso({ linea: 11, lee: ["bisiesto"], capitulo: "El calendario", flecha: ultima < 9, cuenta: "bisiesto → " + py(b),
+      nota: b
+        ? "<code>if bisiesto:</code> no compara nada: <code>bisiesto</code> ya es <code>True</code>. En la hoja aparece el 29."
+        : "<code>bisiesto</code> es <code>False</code>: se salta el bloque del <code>if</code> y corre el del <code>else</code>. El 29 se borra de la hoja." });
+
+    var FINAL = [
+      A + " se divide entre 400: <strong>sí es bisiesto</strong>, con una sola pregunta. Las otras dos tienen ×0 en el mapa de calor: con este dato, no corrieron.",
+      A + " se divide entre 4, pero también entre 100 y no entre 400: <strong>no es bisiesto</strong>. La pregunta del 4 tiene ×0: con este año, ni se hizo.",
+      A + " pasó las dos excepciones y se quedó en la regla del 4: <strong>es bisiesto</strong> y Lucía celebra en su fecha. El <code>else</code> tiene ×0: no corrió con este dato.",
+      A + " llegó al <code>else</code> después de 3 preguntas: <strong>no es bisiesto</strong> y Lucía celebra el 28. Las líneas con ×0 no corrieron con este dato."
+    ];
+    if (b) {
+      paso({ linea: 12, salida: A + " es bisiesto", nota: "El f-string cambia <code>{anio}</code> por " + A + "." });
+      paso({ linea: 13, salida: "Febrero tiene 29 días", pausa: true, fin: true, nota: FINAL[decide] });
+    } else {
+      paso({ linea: 15, ejecuta: [14, 15], flecha: true, salida: A + " no es bisiesto", nota: "El f-string cambia <code>{anio}</code> por " + A + "." });
+      paso({ linea: 16, salida: "Febrero tiene 28 días", pausa: true, fin: true, nota: FINAL[decide] });
+    }
+    return pasos;
+  }
+
+  /* La escena: el año cae por tres coladores y la hoja de febrero */
+  var escena = (function () {
+    var cuentaEl, filas = [], arriba, ficha, mesAnio, dias, celda29, pie;
+    var NOMBRES = ["% 400 == 0", "% 100 == 0", "% 4 == 0", "else"];
+    function crear(c) {
+      var html = '<div class="feb">' +
+        '<p class="feb__cuenta" aria-live="polite"></p>' +
+        '<div class="feb__cuerpo">' +
+        '<div class="coladores">' +
+        '<div class="colador colador--arriba"><span class="colador__nombre">el año</span><span class="colador__lugar"></span></div>';
+      NOMBRES.forEach(function (n, k) {
+        html += '<div class="colador' + (k === 3 ? " colador--piso" : "") + '"><span class="colador__nombre">' + n +
+          '<small class="colador__res"></small></span><span class="colador__lugar"></span></div>';
+      });
+      html += "</div>" +
+        '<div class="hoja-feb" aria-label="La hoja de febrero">' +
+        '<p class="hoja-feb__mes">Febrero <span></span></p>' +
+        '<div class="hoja-feb__dias"></div>' +
+        '<p class="hoja-feb__pie"></p>' +
+        "</div></div></div>";
+      c.innerHTML = html;
+      cuentaEl = c.querySelector(".feb__cuenta");
+      arriba = c.querySelector(".colador--arriba .colador__lugar");
+      filas = Array.prototype.slice.call(c.querySelectorAll(".colador:not(.colador--arriba)"));
+      mesAnio = c.querySelector(".hoja-feb__mes span");
+      dias = c.querySelector(".hoja-feb__dias");
+      pie = c.querySelector(".hoja-feb__pie");
+      ficha = document.createElement("span");
+      ficha.className = "ficha-anio";
+      arriba.appendChild(ficha);
+    }
+    function reiniciar(d) {
+      ficha.textContent = d.anio;
+      arriba.appendChild(ficha);
+      mesAnio.textContent = d.anio;
+      // Los días de febrero de ese año, de lunes a domingo
+      var html = "";
+      ["L", "M", "M", "J", "V", "S", "D"].forEach(function (x, k) { html += '<span class="cab' + (k === 6 ? " domingo" : "") + '">' + x + "</span>"; });
+      var inicio = (new Date(d.anio, 1, 1).getDay() + 6) % 7;
+      for (var v = 0; v < inicio; v++) html += '<span class="vacio"></span>';
+      for (var n = 1; n <= 29; n++) {
+        var col = (inicio + n - 1) % 7;
+        html += "<span" + (n === 29 ? ' class="dia29"' : col === 6 ? ' class="domingo"' : "") + ">" + n + "</span>";
+      }
+      dias.innerHTML = html;
+      celda29 = dias.querySelector(".dia29");
+    }
+    function mover(destino, animar) {
+      if (ficha.parentNode === destino) return;
+      var antes = ficha.getBoundingClientRect();
+      destino.appendChild(ficha);
+      if (!animar || !ficha.animate) return;
+      var despues = ficha.getBoundingClientRect();
+      var dy = antes.top - despues.top, dx = antes.left - despues.left;
+      if (!dy && !dx) return;
+      ficha.animate([
+        { transform: "translate(" + dx + "px, " + dy + "px)" },
+        { transform: "translate(0, 6px)", offset: 0.85 },
+        { transform: "none" }
+      ], { duration: 560, easing: "ease-in" });
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : { en: -1, estado: ["", "", "", ""], sobra: [null, null, null], dia29: "duda" };
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      filas.forEach(function (f, k) {
+        var st = e.estado[k];
+        var asignado = e.bisiesto !== undefined && st === "atrapa";
+        var valor = k === 3 ? false : VALOR[k];
+        f.className = "colador" + (k === 3 ? " colador--piso" : "") +
+          (st === "pasa" ? " colador--pasa" : "") +
+          (st === "atrapa" ? (!asignado ? " colador--atrapa" : valor ? " colador--si" : " colador--no") : "") +
+          (st === "saltado" ? " colador--saltado" : "") +
+          (e.en === k && p && p.linea < 11 ? " colador--activo" : "");
+        var res = f.querySelector(".colador__res");
+        if (st === "pasa") res.textContent = "sobra " + e.sobra[k] + ": sigue";
+        else if (st === "atrapa") res.textContent = asignado ? "bisiesto = " + py(valor) : "sobra 0: ¡True!";
+        else if (st === "saltado") res.textContent = k === 3 ? "no corre" : "no se pregunta";
+        else res.textContent = "";
+      });
+      var destino = e.en < 0 ? arriba : filas[e.en].querySelector(".colador__lugar");
+      mover(destino, op.animar);
+      var atrapado = e.en >= 0 && e.estado[e.en] === "atrapa";
+      var listo = atrapado && e.bisiesto !== undefined;
+      ficha.classList.toggle("ficha-anio--atrapa", atrapado && !listo);
+      ficha.classList.toggle("ficha-anio--si", listo && e.bisiesto);
+      ficha.classList.toggle("ficha-anio--no", listo && !e.bisiesto);
+      // La hoja de febrero
+      var antes = celda29.className;
+      celda29.className = "dia29" + (e.dia29 === "si" ? " dia29--si" : e.dia29 === "no" ? " dia29--no" : "");
+      if (op.animar && celda29.className !== antes) celda29.classList.add("dia29--entra");
+      celda29.textContent = e.dia29 === "duda" ? "29?" : "29";
+      pie.className = "hoja-feb__pie" + (e.dia29 === "si" ? " hoja-feb__pie--si" : e.dia29 === "no" ? " hoja-feb__pie--no" : "");
+      pie.textContent = e.dia29 === "si" ? "29 días: Lucía celebra" : e.dia29 === "no" ? "28 días" : "¿28 o 29 días?";
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "2024", datos: { anio: 2024 } },
+    { nombre: "2026 · este año", datos: { anio: 2026 } },
+    { nombre: "1900 · la sorpresa", datos: { anio: 1900 } },
+    { nombre: "2000 · el de 400", datos: { anio: 2000 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0],
+    variables: ["anio", "bisiesto"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  var mapa = $("t-mapa");
+  for (var y = 2001; y <= 2400; y++) {
+    var s = document.createElement("span");
+    var q = quienDecide(y);
+    s.className = q === 0 ? "p1" : q === 1 ? "p2" : q === 2 ? "p3" : "";
+    mapa.appendChild(s);
+  }
+  function pintarMapa() {
+    var a = Number($("t-anio").value), q = quienDecide(a);
+    $("t-num").textContent = a;
+    mapa.querySelectorAll(".actual").forEach(function (x) { x.classList.remove("actual"); });
+    mapa.children[a - 2001].classList.add("actual");
+    var preguntas = q === 3 ? 3 : q + 1;
+    var por = ["se divide entre 400", "se divide entre 100", "se divide entre 4", "no se divide entre 4"][q];
+    $("t-texto").textContent = a + ": " + preguntas + (preguntas === 1 ? " pregunta" : " preguntas") + " (" + por + "). Nunca más de 3, sea el año que sea.";
+  }
+  $("t-anio").addEventListener("input", pintarMapa);
+  pintarMapa();
+
+  function pildoras(el, orden, a) {
+    // El elif se queda con la primera condición verdadera; las de después no se preguntan
+    var html = "", gano = -1;
+    orden.forEach(function (div, k) {
+      var cls;
+      if (gano >= 0) cls = "pildora--nada";
+      else if (a % div === 0) { cls = "pildora--si"; gano = k; }
+      else cls = "pildora--no";
+      html += (k ? '<span aria-hidden="true">→</span>' : "") + '<span class="pildora ' + cls + '">% ' + div + (gano === k ? " = 0 ✓" : gano >= 0 ? "" : " ≠ 0") + "</span>";
+    });
+    el.innerHTML = html;
+    if (gano < 0) return false;
+    return orden[gano] !== 100;
+  }
+  function pintarOrden(a) {
+    var bien = pildoras($("o-bien"), [400, 100, 4], a);
+    var mal = pildoras($("o-mal"), [4, 100, 400], a);
+    var real = esBisiesto(a);
+    $("o-bien-v").className = "orden-fila__veredicto veredicto--ok";
+    $("o-bien-v").textContent = a + (bien ? " es bisiesto ✓" : " no es bisiesto ✓");
+    $("o-mal-v").className = "orden-fila__veredicto " + (mal === real ? "veredicto--ok" : "veredicto--mal");
+    $("o-mal-v").textContent = a + (mal ? " es bisiesto" : " no es bisiesto") + (mal === real ? " ✓" : " ✗ ¡error!");
+  }
+  elegir($("o-chips"), function (b) { pintarOrden(Number(b.getAttribute("data-a"))); });
+  pintarOrden(1900);
+
+  var pForma = "con", pAnio = 2026;
+  function pintarParentesis() {
+    var ultima = pForma === "con" ? "bisiesto = (not de100 or de400) and de4" : "bisiesto = not de100 or de400 and de4";
+    Python.escribir($("p-codigo"), ["de4 = anio % 4 == 0", "de100 = anio % 100 == 0", "de400 = anio % 400 == 0", ultima]);
+    var a = pAnio, de4 = a % 4 === 0, de100 = a % 100 === 0, de400 = a % 400 === 0;
+    var res, lectura;
+    if (pForma === "con") {
+      res = (!de100 || de400) && de4;
+      lectura = "(" + py(!de100) + " or " + py(de400) + ") and " + py(de4);
+    } else {
+      res = !de100 || (de400 && de4);
+      lectura = py(!de100) + " or (" + py(de400) + " and " + py(de4) + ")";
+    }
+    var ok = res === esBisiesto(a);
+    $("p-eval").innerHTML =
+      '<span class="gris">de4 = ' + py(de4) + " · de100 = " + py(de100) + " · de400 = " + py(de400) + "</span>" +
+      (pForma === "sin" ? '<span class="gris">Python lo lee: not de100 or (de400 and de4)</span>' : "") +
+      "<span>" + lectura + "</span>" +
+      '<span class="' + (ok ? "veredicto--ok" : "veredicto--mal") + '">→ ' + py(res) + (ok ? " ✓" : " ✗ ¡dice que " + a + " es bisiesto!") + "</span>";
+  }
+  elegir($("p-forma"), function (b) { pForma = b.getAttribute("data-p"); pintarParentesis(); });
+  elegir($("p-anios"), function (b) { pAnio = Number(b.getAttribute("data-a")); pintarParentesis(); });
+  pintarParentesis();
+
+  /* ---------- 6. ¿Por qué tantas reglas? ---------- */
+  // El año de verdad: 365,2422 días. Cuánto se separa el calendario cada año con cada versión
+  var DESFASE = [365.2422 - 365, 365.25 - 365.2422, 365.2425 - 365.2422];
+  function dias(x) {
+    var t = x >= 10 ? x.toFixed(0) : x >= 1 ? x.toFixed(1) : x.toFixed(2);
+    return t.replace(".", ",") + (t === "1" ? " día" : " días");
+  }
+  function pintarDesfase() {
+    var n = Number($("r-anios").value);
+    $("r-num").textContent = n;
+    DESFASE.forEach(function (d, k) {
+      var x = d * n;
+      $("r-" + k).textContent = (k === 0 ? "−" : "+") + dias(x);
+      var barra = $("r-" + k + "-barra");
+      barra.style.width = Math.min(100, x / 30 * 100) + "%";
+      barra.classList.toggle("desfase__barra--tope", x > 30);
+    });
+  }
+  $("r-anios").addEventListener("input", pintarDesfase);
+  pintarDesfase();
+
+  $("ver-1900").addEventListener("click", function () {
+    rep.entrada(2);
+    $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
+  });
+
+  Problemas.iniciar({ id: "problema-bisiesto" });
+})();
+</script>
+</body>
+</html>

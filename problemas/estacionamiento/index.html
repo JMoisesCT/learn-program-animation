@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El estacionamiento · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: cuánto paga un auto en el estacionamiento con una tarifa por tramos (gratis, cada hora o fracción y un tope), usando if, else, // y %, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- El ticket (tarifa) ---------- */
+    .ticket__tarifa { margin: var(--esp-2) 0 0; padding-top: var(--esp-2); border-top: 1px dashed #c9c2b2; font-size: 0.68rem; line-height: 1.4; color: var(--tinta-suave); text-align: center; }
+    .hoja-enunciado ul.tarifa { margin-top: calc(-1 * var(--esp-2)); }
+
+    /* ---------- Relojes chicos ---------- */
+    .reloj-mini { display: block; width: 100%; height: auto; overflow: visible; }
+    .reloj-mini__borde { fill: #fff; stroke: var(--tinta); stroke-width: 3; }
+    .reloj-mini__marca { stroke: #9aa4b2; stroke-width: 2; stroke-linecap: round; }
+    .reloj-mini__marca--grande { stroke: var(--tinta); }
+    .reloj-mini__h, .reloj-mini__m { stroke-linecap: round; transform-origin: 30px 30px; transition: transform 500ms ease, opacity 200ms; }
+    .reloj-mini__h { stroke: var(--tinta); stroke-width: 4; }
+    .reloj-mini__m { stroke: var(--lapiz); stroke-width: 2.5; }
+    .reloj-mini__oculta { opacity: 0; }
+
+    /* ---------- La escena: la caja del estacionamiento ---------- */
+    .parqueo { flex: 1; display: grid; gap: var(--esp-3); align-content: center; }
+    .parqueo__ticket { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1.05fr); align-items: center; gap: var(--esp-2); padding: var(--esp-2) var(--esp-3); background: #fff; border: 1px solid var(--papel-borde); border-radius: 6px; box-shadow: var(--sombra); }
+    .parqueo__reloj { display: grid; grid-template-columns: 2.9rem minmax(0, 1fr); align-items: center; gap: 0.4rem; min-width: 0; }
+    .parqueo__reloj-txt { display: grid; min-width: 0; }
+    .parqueo__rotulo { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-suave); }
+    .parqueo__hora { font: 700 var(--texto-md) var(--fuente-codigo); color: var(--tinta); line-height: 1.15; }
+    .parqueo__desde { min-height: 1.1em; font: 700 0.68rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; }
+    .parqueo__flecha { font-size: var(--texto-md); color: var(--tinta-suave); }
+    .parqueo__estuvo { display: grid; justify-items: center; padding: 0.2rem 0.3rem; border-left: 1px dashed var(--papel-borde); }
+    .parqueo__estuvo strong { font: 700 var(--texto-lg) var(--fuente-codigo); color: var(--azul-tinta); line-height: 1.1; white-space: nowrap; }
+    .parqueo__cuenta { justify-self: center; min-height: 1.7rem; max-width: 100%; padding: 0.1em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 200ms; }
+    .parqueo__cuenta:empty { opacity: 0; }
+    .parqueo__abajo { display: grid; grid-template-columns: minmax(0, 1fr) 6.8rem; gap: var(--esp-4); align-items: end; }
+    .parqueo__tiempo { display: grid; gap: 0.35rem; align-self: center; }
+    .parqueo__aviso { margin: 0; min-height: 1.3em; font: 700 0.8rem var(--fuente); color: var(--lapiz); }
+    .parqueo__aviso--ok { color: var(--color-ok); }
+
+    /* La barra de tiempo, partida en horas */
+    .barra-horas { position: relative; display: flex; height: 2.6rem; border: 2px solid var(--tinta); border-radius: 8px; background: #fff; overflow: hidden; }
+    .barra-horas__celda { position: relative; flex: 1 1 0; display: grid; place-items: center; border-right: 1.5px dashed #b9c0cc; font: 700 0.66rem var(--fuente-codigo); color: transparent; transition: background-color 300ms, color 300ms; }
+        .barra-horas__celda span { position: relative; z-index: 2; }
+    .barra-horas__celda--cobrada { color: #fff; }
+    .barra-horas__celda--fraccion { background: repeating-linear-gradient(45deg, #fde2c8 0 6px, #fff6ec 6px 12px); color: var(--lapiz); }
+    .barra-horas__celda--fraccion.barra-horas__celda--cobrada { color: var(--lapiz); }
+    .barra-horas__lleno { position: absolute; z-index: 1; left: 0; top: 0; bottom: 0; width: 0; background: rgba(36, 69, 176, 0.82); transition: width 900ms ease; pointer-events: none; }
+    .barra-horas--sin-trans .barra-horas__lleno { transition: none; }
+    .barra-horas--gratis .barra-horas__lleno { background: rgba(11, 122, 62, 0.8); }
+    .barra-env { position: relative; padding-top: 1rem; }
+    .barra-horas__gratis { position: absolute; z-index: 3; top: 0.1rem; bottom: 0; border-left: 2px dashed var(--color-ok); pointer-events: none; }
+    .barra-horas__gratis span { position: absolute; top: -0.1rem; left: 0.2rem; font: 700 0.6rem var(--fuente-codigo); color: var(--color-ok); white-space: nowrap; }
+    .barra-horas__medianoche { position: absolute; z-index: 3; top: 0; bottom: 0; border-left: 2px solid var(--lapiz); pointer-events: none; }
+    .barra-horas__celda--fraccion.barra-horas__celda--cobrada span { padding: 0 0.3em; border-radius: 3px; background: #fff; }
+    .barra-horas__gratis--foco { border-left-width: 3px; }
+    .barra-horas__gratis--foco span { padding: 0 0.2em; border-radius: 3px; background: var(--resaltador); }
+    .barra-marcas { position: relative; height: 1rem; font: 700 0.64rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .barra-marcas span { position: absolute; top: 0; white-space: nowrap; }
+    .barra-marcas .medianoche { color: var(--lapiz); transform: translateX(-50%); }
+    .barra-marcas .fin { transform: translateX(-100%); }
+    .barra-leyenda { margin: 0; min-height: 1.2em; font: 700 0.72rem var(--fuente); color: var(--tinta-suave); }
+
+    /* La alcancía de monedas con su tope */
+    .alcancia { display: grid; justify-items: start; gap: 0.25rem; }
+    .alcancia__total { justify-self: start; width: 3.4rem; text-align: center; }
+    .alcancia__total { font: 700 var(--texto-md) var(--fuente-codigo); color: var(--tinta); white-space: nowrap; }
+    .alcancia__total--pasa { color: var(--lapiz); }
+    .alcancia__tubo { position: relative; width: 3.4rem; height: 11rem; border: 2px solid var(--tinta); border-top: 0; border-radius: 0 0 10px 10px; background: linear-gradient(to right, rgba(255,255,255,0.9), rgba(229,234,251,0.6)); }
+    .alcancia__tope { position: absolute; z-index: 3; left: -0.6rem; right: -0.6rem; bottom: calc(15 / 22 * 100%); border-top: 3px solid var(--lapiz); transition: box-shadow 300ms; }
+    .alcancia__tope span { position: absolute; left: calc(100% + 0.15rem); bottom: -0.5rem; padding: 0 0.25em; border-radius: 3px; background: #f8f4ea; font: 700 0.58rem/1.4 var(--fuente-codigo); color: var(--lapiz); white-space: nowrap; }
+    .alcancia__tope--choca { border-top-width: 4px; }
+    .alcancia__tope--choca span { background: var(--resaltador); }
+    .alcancia__tope--libre { border-top-style: dashed; opacity: 0.75; }
+    .moneda { position: absolute; z-index: 2; left: 0.25rem; right: 0.25rem; display: grid; place-items: center; box-sizing: border-box; border-radius: 6px; background: linear-gradient(#f6dc7a, #e0b43c); box-shadow: inset 0 -2px 0 rgba(0,0,0,0.18), inset 0 0 0 1.5px #b88a1c; font: 700 0.6rem var(--fuente-codigo); color: #4a3500; transition: transform 650ms ease, opacity 650ms ease; }
+    .moneda--primera { background: linear-gradient(#f9c98a, #e59a3b); box-shadow: inset 0 -2px 0 rgba(0,0,0,0.18), inset 0 0 0 1.5px #b36a14; }
+    .moneda--fuera { transform: translate(2.8rem, 3.6rem) rotate(24deg); opacity: 0.3; }
+    .alcancia--sin-trans .moneda { transition: none; }
+    .moneda--vuela { position: fixed; z-index: 60; margin: 0; pointer-events: none; }
+    .alcancia__sello { position: absolute; z-index: 4; left: 50%; bottom: 1.4rem; padding: 0.1em 0.35em; border: 2.5px double var(--color-ok); border-radius: 6px; background: #fff; font: 700 0.7rem var(--fuente); letter-spacing: 0.08em; color: var(--color-ok); transform: translateX(-50%) rotate(-10deg); }
+
+    /* ---------- Demos (bloque 2) ---------- */
+    .dia { position: relative; height: 1.5rem; margin: var(--esp-2) 0 0; border: 2px solid var(--tinta); border-radius: 8px; background: linear-gradient(to right, #c9d3ea 0 25%, #fff3cf 25% 75%, #c9d3ea 75%); }
+    .dia__marca { position: absolute; top: -0.45rem; bottom: -0.45rem; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--lapiz); }
+    .dia__ticks { position: relative; height: 1rem; margin-bottom: var(--esp-2); font: 700 0.62rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .dia__ticks span { position: absolute; top: 0.15rem; transform: translateX(-50%); }
+    .dia__ticks span:first-child { transform: none; }
+    .dia__ticks span:last-child { transform: translateX(-100%); }
+    .hora-grande { margin: 0; font: 700 var(--texto-2xl) var(--fuente-codigo); color: var(--tinta); line-height: 1.1; }
+    .demo-horas { display: flex; height: 2.2rem; margin: var(--esp-2) 0; border: 2px solid var(--tinta); border-radius: 8px; overflow: hidden; background: #fff; position: relative; }
+    .demo-horas span { flex: 1 1 0; display: grid; place-items: center; border-right: 1.5px dashed #b9c0cc; font: 700 0.66rem var(--fuente-codigo); color: var(--tinta-suave); position: relative; z-index: 1; }
+    .demo-horas span:last-of-type { border-right: 0; }
+    .demo-horas .cobrada { color: #fff; }
+    .demo-horas .fraccion { color: var(--lapiz); background: repeating-linear-gradient(45deg, #fde2c8 0 6px, #fff6ec 6px 12px); }
+    .demo-horas i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(36, 69, 176, 0.82); }
+    .medidor { position: relative; height: 1.7rem; margin: var(--esp-3) 0 var(--esp-1); border: 2px solid var(--tinta); border-radius: 8px; background: #fff; overflow: visible; }
+    .medidor__barra { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px 0 0 6px; background: #e0b43c; transition: width 200ms; }
+    .medidor__sobra { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #f4b9a0 0 6px, #fde6d8 6px 12px); opacity: 0.85; }
+    .medidor__tope { position: absolute; top: -0.5rem; bottom: -0.5rem; border-left: 3px solid var(--lapiz); }
+    .medidor__tope span { position: absolute; top: -1.1rem; left: -1.2rem; font: 700 0.62rem var(--fuente-codigo); color: var(--lapiz); white-space: nowrap; }
+    .cuenta-grande .c-mal { color: var(--lapiz); text-decoration: line-through; }
+    .cuenta-grande .c-ok { color: var(--color-ok); }
+
+    /* ---------- Detalles ---------- */
+    .escalones { display: block; width: 100%; height: auto; margin: var(--esp-1) 0; overflow: visible; }
+    .escalones__eje { stroke: var(--tinta); stroke-width: 1.5; }
+    .escalones__rejilla { stroke: var(--papel-borde); stroke-width: 1; }
+    .escalones__txt { font: 700 9px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .escalones__linea { fill: none; stroke: var(--azul-tinta); stroke-width: 2.5; stroke-linejoin: round; }
+    .escalones__tope { stroke: var(--lapiz); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .escalones__tope-txt { font: 700 9px var(--fuente-codigo); fill: var(--lapiz); }
+    .escalones__punto { fill: var(--lapiz); stroke: #fff; stroke-width: 2; }
+    .escalones__guia { stroke: var(--lapiz); stroke-width: 1; stroke-dasharray: 2 3; }
+    .versiones { width: 100%; margin: var(--esp-2) 0; border-collapse: collapse; font-size: var(--texto-xs); }
+    .versiones th, .versiones td { padding: 0.3em 0.35em; border-bottom: 1px dashed var(--papel-borde); text-align: center; }
+    .versiones th { border-bottom: 2px solid var(--tinta); color: var(--tinta-suave); }
+    .versiones td { font-family: var(--fuente-codigo); }
+    .versiones td:first-child { text-align: left; white-space: nowrap; }
+    .versiones tr.mal td { color: var(--lapiz); }
+    .versiones tr.ok td { color: var(--color-ok); }
+    .versiones .marca { font-weight: 700; }
+    .consola-mini { margin: var(--esp-2) 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs) var(--fuente-codigo); white-space: pre; }
+    .borde-datos { margin: var(--esp-2) 0 0; font: 700 var(--texto-xs) var(--fuente-codigo); color: var(--tinta-suave); }
+
+    /* ---------- 6. ¿Conviene salir y volver? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .tramos { display: flex; gap: 2px; height: 2.6rem; padding: 2px; border: 2px solid var(--tinta); border-radius: 8px; background: #fff; }
+    .tramos span { display: grid; place-items: center; min-width: 0; overflow: hidden; border-radius: 4px; background: #f2a75e; color: #3d2a00; font: 700 0.7rem var(--fuente-codigo); white-space: nowrap; }
+    .tramos span.gratis { background: #9fd1a8; color: #0b3d20; }
+    .tramos--juntos span { background: #c9d3ea; color: var(--tinta); }
+    .tramos-txt { margin: 0; font: 700 var(--texto-xs) var(--fuente-codigo); color: var(--tinta-suave); min-height: 1.3em; }
+    .total-tramos { margin: 0; font: 700 var(--texto-xl) var(--serif); color: var(--azul-tinta); }
+    .total-tramos small { font: 700 var(--texto-xs) var(--fuente); color: var(--tinta-suave); }
+    .total-tramos--caro { color: var(--lapiz); }
+    .total-tramos--gratis { color: var(--color-ok); }
+
+
+    @media (min-width: 1180px) {
+      .rep__cuerpo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(11.5rem, 0.6fr); }
+    }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #salir .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #salir .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .parqueo__ticket { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); padding: var(--esp-2); }
+      .parqueo__estuvo { grid-column: 1 / -1; grid-auto-flow: column; gap: var(--esp-2); align-items: baseline; border-left: 0; border-top: 1px dashed var(--papel-borde); }
+      .parqueo__reloj { grid-template-columns: 2.5rem minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Condicionales</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#salir"><span>6 · ¿Conviene salir y volver?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Condicionales</p>
+          <h1>El estacionamiento</h1>
+          <p class="caso-bajada">Un programa que lee la hora de entrada y la de salida del ticket y dice cuánto se paga, con una tarifa por tramos.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 5"><span class="estrellas__llenas">★★★</span>☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/formulas/index.html">// y %</a></li>
+              <li><a href="../../lecciones/condicionales/index.html">if y else</a></li>
+              <li><a href="../../lecciones/condicionales/anidados/index.html">condiciones anidadas</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="La barrera de un estacionamiento, un letrero con una P, un ticket con la hora y unas monedas">
+          <rect x="176" y="14" width="46" height="46" rx="9" fill="#2445b0"/>
+          <text x="199" y="50" text-anchor="middle" font-family="sans-serif" font-size="32" font-weight="700" fill="#fff">P</text>
+          <rect x="196" y="60" width="6" height="40" fill="#556074"/>
+          <rect x="22" y="92" width="22" height="86" rx="4" fill="#1f2a44"/>
+          <circle cx="33" cy="104" r="5" fill="#9dffb5"/>
+          <g transform="rotate(-16 40 112)">
+            <rect x="40" y="106" width="150" height="12" rx="6" fill="#fff" stroke="#1f2a44" stroke-width="2"/>
+            <g fill="#b4400e"><rect x="56" y="108" width="14" height="8"/><rect x="86" y="108" width="14" height="8"/><rect x="116" y="108" width="14" height="8"/><rect x="146" y="108" width="14" height="8"/></g>
+          </g>
+          <g transform="rotate(5 140 150)">
+            <rect x="98" y="112" width="84" height="74" fill="#fff" stroke="#e3d9c3" stroke-width="1.5"/>
+            <text x="140" y="128" text-anchor="middle" font-family="monospace" font-size="9" font-weight="700" fill="#1f2a44" letter-spacing="1">TICKET</text>
+            <g font-family="monospace" font-size="9" fill="#556074"><text x="106" y="145">Entra</text><text x="106" y="160">Sale</text></g>
+            <g font-family="monospace" font-size="10" font-weight="700" fill="#1f2a44" text-anchor="end"><text x="174" y="145">9:40</text><text x="174" y="160">11:45</text></g>
+            <line x1="106" y1="166" x2="174" y2="166" stroke="#c9c2b2" stroke-dasharray="3 2"/>
+            <text x="106" y="179" font-family="monospace" font-size="10" font-weight="700" fill="#2445b0">S/ ¿?</text>
+          </g>
+          <g font-family="monospace" font-weight="700" text-anchor="middle">
+            <circle cx="206" cy="166" r="14" fill="#e59a3b" stroke="#b36a14" stroke-width="2"/><text x="206" y="170" font-size="12" fill="#4a3500">3</text>
+            <circle cx="222" cy="186" r="11" fill="#e0b43c" stroke="#b88a1c" stroke-width="2"/><text x="222" y="190" font-size="10" fill="#4a3500">2</text>
+            <circle cx="196" cy="190" r="9" fill="#e0b43c" stroke="#b88a1c" stroke-width="2"/><text x="196" y="193.5" font-size="9" fill="#4a3500">2</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Lucía y su tío Beto van al centro comercial. Dejan el auto en el estacionamiento a las <strong>9:40</strong> y la máquina de la entrada les da un ticket con esa hora.</p>
+            <p>Salen a las <strong>11:45</strong>. En la caja, el cartel dice <span class="resalta">«cada hora o fracción»</span>: fueron 2 horas y 5 minutos… ¿se cobran 2 horas o 3? <span class="nota-margen">¿Cómo hace la cuenta la computadora de la caja?</span></p>
+            <div class="ticket" aria-label="El ticket del estacionamiento">
+              <h3>ESTACIONAMIENTO</h3>
+              <div class="ticket__fila"><span>Entrada</span><span>9:40</span></div>
+              <div class="ticket__fila"><span>Salida</span><span>11:45</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Pagas</span><span>S/ ¿?</span></div>
+              <p class="ticket__tarifa">Menos de 15 min: gratis · 1.ª hora S/ 3 · cada hora o fracción más S/ 2 · máximo S/ 15</p>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dadas la hora de entrada y la de salida de un auto, diga <strong>cuántos minutos estuvo</strong> y <strong>cuánto paga</strong> con esta tarifa:</p>
+            <ul class="tarifa">
+              <li>Menos de 15 minutos: gratis.</li>
+              <li>Si no: S/ 3 la primera hora y S/ 2 cada hora <strong>o fracción</strong> más.</li>
+              <li>Nunca más de S/ 15.</li>
+            </ul>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>entra_h</code>, <code>entra_m</code>: la hora de entrada (horas de 0 a 23, minutos de 0 a 59). <code>sale_h</code>, <code>sale_m</code>: la de salida.</li>
+              <li>El auto se queda menos de 24 horas: si la salida es más temprano que la entrada, salió al día siguiente.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Dos líneas: <code>Estuviste N min</code> y <code>Pagas S/ P</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>entra_h = 9
+entra_m = 40
+sale_h = 11
+sale_m = 45</td><td>Estuviste 125 min
+Pagas S/ 7</td></tr>
+                <tr><td>entra_h = 8
+entra_m = 0
+sale_h = 17
+sale_m = 30</td><td>Estuviste 570 min
+Pagas S/ 15</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>La hora, en minutos</h3>
+            <p>Restar 11:45 − 9:40 es incómodo. Mejor un solo número: los minutos desde la medianoche, <code>h * 60 + m</code>.</p>
+            <div class="control-fila">
+              <label for="d1-t">Hora</label>
+              <input type="range" id="d1-t" min="0" max="1435" step="5" value="580">
+            </div>
+            <p class="hora-grande" id="d1-hora">9:40</p>
+            <div class="dia" aria-hidden="true"><span class="dia__marca" id="d1-marca"></span></div>
+            <div class="dia__ticks" aria-hidden="true"><span style="left:0">0:00</span><span style="left:25%">6:00</span><span style="left:50%">12:00</span><span style="left:75%">18:00</span><span style="left:100%">24:00</span></div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+            <p class="nota-margen" style="margin-top:auto">Un día tiene 24 * 60 = 1440 minutos. Si sale pasada la medianoche, <code>% 1440</code> da la vuelta, como en <a href="../reloj/index.html">El reloj que da la vuelta</a>.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Cada fracción, una hora entera</h3>
+            <p><code>// 60</code> redondea hacia abajo. Sumar 59 antes empuja cualquier fracción a la hora siguiente: el truco de <a href="../buses/index.html">La excursión en buses</a>.</p>
+            <div class="control-fila">
+              <label for="d2-m">minutos = <span id="d2-num">125</span></label>
+              <input type="range" id="d2-m" min="1" max="300" value="125">
+            </div>
+            <div class="demo-horas" id="d2-horas" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d2-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Un tope con <code>if</code></h3>
+            <p>Si la cuenta se pasa de 15, un <code>if</code> la corta. Si no se pasa, el <code>if</code> no hace nada.</p>
+            <pre class="codigo" id="d3-codigo"></pre>
+            <div class="control-fila">
+              <label for="d3-h">horas = <span id="d3-num">10</span></label>
+              <input type="range" id="d3-h" min="1" max="12" value="10">
+            </div>
+            <div class="medidor" aria-hidden="true">
+              <span class="medidor__barra" id="d3-barra"></span><span class="medidor__sobra" id="d3-sobra"></span>
+              <span class="medidor__tope" style="left:calc(15 / 25 * 100%)"><span>tope 15</span></span>
+            </div>
+            <p class="cuenta-grande" id="d3-cuenta" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 9:40 → 11:45</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>La cajera no mira el reloj hora por hora: <strong>pasa todo a minutos, decide qué tramo de la tarifa toca y hace una sola cuenta</strong>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Cuenta los minutos</strong> Las dos horas, en minutos desde la medianoche, y se restan.</li>
+              <li data-idea="2"><strong>¿Menos de 15? Gratis</strong> Si no, sigue con la tarifa.</li>
+              <li data-idea="3"><strong>Horas y pago</strong> Cada fracción cuenta entera: 3 la primera y 2 cada otra.</li>
+              <li data-idea="4"><strong>Nunca más de 15</strong> Si la cuenta se pasa, se corta.</li>
+            </ol>
+            <p class="nota-margen">Dos decisiones: según los datos, unas líneas corren y otras no. El mapa de calor lo muestra.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Pocas cuentas, a escalones</h3>
+            <p>Sean 10 minutos o 10 horas, el programa hace las mismas pocas cuentas, sin contar hora por hora. El pago sube a escalones:</p>
+            <svg class="escalones" id="e-grafica" viewBox="0 0 300 150" aria-hidden="true"></svg>
+            <div class="control-fila">
+              <label for="e-m">minutos = <span id="e-num">125</span></label>
+              <input type="range" id="e-m" min="0" max="720" step="5" value="125">
+            </div>
+            <p class="cuenta-grande" id="e-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué <code>+ 59</code>?</h3>
+            <p>Hay versiones que parecen iguales y fallan. Mueve los minutos y compáralas con la del programa:</p>
+            <div class="control-fila">
+              <label for="v-m">minutos = <span id="v-num">60</span></label>
+              <input type="range" id="v-m" min="15" max="240" value="60">
+            </div>
+            <table class="versiones" aria-live="polite">
+              <thead><tr><th>horas =</th><th>horas</th><th>pago</th><th></th></tr></thead>
+              <tbody id="v-filas"></tbody>
+            </table>
+            <p class="nota-margen" id="v-nota" style="margin-top:auto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">15 justos</button>
+              <button type="button" data-b="1" aria-pressed="false">Misma hora</button>
+              <button type="button" data-b="2" aria-pressed="false">25 horas</button>
+            </div>
+            <p class="borde-datos" id="b-datos"></p>
+            <div class="consola-mini" id="b-consola"></div>
+            <p id="b-texto" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Conviene salir y volver? -->
+    <section class="panel" id="salir">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Conviene salir y volver a entrar?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>El tío Beto se queda 3 horas: paga <strong>S/ 7</strong>. ¿Y si sale un rato y vuelve a entrar? Cada entrada es un ticket nuevo, y cada ticket empieza por la primera hora, la más cara.</p>
+            <p>Partir la estadía casi siempre sale <strong>más caro</strong>… salvo por un agujero: en tramos de <strong>menos de 15 minutos</strong>, cada uno es gratis. Prueba con 13 tramos.</p>
+            <p>Los estacionamientos de verdad lo cierran con una regla extra: por ejemplo, una cámara lee la placa y junta todas las entradas del mismo día.</p>
+            <p class="nota-margen"><span class="resalta">Las reglas tienen agujeros.</span> Quien programa tiene que pensar cómo las usaría alguien muy listo.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="control-fila">
+              <label for="s-k">3 horas en <span id="s-num">1</span> <span id="s-pal">tramo</span></label>
+              <input type="range" id="s-k" min="1" max="13" value="1">
+            </div>
+            <div class="tramos" id="s-tramos" aria-hidden="true"></div>
+            <p class="tramos-txt" id="s-txt"></p>
+            <p class="total-tramos" id="s-total" aria-live="polite"></p>
+            <div class="chips-elegir"><button type="button" id="s-regla" aria-pressed="false">Con la regla de la placa</button></div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../podio/index.html">← <span class="largo">Caso anterior: </span>El podio de la carrera</a>
+          <a class="btn btn-primario" href="../vuelto/index.html"><span class="largo">Siguiente caso: </span>El vuelto →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function mod(a, n) { return ((a % n) + n) % n; }   // el % de Python (con negativos, de 0 a n-1)
+  function dos(m) { return (m < 10 ? "0" : "") + m; }
+  function hora(h, m) { return h + ":" + dos(m); }
+
+  /* La tarifa, como la calcula el programa */
+  function horasDe(min) { return Math.floor((min + 59) / 60); }
+  function pagoDe(min) {
+    if (min < 15) return 0;
+    var p = 3 + (horasDe(min) - 1) * 2;
+    return p > 15 ? 15 : p;
+  }
+  function estadia(eh, em, sh, sm) { return mod((sh * 60 + sm) - (eh * 60 + em), 1440); }
+
+  /* ---------- Un reloj chico de agujas ---------- */
+  function relojMini(cont) {
+    var s = '<svg viewBox="0 0 60 60" class="reloj-mini" aria-hidden="true"><circle cx="30" cy="30" r="27" class="reloj-mini__borde"/>';
+    for (var k = 0; k < 12; k++) {
+      var a = k / 12 * 2 * Math.PI, g = k % 3 === 0;
+      s += '<line class="reloj-mini__marca' + (g ? " reloj-mini__marca--grande" : "") + '" x1="' + (30 + 23 * Math.sin(a)).toFixed(1) + '" y1="' + (30 - 23 * Math.cos(a)).toFixed(1) +
+        '" x2="' + (30 + (g ? 18 : 20) * Math.sin(a)).toFixed(1) + '" y2="' + (30 - (g ? 18 : 20) * Math.cos(a)).toFixed(1) + '"/>';
+    }
+    s += '<line class="reloj-mini__h" x1="30" y1="30" x2="30" y2="16"/><line class="reloj-mini__m" x1="30" y1="30" x2="30" y2="9"/><circle cx="30" cy="30" r="2.5" fill="#1f2a44"/></svg>';
+    cont.innerHTML = s;
+    var hh = cont.querySelector(".reloj-mini__h"), mm = cont.querySelector(".reloj-mini__m");
+    return function (h, m) {
+      hh.classList.toggle("reloj-mini__oculta", h === undefined);
+      mm.classList.toggle("reloj-mini__oculta", m === undefined);
+      hh.style.transform = "rotate(" + (((h || 0) % 12) + (m || 0) / 60) * 30 + "deg)";
+      mm.style.transform = "rotate(" + (m || 0) * 6 + "deg)";
+    };
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "entra_h = " + d.eh,
+      "entra_m = " + d.em,
+      "sale_h = " + d.sh,
+      "sale_m = " + d.sm,
+      "entra = entra_h * 60 + entra_m",
+      "sale = sale_h * 60 + sale_m",
+      "minutos = (sale - entra) % 1440",
+      "if minutos < 15:",
+      "    pago = 0",
+      "else:",
+      "    horas = (minutos + 59) // 60",
+      "    pago = 3 + (horas - 1) * 2",
+      "    if pago > 15:",
+      "        pago = 15",
+      'print(f"Estuviste {minutos} min")',
+      'print(f"Pagas S/ {pago}")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 0, 0];
+
+  /* ---------- 2. Demos ---------- */
+  function pintarD1() {
+    var t = Number($("d1-t").value), h = Math.floor(t / 60), m = t % 60;
+    $("d1-hora").textContent = hora(h, m);
+    $("d1-marca").style.left = (t / 1440 * 100) + "%";
+    $("d1-cuenta").innerHTML = h + " * 60 + " + m + " = <span class=\"c-cociente\">" + t + "</span>";
+  }
+  $("d1-t").addEventListener("input", pintarD1);
+  pintarD1();
+
+  function pintarD2() {
+    var m = Number($("d2-m").value), h = horasDe(m), f = m % 60;
+    $("d2-num").textContent = m;
+    var el = $("d2-horas");
+    el.textContent = "";
+    var lleno = document.createElement("i");
+    lleno.style.width = (m / 300 * 100) + "%";
+    el.appendChild(lleno);
+    for (var k = 0; k < 5; k++) {
+      var c = document.createElement("span");
+      var cobrada = k < h, fr = cobrada && k === h - 1 && f !== 0;
+      if (cobrada) c.className = fr ? "fraccion cobrada" : "cobrada";
+      c.textContent = cobrada ? (fr ? "+" + f + " min" : (k + 1) + " h") : "";
+      el.appendChild(c);
+    }
+    $("d2-cuenta").innerHTML = "(" + m + " + 59) // 60 = <span class=\"c-cociente\">" + h + "</span> " + (h === 1 ? "hora" : "horas");
+  }
+  $("d2-m").addEventListener("input", pintarD2);
+  pintarD2();
+
+  Python.escribir($("d3-codigo"), ["pago = 3 + (horas - 1) * 2", "if pago > 15:", "    pago = 15"]);
+  function pintarD3() {
+    var h = Number($("d3-h").value), p = 3 + (h - 1) * 2, final = p > 15 ? 15 : p;
+    $("d3-num").textContent = h;
+    $("d3-barra").style.width = (final / 25 * 100) + "%";
+    $("d3-sobra").style.left = (15 / 25 * 100) + "%";
+    $("d3-sobra").style.width = (p > 15 ? (p - 15) / 25 * 100 : 0) + "%";
+    $("d3-cuenta").innerHTML = "3 + (" + h + " - 1) * 2 = " +
+      (p > 15 ? "<span class=\"c-mal\">" + p + "</span> → <span class=\"c-ok\">15</span>" : "<span class=\"c-cociente\">" + p + "</span>");
+  }
+  $("d3-h").addEventListener("input", pintarD3);
+  pintarD3();
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 50,
+    anchoNodo: 270,
+    columnas: window.matchMedia("(max-width: 640px)").matches ? [0.6, 1.45, 1.1] : [0.6, 1.75, 0.9],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 0, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota la entrada y la salida", col: 1, fila: 0, idea: 1 },
+      { id: "minutos", tipo: "proceso", texto: "<code>minutos = (sale − entra) % 1440</code>", col: 1, fila: 1, idea: 1 },
+      { id: "gratis", tipo: "decision", texto: "¿menos de 15?", col: 1, fila: 2, idea: 2 },
+      { id: "cero", tipo: "proceso", texto: "<code>pago = 0</code>", col: 2, fila: 2, idea: 2 },
+      { id: "horas", tipo: "proceso", texto: "<code>horas = (minutos + 59) // 60</code>", col: 1, fila: 3, idea: 3 },
+      { id: "pago", tipo: "proceso", texto: "<code>pago = 3 + (horas − 1) * 2</code>", col: 1, fila: 4, idea: 3 },
+      { id: "pasa", tipo: "decision", texto: "¿pasa de 15?", col: 1, fila: 5, idea: 4 },
+      { id: "corta", tipo: "proceso", texto: "<code>pago = 15</code>", col: 2, fila: 5, idea: 4 },
+      { id: "imprime", tipo: "datos", texto: "imprime minutos y pago", col: 1, fila: 6 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 0, fila: 6 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "minutos" },
+      { de: "minutos", a: "gratis" },
+      { de: "gratis", a: "cero", texto: "sí" },
+      { de: "gratis", a: "horas", texto: "no" },
+      { de: "horas", a: "pago" },
+      { de: "pago", a: "pasa" },
+      { de: "pasa", a: "corta", texto: "sí" },
+      { de: "pasa", a: "imprime", texto: "no" },
+      { de: "cero", a: "imprime", por: "derecha" },
+      { de: "corta", a: "imprime", por: "derecha" },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "El tío Beto llega a la caja" },
+    { nodo: "datos", nota: "entra 9:40 · sale 11:45" },
+    { nodo: "minutos", nota: "705 − 580 = 125 minutos" },
+    { nodo: "gratis", nota: "¿125 < 15? no" },
+    { nodo: "horas", nota: "(125 + 59) // 60 = 3 horas" },
+    { nodo: "pago", nota: "3 + (3 − 1) * 2 = 7" },
+    { nodo: "pasa", nota: "¿7 > 15? no" },
+    { nodo: "imprime", nota: "Estuviste 125 min · Pagas S/ 7" },
+    { nodo: "fin", nota: "Fin: paga S/ 7" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 9:40 → 11:45";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = {};
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var total = estadia(d.eh, d.em, d.sh, d.sm);
+    est.celdas = Math.max(1, Math.ceil(total / 60));
+
+    vars.entra_h = d.eh; est.eh = d.eh;
+    paso({ linea: 0, escribe: "entra_h", capitulo: "Los datos",
+      nota: "El ticket dice que el auto entró a las <strong>" + d.eh + "</strong> y…" });
+    vars.entra_m = d.em; est.em = d.em;
+    paso({ linea: 1, escribe: "entra_m",
+      nota: "…<strong>" + d.em + "</strong> minutos: las " + hora(d.eh, d.em) + "." });
+    vars.sale_h = d.sh; est.sh = d.sh;
+    paso({ linea: 2, escribe: "sale_h",
+      nota: "Salió a las <strong>" + d.sh + "</strong> y…" });
+    vars.sale_m = d.sm; est.sm = d.sm;
+    paso({ linea: 3, escribe: "sale_m",
+      nota: "…<strong>" + d.sm + "</strong>: las " + hora(d.sh, d.sm) + ". Restar las horas y los minutos por separado es incómodo." });
+
+    var entra = d.eh * 60 + d.em;
+    vars.entra = entra; est.entra = entra;
+    paso({ linea: 4, escribe: "entra", lee: ["entra_h", "entra_m"], capitulo: "A minutos",
+      cuenta: d.eh + " * 60 + " + d.em + " = " + entra,
+      nota: "<code>" + d.eh + " * 60 + " + d.em + "</code> da <strong>" + entra + "</strong>: las " + hora(d.eh, d.em) + " son " + entra + " minutos desde la medianoche." });
+    var sale = d.sh * 60 + d.sm;
+    vars.sale = sale; est.sale = sale;
+    paso({ linea: 5, escribe: "sale", lee: ["sale_h", "sale_m"],
+      cuenta: d.sh + " * 60 + " + d.sm + " = " + sale,
+      nota: "Las " + hora(d.sh, d.sm) + " son <strong>" + sale + "</strong> minutos desde la medianoche. Ahora es una resta de dos números." });
+
+    var resta = sale - entra;
+    vars.minutos = total; est.minutos = total;
+    var cruza = resta < 0;
+    paso({ linea: 6, escribe: "minutos", lee: ["sale", "entra"], capitulo: "¿Cuánto estuvo?", pausa: d.clave === "medianoche", llena: true,
+      cuenta: "(" + sale + " - " + entra + ") % 1440 = " + total,
+      nota: cruza
+        ? "<code>" + sale + " - " + entra + "</code> da <strong>" + resta + "</strong>: salió «antes» de entrar, porque pasó la medianoche. <code>" + resta + " % 1440</code> da la vuelta al día y deja <strong>" + total + "</strong> minutos, como el reloj que da la vuelta."
+        : "<code>" + sale + " - " + entra + "</code> da <strong>" + resta + "</strong> minutos. Aquí el <code>% 1440</code> no cambia nada: " + resta + " ya está entre 0 y 1439." });
+
+    var gratis = total < 15;
+    est.dec1 = gratis;
+    paso({ linea: 7, decide: 1, lee: ["minutos"], capitulo: "¿Gratis?", pausa: d.clave === "gratis",
+      cuenta: total + " < 15 → " + (gratis ? "True" : "False"),
+      nota: gratis
+        ? "<code>" + total + " < 15</code> es <strong>True</strong>: estuvo menos de 15 minutos. Corre la línea de adentro del <code>if</code>, y todo el <code>else</code> se salta."
+        : "<code>" + total + " < 15</code> es <strong>False</strong>: no es gratis. Se salta <code>pago = 0</code> y corre el bloque del <code>else</code>." });
+
+    if (gratis) {
+      vars.pago = 0; est.pago = 0;
+      paso({ linea: 8, escribe: "pago", gratis: true, capitulo: "Gratis",
+        cuenta: "pago = 0",
+        nota: "<code>pago = 0</code>: no paga nada y no cae ninguna moneda." });
+    } else {
+      var h = horasDe(total), f = total % 60;
+      vars.horas = h; est.horas = h;
+      paso({ linea: 10, ejecuta: [9, 10], escribe: "horas", lee: ["minutos"], capitulo: "Las horas", pausa: d.clave === "fraccion",
+        cuenta: "(" + total + " + 59) // 60 = " + (total + 59) + " // 60 = " + h,
+        nota: "<code>(" + total + " + 59) // 60</code> da <strong>" + h + "</strong>. " + (f
+          ? "Fueron " + Math.floor(total / 60) + (Math.floor(total / 60) === 1 ? " hora" : " horas") + " y " + f + " minutos, pero esos " + f + " minutos cuentan como <strong>una hora entera</strong>: «cada hora o fracción». Mira la última hora de la barra: está a medio llenar y se cobra igual."
+          : "Fueron " + h + (h === 1 ? " hora exacta" : " horas exactas") + ": el <code>+ 59</code> no alcanza para otra hora.") });
+
+      var bruto = 3 + (h - 1) * 2;
+      vars.pago = bruto; est.bruto = bruto; est.pago = bruto;
+      paso({ linea: 11, escribe: "pago", lee: ["horas"], capitulo: "El pago", caen: true,
+        cuenta: "3 + (" + h + " - 1) * 2 = " + bruto,
+        nota: "La primera hora cuesta 3 y las otras " + (h - 1) + ", 2 cada una: <code>3 + " + (h - 1) + " * 2</code> da <strong>" + bruto + "</strong>. Cae una moneda por hora." +
+          (bruto > 15 ? " ¡Las monedas pasan la raya del tope!" : "") });
+
+      var pasa = bruto > 15;
+      est.dec2 = pasa;
+      paso({ linea: 12, decide: 2, lee: ["pago"], capitulo: "¿Pasa el tope?",
+        cuenta: bruto + " > 15 → " + (pasa ? "True" : "False"),
+        nota: pasa
+          ? "<code>" + bruto + " > 15</code> es <strong>True</strong>: la cuenta se pasó del tope."
+          : "<code>" + bruto + " > 15</code> es <strong>False</strong>: no llega al tope, así que <code>pago = 15</code> se salta." });
+      if (pasa) {
+        vars.pago = 15; est.pago = 15; est.cortado = true;
+        paso({ linea: 13, escribe: "pago", capitulo: "El tope", pausa: d.clave === "tope", corta: true,
+          cuenta: "pago = 15   (" + bruto + " → 15)",
+          nota: "<code>pago = 15</code>: el <code>if</code> corta la cuenta y las monedas que pasaban la raya se caen. <strong>Nunca más de 15.</strong> En el rastro de <code>pago</code>, el " + bruto + " quedó tachado." });
+      }
+    }
+
+    paso({ linea: 14, salida: "Estuviste " + total + " min", lee: ["minutos"], capitulo: "Fin",
+      nota: "Imprime cuántos minutos estuvo el auto." });
+    var finales = {
+      gratis: "Sale gratis. Mira el mapa de calor: el <code>else</code> y sus líneas quedaron en ×0. Con este dato, esa rama no corrió.",
+      fraccion: "Paga <strong>S/ " + vars.pago + "</strong>: 5 minutos de más le costaron S/ 2. <code>pago = 0</code> y <code>pago = 15</code> quedaron en ×0: con este dato, esas ramas no corrieron.",
+      tope: "Paga <strong>S/ 15</strong> y no 21: el tope cortó la cuenta. Esta vez corrieron las dos decisiones; solo <code>pago = 0</code> quedó en ×0.",
+      medianoche: "Paga <strong>S/ " + vars.pago + "</strong> por " + total + " minutos. Sin el <code>% 1440</code>, <code>minutos</code> habría sido " + resta + " y, como <code>" + resta + " < 15</code> es True, ¡habría salido gratis!"
+    };
+    paso({ linea: 15, salida: "Pagas S/ " + vars.pago, lee: ["pago"], pausa: true, fin: true,
+      nota: finales[d.clave] || "Listo: paga <strong>S/ " + vars.pago + "</strong>." });
+    return pasos;
+  }
+
+  /* La escena: el ticket, la barra de tiempo y la alcancía con su tope */
+  var escena = (function () {
+    var relEntra, relSale, horaEntra, horaSale, desdeEntra, desdeSale, estuvo, cuentaEl, aviso;
+    var barra, lleno, medEl, gratisEl, marcas, leyenda, celdas = [], tubo, tope, total, sello;
+    var monedas = [];
+    var UNIDAD = 100 / 22;   // % del tubo por sol
+    function crear(cont) {
+      cont.innerHTML =
+        '<div class="parqueo">' +
+        '  <div class="parqueo__ticket">' +
+        '    <div class="parqueo__reloj"><div data-r="entra"></div><div class="parqueo__reloj-txt"><span class="parqueo__rotulo">Entrada</span><span class="parqueo__hora" data-h="entra">—</span><span class="parqueo__desde" data-d="entra"></span></div></div>' +
+        '    <span class="parqueo__flecha" aria-hidden="true">→</span>' +
+        '    <div class="parqueo__reloj"><div data-r="sale"></div><div class="parqueo__reloj-txt"><span class="parqueo__rotulo">Salida</span><span class="parqueo__hora" data-h="sale">—</span><span class="parqueo__desde" data-d="sale"></span></div></div>' +
+        '    <div class="parqueo__estuvo"><span class="parqueo__rotulo">Estuvo</span><strong>—</strong></div>' +
+        "  </div>" +
+        '  <span class="parqueo__cuenta"></span>' +
+        '  <div class="parqueo__abajo">' +
+        '    <div class="parqueo__tiempo">' +
+        '      <div class="barra-env" aria-hidden="true"><div class="barra-horas"><span class="barra-horas__lleno"></span><span class="barra-horas__medianoche" hidden></span></div><span class="barra-horas__gratis"><span>15 min</span></span></div>' +
+        '      <div class="barra-marcas" aria-hidden="true"></div>' +
+        '      <p class="barra-leyenda"></p>' +
+        '      <p class="parqueo__aviso" aria-live="polite"></p>' +
+        "    </div>" +
+        '    <div class="alcancia">' +
+        '      <span class="alcancia__total">S/ —</span>' +
+        '      <div class="alcancia__tubo"><span class="alcancia__tope"><span>tope 15</span></span></div>' +
+        "    </div>" +
+        "  </div>" +
+        "</div>";
+      relEntra = relojMini(cont.querySelector('[data-r="entra"]'));
+      relSale = relojMini(cont.querySelector('[data-r="sale"]'));
+      horaEntra = cont.querySelector('[data-h="entra"]');
+      horaSale = cont.querySelector('[data-h="sale"]');
+      desdeEntra = cont.querySelector('[data-d="entra"]');
+      desdeSale = cont.querySelector('[data-d="sale"]');
+      estuvo = cont.querySelector(".parqueo__estuvo strong");
+      cuentaEl = cont.querySelector(".parqueo__cuenta");
+      aviso = cont.querySelector(".parqueo__aviso");
+      barra = cont.querySelector(".barra-horas");
+      lleno = cont.querySelector(".barra-horas__lleno");
+      medEl = cont.querySelector(".barra-horas__medianoche");
+      gratisEl = cont.querySelector(".barra-horas__gratis");
+      marcas = cont.querySelector(".barra-marcas");
+      leyenda = cont.querySelector(".barra-leyenda");
+      tubo = cont.querySelector(".alcancia__tubo");
+      tope = cont.querySelector(".alcancia__tope");
+      total = cont.querySelector(".alcancia__total");
+    }
+    function reiniciar(d) {
+      var n = Math.max(1, Math.ceil(estadia(d.eh, d.em, d.sh, d.sm) / 60));
+      celdas.forEach(function (c) { c.remove(); });
+      celdas = [];
+      for (var k = 0; k < n; k++) {
+        var c = document.createElement("span");
+        c.className = "barra-horas__celda";
+        c.appendChild(document.createElement("span"));
+        if (k === n - 1) c.style.borderRight = "0";
+        barra.insertBefore(c, lleno);
+        celdas.push(c);
+      }
+      gratisEl.style.left = (15 / (n * 60) * 100) + "%";
+      gratisEl.firstChild.style.display = n > 4 ? "none" : "";
+      var e0 = d.eh * 60 + d.em, s0 = d.sh * 60 + d.sm;
+      medEl.hidden = !(e0 > s0);
+      if (e0 > s0) medEl.style.left = ((1440 - e0) / (n * 60) * 100) + "%";
+      ponerMonedas([], false);
+    }
+    function ponerMonedas(valores, fuera) {
+      monedas.forEach(function (m) { m.remove(); });
+      monedas = [];
+      var abajo = 0;
+      valores.forEach(function (v, k) {
+        var m = document.createElement("span");
+        m.className = "moneda" + (k === 0 ? " moneda--primera" : "");
+        m.style.bottom = (abajo * UNIDAD) + "%";
+        m.style.height = (v * UNIDAD) + "%";
+        m.textContent = v;
+        m.setAttribute("data-arriba", String(abajo + v));
+        if (fuera && abajo + v > 15) m.classList.add("moneda--fuera");
+        tubo.appendChild(m);
+        monedas.push(m);
+        abajo += v;
+      });
+    }
+    function volar(desde, hacia, retraso) {
+      if (!document.body.animate) return;
+      var a = desde.getBoundingClientRect(), b = hacia.getBoundingClientRect();
+      hacia.style.visibility = "hidden";
+      var copia = hacia.cloneNode(true);
+      copia.classList.add("moneda--vuela");
+      copia.style.visibility = "visible";
+      copia.style.left = b.left + "px";
+      copia.style.top = b.top + "px";
+      copia.style.width = b.width + "px";
+      copia.style.height = b.height + "px";
+      copia.style.bottom = "auto";
+      copia.style.right = "auto";
+      document.body.appendChild(copia);
+      var dx = a.left + a.width / 2 - (b.left + b.width / 2);
+      var dy = a.top + a.height / 2 - (b.top + b.height / 2);
+      var anim = copia.animate([
+        { transform: "translate(" + dx + "px, " + dy + "px) scale(0.6)", opacity: 0 },
+        { transform: "translate(" + dx * 0.4 + "px, " + (dy * 0.4 - 30) + "px) scale(1)", opacity: 1, offset: 0.45 },
+        { transform: "none", opacity: 1 }
+      ], { duration: 620, delay: retraso, easing: "ease-in", fill: "both" });
+      anim.onfinish = function () { hacia.style.visibility = ""; copia.remove(); };
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : {};
+      var animar = !!op.animar;
+      // El ticket
+      relEntra(e.eh, e.em);
+      relSale(e.sh, e.sm);
+      horaEntra.textContent = e.eh === undefined ? "—" : e.eh + ":" + (e.em === undefined ? "··" : dos(e.em));
+      horaSale.textContent = e.sh === undefined ? "—" : e.sh + ":" + (e.sm === undefined ? "··" : dos(e.sm));
+      desdeEntra.textContent = e.entra === undefined ? "" : "= " + e.entra + " min";
+      desdeSale.textContent = e.sale === undefined ? "" : "= " + e.sale + " min";
+      estuvo.textContent = e.minutos === undefined ? "—" : e.minutos + " min";
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+
+      // La barra de tiempo
+      var n = celdas.length, cap = n * 60;
+      if (!(animar && p && p.llena)) {
+        barra.classList.add("barra-horas--sin-trans");
+        void barra.offsetWidth;
+      }
+      lleno.style.width = (e.minutos === undefined ? 0 : e.minutos / cap * 100) + "%";
+      if (!(animar && p && p.llena)) { void lleno.offsetWidth; barra.classList.remove("barra-horas--sin-trans"); }
+      barra.classList.toggle("barra-horas--gratis", e.dec1 === true);
+      gratisEl.classList.toggle("barra-horas__gratis--foco", !!(p && p.decide === 1));
+      var fr = e.minutos !== undefined ? e.minutos % 60 : 0;
+      celdas.forEach(function (c, k) {
+        var cobrada = e.horas !== undefined && k < e.horas;
+        var esFr = cobrada && k === e.horas - 1 && fr !== 0;
+        c.classList.toggle("barra-horas__celda--cobrada", cobrada);
+        c.classList.toggle("barra-horas__celda--fraccion", esFr);
+        c.firstChild.textContent = cobrada ? (esFr && n <= 4 ? "+" + fr + " min" : (k + 1) + (n <= 4 ? " h" : "")) : "";
+      });
+      marcas.textContent = "";
+      if (e.minutos !== undefined) {
+        var ini = document.createElement("span");
+        ini.style.left = "0";
+        ini.textContent = hora(e.eh, e.em);
+        marcas.appendChild(ini);
+        var fin = document.createElement("span");
+        fin.className = "fin";
+        fin.style.left = Math.max(e.minutos / cap * 100, 22) + "%";
+        fin.textContent = hora(e.sh, e.sm);
+        marcas.appendChild(fin);
+        if (e.entra > e.sale) {
+          var med = document.createElement("span");
+          med.className = "medianoche";
+          med.style.left = ((1440 - e.entra) / cap * 100) + "%";
+          med.textContent = "0:00";
+          marcas.appendChild(med);
+        }
+      }
+      if (e.minutos === undefined) leyenda.textContent = "";
+      else if (e.horas !== undefined) leyenda.textContent = e.horas + (e.horas === 1 ? " hora cobrada" : " horas cobradas") + (fr ? " · la última, solo " + fr + " min" : "");
+      else leyenda.textContent = e.minutos + " min" + (e.entra > e.sale ? " (pasó la medianoche)" : "");
+
+      // El aviso de cada decisión
+      var txt = "", ok = false;
+      if (p && p.decide === 1) { txt = e.dec1 ? "Menos de 15 min: ¡gratis!" : "Pasó los 15 min: paga"; ok = e.dec1; }
+      else if (p && p.gratis) { txt = "Gratis"; ok = true; }
+      else if (p && p.decide === 2) { txt = e.dec2 ? "¡Se pasó del tope!" : "No llega al tope"; ok = !e.dec2; }
+      else if (p && p.corta) { txt = "Se corta en 15"; }
+      aviso.textContent = txt;
+      aviso.classList.toggle("parqueo__aviso--ok", ok);
+
+      // La alcancía
+      var valores = [];
+      if (e.bruto !== undefined) for (var k = 0; k < e.horas; k++) valores.push(k === 0 ? 3 : 2);
+      var antes = monedas.length;
+      var caen = animar && p && p.caen && antes === 0;
+      var cortan = animar && p && p.corta && antes === valores.length;
+      if (cortan) {
+        tubo.classList.remove("alcancia--sin-trans");
+        monedas.forEach(function (m) { if (Number(m.getAttribute("data-arriba")) > 15) m.classList.add("moneda--fuera"); });
+      } else {
+        tubo.classList.add("alcancia--sin-trans");
+        ponerMonedas(valores, !!e.cortado);
+      }
+      if (caen) monedas.forEach(function (m, k2) { if (celdas[k2]) volar(celdas[k2], m, k2 * 110); });
+      tope.classList.toggle("alcancia__tope--choca", e.bruto !== undefined && e.bruto > 15);
+      tope.classList.toggle("alcancia__tope--libre", e.dec2 === false);
+      if (sello) { sello.remove(); sello = null; }
+      if (e.dec1 === true && e.pago === 0) {
+        sello = document.createElement("span");
+        sello.className = "alcancia__sello";
+        sello.textContent = "GRATIS";
+        tubo.appendChild(sello);
+      }
+      var pasa = e.bruto !== undefined && e.pago > 15;
+      total.textContent = e.pago === undefined ? "S/ —" : "S/ " + e.pago;
+      total.classList.toggle("alcancia__total--pasa", pasa);
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "10 min: gratis", datos: { eh: 9, em: 40, sh: 9, sm: 50, clave: "gratis" } },
+    { nombre: "2 h 05: la fracción", datos: { eh: 9, em: 40, sh: 11, sm: 45, clave: "fraccion" } },
+    { nombre: "Todo el día: tope", datos: { eh: 8, em: 0, sh: 17, sm: 30, clave: "tope" } },
+    { nombre: "Pasa la medianoche", datos: { eh: 23, em: 30, sh: 1, sm: 15, clave: "medianoche" } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1, 2, 3],
+    variables: ["entra_h", "entra_m", "sale_h", "sale_m", "entra", "sale", "minutos", "horas", "pago"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // La gráfica escalonada: pago según los minutos, de 0 a 12 horas
+  var G = { x0: 26, x1: 292, y0: 128, y1: 10, maxM: 720, maxP: 17 };
+  function gx(m) { return G.x0 + (G.x1 - G.x0) * m / G.maxM; }
+  function gy(p) { return G.y0 - (G.y0 - G.y1) * p / G.maxP; }
+  (function dibujarEscalones() {
+    var s = "";
+    [3, 5, 7, 9, 11, 13].forEach(function (p) { s += '<line class="escalones__rejilla" x1="' + G.x0 + '" x2="' + G.x1 + '" y1="' + gy(p) + '" y2="' + gy(p) + '"/>'; });
+    s += '<line class="escalones__tope" x1="' + G.x0 + '" x2="' + G.x1 + '" y1="' + gy(15) + '" y2="' + gy(15) + '"/>';
+    s += '<text class="escalones__tope-txt" x="' + (G.x1 - 2) + '" y="' + (gy(15) - 4) + '" text-anchor="end">tope S/ 15</text>';
+    s += '<line class="escalones__eje" x1="' + G.x0 + '" x2="' + G.x1 + '" y1="' + G.y0 + '" y2="' + G.y0 + '"/>';
+    s += '<line class="escalones__eje" x1="' + G.x0 + '" x2="' + G.x0 + '" y1="' + G.y0 + '" y2="' + G.y1 + '"/>';
+    for (var h = 0; h <= 12; h += 2) s += '<text class="escalones__txt" x="' + gx(h * 60) + '" y="' + (G.y0 + 12) + '" text-anchor="middle">' + h + " h</text>";
+    [0, 3, 7, 11, 15].forEach(function (p) { s += '<text class="escalones__txt" x="' + (G.x0 - 4) + '" y="' + (gy(p) + 3) + '" text-anchor="end">' + p + "</text>"; });
+    var d = "M" + gx(0) + " " + gy(0), ultimo = 0;
+    for (var m = 1; m <= G.maxM; m++) {
+      var p = pagoDe(m);
+      if (p !== ultimo) { d += " L" + gx(m) + " " + gy(ultimo) + " L" + gx(m) + " " + gy(p); ultimo = p; }
+    }
+    d += " L" + gx(G.maxM) + " " + gy(ultimo);
+    s += '<path class="escalones__linea" d="' + d + '"/>';
+    s += '<line class="escalones__guia" id="e-guia-x"/><line class="escalones__guia" id="e-guia-y"/><circle class="escalones__punto" id="e-punto" r="5"/>';
+    $("e-grafica").innerHTML = s;
+  })();
+  function pintarEscalones() {
+    var m = Number($("e-m").value), p = pagoDe(m), h = horasDe(m);
+    $("e-num").textContent = m;
+    var x = gx(m), y = gy(p);
+    $("e-punto").setAttribute("cx", x); $("e-punto").setAttribute("cy", y);
+    var gxl = $("e-guia-x"), gyl = $("e-guia-y");
+    gxl.setAttribute("x1", x); gxl.setAttribute("x2", x); gxl.setAttribute("y1", y); gxl.setAttribute("y2", G.y0);
+    gyl.setAttribute("x1", G.x0); gyl.setAttribute("x2", x); gyl.setAttribute("y1", y); gyl.setAttribute("y2", y);
+    var bruto = 3 + (h - 1) * 2;
+    $("e-cuenta").innerHTML = m < 15
+      ? m + " min → <span class=\"c-ok\">gratis</span>"
+      : m + " min → " + h + " h → " + (bruto > 15 ? "<span class=\"c-mal\">S/ " + bruto + "</span> <span class=\"c-resto\">S/ 15</span>" : "<span class=\"c-cociente\">S/ " + p + "</span>");
+  }
+  $("e-m").addEventListener("input", pintarEscalones);
+  pintarEscalones();
+
+  // Versiones que parecen iguales
+  var VERSIONES = [
+    { codigo: "(minutos + 59) // 60", horas: function (m) { return Math.floor((m + 59) / 60); } },
+    { codigo: "minutos // 60 + 1", horas: function (m) { return Math.floor(m / 60) + 1; } },
+    { codigo: "minutos // 60", horas: function (m) { return Math.floor(m / 60); } }
+  ];
+  function pagoCon(h) { var p = 3 + (h - 1) * 2; return p > 15 ? 15 : p; }
+  function pintarVersiones() {
+    var m = Number($("v-m").value);
+    $("v-num").textContent = m;
+    var bien = pagoCon(VERSIONES[0].horas(m));
+    $("v-filas").innerHTML = VERSIONES.map(function (v, k) {
+      var h = v.horas(m), p = pagoCon(h), ok = p === bien;
+      return '<tr class="' + (ok ? "ok" : "mal") + '"><td>' + Python.escapar(v.codigo) + "</td><td>" + h + "</td><td>S/ " + p + '</td><td class="marca">' + (k === 0 ? "✓" : ok ? "=" : "✗") + "</td></tr>";
+    }).join("");
+    var f = m % 60;
+    $("v-nota").innerHTML = f === 0
+      ? "Con " + m + " minutos justos, <code>// 60 + 1</code> cobra una hora de más."
+      : m < 60
+        ? "<code>minutos // 60</code> da 0 horas: ¡cobra S/ " + pagoCon(0) + "!"
+        : "<code>minutos // 60</code> regala la fracción de " + f + " min. Prueba con 60 o 120.";
+  }
+  $("v-m").addEventListener("input", pintarVersiones);
+  pintarVersiones();
+
+  // Casos borde
+  var BORDES = [
+    { datos: [10, 0, 10, 15],
+      texto: "«Menos de 15» no incluye el 15: <code>15 < 15</code> es False y ya paga la primera hora. Si el cartel dijera «hasta 15 minutos», haría falta <code>&lt;=</code>." },
+    { datos: [10, 0, 10, 0],
+      texto: "<code>(600 - 600) % 1440</code> da 0: gratis. ¿Entró y salió enseguida, o estuvo 24 horas? Con solo la hora, el programa no lo puede saber." },
+    { datos: [9, 40, 10, 40], dias: [" (lunes)", " (martes)"],
+      texto: "Estuvo 25 horas, pero <code>% 1440</code> borra el día entero: cobra 1 hora y no S/ 15. Para estadías largas, el ticket tendría que guardar también la fecha." }
+  ];
+  function pintarBorde(k) {
+    var b = BORDES[k], d = b.datos, m = estadia(d[0], d[1], d[2], d[3]);
+    var dias = b.dias || ["", ""];
+    $("b-datos").textContent = "entra " + hora(d[0], d[1]) + dias[0] + " · sale " + hora(d[2], d[3]) + dias[1];
+    $("b-consola").textContent = "Estuviste " + m + " min\nPagas S/ " + pagoDe(m);
+    $("b-texto").innerHTML = b.texto;
+  }
+  $("b-chips").querySelectorAll("button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      $("b-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === btn)); });
+      pintarBorde(Number(btn.getAttribute("data-b")));
+    });
+  });
+  pintarBorde(0);
+
+  /* ---------- 6. ¿Conviene salir y volver? ---------- */
+  function pintarTramos() {
+    var k = Number($("s-k").value), regla = $("s-regla").getAttribute("aria-pressed") === "true";
+    $("s-num").textContent = k;
+    $("s-pal").textContent = k === 1 ? "tramo" : "tramos";
+    var partes = [];
+    for (var i = 0; i < k; i++) partes.push(Math.floor(180 / k) + (i < 180 % k ? 1 : 0));
+    var cont = $("s-tramos");
+    cont.textContent = "";
+    cont.classList.toggle("tramos--juntos", regla);
+    var suma = 0;
+    partes.forEach(function (m) {
+      var p = pagoDe(m);
+      suma += p;
+      var s = document.createElement("span");
+      s.style.flex = m + " 1 0";
+      if (p === 0) s.className = "gratis";
+      s.textContent = regla ? "" : (k <= 6 ? "S/ " + p : String(p));
+      cont.appendChild(s);
+    });
+    var iguales = partes.every(function (m) { return m === partes[0]; });
+    $("s-txt").textContent = k === 1 ? "180 min de una vez" : (iguales ? k + " de " + partes[0] + " min" : "tramos de " + partes[partes.length - 1] + " y " + partes[0] + " min");
+    var totalEl = $("s-total");
+    var t = regla ? pagoDe(180) : suma;
+    totalEl.innerHTML = "S/ " + t + " <small>" + (regla ? "(la cámara junta los tramos: 180 min)" : k === 1 ? "pagando una vez" : "sumando " + k + " tickets") + "</small>";
+    totalEl.classList.toggle("total-tramos--caro", !regla && t > 7);
+    totalEl.classList.toggle("total-tramos--gratis", t === 0);
+  }
+  $("s-k").addEventListener("input", pintarTramos);
+  $("s-regla").addEventListener("click", function () {
+    var b = $("s-regla");
+    b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
+    pintarTramos();
+  });
+  pintarTramos();
+
+  Problemas.iniciar({ id: "problema-estacionamiento" });
+})();
+</script>
+</body>
+</html>

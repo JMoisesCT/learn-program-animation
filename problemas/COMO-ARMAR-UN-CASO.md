@@ -1,6 +1,6 @@
 # Cómo armar un caso de «Problemas resueltos»
 
-Guía para escribir un caso nuevo, desde el enunciado hasta publicarlo. Resume lo aprendido con los seis primeros (la cuenta, buses, el final, el reloj, el vuelto y el laberinto). El formato técnico está en `CLAUDE.md` («Problemas resueltos»); aquí va el **cómo**: qué elegir, qué escribir, qué probar.
+Guía para escribir un caso nuevo, desde el enunciado hasta publicarlo. Resume lo aprendido con los primeros casos (la cuenta, buses, el final, el reloj, el vuelto y el laberinto; después, los tres de Condicionales). El formato técnico está en `CLAUDE.md` («Problemas resueltos»); aquí va el **cómo**: qué elegir, qué escribir, qué probar.
 
 La mejor plantilla es un caso ya hecho: `problemas/cuenta/index.html` (básico, sin bucles) y `problemas/vuelto/index.html` (con `for` e `if`). Se copia uno y se cambia todo lo propio.
 
@@ -33,7 +33,7 @@ Lo que se puede usar en cada sección (cada una suma lo de las anteriores; ver �
 | Búsquedas, Ordenar | búsqueda lineal y binaria, burbuja, quicksort, mergesort | `bisect`, `lambda` |
 | Errores | `try`/`except`, tipos de error | `raise`, `finally` |
 
-Las secciones del catálogo hoy son Variables y fórmulas, Texto a fondo, Listas, Otras estructuras y Ordenar. Para un caso de otro tema (Condicionales, Bucles, Funciones, Recursión, Búsquedas, Errores) se agrega su sección en su lugar del curso (ver §8).
+Las secciones del catálogo hoy son Variables y fórmulas, Condicionales, Texto a fondo, Listas, Otras estructuras y Ordenar. Para un caso de otro tema (Bucles, Funciones, Recursión, Búsquedas, Errores) se agrega su sección en su lugar del curso (ver §8).
 
 **Dificultad de 1 a 5 estrellas**, comparando con todo el catálogo (no solo con la sección):
 
@@ -133,9 +133,11 @@ Para proponer al autor. Cada una con su tema, nivel, idea central, escena posibl
 - **El cambio de moneda** ★: soles a dólares con un tipo de cambio y comisión, con `:.2f`. Giro: cambiar y volver a cambiar no devuelve lo mismo.
 
 **Condicionales**
-- **La taquilla del cine** ★★: precio según edad y día (niño, adulto, mayor; martes a mitad de precio). Escena: la fila con su entrada. Giro: el orden de los `elif` importa.
-- **¿Es año bisiesto?** ★★: divisible entre 4, salvo los de 100, salvo los de 400, con `and`/`or`. Giro: 1900 no fue bisiesto y 2000 sí.
-- **¿Se puede armar el triángulo?** ★★★: tres palos, la suma de dos lados mayor que el tercero, y qué tipo es. Escena: los palos que se cierran o no.
+- **La taquilla del cine** ★★: precio según edad y día (niño, adulto, mayor; martes a mitad de precio). Escena: la fila con su entrada. Giro: el orden de los `elif` importa. (Se parece al proyecto de Condicionales, la taquilla: cambiarle el giro si se hace.)
+- Ya publicados: ¿Es año bisiesto? ★★, El podio de la carrera ★★★ y El estacionamiento ★★★.
+- **¿Qué plan de celular me conviene?** ★★★: el costo de tres planes (uno por tramos) y el menor sin `min()`. Escena: las tres rectas de costo según los GB. Giro: en qué GB conviene cambiar de plan (los cruces).
+- **El día de mañana** ★★★★: dada una fecha, la de mañana (meses de 30 y 31, febrero con bisiesto, fin de año). Escena: un calendario de taco que arranca la hoja. Giro: ¿y si la fecha no existe (31/04)?
+- **¿Se puede armar el triángulo?** ★★★: tres palos, la suma de dos lados mayor que el tercero, y qué tipo es (y si es rectángulo, `a*a + b*b == c*c`). Escena: los palos que se cierran o no. Giro: con 2, 3 y 5 se aplana: `>` o `>=`.
 
 **Bucles**
 - **La alcancía** ★★: ahorrar cada semana hasta llegar a una meta, con un `while`. Giro: ¿y si cada semana ahorra un sol más?
