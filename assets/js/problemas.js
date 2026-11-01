@@ -2,17 +2,20 @@
    Necesita python.js; progreso.js para guardar que el caso se vio.
 
    Problemas.iniciar({ id: "problema-vuelto" })
-       - las piezas con .aparece entran al llegar a ellas al bajar;
-       - el índice del costado (.caso-indice a[href="#…"]) marca la sección que se lee
-         y la raya de la cabecera (.caso-avance) crece con lo leído;
-       - la idea y el código se señalan entre sí: un paso .idea li[data-idea="2"] ilumina
-         las líneas del código con data-idea="2", y una línea ilumina su paso.
+       - las piezas con .aparece entran al llegar a ellas;
+       - los puntos del costado (.caso-indice a[href="#…"]) marcan el bloque que se ve y la
+         raya de la cabecera (.caso-avance) crece con lo leído;
+       - la idea, el diagrama y el código se señalan entre sí: todo lo que lleva el mismo
+         data-idea (.idea li, .flujo__nodo, .codigo .linea) se ilumina junto;
+       - al llegar al último bloque (.caso-fin), el caso queda visto (Progreso) y aparece
+         el sello .visto.
+   Problemas.alVer(el, fn)   llama a fn una vez, cuando el se ve en la pantalla (p. ej. para
+                             dibujar un diagrama o empezar una demo).
    Problemas.codigo(pre, lineas, ideas)
        escribe el código (Python.escribir) y pone data-idea en cada línea: ideas[i] es el
        número del paso de la idea que resuelve (0 o nada: ninguno).
-   Problemas.pregunta(el, { opciones: ["6", "5"], correcta: "6", pistas: { "5": "…" },
-                            ok: "…", alAcertar })
-       una pregunta de opción múltiple dentro de el (.pregunta con su h3).
+   Problemas.pregunta(el, { opciones, correcta, pistas, ok, alAcertar })
+       una pregunta de opción múltiple dentro de el.
    Problemas.completar(id)   guarda el caso como visto (lo muestra el catálogo).
    Problemas.reducir         true si se pidió menos movimiento.
 */
@@ -41,7 +44,6 @@
     // Índice y avance
     var enlaces = Array.prototype.slice.call(document.querySelectorAll(".caso-indice a[href^='#']"));
     var avance = document.querySelector(".caso-avance");
-    var indice = document.querySelector(".caso-indice");
     function alBajar() {
       var alto = document.documentElement.scrollHeight - window.innerHeight;
       if (avance) avance.style.width = (alto > 0 ? Math.min(100, (window.scrollY / alto) * 100) : 100) + "%";
@@ -51,50 +53,51 @@
         if (s && s.getBoundingClientRect().top < window.innerHeight * 0.35) actual = a;
       });
       enlaces.forEach(function (a) { a.classList.toggle("activo", a === actual); });
-      // El índice se esconde mientras pasa por delante algo ancho (la portada, el código, la ejecución)
-      if (indice) {
-        var ri = indice.getBoundingClientRect();
-        var tapa = false;
-        document.querySelectorAll(".caso-portada, .codigo-comentado, .caso-ancha .rep").forEach(function (s) {
-          var r = s.getBoundingClientRect();
-          if (r.top < ri.bottom && r.bottom > ri.top) tapa = true;
-        });
-        indice.classList.toggle("caso-indice--oculto", tapa);
-      }
     }
     window.addEventListener("scroll", alBajar, { passive: true });
     alBajar();
 
-    // La idea y el código, enlazados
-    document.querySelectorAll(".idea li[data-idea]").forEach(function (li) {
-      li.tabIndex = 0;
-      function encender(si) {
-        var n = li.getAttribute("data-idea");
-        document.querySelectorAll('.codigo .linea[data-idea="' + n + '"]').forEach(function (l) {
-          l.classList.toggle("linea--idea", si);
-        });
-        li.classList.toggle("activa", si);
+    // La idea, el diagrama y el código, enlazados por data-idea
+    var SEL = ".idea li[data-idea], .flujo__nodo[data-idea], .codigo .linea[data-idea]";
+    function encender(n) {
+      document.querySelectorAll(SEL).forEach(function (x) {
+        var si = n !== null && x.getAttribute("data-idea") === n;
+        x.classList.toggle(x.classList.contains("linea") ? "linea--idea" : "activa", si);
+      });
+    }
+    document.addEventListener("mouseover", function (e) {
+      var x = e.target.closest && e.target.closest(SEL);
+      encender(x ? x.getAttribute("data-idea") : null);
+    });
+    document.addEventListener("focusin", function (e) {
+      var x = e.target.closest && e.target.closest(".idea li[data-idea], .flujo__nodo[data-idea]");
+      encender(x ? x.getAttribute("data-idea") : null);
+    });
+    document.querySelectorAll(".idea li[data-idea]").forEach(function (li) { li.tabIndex = 0; });
+
+    // Visto al llegar al final
+    var fin = document.querySelector(".caso-fin");
+    if (fin && o.id) {
+      alVer(fin, function () {
+        completar(o.id);
+        var sello = document.querySelector(".visto");
+        if (sello) sello.classList.add("visto--puesto");
+      });
+      if (window.Progreso && (Progreso.obtener(o.id) || {}).completada) {
+        var s0 = document.querySelector(".visto");
+        if (s0) s0.classList.add("visto--puesto");
       }
-      li.addEventListener("mouseenter", function () { encender(true); });
-      li.addEventListener("mouseleave", function () { encender(false); });
-      li.addEventListener("focus", function () { encender(true); });
-      li.addEventListener("blur", function () { encender(false); });
-    });
-    document.querySelectorAll(".codigo-comentado .codigo").forEach(function (pre) {
-      pre.addEventListener("mouseover", function (e) {
-        var l = e.target.closest(".linea[data-idea]");
-        document.querySelectorAll(".idea li").forEach(function (li) {
-          li.classList.toggle("activa", !!l && li.getAttribute("data-idea") === l.getAttribute("data-idea"));
-        });
-        pre.querySelectorAll(".linea").forEach(function (x) {
-          x.classList.toggle("linea--idea", !!l && x.getAttribute("data-idea") === l.getAttribute("data-idea"));
-        });
-      });
-      pre.addEventListener("mouseleave", function () {
-        document.querySelectorAll(".idea li.activa").forEach(function (li) { li.classList.remove("activa"); });
-        pre.querySelectorAll(".linea--idea").forEach(function (x) { x.classList.remove("linea--idea"); });
-      });
-    });
+    }
+  }
+
+  function alVer(el, fn) {
+    if (!window.IntersectionObserver) { fn(); return; }
+    var obs = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      obs.disconnect();
+      fn();
+    }, { threshold: 0.35 });
+    obs.observe(el);
   }
 
   function codigo(pre, lineas, ideas) {
@@ -148,5 +151,5 @@
     if (window.Progreso) Progreso.guardar(id, { completada: true });
   }
 
-  window.Problemas = { iniciar: iniciar, codigo: codigo, pregunta: pregunta, completar: completar, reducir: reducir };
+  window.Problemas = { iniciar: iniciar, alVer: alVer, codigo: codigo, pregunta: pregunta, completar: completar, reducir: reducir };
 })();
