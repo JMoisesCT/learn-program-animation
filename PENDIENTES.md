@@ -23,7 +23,9 @@ Por orden de prioridad:
    - si usan la barra de tiempo para rebobinar, los rombos de capítulos y los datos de entrada preparados, o solo tocan ▶;
    - si el rastro de las variables (valores tachados) y el mapa de calor de las líneas ayudan o distraen;
    - en el móvil, el escenario es largo (escena, código, variables y consola apilados) y los controles quedan fijos abajo.
-   Siguientes casos (están como «Próximamente» en el catálogo): el torneo del salón y el mensaje secreto; también los asientos del cine, el dígito verificador del DNI y las Torres de Hanói.
+   - con los casos básicos (03 y 04): si un alumno que recién vio Variables sigue el caso entero, y si «¿Siempre cierra la cuenta?» y «¿Y si sale más de 20?» se entienden como el motivo para aprender `if`.
+   Siguientes casos básicos (propuestos al autor, sin condicionales ni bucles): la excursión en buses, el cronómetro de la maratón, el reloj que da la vuelta y el número al revés. Más grandes («Próximamente» en el catálogo): el torneo del salón y el mensaje secreto; también los asientos del cine, el dígito verificador del DNI y las Torres de Hanói.
+   **En el móvil, el código del reproductor no se desplaza de lado**: una línea de más de unos 38 caracteres llega a las barras del mapa de calor. Los casos 03 y 04 acortaron sus líneas (y el 04 achica la letra en su página); conviene una solución en `problemas.css` (desplazar el código de lado o angostar la columna del mapa de calor).
 4. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
    **Probar con alumnos** en un móvil de verdad, sobre todo:
    - si la clave colgada encima del casillero (en vez del número) se entiende como «buscar por nombre»;
@@ -95,6 +97,14 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-01 · Problemas resueltos: dos casos básicos (03 y 04)
+
+Casos que solo usan lo de Variables → Mensajes con f-strings (sin `if`, bucles ni listas), pedidos por el autor para empezar por lo básico. En el catálogo, un filtro nuevo «Variables»; el orden de lectura queda 03 → 04 → 01 → 02 (enlaces al pie de cada caso).
+- **Caso 03 · La cuenta del restaurante** (`problemas/cuenta/`, `problema-cuenta`, ★☆☆): cinco amigos en una pollería, 137.50 de consumo y 10% de propina. `propina = consumo * porcentaje / 100`, `total`, `cada_uno = total / personas` y tres `print` con `:.2f`. Conceptos: un porcentaje con una cuadrícula de 100, el orden de las líneas (cambiadas dan `NameError`) y `:.2f`. La escena es la mesa: el ticket se llena, una barra consumo + propina se corta en partes iguales que vuelan a cada persona, y al final «5 × 30.25 = 151.25 ✓ cierra». 4 datos: la pollería, una pizza con 15%, un menú de 45.90 (el total guarda `50.489999999999995`: por qué el dinero va con `:.2f`) y 100 entre 3 (falta un céntimo). Detalles: siempre el mismo trabajo (tabla con dos controles), repartir antes o después da lo mismo, y `personas = 0` (`ZeroDivisionError`). Enseñanza: «¿Siempre cierra la cuenta?»: con `:.2f` entre 3 falta un céntimo y entre 6 sobran dos; en céntimos, con `//` y `%`, algunos pagan un céntimo más y cierra.
+- **Caso 04 · ¿Cuánto necesito en el final?** (`problemas/final/`, `problema-final`, ★★☆, escrito por un agente): con prácticas 9 y 12, el final que vale doble y 11 para aprobar: `puntos = aprobar * 4`, `faltan = puntos - p1 - p2`, `final = faltan / 2` y la comprobación con la fórmula del promedio. Conceptos: un promedio con pesos, deshacer una cuenta (al revés, en orden inverso) y `/` siempre da decimales. Diagrama en zigzag de 3×3 (una columna en el móvil). La escena es una barra de puntos de 4 partes con la meta en 44 y una regla de 0 a 20. 4 datos: 9 y 12, 14 y 16, 5 y 6, y 2 y 0 (necesita 21.0: imposible, y el programa no se da cuenta). Detalles: por qué el final vale el doble, los paréntesis importan (sin ellos da 29.0) y notas enteras (`(faltan + 1) // 2`). Enseñanza: «¿Y si sale más de 20?», con el `if` que haría falta y el enlace a Condicionales.
+- En `problemas.css`, una caja de variable con un valor largo (`33.333333333333336`) ya no se sale de su columna: el valor se parte.
+- Probado con Playwright a 1366×657, 1280×800 y 390×844 (también con movimiento reducido): cada bloque cabe en la pantalla, sin errores de JavaScript ni desborde horizontal, y las cuatro entradas de cada caso llegan al final con la salida que da python3.
 
 ### 2026-11-01 · Problemas resueltos: bloques de una pantalla y diagrama de flujo
 
