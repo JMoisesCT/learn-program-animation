@@ -40,7 +40,8 @@
 
      MensajeError.romper(pre, 2, { marca: "nmbre", cortadas: [3, 4] })
          la línea 2 (desde 0) se pone roja y se sacude, el texto de marca se subraya con una
-         onda roja y las líneas cortadas (por defecto, todas las de abajo) se apagan con
+         onda roja y las líneas cortadas (por defecto, todas las de abajo; con sintaxis: true,
+         todas las demás, porque un error de escritura no deja correr nada) se apagan con
          «no se ejecuta». Codigo.limpiar(pre) lo borra todo (y MensajeError.limpiar(pre)).
 
    ---------- try / except ----------
@@ -286,7 +287,8 @@
     var cortadas = opciones.cortadas;
     if (!cortadas) {
       cortadas = [];
-      for (var k = i + 1; k < ls.length; k++) cortadas.push(k);
+      // Un error de escritura no deja correr nada: también se apagan las de arriba
+      for (var k = opciones.sintaxis ? 0 : i + 1; k < ls.length; k++) if (k !== i) cortadas.push(k);
     }
     cortadas.forEach(function (k, n) {
       if (!ls[k] || !ls[k].textContent.trim()) return;
