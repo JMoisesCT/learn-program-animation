@@ -94,9 +94,15 @@ Por orden de prioridad:
 
 ### Cómo se probó
 
-Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
+Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Para los casos de Problemas resueltos, la prueba ya está en el repositorio: `node herramientas/probar-caso.js <caso>` (y `catalogo`). Para las lecciones, unos scripts sueltos (no guardados) recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-01 · Problemas resueltos: guía para armar casos y prueba guardada
+
+- **`problemas/COMO-ARMAR-UN-CASO.md`**: lo aprendido con los seis primeros casos, para escribir más (pedido por el autor). Qué hace un buen caso (problema cotidiano, una idea central, algo que se pueda dibujar, un giro final), cómo elegir el tema (la última lección que hace falta) y la dificultad (de 1 a 5, con ejemplos), una tabla de lo que se puede usar en cada sección, la plantilla del enunciado (historia + Problema, Entrada, Salida y Ejemplos), qué va en cada bloque, reglas del programa (líneas de 36 caracteres o menos, datos primero, verificar con python3, decimales como los escribe Python), los datos de entrada y la escena, cómo publicarlo (catálogo, vecinos, documentos) y cómo probarlo. Al final, un banco de ideas por tema con nivel, escena y giro final.
+- **`herramientas/probar-caso.js`**: la prueba con Playwright que se usó para los casos, ahora guardada (antes vivía en `/tmp` y se perdía con la sesión). Revisa que cada bloque quepa a 1366×657, 1280×800 y 390×844, desborde, errores, que el código no llegue al mapa de calor, cada dato de entrada hasta el final (imprime la consola) y el recorrido del diagrama; con `reducir`, lo mismo con movimiento reducido; con `catalogo`, los filtros del catálogo. Deja capturas en `capturas/`.
+- `CLAUDE.md` apunta a la guía (en «Problemas resueltos» y en «Convenciones de trabajo»).
 
 ### 2026-11-01 · Problemas resueltos: buses, reloj y el catálogo por tema
 
