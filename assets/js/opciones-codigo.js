@@ -15,7 +15,7 @@
 (function () {
   "use strict";
 
-  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not|import)$/;
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not|import|from|as|try|except|finally|pass|del|is|raise)$/;
   var PIEZA = /(f?"[^"\n]*"?)|(#.*)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)(\s*\()?/g;
 
   function escapar(t) {
