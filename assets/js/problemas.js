@@ -51,11 +51,11 @@
         if (s && s.getBoundingClientRect().top < window.innerHeight * 0.35) actual = a;
       });
       enlaces.forEach(function (a) { a.classList.toggle("activo", a === actual); });
-      // El índice se esconde mientras pasa por delante una sección ancha (la ejecución)
+      // El índice se esconde mientras pasa por delante algo ancho (la portada, el código, la ejecución)
       if (indice) {
         var ri = indice.getBoundingClientRect();
         var tapa = false;
-        document.querySelectorAll(".caso-ancha .rep").forEach(function (s) {
+        document.querySelectorAll(".caso-portada, .codigo-comentado, .caso-ancha .rep").forEach(function (s) {
           var r = s.getBoundingClientRect();
           if (r.top < ri.bottom && r.bottom > ri.top) tapa = true;
         });
