@@ -19,6 +19,8 @@
          capitulo: "Billete de 50",       (opcional) empieza un capítulo: marca en la barra
          pausa: true,                     (opcional) momento clave: al reproducir, se detiene aquí
          flecha: true / false,            (opcional) fuerza o evita la flecha de salto
+         ejecuta: [5, 6, 7],              (opcional) un paso que agrupa varias líneas (p. ej. una
+                                          llamada que vuelve enseguida): todas suman en el mapa de calor
          …                                lo que necesite la escena (su estado completo)
        }, …];
      },
@@ -197,9 +199,10 @@
       var cuenta = {};
       var max = 1;
       for (var n = 0; n <= i; n++) {
-        var l = pasos[n].linea;
-        cuenta[l] = (cuenta[l] || 0) + 1;
-        if (cuenta[l] > max) max = cuenta[l];
+        (pasos[n].ejecuta || [pasos[n].linea]).forEach(function (l) {
+          cuenta[l] = (cuenta[l] || 0) + 1;
+          if (cuenta[l] > max) max = cuenta[l];
+        });
       }
       calores.querySelectorAll(".rep__calor").forEach(function (c) {
         var veces = cuenta[c.getAttribute("data-linea")] || 0;
@@ -305,7 +308,7 @@
       pintarVars(animar);
       pintarSalida(animar);
       pintarCalores();
-      if (o.escena && o.escena.pintar) o.escena.pintar(paso, { animar: animar && !reducir(), datos: datos, i: i, pasos: pasos });
+      if (o.escena && o.escena.pintar) o.escena.pintar(paso, { animar: animar && !reducir(), datos: datos, i: i, pasos: pasos, velocidad: vel, intervalo: (o.intervalo || 1000) / vel });
 
       nota.classList.toggle("rep__nota--clave", !!(paso && paso.pausa));
       nota.innerHTML = "";
