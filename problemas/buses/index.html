@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La excursión en buses · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: cuántos buses contratar para una excursión y cuántos asientos quedan libres, con //, % y el truco de redondear hacia arriba sin if; con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- Alumnos, asientos y buses ---------- */
+    .alumno { display: block; width: 0.66rem; height: 0.66rem; border-radius: 50%; background: var(--c, #2445b0); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+    .alumno--fantasma { background: transparent; box-shadow: inset 0 0 0 1.5px #8d97a6; border: 0; opacity: 0.9; }
+    .alumno--sobra { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--lapiz); }
+    .alumno--nace { animation: alumno-nace 380ms var(--curva-rebote) both; animation-delay: var(--retraso, 0ms); }
+    @keyframes alumno-nace { from { opacity: 0; transform: scale(0.2); } }
+    .k0 { --c: #2445b0; } .k1 { --c: #0b7a3e; } .k2 { --c: #b4400e; } .k3 { --c: #7c3aed; } .k4 { --c: #0e7490; } .k5 { --c: #be185d; }
+
+    .bus { position: relative; display: inline-grid; grid-template-columns: repeat(var(--cols, 6), 0.95rem); gap: 3px; padding: 0.4rem 0.85rem 0.6rem 0.45rem; border-radius: 6px 14px 6px 6px; background: #f2c14e; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.12), 0 2px 5px rgba(31, 42, 68, 0.2); }
+    .bus::before, .bus::after { content: ""; position: absolute; bottom: -0.35rem; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #1f2a44; box-shadow: inset 0 0 0 2px #556074; }
+    .bus::before { left: 0.6rem; }
+    .bus::after { right: 0.8rem; }
+    .bus--modelo { background: transparent; box-shadow: inset 0 0 0 2px #c9a33a; }
+    .bus--modelo::before, .bus--modelo::after { background: #c9c2b2; box-shadow: none; }
+    .bus--nace { animation: bus-nace 420ms var(--curva-rebote) both; }
+    @keyframes bus-nace { from { opacity: 0; transform: translateX(-24px); } }
+    .asiento { display: grid; place-items: center; width: 0.95rem; height: 0.95rem; border-radius: 3px; background: rgba(255, 255, 255, 0.7); }
+    .asiento--libre { background: #fff; box-shadow: inset 0 0 0 1.5px var(--lapiz); }
+    .bus__num { position: absolute; top: -0.95rem; left: 0.2rem; font: 700 0.62rem var(--fuente); color: var(--tinta-suave); white-space: nowrap; }
+    .bus--chico { grid-template-columns: repeat(var(--cols, 6), 0.5rem); gap: 2px; padding: 0.25rem 0.5rem 0.4rem 0.3rem; border-radius: 4px 9px 4px 4px; }
+    .bus--chico .asiento { width: 0.5rem; height: 0.5rem; border-radius: 2px; }
+    .bus--chico .asiento.si { background: #1f2a44; }
+    .bus--chico::before, .bus--chico::after { width: 0.45rem; height: 0.45rem; bottom: -0.22rem; }
+
+    /* ---------- La cochera (escena del reproductor) ---------- */
+    .cochera { flex: 1; display: grid; gap: var(--esp-3); align-content: center; }
+    .cochera__rotulo { margin: 0 0 0.3rem; font: 700 0.66rem var(--fuente); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-suave); }
+    .cochera__rotulo b { color: var(--tinta); letter-spacing: 0; text-transform: none; font-size: 0.78rem; }
+    .cola { display: flex; flex-wrap: wrap; gap: 3px; min-height: 0.7rem; }
+    .cochera__cuenta { justify-self: center; min-height: 1.7rem; padding: 0.1em 0.6em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .cochera__cuenta:empty { opacity: 0; }
+    .flota { display: flex; flex-wrap: wrap; gap: 1.35rem 0.8rem; align-items: flex-end; min-height: 3.6rem; padding-top: 0.9rem; }
+    .flota__vacia { margin: 0; font-size: var(--texto-xs); font-style: italic; color: var(--tinta-suave); }
+    .flota .alumno { position: relative; z-index: 2; }
+    .cochera__resumen { min-height: 1.4em; margin: 0; text-align: center; font: 700 0.82rem var(--fuente); color: var(--color-ok); }
+
+    /* El código de este caso: su columna, más ancha */
+    @media (min-width: 1180px) {
+      .rep__cuerpo { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(12rem, 0.7fr); }
+    }
+
+    /* ---------- Demos ---------- */
+    .puntos { display: grid; grid-template-columns: repeat(12, 0.85rem); gap: 4px; margin: var(--esp-2) 0; min-height: 4.6rem; align-content: start; }
+    .puntos .alumno { width: 0.85rem; height: 0.85rem; background: #c7d0e8; box-shadow: none; }
+    .puntos .alumno.lleno { background: var(--azul-tinta); }
+    .puntos .alumno.resto { background: var(--lapiz); }
+    .escalera { display: flex; align-items: flex-end; gap: 1px; height: 4.6rem; margin: var(--esp-2) 0 0.2rem; padding-bottom: 2px; border-bottom: 2px solid var(--tinta); }
+    .escalera span { flex: 1; height: calc(var(--h) * 25%); background: #c7d0e8; border-radius: 2px 2px 0 0; }
+    .escalera span.multiplo { background: #9fb0d6; }
+    .escalera span.aqui { background: var(--lapiz); }
+    .escalera-ejes { display: flex; justify-content: space-between; font: 0.66rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .consola-mini { margin: 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs)/1.5 var(--fuente-codigo); white-space: pre-wrap; }
+    .consola-mini--error { font-size: 0.6rem; white-space: pre; overflow-x: auto; }
+    .consola-mini .gris { color: #8b96a3; font-weight: 400; }
+    .consola-mini .rojo { color: #ff9b9b; }
+    .cuentas { margin: var(--esp-2) 0 0; padding: 0; list-style: none; display: grid; gap: 0.15rem; font: 700 var(--texto-xs) var(--fuente-codigo); }
+    .cuentas .si { color: var(--color-ok); }
+    .cuentas .no { color: var(--lapiz); }
+    .flota-mini { display: flex; flex-wrap: wrap; gap: 0.7rem 0.45rem; align-items: flex-end; min-height: 1.6rem; margin: 0.25rem 0 0.4rem; }
+    .comparar { display: grid; gap: var(--esp-2); }
+    .comparar__fila { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--papel); }
+    .comparar__fila code { font-size: 0.78rem; }
+    .comparar__fila strong { display: block; font: 700 var(--texto-md) var(--serif); }
+    .comparar__fila--mal strong { color: var(--lapiz); }
+    .comparar__fila--bien strong { color: var(--color-ok); }
+
+    /* ---------- ¿Un bus con un solo alumno? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1.05fr 1fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .mas__dibujo h3 { margin: 0; font-size: var(--texto-md); }
+    .mas .codigo { font-size: 0.85rem; }
+    .dibujo-rotulo { margin: 0; font-size: var(--texto-xs) !important; font-weight: 700; color: var(--tinta-suave); }
+    .reparto-fila { display: flex; flex-wrap: wrap; gap: 0.5rem 0.6rem; align-items: flex-end; }
+    .reparto-fila figure { margin: 0; display: grid; justify-items: center; gap: 0.35rem; }
+    .reparto-fila figcaption { font: 700 0.72rem var(--fuente-codigo); color: var(--tinta); }
+    .reparto-fila figcaption.solo { color: var(--lapiz); }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #parejo .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #parejo .caso-fin .btn { min-height: 2.4rem; padding: 0.3rem 0.9rem; font-size: var(--texto-xs); }
+      .mas .codigo { font-size: 0.72rem; }
+      #parejo .btn-secundario#ver-49 { min-height: 2.4rem; padding: 0.3rem 1rem; font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Variables</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#parejo"><span>6 · ¿Un bus con un solo alumno?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Variables</p>
+          <h1>La excursión en buses</h1>
+          <p class="caso-bajada">Un programa que dice cuántos buses contratar para que nadie se quede en tierra.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 2 de 5"><span class="estrellas__llenas">★★</span>☆☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/index.html">variables</a></li>
+              <li><a href="../../lecciones/variables/formulas/index.html">// y %</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 170" role="img" aria-label="Tres buses escolares en fila; el último lleva un solo asiento ocupado">
+          <rect x="0" y="146" width="240" height="6" rx="3" fill="#c9c2b2"/>
+          <g>
+            <rect x="8" y="70" width="104" height="58" rx="10" fill="#f2c14e"/>
+            <rect x="96" y="76" width="16" height="22" rx="3" fill="#cfe3f5"/>
+            <g fill="#2445b0"><rect x="16" y="78" width="12" height="12" rx="3"/><rect x="32" y="78" width="12" height="12" rx="3"/><rect x="48" y="78" width="12" height="12" rx="3"/><rect x="64" y="78" width="12" height="12" rx="3"/><rect x="80" y="78" width="12" height="12" rx="3"/></g>
+            <g fill="#0b7a3e"><rect x="16" y="96" width="12" height="12" rx="3"/><rect x="32" y="96" width="12" height="12" rx="3"/><rect x="48" y="96" width="12" height="12" rx="3"/><rect x="64" y="96" width="12" height="12" rx="3"/><rect x="80" y="96" width="12" height="12" rx="3"/></g>
+            <circle cx="30" cy="132" r="10" fill="#1f2a44"/><circle cx="92" cy="132" r="10" fill="#1f2a44"/>
+          </g>
+          <g>
+            <rect x="126" y="70" width="104" height="58" rx="10" fill="#f2c14e"/>
+            <rect x="214" y="76" width="16" height="22" rx="3" fill="#cfe3f5"/>
+            <rect x="134" y="78" width="12" height="12" rx="3" fill="#b4400e"/>
+            <g fill="#fff" stroke="#b4400e" stroke-width="1.5" stroke-dasharray="3 2"><rect x="150" y="78" width="12" height="12" rx="3"/><rect x="166" y="78" width="12" height="12" rx="3"/><rect x="182" y="78" width="12" height="12" rx="3"/><rect x="198" y="78" width="12" height="12" rx="3"/><rect x="134" y="96" width="12" height="12" rx="3"/><rect x="150" y="96" width="12" height="12" rx="3"/><rect x="166" y="96" width="12" height="12" rx="3"/><rect x="182" y="96" width="12" height="12" rx="3"/><rect x="198" y="96" width="12" height="12" rx="3"/></g>
+            <circle cx="148" cy="132" r="10" fill="#1f2a44"/><circle cx="210" cy="132" r="10" fill="#1f2a44"/>
+          </g>
+          <text x="60" y="58" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="14" fill="#556074">lleno</text>
+          <text x="178" y="58" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="14" fill="#b4400e">¿uno solo?</text>
+          <text x="120" y="28" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#1f2a44">47 alumnos · 12 asientos</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>El salón de la profesora Marta se va de excursión: son <strong>47 alumnos</strong>, y la empresa alquila buses de <strong>12 asientos</strong>.</p>
+            <p>Lucho hace la cuenta: 47 entre 12 da 3. «¡Tres buses!». Pero en tres buses van 36: <span class="resalta">11 se quedarían en tierra</span>. <span class="nota-margen">¿Cómo sabe la computadora que hace falta uno más, sin un if?</span></p>
+            <div class="ticket" aria-label="La reserva de la excursión">
+              <h3>EXCURSIÓN · RESERVA</h3>
+              <div class="ticket__fila"><span>Alumnos</span><span>47</span></div>
+              <div class="ticket__fila"><span>Asientos por bus</span><span>12</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Buses</span><span>¿?</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dado cuántos alumnos van y cuántos asientos tiene cada bus, diga <strong>cuántos buses se llenan, cuántos alumnos sobran, cuántos buses hay que contratar y cuántos asientos quedan libres</strong>. Nadie se queda en tierra.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>alumnos</code>: cuántos van a la excursión, un entero mayor que 0.</li>
+              <li><code>asientos</code>: cuántos asientos tiene cada bus, un entero mayor que 0. Todos los buses son iguales.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Cuatro líneas: <code>Buses llenos: …</code>, <code>Alumnos que sobran: …</code>, <code>Buses a contratar: …</code> y <code>Asientos libres: …</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>alumnos = 47
+asientos = 12</td><td>Buses llenos: 3
+Alumnos que sobran: 11
+Buses a contratar: 4
+Asientos libres: 1</td></tr>
+                <tr><td>alumnos = 48
+asientos = 12</td><td>Buses llenos: 4
+Alumnos que sobran: 0
+Buses a contratar: 4
+Asientos libres: 0</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3><code>//</code> cuenta los grupos completos</h3>
+            <p>Si los alumnos se ponen en filas de 12, <code>//</code> dice cuántas filas quedan completas.</p>
+            <div class="control-fila">
+              <label for="d1-n">Alumnos: <span id="d1-num">47</span></label>
+              <input type="range" id="d1-n" min="0" max="60" value="47">
+            </div>
+            <div class="puntos" id="d1-puntos" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3><code>%</code> dice cuántos sobran</h3>
+            <p>Los que no completan un grupo son el resto de la división. Con 47 alumnos, cambia el tamaño del grupo:</p>
+            <div class="chips-elegir" id="d2-chips" role="group" aria-label="Asientos por bus">
+              <button type="button" data-s="12" aria-pressed="true">12</button>
+              <button type="button" data-s="10" aria-pressed="false">10</button>
+              <button type="button" data-s="9" aria-pressed="false">9</button>
+              <button type="button" data-s="5" aria-pressed="false">5</button>
+            </div>
+            <div class="puntos" id="d2-puntos" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d2-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Redondear hacia arriba</h3>
+            <p><code>47 // 12</code> da 3, pero hacen falta 4 buses. Sumando 11 antes de dividir, el resultado <strong>salta justo después de cada 12</strong>:</p>
+            <div class="control-fila">
+              <label for="d3-n">Alumnos: <span id="d3-num">47</span></label>
+              <input type="range" id="d3-n" min="1" max="48" value="47">
+            </div>
+            <div class="escalera" id="d3-escalera" aria-hidden="true"></div>
+            <div class="escalera-ejes" aria-hidden="true"><span>1</span><span>12</span><span>24</span><span>36</span><span>48</span></div>
+            <p class="cuenta-grande" id="d3-cuenta" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 47 alumnos</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Primero se llenan los buses que se pueda; si sobra <strong>aunque sea uno</strong>, hace falta otro bus. El truco está en decir «otro bus» <strong>sin preguntar</strong>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota los datos</strong> Cuántos alumnos van y cuántos asientos tiene cada bus.</li>
+              <li data-idea="2"><strong>Llenos y sobrantes</strong> <code>//</code> cuenta los buses llenos; <code>%</code>, los alumnos que sobran.</li>
+              <li data-idea="3"><strong>Redondea hacia arriba</strong> Suma <code>asientos − 1</code> antes de dividir: si sobra alguien, eso empuja un bus más; si no, no alcanza.</li>
+              <li data-idea="4"><strong>Asientos libres</strong> Los asientos de todos los buses menos los alumnos.</li>
+            </ol>
+            <p class="nota-margen">Sin decisiones ni vueltas: el programa baja en línea recta.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Por qué funciona el + 11?</h3>
+            <p>Los 11 de mentira se juntan con los que sobran. Solo llegan a 12 si sobra al menos uno:</p>
+            <div class="control-fila">
+              <label for="t-n">Alumnos: <span id="t-num">47</span></label>
+              <input type="range" id="t-n" min="1" max="60" value="47">
+            </div>
+            <ul class="cuentas" id="t-cuentas" aria-live="polite"></ul>
+            <p class="nota-margen" style="margin-top:auto">Con buses de 40 asientos, se suma 39: siempre uno menos que un bus lleno.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Sumar 1 siempre no sirve</h3>
+            <p>Parece más fácil sumar un bus a los llenos. Pero cuando no sobra nadie, sale un bus vacío:</p>
+            <div class="chips-elegir" id="w-chips" role="group" aria-label="Alumnos">
+              <button type="button" data-n="47" aria-pressed="false">47</button>
+              <button type="button" data-n="48" aria-pressed="true">48</button>
+              <button type="button" data-n="36" aria-pressed="false">36</button>
+            </div>
+            <div class="comparar" aria-live="polite">
+              <div class="comparar__fila comparar__fila--mal" id="w-mal">
+                <code>alumnos // asientos + 1</code>
+                <strong></strong>
+                <div class="flota-mini"></div>
+              </div>
+              <div class="comparar__fila comparar__fila--bien" id="w-bien">
+                <code>(alumnos + extra) // asientos</code>
+                <strong></strong>
+                <div class="flota-mini"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <p>Con <code>alumnos = 0</code>, todo da 0: <code>(0 + 11) // 12</code> es 0 y no se contrata ningún bus. Con <code>asientos = 0</code>, no hay grupos posibles y Python se detiene:</p>
+            <div class="consola-mini consola-mini--error"><span class="gris">  File "buses.py", line 3, in &lt;module&gt;</span>
+    llenos = alumnos // asientos
+             ~~~~~~~~^^~~~~~~~~~
+<span class="rojo">ZeroDivisionError: integer division or modulo by zero</span></div>
+            <p>El enunciado pide <code>asientos</code> mayor que 0; un programa más cuidadoso lo revisaría antes con un <code>if</code>.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Un bus con un solo alumno? -->
+    <section class="panel" id="parejo">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Un bus con un solo alumno?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Con 49 alumnos hacen falta 5 buses. Si se llenan uno por uno, van 12, 12, 12, 12… y <span class="resalta">1 alumno solo</span> en el último.</p>
+            <p>Mejor repartirlos <strong>parejo</strong> entre los 5 buses, otra vez con <code>//</code> y <code>%</code>: cada bus lleva <code>alumnos // buses</code> y los que sobran van de a uno en algunos buses. Es la misma idea que los céntimos de <a href="../cuenta/index.html">La cuenta del restaurante</a>.</p>
+            <pre class="codigo" id="m-codigo"></pre>
+            <p><button type="button" class="btn btn-secundario" id="ver-49">Ver 49 en la ejecución ↑</button></p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <h3>Alumnos en buses de 12</h3>
+            <div class="chips-elegir" id="m-chips" role="group" aria-label="Cuántos alumnos">
+              <button type="button" data-n="37" aria-pressed="false">37</button>
+              <button type="button" data-n="49" aria-pressed="true">49</button>
+              <button type="button" data-n="61" aria-pressed="false">61</button>
+              <button type="button" data-n="48" aria-pressed="false">48</button>
+            </div>
+            <p class="dibujo-rotulo">Llenando uno por uno:</p>
+            <div class="reparto-fila" id="m-antes"></div>
+            <p class="dibujo-rotulo" id="m-despues-txt"></p>
+            <div class="reparto-fila" id="m-despues"></div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver el reparto parejo →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../cuenta/index.html">← <span class="largo">Caso anterior: </span>La cuenta del restaurante</a>
+          <a class="btn btn-primario" href="../final/index.html"><span class="largo">Siguiente caso: </span>¿Cuánto necesito en el final? →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function div(a, b) { return Math.floor(a / b); }
+
+  /* Un bus con sus asientos: ocupados (los primeros) y, si se pide, los libres marcados */
+  function columnasDe(s) { var filas = s > 20 ? 4 : 2; return Math.ceil(s / filas); }
+  function bus(asientos, ocupados, o) {
+    o = o || {};
+    var b = document.createElement("div");
+    b.className = "bus" + (o.chico ? " bus--chico" : "") + (o.modelo ? " bus--modelo" : "");
+    b.style.setProperty("--cols", columnasDe(asientos));
+    for (var k = 0; k < asientos; k++) {
+      var a = document.createElement("span");
+      a.className = "asiento" + (k < ocupados ? " si" : (o.libres ? " asiento--libre" : ""));
+      b.appendChild(a);
+    }
+    return b;
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "alumnos = " + d.alumnos,
+      "asientos = " + d.asientos,
+      "llenos = alumnos // asientos",
+      "sobran = alumnos % asientos",
+      "extra = asientos - 1",
+      "buses = (alumnos + extra) // asientos",
+      "libres = buses * asientos - alumnos",
+      'print(f"Buses llenos: {llenos}")',
+      'print(f"Alumnos que sobran: {sobran}")',
+      'print(f"Buses a contratar: {buses}")',
+      'print(f"Asientos libres: {libres}")'
+    ];
+  }
+  var IDEAS = [1, 1, 2, 2, 3, 3, 4, 2, 2, 3, 4];
+  var BASE = { alumnos: 47, asientos: 12 };
+
+  /* ---------- 2. Demos ---------- */
+  function puntos(el, n, s) {
+    el.textContent = "";
+    el.style.gridTemplateColumns = "repeat(" + s + ", 0.85rem)";
+    var completos = div(n, s) * s;
+    for (var k = 0; k < n; k++) {
+      var p = document.createElement("span");
+      p.className = "alumno " + (k < completos ? "lleno" : "resto");
+      el.appendChild(p);
+    }
+  }
+  function pintarD1() {
+    var n = Number($("d1-n").value);
+    $("d1-num").textContent = n;
+    puntos($("d1-puntos"), n, 12);
+    $("d1-cuenta").innerHTML = n + " // 12 = <span class=\"c-cociente\">" + div(n, 12) + "</span> <small style=\"font-size:0.7em;font-weight:400\">filas completas</small>";
+  }
+  $("d1-n").addEventListener("input", pintarD1);
+  pintarD1();
+
+  function pintarD2(s) {
+    puntos($("d2-puntos"), 47, s);
+    $("d2-cuenta").innerHTML = "47 % " + s + " = <span class=\"c-resto\">" + (47 % s) + "</span> <small style=\"font-size:0.7em;font-weight:400\">sobran</small>";
+  }
+  $("d2-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("d2-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD2(Number(b.getAttribute("data-s")));
+    });
+  });
+  pintarD2(12);
+
+  var escalera = $("d3-escalera");
+  for (var e = 1; e <= 48; e++) {
+    var barra = document.createElement("span");
+    barra.style.setProperty("--h", div(e + 11, 12));
+    if (e % 12 === 0) barra.className = "multiplo";
+    escalera.appendChild(barra);
+  }
+  function pintarD3() {
+    var n = Number($("d3-n").value);
+    $("d3-num").textContent = n;
+    escalera.querySelectorAll("span").forEach(function (b, k) { b.classList.toggle("aqui", k + 1 === n); });
+    $("d3-cuenta").innerHTML = '<span style="color:var(--tinta-suave)">' + n + " // 12 = " + div(n, 12) + "</span><br>(" + n + " + 11) // 12 = <span class=\"c-cociente\">" + div(n + 11, 12) + "</span> <small style=\"font-size:0.7em;font-weight:400\">buses</small>";
+  }
+  $("d3-n").addEventListener("input", pintarD3);
+  pintarD3();
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 54,
+    anchoNodo: 320,
+    columnas: [0.3, 2, 0.3],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota <code>alumnos</code> y <code>asientos</code>", col: 1, fila: 1, idea: 1 },
+      { id: "llenos", tipo: "proceso", texto: "<code>llenos = alumnos // asientos</code><br><code>sobran = alumnos % asientos</code>", col: 1, fila: 2, idea: 2 },
+      { id: "buses", tipo: "proceso", texto: "<code>buses = (alumnos + asientos − 1) // asientos</code>", col: 1, fila: 3, idea: 3 },
+      { id: "libres", tipo: "proceso", texto: "<code>libres = buses × asientos − alumnos</code>", col: 1, fila: 4, idea: 4 },
+      { id: "imprime", tipo: "datos", texto: "imprime los cuatro resultados", col: 1, fila: 5 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 1, fila: 6 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "llenos" },
+      { de: "llenos", a: "buses" },
+      { de: "buses", a: "libres" },
+      { de: "libres", a: "imprime" },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Llega la lista del salón" },
+    { nodo: "datos", nota: "alumnos = 47 · asientos = 12" },
+    { nodo: "llenos", nota: "47 // 12 = 3 buses llenos · 47 % 12 = 11 sobran" },
+    { nodo: "buses", nota: "(47 + 11) // 12 = 58 // 12 = 4 buses" },
+    { nodo: "libres", nota: "4 × 12 − 47 = 1 asiento libre" },
+    { nodo: "imprime", nota: "Buses llenos: 3 · Alumnos que sobran: 11 · Buses a contratar: 4 · Asientos libres: 1" },
+    { nodo: "fin", nota: "Fin: 4 buses, nadie se queda en tierra" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 47 alumnos";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = { alumnos: null, asientos: null, buses: 0, sentados: 0, fantasmas: 0, sobra: false, libres: false };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var a = d.alumnos, s = d.asientos;
+
+    vars.alumnos = a; est.alumnos = a;
+    paso({ linea: 0, escribe: "alumnos", capitulo: "Los datos",
+      nota: "Guardamos cuántos alumnos van: <strong>" + a + "</strong>. Ya están en la fila, esperando su bus." });
+    vars.asientos = s; est.asientos = s;
+    paso({ linea: 1, escribe: "asientos",
+      nota: "Cada bus tiene <strong>" + s + "</strong> asientos. En la cochera se ve el molde de un bus vacío." });
+
+    var llenos = div(a, s);
+    vars.llenos = llenos; est.buses = llenos; est.sentados = llenos * s;
+    paso({ linea: 2, escribe: "llenos", lee: ["alumnos", "asientos"], capitulo: "Llenos y sobrantes", pausa: true,
+      cuenta: a + " // " + s + " = " + llenos,
+      nota: llenos
+        ? "<code>" + a + " // " + s + " = " + llenos + "</code>: con " + a + " alumnos se llenan <strong>" + llenos + (llenos === 1 ? " bus" : " buses") + "</strong> completos. Los alumnos suben de a " + s + "."
+        : "<code>" + a + " // " + s + " = 0</code>: no alcanzan para llenar ni un bus. Nadie sube todavía." });
+
+    var sobran = a % s;
+    vars.sobran = sobran; est.sobra = true;
+    paso({ linea: 3, escribe: "sobran", lee: ["alumnos", "asientos"],
+      cuenta: a + " % " + s + " = " + sobran,
+      nota: sobran
+        ? "<code>" + a + " % " + s + " = " + sobran + "</code>: <strong>" + sobran + (sobran === 1 ? " alumno se queda" : " alumnos se quedan") + "</strong> en la fila. Si contratamos solo " + llenos + (llenos === 1 ? " bus" : " buses") + ", no viajan."
+        : "<code>" + a + " % " + s + " = 0</code>: no sobra nadie. Los buses llenos alcanzan justo." });
+
+    var extra = s - 1;
+    vars.extra = extra; est.fantasmas = extra;
+    paso({ linea: 4, escribe: "extra", lee: ["asientos"], capitulo: "Redondear hacia arriba",
+      cuenta: s + " - 1 = " + extra,
+      nota: "<code>extra</code> vale <strong>" + extra + "</strong>, uno menos que un bus lleno. Imagina " + extra + " alumnos de mentira (los círculos vacíos) que se ponen al final de la fila." });
+
+    var buses = div(a + extra, s);
+    var empuja = buses > llenos;
+    vars.buses = buses; est.buses = buses; est.sentados = a; est.fantasmas = 0;
+    paso({ linea: 5, escribe: "buses", lee: ["alumnos", "extra", "asientos"], pausa: true, empuja: empuja,
+      cuenta: "(" + a + " + " + extra + ") // " + s + " = " + (a + extra) + " // " + s + " = " + buses,
+      nota: empuja
+        ? "Los " + sobran + " que sobraban más los " + extra + " de mentira son " + (sobran + extra) + ": <strong>alcanzan para llenar un bus más</strong>. Así sale <code>" + buses + "</code> sin preguntar nada. Los de mentira no viajan: se van."
+        : "Esta vez no sobraba nadie: 0 + " + extra + " = " + extra + " <strong>no alcanza para otro bus</strong>. Por eso <code>buses</code> queda en " + buses + ", igual que los llenos. Ni un bus vacío de más." });
+
+    var libres = buses * s - a;
+    vars.libres = libres; est.libres = true;
+    paso({ linea: 6, escribe: "libres", lee: ["buses", "asientos", "alumnos"], capitulo: "Asientos libres",
+      cuenta: buses + " * " + s + " - " + a + " = " + libres,
+      nota: "En " + buses + (buses === 1 ? " bus caben " : " buses caben ") + (buses * s) + "; van " + a + ". Quedan <strong>" + libres + (libres === 1 ? " asiento libre" : " asientos libres") + "</strong>, marcados en rojo." });
+
+    paso({ linea: 7, salida: "Buses llenos: " + llenos, lee: ["llenos"], capitulo: "Mostrar", nota: "Ahora se imprime todo con f-strings." });
+    paso({ linea: 8, salida: "Alumnos que sobran: " + sobran, lee: ["sobran"], nota: "Los que no completaban un bus." });
+    paso({ linea: 9, salida: "Buses a contratar: " + buses, lee: ["buses"], nota: "La respuesta que buscaba la profesora." });
+    var solo = sobran === 1 && llenos > 0;
+    paso({ linea: 10, salida: "Asientos libres: " + libres, lee: ["libres"], capitulo: "Fin", pausa: true, fin: true, flecha: false,
+      nota: solo
+        ? "Listo: " + buses + " buses y " + libres + " asientos libres. Pero mira el último bus: <strong>un alumno va solo</strong>. El bloque 6 cuenta cómo repartirlos parejo."
+        : "Listo: <strong>" + buses + (buses === 1 ? " bus" : " buses") + "</strong> y " + libres + (libres === 1 ? " asiento libre" : " asientos libres") + ". Cada línea corrió una sola vez (×1 en el mapa de calor): sin decisiones ni vueltas." });
+    return pasos;
+  }
+
+  /* La escena: la fila y la cochera */
+  var escena = (function () {
+    var colaEl, colaRot, cuentaEl, flota, resumen;
+    function crear(cont) {
+      cont.innerHTML =
+        '<div class="cochera">' +
+        '  <div><p class="cochera__rotulo">En la fila <b></b></p><div class="cola" aria-hidden="true"></div></div>' +
+        '  <span class="cochera__cuenta"></span>' +
+        '  <div><p class="cochera__rotulo">Cochera</p><div class="flota" aria-label="Los buses"></div></div>' +
+        '  <p class="cochera__resumen" aria-live="polite"></p>' +
+        "</div>";
+      colaEl = cont.querySelector(".cola");
+      colaRot = cont.querySelector(".cochera__rotulo b");
+      cuentaEl = cont.querySelector(".cochera__cuenta");
+      flota = cont.querySelector(".flota");
+      resumen = cont.querySelector(".cochera__resumen");
+    }
+    function reiniciar() { colaEl.textContent = ""; flota.textContent = ""; }
+    function alumno(i) {
+      var p = document.createElement("span");
+      p.className = "alumno k" + (i % 6);
+      p.setAttribute("data-i", String(i));
+      return p;
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : { alumnos: null };
+      // Dónde estaba cada alumno (para hacerlos viajar de la fila a su asiento)
+      var antes = {};
+      if (op.animar) colaEl.querySelectorAll(".alumno[data-i]").forEach(function (x) { antes[x.getAttribute("data-i")] = x.getBoundingClientRect(); });
+      var habiaFantasmas = colaEl.querySelectorAll(".alumno--fantasma").length;
+
+      // La fila
+      colaEl.textContent = "";
+      var n = e.alumnos || 0, s = e.asientos || 0;
+      var enFila = n - (e.sentados || 0);
+      for (var i = e.sentados || 0; i < n; i++) {
+        var al = alumno(i);
+        if (e.sobra && enFila > 0) al.classList.add("alumno--sobra");
+        if (op.animar && p.linea === 0) { al.classList.add("alumno--nace"); al.style.setProperty("--retraso", Math.min(i * 12, 600) + "ms"); }
+        colaEl.appendChild(al);
+      }
+      for (var f = 0; f < (e.fantasmas || 0); f++) {
+        var fa = document.createElement("span");
+        fa.className = "alumno alumno--fantasma";
+        if (op.animar && !habiaFantasmas) { fa.classList.add("alumno--nace"); fa.style.setProperty("--retraso", (f * 30) + "ms"); }
+        colaEl.appendChild(fa);
+      }
+      colaRot.textContent = !p ? "" : (enFila || e.fantasmas) ? enFila + (e.fantasmas ? " + " + e.fantasmas + " de mentira" : "") : "nadie: todos subieron";
+
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+
+      // La cochera
+      var previos = flota.querySelectorAll(".bus:not(.bus--modelo)").length;
+      flota.textContent = "";
+      if (!s) {
+        var v = document.createElement("p");
+        v.className = "flota__vacia";
+        v.textContent = "Todavía no sabemos cuántos asientos tiene un bus.";
+        flota.appendChild(v);
+      } else if (!e.buses) {
+        flota.appendChild(bus(s, 0, { modelo: true }));
+      } else {
+        for (var k = 0; k < e.buses; k++) {
+          var ocupados = Math.max(0, Math.min(s, (e.sentados || 0) - k * s));
+          var b = bus(s, 0, { libres: e.libres });
+          var num = document.createElement("span");
+          num.className = "bus__num";
+          num.textContent = "Bus " + (k + 1);
+          b.appendChild(num);
+          var sillas = b.querySelectorAll(".asiento");
+          for (var m = 0; m < ocupados; m++) {
+            sillas[m].classList.remove("asiento--libre");
+            sillas[m].appendChild(alumno(k * s + m));
+          }
+          if (op.animar && k >= previos) b.classList.add("bus--nace");
+          flota.appendChild(b);
+        }
+      }
+      // Viajes de la fila al asiento (FLIP)
+      if (op.animar && document.body.animate) {
+        var orden = 0;
+        flota.querySelectorAll(".alumno[data-i]").forEach(function (x) {
+          var r0 = antes[x.getAttribute("data-i")];
+          if (!r0) return;
+          var r1 = x.getBoundingClientRect();
+          x.animate([
+            { transform: "translate(" + (r0.left - r1.left) + "px, " + (r0.top - r1.top) + "px)" },
+            { transform: "none" }
+          ], { duration: 520, delay: 150 + Math.min(orden++ * 18, 700), easing: "ease-in-out", fill: "backwards" });
+        });
+      }
+      resumen.textContent = p && p.fin ? e.buses + (e.buses === 1 ? " bus" : " buses") + " · nadie se queda en tierra ✓" : "";
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "47 alumnos · buses de 12", datos: BASE },
+    { nombre: "48 justos", datos: { alumnos: 48, asientos: 12 } },
+    { nombre: "49: uno de más", datos: { alumnos: 49, asientos: 12 } },
+    { nombre: "30 en un bus de 40", datos: { alumnos: 30, asientos: 40 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1],
+    variables: ["alumnos", "asientos", "llenos", "sobran", "extra", "buses", "libres"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  function pintarCuentas() {
+    var n = Number($("t-n").value);
+    $("t-num").textContent = n;
+    var sobran = n % 12, junta = sobran + 11, alcanza = junta >= 12;
+    $("t-cuentas").innerHTML =
+      "<li>llenos = " + n + " // 12 = " + div(n, 12) + "</li>" +
+      "<li>sobran = " + n + " % 12 = " + sobran + "</li>" +
+      "<li>sobran + 11 = " + junta + ' → <span class="' + (alcanza ? "si" : "no") + '">' + (alcanza ? "llega a 12: un bus más" : "no llega a 12: ninguno más") + "</span></li>" +
+      "<li>buses = (" + n + " + 11) // 12 = <strong>" + div(n + 11, 12) + "</strong></li>";
+  }
+  $("t-n").addEventListener("input", pintarCuentas);
+  pintarCuentas();
+
+  function flotaMini(el, total, a, s) {
+    el.textContent = "";
+    for (var k = 0; k < total; k++) el.appendChild(bus(s, Math.max(0, Math.min(s, a - k * s)), { chico: true, libres: true }));
+  }
+  function pintarMal(n) {
+    var mal = div(n, 12) + 1, bien = div(n + 11, 12);
+    var vacios = mal * 12 - n >= 12;
+    $("w-mal").querySelector("strong").textContent = mal + " buses" + (vacios ? " · uno va vacío" : "");
+    $("w-bien").querySelector("strong").textContent = bien + " buses";
+    flotaMini($("w-mal").querySelector(".flota-mini"), mal, n, 12);
+    flotaMini($("w-bien").querySelector(".flota-mini"), bien, n, 12);
+    $("w-mal").className = "comparar__fila " + (mal === bien ? "comparar__fila--bien" : "comparar__fila--mal");
+  }
+  $("w-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("w-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarMal(Number(b.getAttribute("data-n")));
+    });
+  });
+  pintarMal(48);
+
+  /* ---------- 6. ¿Un bus con un solo alumno? ---------- */
+  function pintarParejo(n) {
+    var buses = div(n + 11, 12), base = div(n, buses), mas = n % buses;
+    Python.escribir($("m-codigo"), [
+      "buses = " + buses,
+      "por_bus = alumnos // buses  # " + base,
+      "con_uno_mas = alumnos % buses  # " + mas
+    ]);
+    function fila(el, cuantos) {
+      el.textContent = "";
+      cuantos.forEach(function (c) {
+        var fig = document.createElement("figure");
+        fig.appendChild(bus(12, c, { chico: true }));
+        var cap = document.createElement("figcaption");
+        cap.textContent = c;
+        if (c === 1) cap.className = "solo";
+        fig.appendChild(cap);
+        el.appendChild(fig);
+      });
+    }
+    var antes = [], despues = [];
+    for (var k = 0; k < buses; k++) {
+      antes.push(Math.min(12, n - k * 12));
+      despues.push(base + (k < mas ? 1 : 0));
+    }
+    fila($("m-antes"), antes);
+    fila($("m-despues"), despues);
+    $("m-despues-txt").textContent = mas === 0
+      ? "Repartiendo parejo: " + base + " en cada bus, sin sobrantes:"
+      : "Repartiendo parejo: " + base + " en cada bus, y " + (mas === 1 ? "1 bus lleva" : mas + " buses llevan") + " uno más:";
+  }
+  $("m-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("m-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarParejo(Number(b.getAttribute("data-n")));
+    });
+  });
+  pintarParejo(49);
+
+  $("ver-49").addEventListener("click", function () {
+    rep.entrada(2);
+    $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
+  });
+
+  Problemas.iniciar({ id: "problema-buses" });
+})();
+</script>
+</body>
+</html>

@@ -24,7 +24,7 @@ Por orden de prioridad:
    - si el rastro de las variables (valores tachados) y el mapa de calor de las líneas ayudan o distraen;
    - en el móvil, el escenario es largo (escena, código, variables y consola apilados) y los controles quedan fijos abajo.
    - con los casos básicos (03 y 04): si un alumno que recién vio Variables sigue el caso entero, y si «¿Siempre cierra la cuenta?» y «¿Y si sale más de 20?» se entienden como el motivo para aprender `if`.
-   Siguientes casos básicos (propuestos al autor, sin condicionales ni bucles): la excursión en buses, el cronómetro de la maratón, el reloj que da la vuelta y el número al revés. Más grandes («Próximamente» en el catálogo): el torneo del salón y el mensaje secreto; también los asientos del cine, el dígito verificador del DNI y las Torres de Hanói.
+   Siguientes casos básicos (propuestos al autor, sin condicionales ni bucles): el cronómetro de la maratón y el número al revés. Más grandes («Próximamente» en el catálogo): el torneo del salón y el mensaje secreto; también los asientos del cine, el dígito verificador del DNI y las Torres de Hanói.
    **En el móvil, el código del reproductor no se desplaza de lado**: una línea de más de unos 38 caracteres llega a las barras del mapa de calor. Los casos 03 y 04 acortaron sus líneas (y el 04 achica la letra en su página); conviene una solución en `problemas.css` (desplazar el código de lado o angostar la columna del mapa de calor).
 4. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
    **Probar con alumnos** en un móvil de verdad, sobre todo:
@@ -97,6 +97,16 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-01 · Problemas resueltos: buses, reloj y el catálogo por tema
+
+- **La excursión en buses** (`problemas/buses/`, `problema-buses`, ★★, escrita por un agente): 47 alumnos en buses de 12. `llenos` y `sobran` con `//` y `%`, `buses = (alumnos + extra) // asientos` con `extra = asientos - 1` (redondear hacia arriba sin `if`) y los asientos libres. Escena: la fila de alumnos que suben a la cochera; los «de mentira» del `+ 11` como círculos vacíos. 4 datos: 47, 48 justos (el +11 no agrega un bus), 49 (un alumno solo en el último) y 30 en un bus de 40. Detalles: por qué funciona el +11, `alumnos // asientos + 1` falla con 48, y los casos borde (`ZeroDivisionError`). Enseñanza: «¿Un bus con un solo alumno?», repartir parejo con `//` y `%`.
+- **El reloj que da la vuelta** (`problemas/reloj/`, `problema-reloj`, ★★, escrito por un agente): son las 9 y pasan 30 horas. `total`, `vueltas = total // 12`, `nueva = total % 12`. Escena: el reloj de agujas que da sus vueltas, con un contador, y la tira del total partida en bloques de 12. 4 datos: 9 + 30, 9 + 5, 10 + 100 y 9 + 3 (`Serán las 0`: el reloj marca 12). Detalles: mil horas con el mismo trabajo, el arreglo `(total - 1) % 12 + 1` y hacia atrás (`(9 - 15) % 12 = 6`). Enseñanza: «Todo lo que da vueltas» (días con `% 7`, minutos con `% 60`, reloj de 24 horas).
+- **Sin números de caso** (pedido por el autor): «Caso 03» pasó a «Caso de Variables» (el tema que hace falta para leerlo) en la página, la cabecera y el título. El progreso no cambia (la clave es el nombre del caso).
+- **Catálogo por tema**: una sección por tema en el orden del curso (Variables y fórmulas, Texto a fondo, Listas, Otras estructuras, Ordenar), cada una con «Para después de …», y dentro de cada una del más fácil al más difícil. Lo «Próximamente» va en su sección.
+- **Dificultad de 1 a 5 estrellas** (las llenas en ámbar) y **filtro por dificultad**, que se combina con el de tema; si no queda ningún caso, «Todavía no hay casos con ese filtro». Niveles: la cuenta 1; buses, final y reloj 2; el vuelto 3; el torneo (pronto) 4; el laberinto 5; el mensaje secreto (pronto) 3.
+- **Pie de cada caso** en el orden del catálogo: cuenta → buses → final → reloj → vuelto → laberinto. En el móvil se esconden «Caso anterior:» y «Siguiente caso:» (`.caso-fin .largo`, ahora en `problemas.css`). La cabecera no se parte en dos líneas en el móvil (el sello se recorta con «…» si no cabe).
+- Probado con Playwright a 1366×657, 1280×800 y 390×844: cada bloque de los seis casos cabe en la pantalla, sin errores ni desborde; los filtros del catálogo combinados (p. ej. Listas + ★★ deja el aviso de vacío).
 
 ### 2026-11-01 · Problemas resueltos: dos casos básicos (03 y 04)
 
