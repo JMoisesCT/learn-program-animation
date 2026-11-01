@@ -9,7 +9,17 @@ Por orden de prioridad:
 1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
+2. **Errores, completo (7/7)** (ver el registro del 2026-11-01, «Errores»). Es el último tema publicado: su proyecto termina en «Volver a la portada». Lo siguiente: decidir el tema que viene (y la zona **Problemas resueltos**, ver abajo).
+   **Probar con alumnos** en un móvil de verdad, sobre todo:
+   - si el mensaje en inglés con su línea «En español» se lee, y si los rótulos «dónde / qué línea / qué pasó» ayudan a leerlo de abajo arriba;
+   - si la ficha roja del error que vuela al `except` (y rebota si no es su tipo) se entiende como «la red atrapa solo su tipo»;
+   - el escáner de Errores al escribir: si se entiende que con un error de escritura no corre ni la primera línea.
+   **Python 3.12 frente a 3.13**: los mensajes siguen a 3.12, como dice el plan. 3.13 cambia algunas marcas (`~~~^^^` en las llamadas, sin `^` bajo `x = int(input())`); la última línea del mensaje es igual.
+   **Para unificar** (cada lección lo resolvió en su página): el subrayado con `~` (`subrayado` ya está en `mensaje-error.js`; Tipos, Traza, try y el proyecto aún reescriben ese renglón a mano), «Did you forget to import» (Leer un mensaje lo arma a mano), `romper` con un rango `[desde, hasta]` en vez del texto (cae en la primera aparición), los `^` en su propio span tocable, marcar una segunda línea que nombra el mensaje («on line 2», Errores al escribir usa `.linea--mira`), un estado «explotó aquí» en `pila.js` (Traza usa `marco--explota`), `lanzar` con una lista de `except` en orden y que se pueda cancelar, crear el mensaje reservado (invisible) para que la ficha vuele hasta él, la etiqueta «no se ejecuta» que se encima en líneas largas, el escáner de dos fases (Errores al escribir) y la consola con campo, misiones y la emulación de `int()` (Volver a pedir y el proyecto). En `bucle-input.js`: no recortar los espacios del dato (el mensaje debería decir `' veinte'`), cambiar la pregunta entre vueltas, terminar cuando el programa se corta por un error y esperar a las animaciones antes de pedir otro dato.
+   **No cabe a 1366×657**: casi todos los pasos piden bajar entre 30 y 200 px tras mostrar un mensaje; el reto de Volver a pedir y el del proyecto (26 líneas), más.
+   **Desvíos de las convenciones**: Leer un mensaje usa un cuarto grupo `lab__arreglo` (opciones bajo el código en escritorio, después del mensaje en el móvil).
+3. **Problemas resueltos (idea)**: una zona aparte con problemas resueltos y ejecutados línea a línea. Las ideas están en la conversación del 2026-11-01; falta decidir el formato (y si se escribe un intérprete de un subconjunto de Python en JS para poder cambiar los datos y el código).
+4. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
    **Probar con alumnos** en un móvil de verdad, sobre todo:
    - si la clave colgada encima del casillero (en vez del número) se entiende como «buscar por nombre»;
    - si la bolsa de fichas sueltas transmite «sin orden» y el rebote de un repetido se ve;
@@ -80,6 +90,24 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Unos scripts sueltos recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-01 · Errores: 7 lecciones
+
+Tema nuevo después de Ordenar (el plan está en CLAUDE.md): leer un mensaje de error sin miedo y atrapar errores con `try`/`except`. Primero se hicieron las piezas compartidas:
+- **`assets/js/mensaje-error.js`**: el `Traceback` como lo imprime Python 3.12 (`MensajeError.crear`: marcos, `^^^` o `subrayado` con `~`, «Did you mean», línea «En español», rótulos «dónde / qué línea / qué pasó», partes tocables que iluminan su línea en el código), el programa que se corta (`romper`: la línea roja con la pieza subrayada en onda y las de abajo apagadas con «no se ejecuta»; `sintaxis: true` apaga también las de arriba) y `try`/`except` (`zona`: raya azul en la zona protegida y naranja en la red; `lanzar`: una ficha roja con el tipo vuela de la línea que falla al `except`, que se ilumina, o rebota si no es su tipo). CSS en `base.css`, «Mensaje de error».
+- **`assets/js/python.js`**: el coloreador de Python compartido (`Python.escribir`, `Python.colorear`, comillas simples, `tk-excepcion`), para no copiar uno en cada página.
+- **`pasos.js`**: la salida se vuelve a repartir cuando lo que se ve o la salida cambian de alto (`ResizeObserver`; lo pedía la nota de Otras estructuras), y `Pasos.feedback` admite `{ html }` y conserva las clases propias del elemento. **`opciones-codigo.js`** colorea `try`, `except` y demás palabras clave. `Codigo.limpiar` borra también las marcas de error.
+
+Luego las siete lecciones se escribieron en paralelo, una por agente, con todos los mensajes copiados de ejecutar los programas de verdad con `python3.12`/`3.13`:
+- **1/7 · Leer un mensaje de error** (`errores`, 9 pasos): el programa se corta en la línea 4 («Hola» queda, «Fin» no sale), qué queda en la consola, las partes del mensaje, leerlo de abajo arriba, «Did you mean» (calculado con el algoritmo de CPython), dónde se corta, por qué no existe un nombre y un reto con dos errores.
+- **2/7 · Errores al escribir** (`errores-sintaxis`, 10 pasos): un escáner lee todo antes de correr; falta `:`, paréntesis sin cerrar (tocar las parejas), texto sin cerrar, `=` en vez de `==`, la sangría con botones (16 combinaciones reales), ¿qué error da? y un reto con tres errores que se destapan uno a uno.
+- **3/7 · Cada error con su nombre** (`errores-tipos`, 9 pasos): una colección de fichas (TypeError, ValueError, ZeroDivisionError, IndexError, KeyError, AttributeError), predecir, emparejar mensajes y causas, la máquina `int()` con dos puertas (tipo y valor), clasificar, el mismo programa con otro dato y el detective.
+- **4/7 · El error viene de una función** (`errores-traza`, 8 pasos): un mensaje con dos lugares, la traza con la pila congelada en el error, dónde se arregla, tres niveles, leer de abajo arriba, el dato malo que vino de afuera y un reto con `.split()`.
+- **5/7 · try y except** (`errores-try`, 9 pasos): el trapecista con y sin red, dos caminos, ¿qué imprime?, cada red atrapa su tipo (el `ZeroDivisionError` rebota), dos `except`, un `try` corto, la trampa de `except:` sin tipo y armar la red.
+- **6/7 · Volver a pedir un dato** (`errores-pedir`, 9 pasos): un dato malo lo corta todo, `while True` con `try` y `break` (`BucleInput`), `isdigit` frente a `int`, el 25 que se cuela, dos filtros con `continue`, sin el primer `continue` (`NameError`), `pedir_nota` y un reto con cuatro misiones.
+- **7/7 · Proyecto: la calculadora que no se rompe** (`errores-proyecto`, 8 pasos): romperla de cuatro formas, cinco partes (partir y desempaquetar, convertir, operador desconocido, un `except` para cada error, «fin») y el programa completo (26 líneas) con seis misiones; su salida coincide con python3 en 29 entradas.
+
+Portada con la tarjeta del tema y «Siguiente: Errores →» en el proyecto de Ordenar. Probado con Playwright a 1280×800, 1366×657 y 390×844 (también con movimiento reducido): sin errores de JavaScript ni desborde horizontal.
 
 ### 2026-10-31 · Conjuntos: el código de «Sacar una ficha» se acumula
 

@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El error viene de una función · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: un mensaje de error con varios File … line … se lee de abajo arriba, como la pila de llamadas. Abajo, dónde explotó; arriba, quién la llamó. Y el arreglo puede estar donde nació el dato malo.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .pista-texto { color: var(--color-pista); }
+    .rotulo-zona { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+
+    /* ---------- La consola y el mensaje, juntos: como en una consola real ---------- */
+    .lab__resultado > .consola { margin-top: 0; }
+    .consola + .zona-mensaje .traceback { margin-top: var(--esp-2); }
+    .consola__tecleo { color: var(--color-azul); text-decoration: underline; text-underline-offset: 3px; }
+    .zona-mensaje:empty { display: none; }
+
+    /* ---------- Cada renglón del mensaje con su tarjeta y su línea ---------- */
+    .traceback__renglon--elegido { margin-inline: calc(-1 * var(--esp-2)); padding-inline: var(--esp-2); border-radius: 4px; background: #fff0c2; }
+    .codigo .linea--del-marco { box-shadow: inset 0 0 0 2px #ffd479; }
+    .marco--senalado { opacity: 1; border-style: solid; border-color: #e0a800; background: #fff8dc; box-shadow: 0 0 0 3px #ffe58f; }
+    .marco--explota { border-style: solid; border-color: var(--color-error); background: #fff6f5; }
+    .marco--explota.marco--senalado { border-color: var(--color-error); box-shadow: 0 0 0 3px #ffe58f; }
+    .marco__estado--explota { padding: 0.1em 0.6em; border-radius: 999px; background: var(--color-error); color: #fff; animation: sacudir 420ms ease; }
+    .etiqueta-linea { display: inline-block; margin-left: 0.8em; padding: 0 0.55em; border-radius: 999px; background: #ffe58f; font-family: var(--fuente); font-size: 0.72rem; font-weight: 700; line-height: 1.55; color: #5c2a00; vertical-align: 0.1em; white-space: nowrap; animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    /* ---------- La pila, compacta: título, variables y estado en una fila ---------- */
+    .lab .pila { margin-top: 0; }
+    .lab .marco { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem var(--esp-3); padding: 0.35rem var(--esp-3); }
+    .lab .marco__cabecera { display: contents; }
+    .lab .marco__titulo { order: 0; }
+    .lab .marco__vars { order: 1; flex: 0 1 auto; margin-top: 0; min-height: 0; gap: var(--esp-1) var(--esp-2); }
+    .lab .marco__vacia { display: none; }
+    .lab .marco__falta { order: 2; flex: 0 1 auto; margin-top: 0; }
+    .lab .marco__estado { order: 3; margin-left: auto; }
+    .lab .marco .var { font-size: var(--texto-xs); }
+    .lab .pila__marcos { gap: 0.4rem; }
+    .lab .pila__titulo { margin-bottom: var(--esp-1); }
+
+    /* Al pasar el mouse por el código del mensaje, que no se pierda el fondo oscuro */
+    .traceback__codigo.traceback__parte--tocable:hover { background: var(--color-codigo-fondo); box-shadow: 0 0 0 0.25em var(--color-codigo-fondo), 0 0 0 calc(0.25em + 2px) #f0b6b0; }
+
+    /* ---------- Predicción ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- Leer de abajo arriba ---------- */
+    .lectura { list-style: none; counter-reset: lectura; margin: var(--esp-3) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .lectura li { counter-increment: lectura; position: relative; padding: 0.3rem var(--esp-3) 0.3rem 2.6rem; border: 2px solid #f0d68a; border-radius: var(--radio-sm); background: #fffbea; font-size: var(--texto-xs); line-height: 1.45; animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .lectura li::before { content: counter(lectura); position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #e0a800; color: #fff; font-size: var(--texto-xs); font-weight: 700; line-height: 1.4rem; text-align: center; }
+    .lectura__vacia { color: var(--color-texto-suave); font-style: italic; }
+    .lectura:empty::before { content: "Aquí irás leyendo el mensaje, renglón a renglón."; display: block; padding: var(--esp-2) var(--esp-3); border: 2px dashed var(--color-borde); border-radius: var(--radio-sm); font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); }
+
+    /* ---------- Líneas del código que se pueden tocar ---------- */
+    .codigo--tocable .linea--tocable { cursor: pointer; }
+    .codigo--tocable .linea--tocable:hover { background: rgba(255, 255, 255, 0.08); }
+    .codigo--tocable .linea--tocable:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: -3px; }
+    .codigo .linea--tocada-mal { animation: sacudir 380ms ease; box-shadow: inset 4px 0 0 #ffb35c; }
+    .codigo .linea--nueva { background: rgba(60, 196, 124, 0.20); box-shadow: inset 4px 0 0 #3cc47c; }
+    .codigo .linea--borrada { text-decoration: line-through 2px #ff8f8f; opacity: 0.6; }
+
+    /* ---------- Opciones de arreglo (versiones de código) ---------- */
+    .opciones--arreglo { grid-template-columns: minmax(0, 1fr); gap: var(--esp-2); margin: var(--esp-3) 0 0; }
+    .lab__principal > .opciones--arreglo:first-child { margin-top: 0; }
+    .opciones--arreglo .opcion > span { padding: var(--esp-2) var(--esp-3); text-align: left; font-size: var(--texto-sm); }
+    .version__nombre { display: block; margin-bottom: 0.15em; font-family: var(--fuente); font-size: var(--texto-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .version__codigo { display: block; white-space: pre; overflow-x: auto; font-size: var(--texto-xs); font-weight: 600; line-height: 1.55; }
+    .version--borrar .version__codigo { text-decoration: line-through 2px var(--color-error); }
+
+    /* ---------- Pruebas del reto ---------- */
+    .pruebas { list-style: none; margin: var(--esp-3) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-xs); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 120ms; }
+    .prueba__entrada { color: var(--color-azul); font-weight: 700; white-space: nowrap; }
+    .prueba__salida { font-weight: 700; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .pruebas li.prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-error); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (min-width: 1024px) {
+      /* Código y pila más compactos: el paso entra en una pantalla */
+      .lab .codigo { font-size: 0.9rem; line-height: 1.5; padding: var(--esp-3) 0; }
+      .lab .codigo .linea { min-height: 1.5em; }
+      .lab .consola { min-height: 0; padding: var(--esp-2) var(--esp-3); }
+      .lab .explicacion { margin-top: var(--esp-3); }
+      .lab .fila-botones { margin-top: var(--esp-3); }
+      .lab__visual { padding: var(--esp-3) var(--esp-4); }
+      .lab__visual ~ .lab__resultado { margin-top: var(--esp-3); }
+      .lab__visual > .consola { margin-top: var(--esp-3); }
+      .lab .consola__linea { font-size: 0.9rem; line-height: 1.45; }
+      .lab .traceback { padding: var(--esp-2) var(--esp-3); font-size: 0.75rem; line-height: 1.45; }
+      .lab .traceback__fin { font-size: var(--texto-xs); }
+      .lab .traceback__traduccion { margin-top: var(--esp-2); padding-top: var(--esp-1); font-size: var(--texto-xs); }
+      .lab .feedback { margin-top: var(--esp-3); padding: var(--esp-3); font-size: var(--texto-sm); }
+      .lab .opcion > span { padding: 0.3rem var(--esp-3); }
+      .lab .opciones--arreglo { gap: 0.4rem; }
+      .lab .pruebas { gap: 0.4rem; }
+      .lab .pruebas li { padding: 0.3rem var(--esp-3); font-size: 0.7rem; }
+      /* La pregunta y sus botones en una fila */
+      .prediccion-fila { display: flex; align-items: center; gap: var(--esp-3); margin-bottom: var(--esp-3); }
+      .prediccion-fila .prediccion__pregunta { flex: 1 1 auto; margin: 0; font-size: var(--texto-sm); }
+      .prediccion-fila .prediccion { flex: 0 0 13rem; margin: 0; }
+      .prediccion-fila .prediccion .btn { min-height: 2.5rem; padding: var(--esp-1); }
+    }
+    @media (min-width: 1024px) and (max-height: 720px) {
+      .paso__intro p { font-size: var(--texto-sm); }
+      .lab .codigo { font-size: 0.8rem; line-height: 1.42; padding: var(--esp-2) 0; }
+      .lab .codigo .linea { min-height: 1.42em; }
+      .lab .consola__linea { font-size: 0.8rem; line-height: 1.35; }
+      .lab .consola__titulo { font-size: 0.7rem; }
+      .lab .traceback { font-size: 0.7rem; line-height: 1.38; }
+      .lab .traceback__fin { font-size: 0.75rem; }
+      .lab .traceback__traduccion { font-size: 0.75rem; }
+      .lab .marco { padding: 0.2rem var(--esp-3); }
+      .lab .marco .var, .lab .marco__estado, .lab .marco__falta, .lab .marco__falta code { font-size: 0.72rem; }
+      .lab .marco__titulo code { font-size: var(--texto-xs); }
+      .lab .explicacion { font-size: var(--texto-sm); margin-top: var(--esp-2); }
+      .lab .fila-botones { margin-top: var(--esp-2); }
+      .lab .fila-botones .btn { min-height: 2.4rem; padding-block: var(--esp-1); }
+      .lab .feedback { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .lab .version__codigo { line-height: 1.4; }
+      .lab .lectura li { padding-block: 0.2rem; }
+    }
+    @media (max-width: 1023px) {
+      .lab > * + * { margin-top: var(--esp-4); }
+    }
+    @media (max-width: 480px) {
+      /* Las líneas largas siguen debajo, sin esconderse a la derecha */
+      .lab .codigo, .codigo--chico { font-size: 0.75rem; }
+      .lab .codigo .linea, .codigo--chico .linea { padding-left: 2.3rem; padding-right: var(--esp-2); white-space: pre-wrap; }
+      .lab .codigo .linea::before, .codigo--chico .linea::before { width: 1.6rem; }
+      .etiqueta-linea { margin-left: 0.4em; }
+      .pruebas li { grid-template-columns: minmax(0, 1fr) auto; }
+      .version__codigo { white-space: pre-wrap; overflow-wrap: anywhere; }
+      /* El mensaje entra entero, sin barra de desplazamiento */
+      .lab .traceback { font-size: 0.68rem; padding-inline: var(--esp-2); }
+      .prueba__entrada { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="errores-traza">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: un mensaje que nombra dos líneas -->
+    <section class="paso" id="paso-mensaje" data-requiere aria-labelledby="h-mensaje">
+      <span class="paso__etiqueta">Errores 4/7 · El error viene de una función</span>
+      <h1 class="paso__titulo" id="h-mensaje">Un mensaje, dos lugares</h1>
+      <p>Este programa imprimió un promedio y después se cortó. El mensaje tiene <strong>dos</strong> renglones <code>File</code>: nombra dos líneas.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="p1-mensaje"></div>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Traza con la pila hasta que explota -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="h-traza">
+      <h2 class="paso__titulo" id="h-traza">Hasta que explota</h2>
+      <p>Ejecuta el programa línea a línea y mira la <strong>pila de llamadas</strong>. Cuando explote, la pila se queda congelada.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-saltar">Siguiente salto ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="p2-mensaje"></div>
+          <div class="feedback" data-izquierda id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ¿Dónde se arregla? -->
+    <section class="paso" id="paso-arreglo" data-comprobar aria-labelledby="h-arreglo">
+      <h2 class="paso__titulo" id="h-arreglo">¿Dónde se arregla?</h2>
+      <p>Explotó en la línea 3, dentro de <code>promedio</code>. Elige un cambio: el programa tiene que imprimir el 13.0 del salón A <strong>sin cortarse</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <p class="rotulo-zona" id="p3-rotulo">El programa</p>
+          <pre class="codigo" id="p3-codigo" aria-labelledby="p3-rotulo"></pre>
+        </div>
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--arreglo" id="p3-opciones">
+            <legend class="visualmente-oculto">¿Qué cambio haces?</legend>
+            <label class="opcion"><input type="radio" name="p3" value="division"><span><b class="version__nombre">Cambiar la línea 3</b><code class="version__codigo">    return total / (len(notas) + 1)</code></span></label>
+            <label class="opcion"><input type="radio" name="p3" value="llamada"><span><b class="version__nombre">Cambiar la línea 8</b><code class="version__codigo">if len(salon_b) == 0:
+    print("Sin notas")
+else:
+    print(promedio(salon_b))</code></span></label>
+            <label class="opcion version--borrar"><input type="radio" name="p3" value="borrar"><span><b class="version__nombre">Borrar la línea 6</b><code class="version__codigo">salon_b = []</code></span></label>
+          </fieldset>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="p3-mensaje"></div>
+          <div class="feedback" data-izquierda id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Tres niveles -->
+    <section class="paso" id="paso-niveles" data-requiere aria-labelledby="h-niveles">
+      <h2 class="paso__titulo" id="h-niveles">Tres niveles</h2>
+      <p>Ahora <code>informe</code> llama a <code>promedio</code>, y el programa, a <code>informe</code>. El salón B viene vacío otra vez.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="prediccion-fila">
+            <p class="prediccion__pregunta" id="p4-pregunta">¿Cuántos renglones <code>File</code> tendrá el mensaje?</p>
+            <div class="prediccion" id="p4-prediccion" role="group" aria-labelledby="p4-pregunta">
+              <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">1</button>
+              <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+              <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+              <button type="button" class="btn btn-secundario" data-valor="4" aria-pressed="false">4</button>
+            </div>
+          </div>
+          <pre class="codigo" id="p4-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-saltar">Siguiente salto ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="p4-mensaje"></div>
+          <div class="feedback" data-izquierda id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. De abajo arriba -->
+    <section class="paso" id="paso-abajo" data-requiere aria-labelledby="h-abajo">
+      <h2 class="paso__titulo" id="h-abajo">De abajo arriba</h2>
+      <p>Lee el mensaje como lo lee un programador: toca los renglones <code>File</code> <strong>de abajo arriba</strong>, uno por uno.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p5-codigo" aria-label="Código"></pre>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p5-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="p5-mensaje"></div>
+          <ol class="lectura" data-izquierda id="p5-lectura" aria-live="polite" aria-label="Lo que dice el mensaje"></ol>
+          <div class="feedback" data-izquierda id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. El dato malo vino de afuera -->
+    <section class="paso" id="paso-afuera" data-requiere aria-labelledby="h-afuera">
+      <h2 class="paso__titulo" id="h-afuera">El dato malo vino de afuera</h2>
+      <p>Explotó dentro de <code>nota_final</code>. Mira en la pila qué recibió <code>examen</code> y <strong>toca la línea</strong> donde nació ese dato.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--tocable" id="p6-codigo" aria-label="Código: toca una línea"></pre>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p6-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="p6-mensaje"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: qué línea cambiar y cómo -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">¿Qué línea cambias?</h2>
+      <p>Ana escribió sus notas en una línea. Lee el mensaje de abajo arriba y elige el arreglo. Lo probamos con <code>14 9 16</code> y con <code>20 11</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <pre class="codigo" id="reto-codigo" aria-label="Código"></pre>
+          <div class="consola" id="reto-consola"><span class="consola__titulo">Salida</span></div>
+          <div class="zona-mensaje" id="reto-mensaje"></div>
+        </div>
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--arreglo" id="reto-opciones">
+            <legend class="visualmente-oculto">¿Qué arreglo eliges?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="int-lista"><span><b class="version__nombre">Cambiar la línea 2</b><code class="version__codigo">    return sum(int(notas)) / len(notas)</code></span></label>
+            <label class="opcion"><input type="radio" name="reto" value="int-print"><span><b class="version__nombre">Cambiar la línea 5</b><code class="version__codigo">    print(nombre, "tiene", int(promedio(notas)))</code></span></label>
+            <label class="opcion"><input type="radio" name="reto" value="for"><span><b class="version__nombre">Agregar después de la línea 7</b><code class="version__codigo">for i in range(len(notas)):
+    notas[i] = int(notas[i])</code></span></label>
+            <label class="opcion"><input type="radio" name="reto" value="int-input"><span><b class="version__nombre">Cambiar la línea 7</b><code class="version__codigo">notas = int(input("Notas: ")).split()</code></span></label>
+          </fieldset>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" data-izquierda id="reto-pruebas" hidden aria-label="Pruebas con tu arreglo"></ul>
+          <div class="feedback" data-izquierda id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Un mensaje con varios <code>File</code> se lee <strong>de abajo arriba</strong>, como la pila: abajo, dónde explotó; arriba, quién la llamó. Y el arreglo puede ir <strong>donde nació el dato malo</strong>.</p>
+        <pre class="codigo resumen-codigo codigo--chico" id="resumen-codigo" aria-label="Resumen"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../try/index.html">Siguiente: try y except →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/python.js"></script>
+<script src="../../../assets/js/mensaje-error.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function copiar(o, extra) {
+    var c = {};
+    var k;
+    for (k in o) c[k] = o[k];
+    for (k in extra || {}) c[k] = extra[k];
+    return c;
+  }
+
+  var leccion; // se asigna al final, con Pasos.iniciar
+
+  /* ---------- El mensaje de error ----------
+     Python 3.12 subraya una operación con ~ y ^ (total / len(notas) → ~~~~~~^~~~~~~~~~~~).
+     MensajeError solo dibuja ^, así que un marco puede traer subrayado: [columna, "~~^~~"]
+     y aquí se reescribe ese renglón tal cual. */
+  function mensaje(el, o) {
+    el.textContent = "";
+    var marcos = o.marcos.map(function (mc) {
+      return mc.subrayado ? copiar(mc, { marca: [mc.subrayado[0], mc.subrayado[0] + mc.subrayado[1].length] }) : mc;
+    });
+    var m = MensajeError.crear(el, copiar(o, { marcos: marcos }));
+    var renglones = m.el.querySelectorAll(".traceback__marca .traceback__texto");
+    var k = 0;
+    marcos.forEach(function (mc) {
+      var texto = String(mc.codigo).replace(/^\s+/, "");
+      var hay = Array.isArray(mc.marca) || (mc.marca && texto.indexOf(mc.marca) !== -1);
+      if (!hay) return;
+      if (mc.subrayado && renglones[k]) renglones[k].textContent = "    " + " ".repeat(mc.subrayado[0]) + mc.subrayado[1];
+      k++;
+    });
+    m.marcos = o.marcos;
+    return m;
+  }
+
+  // Los renglones de un marco: File …, su línea de código y, si hay, la de ^^^
+  function renglonesDe(m, i) {
+    var rs = [];
+    m.el.querySelectorAll('[data-marco="' + i + '"]').forEach(function (p) {
+      var r = p.closest(".traceback__renglon");
+      if (r && rs.indexOf(r) === -1) rs.push(r);
+    });
+    var ultimo = rs[rs.length - 1];
+    var sig = ultimo && ultimo.nextElementSibling;
+    if (sig && sig.classList.contains("traceback__marca")) rs.push(sig);
+    return rs;
+  }
+
+  // Las tarjetas de la pila, de abajo (0, el programa) arriba
+  function tarjetas(pilaEl) {
+    return pilaEl ? Array.prototype.slice.call(pilaEl.querySelectorAll(".pila__marcos > .marco:not(.marco--sale)")) : [];
+  }
+
+  /* Ilumina el marco i del mensaje, su línea del código y su tarjeta de la pila
+     (null apaga todo). ctx: { m, pre, pila } */
+  function senalar(ctx, i) {
+    var m = ctx.m;
+    m.el.querySelectorAll(".traceback__renglon--elegido").forEach(function (r) { r.classList.remove("traceback__renglon--elegido"); });
+    ctx.pre.querySelectorAll(".linea--del-marco").forEach(function (l) { l.classList.remove("linea--del-marco"); });
+    tarjetas(ctx.pila).forEach(function (t, k) { t.classList.toggle("marco--senalado", k === i); });
+    if (i === null || i === undefined) { m.resaltar(null); return; }
+    m.resaltar("linea", i);
+    renglonesDe(m, i).forEach(function (r) { r.classList.add("traceback__renglon--elegido"); });
+    var l = Python.linea(ctx.pre, m.marcos[i].linea - 1);
+    if (l) l.classList.add("linea--del-marco");
+  }
+
+  // Una etiqueta al final de una línea del código («💥 explotó aquí»)
+  function etiquetar(pre, i, texto) {
+    var l = Python.linea(pre, i);
+    if (!l) return;
+    var e = l.querySelector(".etiqueta-linea");
+    if (!e) e = l.appendChild(crear("span", "etiqueta-linea"));
+    e.textContent = texto;
+  }
+  function quitarEtiquetas(pre) { pre.querySelectorAll(".etiqueta-linea").forEach(function (e) { e.remove(); }); }
+
+  // La tarjeta de arriba de la pila: ahí explotó
+  function explotar(pilaEl) {
+    var ts = tarjetas(pilaEl);
+    var tope = ts[ts.length - 1];
+    if (!tope) return;
+    tope.classList.add("marco--explota");
+    var est = tope.querySelector(".marco__estado");
+    est.textContent = "✖ explotó aquí";
+    est.className = "marco__estado marco__estado--explota";
+  }
+
+  // La consola: cada salida es un texto, o [mensaje, lo que escribió el alumno]
+  function consola(el, salidas) {
+    Codigo.consola(el, []);
+    salidas.forEach(function (s) {
+      if (typeof s === "string") { Codigo.agregar(el, s); return; }
+      Codigo.agregar(el, s[0]);
+      el.lastElementChild.appendChild(crear("span", "consola__tecleo", s[1]));
+    });
+  }
+
+  function prog(vars, extra) { return copiar(Pila.programa(vars), extra); }
+  function llamada(titulo, vars, extra) { return copiar(Pila.llamada(titulo, vars), extra); }
+
+  /* ======================= Programa 1: promedio con una lista vacía ======================= */
+  var PROG1 = [
+    "def promedio(notas):",
+    "    total = sum(notas)",
+    "    return total / len(notas)",
+    "",
+    "salon_a = [14, 9, 16]",
+    "salon_b = []",
+    "print(promedio(salon_a))",
+    "print(promedio(salon_b))",
+    'print("Fin")'
+  ];
+  var TRAD_CERO = "No se puede dividir entre cero.";
+  var MSJ1 = {
+    tipo: "ZeroDivisionError",
+    mensaje: "division by zero",
+    traduccion: TRAD_CERO,
+    marcos: [
+      { linea: 8, codigo: "print(promedio(salon_b))", marca: "promedio(salon_b)", funcion: "<module>" },
+      { linea: 3, codigo: "    return total / len(notas)", subrayado: [7, "~~~~~~^~~~~~~~~~~~"], funcion: "promedio" }
+    ]
+  };
+  function romper1(pre) { MensajeError.romper(pre, 2, { marca: "total / len(notas)", cortadas: [8] }); }
+
+  /* ---------- 1. Un mensaje, dos lugares ---------- */
+  var pre1 = $("p1-codigo");
+  Python.escribir(pre1, PROG1);
+  var fase1 = "division";
+  var m1 = mensaje($("p1-mensaje"), copiar(MSJ1, { codigo: pre1, alTocar: tocar1 }));
+  var ctx1 = { m: m1, pre: pre1, pila: null };
+
+  function preguntar1() {
+    $("p1-explicacion").innerHTML = fase1 === "division"
+      ? "¿En qué línea está la <strong>división</strong> que falló? Toca su <code>line</code> en el mensaje."
+      : fase1 === "llamada" ? "¿Y desde qué línea <strong>llamaron</strong> a <code>promedio</code>? Toca el otro <code>line</code>."
+        : "Abajo, <strong>dónde explotó</strong>; arriba, <strong>quién la llamó</strong>.";
+  }
+
+  function empezar1() {
+    fase1 = "division";
+    Codigo.limpiar(pre1);
+    quitarEtiquetas(pre1);
+    romper1(pre1);
+    consola($("p1-consola"), ["13.0"]);
+    m1.marcar("linea", null, 0);
+    m1.marcar("linea", null, 1);
+    senalar(ctx1, null);
+    m1.mostrar();
+    Pasos.limpiarFeedback($("p1-fb"));
+    preguntar1();
+  }
+
+  function tocar1(parte, i) {
+    if (i === null) {
+      Pasos.feedback($("p1-fb"), "pista", "Ese renglón dice qué pasó: se dividió entre cero. Para saber dónde, mira los renglones File … line … de arriba.");
+      return;
+    }
+    senalar(ctx1, i);
+    if (fase1 === "division") {
+      if (i === 1) {
+        m1.marcar("linea", "ok", 1);
+        etiquetar(pre1, 2, "💥 explotó aquí");
+        fase1 = "llamada";
+        Pasos.feedback($("p1-fb"), "ok", "Sí: line 3, in promedio. Es el último File: dentro de la función, la división entre len(notas), que era 0.");
+        preguntar1();
+      } else {
+        m1.marcar("linea", "mal", 0);
+        Pasos.feedback($("p1-fb"), "pista", "La línea 8 no divide nada: llama a promedio. ¿Y dentro de promedio? Mira el otro File.");
+      }
+      return;
+    }
+    if (fase1 === "llamada") {
+      if (i === 0) {
+        m1.marcar("linea", "ok", 0);
+        etiquetar(pre1, 7, "📞 desde aquí la llamaron");
+        fase1 = "fin";
+        preguntar1();
+        Pasos.feedback($("p1-fb"), "ok", "¡Eso es! El mensaje cuenta un camino: la línea 8 llamó a promedio, y dentro de promedio explotó la línea 3. El último File es dónde explotó; el de arriba, quién la llamó.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("p1-fb"), "pista", "Ahí explotó: ya lo encontraste. Ahora busca quién llamó a promedio: el File de arriba.");
+      }
+    }
+  }
+
+  /* ---------- 2. Hasta que explota ---------- */
+  var pre2 = $("p2-codigo");
+  Python.escribir(pre2, PROG1);
+  var pila2 = Pila.crear($("p2-pila"), { codigo: pre2, alTocar: function (nivel) { if (m2.listo) tocar2(nivel); } });
+  var m2 = mensaje($("p2-mensaje"), copiar(MSJ1, { codigo: pre2, alTocar: function (parte, i) { tocar2(i); } }));
+  m2.listo = false;
+  var ctx2 = { m: m2, pre: pre2, pila: $("p2-pila") };
+  var tocados2 = {};
+
+  var VA = ["salon_a", "[14, 9, 16]"];
+  var VB = ["salon_b", "[]"];
+  function trazaPromedio() {
+    var esperaA = prog([VA, VB], { linea: 6, falta: "print(▢)", ficha: "programa" });
+    var esperaB = prog([VA, VB], { linea: 7, falta: "print(▢)", ficha: "programa" });
+    return [
+      { linea: 0, texto: "Python recuerda la receta <strong>promedio</strong>. Todavía no la ejecuta.",
+        estado: { pila: [prog([])] } },
+      { linea: 4, texto: "El salón A tiene tres notas.", estado: { pila: [prog([VA])] } },
+      { linea: 5, texto: "El salón B todavía no tiene notas: una lista <strong>vacía</strong>.", estado: { pila: [prog([VA, VB])] } },
+      { linea: 6, fase: "ida", parada: true,
+        texto: "Para imprimir hace falta <code>promedio(salon_a)</code>: Python la llama y <strong>apila</strong> una tarjeta.",
+        estado: { pila: [esperaA, llamada("promedio(salon_a)", [["notas", "[14, 9, 16]"]])] } },
+      { linea: 1, texto: "<code>sum(notas)</code> es 39.",
+        estado: { pila: [esperaA, llamada("promedio(salon_a)", [["notas", "[14, 9, 16]"], ["total", 39]])] } },
+      { linea: 2, texto: "<code>39 / 3</code> es 13.0: la tarjeta lo devuelve.",
+        estado: { pila: [esperaA, llamada("promedio(salon_a)", [["notas", "[14, 9, 16]"], ["total", 39]], { devuelve: "13.0" })] } },
+      { linea: 6, fase: "vuelta", flecha: true, parada: true, salida: "13.0",
+        texto: "La tarjeta se va y el 13.0 baja al <code>print</code>. Hasta aquí, todo bien.",
+        estado: { pila: [prog([VA, VB], { linea: 6, sigue: true, recibe: "13.0", falta: "print(▢)" })] } },
+      { linea: 7, fase: "ida", parada: true,
+        texto: "Ahora <code>promedio(salon_b)</code>: otra tarjeta, con la lista vacía.",
+        estado: { pila: [esperaB, llamada("promedio(salon_b)", [["notas", "[]"]])] } },
+      { linea: 1, texto: "<code>sum([])</code> es 0.",
+        estado: { pila: [esperaB, llamada("promedio(salon_b)", [["notas", "[]"], ["total", 0]])] } },
+      { linea: 2, error: true, parada: true,
+        texto: "<code>len(notas)</code> es 0 y <code>0 / 0</code> no se puede: <strong>¡explota!</strong> La pila queda congelada así.",
+        estado: { pila: [esperaB, llamada("promedio(salon_b)", [["notas", "[]"], ["total", 0]])] } }
+    ];
+  }
+
+  function tocar2(i) {
+    if (i === null || i === undefined) {
+      Pasos.feedback($("p2-fb"), "pista", "Ese renglón dice qué pasó. Toca un renglón File … line …: cada uno es una tarjeta.");
+      return;
+    }
+    senalar(ctx2, i);
+    tocados2[i] = true;
+    $("p2-explicacion").innerHTML = i === 1
+      ? "El último <code>File</code> (line 3, in promedio) es la tarjeta de <strong>arriba</strong>: la que estaba trabajando."
+      : "El primer <code>File</code> (line 8, in &lt;module&gt;) es la tarjeta de <strong>abajo</strong>: el programa, esperando en la línea 8.";
+    if (tocados2[0] && tocados2[1]) {
+      Pasos.feedback($("p2-fb"), "ok", "Cada File es una tarjeta, pero al revés: la pila pone la última llamada arriba; el mensaje, abajo («most recent call last»). Por eso se lee de abajo arriba.");
+      leccion.desbloquear();
+    }
+  }
+
+  var t2 = Traza.crear({
+    codigo: pre2,
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    saltar: $("p2-saltar"),
+    reiniciar: $("p2-reiniciar"),
+    pila: pila2,
+    generar: trazaPromedio,
+    alPaso: function (paso) {
+      pila2.pintar(paso.estado);
+      if (paso.error) {
+        explotar($("p2-pila"));
+        romper1(pre2);
+      }
+    },
+    alReiniciar: function () {
+      pila2.vaciar();
+      m2.ocultar();
+      m2.listo = false;
+      tocados2 = {};
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alTerminar: function () {
+      m2.listo = true;
+      m2.mostrar();
+      $("p2-explicacion").innerHTML = "Toca cada renglón <code>File</code> del mensaje: se ilumina <strong>su tarjeta</strong> en la pila.";
+    }
+  });
+
+  /* ---------- 3. ¿Dónde se arregla? ---------- */
+  var pre3 = $("p3-codigo");
+  var VERSIONES3 = {
+    division: { lineas: PROG1.slice(0, 2).concat(["    return total / (len(notas) + 1)"], PROG1.slice(3)), nuevas: [2] },
+    llamada: { lineas: PROG1.slice(0, 7).concat(["if len(salon_b) == 0:", '    print("Sin notas")', "else:", "    print(promedio(salon_b))", 'print("Fin")']), nuevas: [7, 8, 9, 10] },
+    borrar: { lineas: PROG1.slice(0, 5).concat(PROG1.slice(6)), borrada: 5 }
+  };
+  var elegida3 = null;
+
+  function opcionElegida(nombre) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    return r ? r.value : null;
+  }
+
+  function mostrar3(valor) {
+    Codigo.limpiar(pre3);
+    $("p3-mensaje").textContent = "";
+    if (!valor) {
+      Python.escribir(pre3, PROG1);
+      romper1(pre3);
+      consola($("p3-consola"), ["13.0"]);
+      mensaje($("p3-mensaje"), copiar(MSJ1, { codigo: pre3 })).mostrar();
+      $("p3-rotulo").textContent = "El programa, tal como está";
+      return;
+    }
+    var v = VERSIONES3[valor];
+    // La línea borrada se ve tachada hasta que se ejecuta
+    var lineas = v.borrada !== undefined ? PROG1 : v.lineas;
+    Python.escribir(pre3, lineas);
+    (v.nuevas || []).forEach(function (k) { Python.linea(pre3, k).classList.add("linea--nueva"); });
+    if (v.borrada !== undefined) Python.linea(pre3, v.borrada).classList.add("linea--borrada");
+    consola($("p3-consola"), []);
+    $("p3-rotulo").textContent = "El programa, con tu cambio";
+  }
+
+  function comprobar3() {
+    var valor = opcionElegida("p3");
+    if (!valor) return false;
+    var v = VERSIONES3[valor];
+    Python.escribir(pre3, v.lineas);
+    (v.nuevas || []).forEach(function (k) { Python.linea(pre3, k).classList.add("linea--nueva"); });
+    $("p3-mensaje").textContent = "";
+    var opcion = document.querySelector('input[name="p3"]:checked').closest(".opcion");
+    document.querySelectorAll("#p3-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    if (valor === "llamada") {
+      consola($("p3-consola"), ["13.0", "Sin notas", "Fin"]);
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("p3-fb"), "ok", "¡Ya no se corta! Lo arreglaste en la llamada, no donde explotó: antes de llamar a promedio se revisa si hay notas. promedio estaba bien; lo malo era la lista vacía que le mandaban.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    if (valor === "division") {
+      consola($("p3-consola"), ["9.75", "0.0", "Fin"]);
+      Pasos.feedback($("p3-fb"), "pista", "Ya no explota… pero el promedio de [14, 9, 16] salió 9.75, no 13.0, y el salón vacío dice 0.0. Cambiar la división arruinó lo que sí funcionaba: el problema no es la división, es la lista vacía.");
+      return false;
+    }
+    // Sin salon_b, la línea 7 usa un nombre que no existe
+    consola($("p3-consola"), ["13.0"]);
+    MensajeError.romper(pre3, 6, { marca: "salon_b" });
+    mensaje($("p3-mensaje"), {
+      tipo: "NameError",
+      mensaje: "name 'salon_b' is not defined",
+      sugerencia: "salon_a",
+      traduccion: "El nombre <code>salon_b</code> no existe. ¿Quisiste decir <code>salon_a</code>?",
+      codigo: pre3,
+      marcos: [{ linea: 7, codigo: "print(promedio(salon_b))", marca: "salon_b", funcion: "<module>" }]
+    }).mostrar();
+    Pasos.feedback($("p3-fb"), "pista", "Ahora es otro error: NameError en la línea 7, que todavía usa salon_b. Borrar el dato no lo arregla: hay que decidir qué hacer cuando un salón no tiene notas.");
+    return false;
+  }
+
+  document.querySelectorAll('input[name="p3"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      elegida3 = r.value;
+      document.querySelectorAll("#p3-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback($("p3-fb"));
+      mostrar3(elegida3);
+      leccion.listoParaComprobar(true);
+    });
+  });
+
+  /* ======================= Programa 2: tres niveles ======================= */
+  var PROG4 = [
+    "def promedio(notas):",
+    "    return sum(notas) / len(notas)",
+    "",
+    "def informe(salon, notas):",
+    '    print("Salón", salon)',
+    '    print("Promedio:", promedio(notas))',
+    "",
+    'informe("A", [14, 9, 16])',
+    'informe("B", [])',
+    'print("Listo")'
+  ];
+  var MSJ4 = {
+    tipo: "ZeroDivisionError",
+    mensaje: "division by zero",
+    traduccion: TRAD_CERO,
+    marcos: [
+      { linea: 9, codigo: 'informe("B", [])', funcion: "<module>" },
+      { linea: 6, codigo: '    print("Promedio:", promedio(notas))', marca: "promedio(notas)", funcion: "informe" },
+      { linea: 2, codigo: "    return sum(notas) / len(notas)", subrayado: [7, "~~~~~~~~~~~^~~~~~~~~~~~"], funcion: "promedio" }
+    ]
+  };
+  var SALIDA4 = ["Salón A", "Promedio: 13.0", "Salón B"];
+  function romper4(pre) { MensajeError.romper(pre, 1, { marca: "sum(notas) / len(notas)", cortadas: [9] }); }
+  var ESPERA_B = prog([], { linea: 8, ficha: "programa" });
+  var INFORME_B = function (extra) { return llamada('informe("B", [])', [["salon", "'B'"], ["notas", "[]"]], extra); };
+  var PILA_ERROR4 = [ESPERA_B, INFORME_B({ linea: 5, falta: 'print("Promedio:", ▢)', ficha: "informe" }), llamada("promedio(notas)", [["notas", "[]"]])];
+
+  /* ---------- 4. Tres niveles ---------- */
+  var pre4 = $("p4-codigo");
+  Python.escribir(pre4, PROG4);
+  var pila4 = Pila.crear($("p4-pila"), { codigo: pre4 });
+  var m4 = mensaje($("p4-mensaje"), copiar(MSJ4, { codigo: pre4 }));
+  var prediccion4 = null;
+
+  function trazaTres() {
+    var espA = prog([], { linea: 7, ficha: "programa" });
+    var infA = function (extra) { return llamada('informe("A", [14, 9, 16])', [["salon", "'A'"], ["notas", "[14, 9, 16]"]], extra); };
+    var infAespera = infA({ linea: 5, falta: 'print("Promedio:", ▢)', ficha: "informe" });
+    return [
+      { linea: 0, texto: "Python recuerda la receta <strong>promedio</strong>.", estado: { pila: [prog([])] } },
+      { linea: 3, texto: "…y la receta <strong>informe</strong>.", estado: { pila: [prog([])] } },
+      { linea: 7, fase: "ida", parada: true, texto: "El programa llama a <code>informe</code> con el salón A: una tarjeta.",
+        estado: { pila: [espA, infA()] } },
+      { linea: 4, salida: "Salón A", texto: "Imprime el nombre del salón.", estado: { pila: [espA, infA()] } },
+      { linea: 5, fase: "ida", parada: true, texto: "<code>informe</code> necesita <code>promedio(notas)</code>: otra tarjeta encima.",
+        estado: { pila: [espA, infAespera, llamada("promedio(notas)", [["notas", "[14, 9, 16]"]])] } },
+      { linea: 1, texto: "<code>39 / 3</code> es 13.0: lo devuelve.",
+        estado: { pila: [espA, infAespera, llamada("promedio(notas)", [["notas", "[14, 9, 16]"]], { devuelve: "13.0" })] } },
+      { linea: 5, fase: "vuelta", flecha: true, salida: "Promedio: 13.0", texto: "El 13.0 baja a <code>informe</code>, que lo imprime.",
+        estado: { pila: [espA, infA({ linea: 5, sigue: true, recibe: "13.0", falta: 'print("Promedio:", ▢)' })] } },
+      { linea: 7, fase: "vuelta", flecha: true, parada: true, texto: "<code>informe</code> terminó: su tarjeta se va.",
+        estado: { pila: [prog([], { linea: 7, sigue: true })] } },
+      { linea: 8, fase: "ida", parada: true, texto: "Ahora el salón B, con la lista <strong>vacía</strong>.",
+        estado: { pila: [ESPERA_B, INFORME_B()] } },
+      { linea: 4, salida: "Salón B", texto: "Imprime el nombre del salón.", estado: { pila: [ESPERA_B, INFORME_B()] } },
+      { linea: 5, fase: "ida", parada: true, texto: "<code>informe</code> llama a <code>promedio(notas)</code>: tercera tarjeta.",
+        estado: { pila: PILA_ERROR4 } },
+      { linea: 1, error: true, parada: true, texto: "<code>0 / 0</code>: <strong>¡explota!</strong> con tres tarjetas en la pila.",
+        estado: { pila: PILA_ERROR4 } }
+    ];
+  }
+
+  function habilitar4() {
+    var sin = prediccion4 === null;
+    $("p4-ejecutar").disabled = sin;
+    $("p4-saltar").disabled = sin;
+  }
+
+  var t4 = Traza.crear({
+    codigo: pre4,
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    saltar: $("p4-saltar"),
+    reiniciar: $("p4-reiniciar"),
+    pila: pila4,
+    generar: trazaTres,
+    alPaso: function (paso) {
+      pila4.pintar(paso.estado);
+      if (paso.error) {
+        explotar($("p4-pila"));
+        romper4(pre4);
+      }
+    },
+    alReiniciar: function () {
+      pila4.vaciar();
+      m4.ocultar();
+      Pasos.limpiarFeedback($("p4-fb"));
+      habilitar4();
+    },
+    alTerminar: function () {
+      m4.mostrar();
+      $("p4-explicacion").innerHTML = "Tres tarjetas en la pila, tres renglones <code>File</code> en el mensaje.";
+      if (prediccion4 === "3") {
+        Pasos.feedback($("p4-fb"), "ok", "¡Tres! Uno por tarjeta de la pila cuando explotó: el programa, informe y promedio.");
+      } else {
+        Pasos.feedback($("p4-fb"), "pista", "Son tres, no " + prediccion4 + ": uno por tarjeta de la pila cuando explotó (el programa, informe y promedio).");
+      }
+      leccion.desbloquear();
+    }
+  });
+  habilitar4();
+
+  $("p4-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion4 !== null && prediccion4 !== b.getAttribute("data-valor");
+      prediccion4 = b.getAttribute("data-valor");
+      $("p4-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (nueva) t4.reiniciar(); else habilitar4();
+    });
+  });
+
+  /* ---------- 5. De abajo arriba ---------- */
+  var pre5 = $("p5-codigo");
+  Python.escribir(pre5, PROG4);
+  var pila5 = Pila.crear($("p5-pila"), { codigo: pre5 });
+  var m5 = mensaje($("p5-mensaje"), copiar(MSJ4, { codigo: pre5, alTocar: function (parte, i) { tocar5(i); } }));
+  var ctx5 = { m: m5, pre: pre5, pila: $("p5-pila") };
+  var orden5 = [2, 1, 0];
+  var leidos5 = 0;
+  var LECTURA5 = [
+    "<strong>Dónde explotó:</strong> en <code>promedio</code>, línea 2. Dividió entre 0.",
+    "<strong>Quién la llamó:</strong> <code>informe</code>, en la línea 6.",
+    "<strong>Quién llamó a <code>informe</code>:</strong> el programa, en la línea 9. ¡Ahí nació el <code>[]</code>!"
+  ];
+
+  function empezar5() {
+    leidos5 = 0;
+    $("p5-lectura").textContent = "";
+    Codigo.limpiar(pre5);
+    pila5.vaciar();
+    pila5.pintar({ pila: PILA_ERROR4 });
+    explotar($("p5-pila"));
+    romper4(pre5);
+    consola($("p5-consola"), SALIDA4);
+    [0, 1, 2].forEach(function (i) { m5.marcar("linea", null, i); });
+    senalar(ctx5, null);
+    m5.mostrar();
+    Pasos.limpiarFeedback($("p5-fb"));
+  }
+
+  function tocar5(i) {
+    if (leidos5 >= orden5.length) { senalar(ctx5, i); return; }
+    if (i === null) {
+      Pasos.feedback($("p5-fb"), "pista", "Ese renglón dice qué pasó. Ahora toca los renglones File … line …, empezando por el de abajo.");
+      return;
+    }
+    var esperado = orden5[leidos5];
+    if (i !== esperado) {
+      m5.marcar("linea", "mal", i);
+      Pasos.feedback($("p5-fb"), "pista", leidos5 === 0
+        ? "Empieza por abajo: el último File, justo encima de qué pasó, es donde explotó."
+        : "Sube un solo renglón: ¿quién llamó a " + m5.marcos[orden5[leidos5 - 1]].funcion + "?");
+      return;
+    }
+    senalar(ctx5, i);
+    m5.marcar("linea", "ok", i);
+    var li = crear("li");
+    li.innerHTML = LECTURA5[leidos5];
+    $("p5-lectura").appendChild(li);
+    leidos5++;
+    if (leidos5 === orden5.length) {
+      Pasos.feedback($("p5-fb"), "ok", "Así se lee un mensaje largo: de abajo arriba, como si quitaras las tarjetas de la pila una a una. El último File dice dónde explotó; el primero, dónde empezó todo. Y el [] vino de la línea 9.");
+      leccion.desbloquear();
+    } else {
+      Pasos.limpiarFeedback($("p5-fb"));
+    }
+  }
+
+  /* ======================= Programa 3: el dato malo vino de afuera ======================= */
+  var PROG6 = [
+    "def nota_final(examen, extra):",
+    "    return examen + extra",
+    "",
+    'nota = input("Nota del examen: ")',
+    "print(nota_final(nota, 2))"
+  ];
+  var MSJ6 = {
+    tipo: "TypeError",
+    mensaje: 'can only concatenate str (not "int") to str',
+    traduccion: "Solo se puede unir un texto (<code>str</code>) con otro texto, no con un número (<code>int</code>).",
+    marcos: [
+      { linea: 5, codigo: "print(nota_final(nota, 2))", marca: "nota_final(nota, 2)", funcion: "<module>" },
+      { linea: 2, codigo: "    return examen + extra", subrayado: [7, "~~~~~~~^~~~~~"], funcion: "nota_final" }
+    ]
+  };
+
+  var pre6 = $("p6-codigo");
+  var pila6 = Pila.crear($("p6-pila"), { codigo: pre6 });
+  var hecho6 = false;
+  var PISTAS6 = {
+    0: "Ahí solo se define la receta: examen recibe lo que le manden. ¿Qué le mandaron?",
+    1: "Ahí explotó, pero examen ya llegó como '15', con comillas. Con un número, esta línea funciona. ¿De dónde vino el texto?",
+    4: "Ahí se le pasa nota a la función, pero nota ya era '15'. Mira la tarjeta del programa: ¿dónde nació nota?"
+  };
+
+  function empezar6() {
+    hecho6 = false;
+    Python.escribir(pre6, PROG6);
+    pre6.querySelectorAll(".linea").forEach(function (l, k) {
+      if (!PROG6[k].trim()) return;
+      l.classList.add("linea--tocable");
+      l.setAttribute("role", "button");
+      l.tabIndex = 0;
+      l.setAttribute("aria-label", "Línea " + (k + 1) + ": " + PROG6[k].trim());
+    });
+    pila6.vaciar();
+    pila6.pintar({ pila: [prog([["nota", "'15'"]], { linea: 4, ficha: "programa" }), llamada("nota_final(nota, 2)", [["examen", "'15'"], ["extra", 2]])] });
+    explotar($("p6-pila"));
+    MensajeError.romper(pre6, 1, { marca: "examen + extra", cortadas: [] });
+    consola($("p6-consola"), [["Nota del examen: ", "15"]]);
+    mensaje($("p6-mensaje"), copiar(MSJ6, { codigo: pre6 })).mostrar();
+    $("p6-explicacion").innerHTML = "En la tarjeta, <code>examen</code> vale <strong>'15'</strong>, con comillas: es un <strong>texto</strong>. ¿En qué línea nació?";
+    Pasos.limpiarFeedback($("p6-fb"));
+  }
+
+  function tocar6(k) {
+    if (hecho6) return;
+    var l = Python.linea(pre6, k);
+    if (k !== 3) {
+      l.classList.remove("linea--tocada-mal");
+      void l.offsetWidth;
+      l.classList.add("linea--tocada-mal");
+      Pasos.feedback($("p6-fb"), "pista", PISTAS6[k]);
+      return;
+    }
+    hecho6 = true;
+    // El arreglo, en la línea donde nació el dato: int() lo vuelve número
+    PROG6[3] = 'nota = int(input("Nota del examen: "))';
+    Python.escribir(pre6, PROG6);
+    PROG6[3] = 'nota = input("Nota del examen: ")';
+    Python.linea(pre6, 3).classList.add("linea--nueva");
+    $("p6-mensaje").textContent = "";
+    pila6.vaciar();
+    pila6.pintar({ pila: [prog([["nota", 15]])] });
+    consola($("p6-consola"), [["Nota del examen: ", "15"], "17"]);
+    $("p6-explicacion").innerHTML = "Con <code>int()</code> en la línea 4, <code>nota</code> es el número 15 y <code>nota_final</code> devuelve 17.";
+    Pasos.feedback($("p6-fb"), "ok", "¡Ahí! input() siempre devuelve un texto. Fíjate: la línea 4 ni siquiera sale en el mensaje. El error saltó dentro de la función, pero el dato malo vino de afuera, y se arregla donde nació.");
+    leccion.desbloquear();
+  }
+
+  pre6.addEventListener("click", function (e) {
+    var l = e.target.closest(".linea--tocable");
+    if (l) tocar6(Array.prototype.indexOf.call(pre6.querySelectorAll(".linea"), l));
+  });
+  pre6.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var l = e.target.closest(".linea--tocable");
+    if (!l) return;
+    e.preventDefault();
+    tocar6(Array.prototype.indexOf.call(pre6.querySelectorAll(".linea"), l));
+  });
+
+  /* ======================= Reto ======================= */
+  var RETO = [
+    "def promedio(notas):",
+    "    return sum(notas) / len(notas)",
+    "",
+    "def informe(nombre, notas):",
+    '    print(nombre, "tiene", promedio(notas))',
+    "",
+    'notas = input("Notas: ").split()',
+    'informe("Ana", notas)'
+  ];
+  var preR = $("reto-codigo");
+  Python.escribir(preR, RETO);
+  var TIPO_SUMA = "unsupported operand type(s) for +: 'int' and 'str'";
+  var MSJ_RETO = {
+    tipo: "TypeError",
+    mensaje: TIPO_SUMA,
+    traduccion: "No se puede sumar (<code>+</code>) un número (<code>int</code>) con un texto (<code>str</code>).",
+    marcos: [
+      { linea: 8, codigo: 'informe("Ana", notas)', funcion: "<module>" },
+      { linea: 5, codigo: '    print(nombre, "tiene", promedio(notas))', marca: "promedio(notas)", funcion: "informe" },
+      { linea: 2, codigo: "    return sum(notas) / len(notas)", marca: "sum(notas)", funcion: "promedio" }
+    ]
+  };
+
+  function empezarReto() {
+    Codigo.limpiar(preR);
+    MensajeError.romper(preR, 1, { marca: "sum(notas)", cortadas: [] });
+    consola($("reto-consola"), [["Notas: ", "14 9 16"]]);
+    mensaje($("reto-mensaje"), copiar(MSJ_RETO, { codigo: preR })).mostrar();
+  }
+
+  // Lo que pasa con cada arreglo, para una entrada
+  function correrReto(valor, entrada) {
+    var pedazos = entrada.split(" ");
+    if (valor === "for") {
+      var suma = pedazos.reduce(function (a, t) { return a + Number(t); }, 0);
+      var prom = suma / pedazos.length;
+      return { ok: true, sale: "Ana tiene " + (Number.isInteger(prom) ? prom.toFixed(1) : String(prom)) };
+    }
+    if (valor === "int-lista") return { sale: "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'list'" };
+    if (valor === "int-print") return { sale: "TypeError: " + TIPO_SUMA };
+    return { sale: "ValueError: invalid literal for int() with base 10: '" + entrada + "'" };
+  }
+
+  var PISTAS_RETO = {
+    "int-lista": "Otro error: int() convierte un texto, no una lista entera. Y promedio estaba bien: sumar una lista de números funciona. El problema es que la lista trae textos ('14', '9', '16'). ¿Dónde nacieron?",
+    "int-print": "El mismo error de antes: promedio explota antes de que int() pueda hacer algo, porque la lista sigue trayendo textos. Lee el mensaje hasta arriba: ¿qué línea armó la lista?",
+    "int-input": "Otro error: ValueError. int() no puede convertir '14 9 16' entero, con espacios. Hay que convertir cada pedazo, después de .split()."
+  };
+
+  function comprobarReto() {
+    var valor = opcionElegida("reto");
+    if (!valor) return false;
+    var ul = $("reto-pruebas");
+    ul.textContent = "";
+    var todas = true;
+    ["14 9 16", "20 11"].forEach(function (entrada) {
+      var r = correrReto(valor, entrada);
+      todas = todas && !!r.ok;
+      var li = crear("li", r.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "prueba__entrada", entrada));
+      li.appendChild(crear("span", "prueba__salida", r.sale));
+      li.appendChild(crear("span", "prueba__marca", r.ok ? "✓" : "✗"));
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+    var opcion = document.querySelector('input[name="reto"]:checked').closest(".opcion");
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    if (todas) {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "¡Funciona con las dos! El error saltó dos funciones más adentro, en promedio, pero el dato malo nació en la línea 7: .split() da textos. Convertir cada pedazo con int() justo ahí lo arregla en su origen.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[valor]);
+    return false;
+  }
+
+  document.querySelectorAll('input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      $("reto-pruebas").hidden = true;
+      Pasos.limpiarFeedback($("reto-fb"));
+      leccion.listoParaComprobar(true);
+    });
+  });
+
+  /* ---------- Resumen ---------- */
+  Python.escribir($("resumen-codigo"), [
+    "# Abajo: dónde explotó. Arriba: quién la llamó.",
+    "if len(notas) == 0:   # el arreglo, en la llamada",
+    '    print("Sin notas")',
+    "else:",
+    "    print(promedio(notas))"
+  ]);
+
+  /* ---------- En escritorio, el feedback va bajo el código (a la izquierda) ----------
+     Así la columna de la derecha (pila, salida y mensaje) cabe en la pantalla. En el móvil
+     se queda en su lugar, debajo del mensaje que se toca. */
+  var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
+  var movibles = Array.prototype.slice.call(document.querySelectorAll("[data-izquierda]")).map(function (el) {
+    var lugar = document.createComment("lugar de " + el.id);
+    el.parentNode.insertBefore(lugar, el);
+    return { el: el, lugar: lugar, principal: el.closest(".lab").querySelector(".lab__principal") };
+  });
+  function ubicar() {
+    var izquierda = escritorio && escritorio.matches;
+    movibles.forEach(function (m) {
+      if (izquierda) m.principal.appendChild(m.el);
+      else m.lugar.parentNode.insertBefore(m.el, m.lugar.nextSibling);
+    });
+  }
+  ubicar();
+  if (escritorio) {
+    if (escritorio.addEventListener) escritorio.addEventListener("change", ubicar);
+    else if (escritorio.addListener) escritorio.addListener(ubicar);
+  }
+
+  /* ---------- Conexiones ---------- */
+  function pausar() {
+    t2.detener();
+    t4.detener();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-mensaje": function () { pausar(); empezar1(); },
+      "paso-traza": pausar,
+      "paso-arreglo": function (paso, l, info) {
+        pausar();
+        mostrar3(opcionElegida("p3"));
+        if (!info.desbloqueado) l.listoParaComprobar(!!opcionElegida("p3"));
+      },
+      "paso-niveles": pausar,
+      "paso-abajo": function () { pausar(); empezar5(); },
+      "paso-afuera": function () { pausar(); empezar6(); },
+      "paso-reto": function (paso, l, info) {
+        pausar();
+        empezarReto();
+        if (!info.desbloqueado) l.listoParaComprobar(!!opcionElegida("reto"));
+      },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-arreglo": comprobar3, "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
