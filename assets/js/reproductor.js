@@ -43,7 +43,8 @@
    Lo que muestra, además del código, la escena, las cajas y la consola:
    - una barra de tiempo con los capítulos marcados (se arrastra adelante y atrás),
    - el rastro de cada variable (sus valores anteriores, tachados),
-   - el mapa de calor: cuántas veces se ejecutó cada línea hasta ahora,
+   - el mapa de calor: cuántas veces se ejecutó cada línea hasta ahora (al final, ×0 en
+     las líneas con código que no corrieron: una rama que no se tomó),
    - la nota del paso, y en los momentos clave la reproducción se pausa sola.
    Teclado (con el foco dentro): espacio reproduce o pausa, ← → paso a paso, Inicio / Fin.
    En pantallas angostas (CSS) se ve una parte a la vez, con pestañas: Dibujo, Código y
@@ -226,11 +227,17 @@
           if (cuenta[l] > max) max = cuenta[l];
         });
       }
+      // Al final, las líneas con código que no corrieron dicen ×0 (una rama que no se tomó)
+      var fin = pasos.length > 0 && i >= pasos.length - 1;
+      var ls = lineas();
       calores.querySelectorAll(".rep__calor").forEach(function (c) {
-        var veces = cuenta[c.getAttribute("data-linea")] || 0;
+        var k = Number(c.getAttribute("data-linea"));
+        var veces = cuenta[k] || 0;
+        var nunca = !veces && fin && ls[k] && ls[k].textContent.trim() !== "";
         c.style.setProperty("--calor", String(veces / max));
         c.classList.toggle("rep__calor--cero", !veces);
-        c.firstChild.textContent = veces ? "×" + veces : "";
+        c.classList.toggle("rep__calor--nunca", nunca);
+        c.firstChild.textContent = veces ? "×" + veces : (nunca ? "×0" : "");
       });
     }
 
