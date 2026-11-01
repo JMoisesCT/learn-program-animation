@@ -7,12 +7,14 @@
        { id: "hay", tipo: "decision", texto: "¿Quedan valores?", col: 1, fila: 2, idea: 2 },
        { id: "fin", tipo: "fin", texto: "Fin", col: 2, fila: 2 },
        …                                tipos: inicio, fin (píldora), proceso (rectángulo),
+                                        clase: "…" (opcional) una clase propia para el nodo
      ],                                 decision (rombo), datos (paralelogramo: lo que se
                                         imprime o se lee). idea: el color de su paso de la idea
      flechas: [
        { de: "ini", a: "calc" },
        { de: "hay", a: "fin", texto: "no" },
        { de: "resta", a: "hay", por: "izquierda", carril: 0 },   vuelve arriba rodeando por un
+                                                                 lado; clase: "…" (opcional) en el grupo
        …                                                         lado (carril: más afuera)
      ],
      fila: 72,                          alto mínimo de cada fila (px; crece si un texto ocupa más)
@@ -57,7 +59,7 @@
     var cols = 1, filas = 1;
     (o.nodos || []).forEach(function (n, k) {
       var d = document.createElement("div");
-      d.className = "flujo__nodo flujo__nodo--" + (n.tipo || "proceso");
+      d.className = "flujo__nodo flujo__nodo--" + (n.tipo || "proceso") + (n.clase ? " " + n.clase : "");
       var t = document.createElement("span");
       t.className = "flujo__texto";
       t.innerHTML = n.texto;
@@ -70,7 +72,7 @@
       filas = Math.max(filas, n.fila + 1);
     });
     var flechas = (o.flechas || []).map(function (f, k) {
-      var g = svg("g", { "class": "flujo__flecha" });
+      var g = svg("g", { "class": "flujo__flecha" + (f.clase ? " " + f.clase : "") });
       g.style.setProperty("--orden", String(k));
       var p = svg("path", { pathLength: "1", "marker-end": "url(#" + marca.id + ")" });
       g.appendChild(p);

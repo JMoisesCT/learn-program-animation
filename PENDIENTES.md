@@ -96,6 +96,16 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-01 · Problemas resueltos: bloques de una pantalla y diagrama de flujo
+
+Ajustes pedidos por el autor a los dos casos:
+- **Cada bloque cabe en una pantalla** (`.panel`, con imán al bajar y puntos al costado), medido con Playwright a 1366×657, 1280×800 y 390×844. En el móvil, lo que va lado a lado se vuelve carrusel y el reproductor muestra una parte a la vez con pestañas (Dibujo / Código / Variables); el código largo se desplaza solo, siguiendo la línea activa.
+- **El caso con el enunciado completo**: la historia y una hoja con Problema, Entrada, Salida y Ejemplos.
+- **La idea como diagrama de flujo**: `assets/js/flujo.js` (nodos de inicio/fin, proceso, decisión y datos, flechas que vuelven rodeando, filas que crecen en el móvil, `recorrer` para que una ficha lo siga con un ejemplo). En el laberinto, el diagrama es el cuerpo de `buscar(f, c)` con el nodo «buscar(vecino) ↺ la misma función».
+- **Código y ejecución en un solo bloque**: el reproductor colorea cada línea con su paso de la idea (`ideas`).
+- **«¿Lo entendiste?» pasó a «Detalles del algoritmo»**: tres tarjetas que se entienden sin volver al código. Vuelto: siempre 6 vueltas (tabla con un control), el orden de la lista (5 piezas frente a 87) y qué pasa si paga menos. Laberinto: cuántas llamadas como mucho (`1 + 4 × L`), qué pasa sin la miga (`RecursionError`) y cómo el orden de las direcciones cambia el camino.
+- **La enseñanza final** se mantiene («¿Siempre funciona?», «¿Es el camino más corto?»). El caso queda «visto» al llegar al final (el catálogo dice «✓ Visto»).
+
 ### 2026-11-01 · Problemas resueltos: la zona y un piloto con dos casos
 
 Una zona nueva, aparte de las lecciones y con su propio estilo (ver «Problemas resueltos» en CLAUDE.md): el alumno no programa; lee un caso más grande, entiende las ideas y al final ve el programa terminado correr con animaciones.
