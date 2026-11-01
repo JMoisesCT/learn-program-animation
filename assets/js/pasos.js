@@ -333,21 +333,32 @@
   function quitar(el) { return function () { el.remove(); }; }
 
   /** Muestra un mensaje de feedback amable. tipo: "ok" | "pista". */
+  /* texto: texto plano, o { html: "…" } para poner código (<code>) en el mensaje.
+     Las clases propias del elemento se conservan; solo cambia feedback--tipo. */
   function feedback(el, tipo, texto) {
-    el.className = "feedback feedback--" + tipo;
+    quitarTipo(el);
+    el.classList.add("feedback", "feedback--" + tipo);
     el.textContent = "";
     var icono = document.createElement("span");
     icono.className = "feedback__icono";
     icono.setAttribute("aria-hidden", "true");
     icono.textContent = tipo === "ok" ? "✓" : "💡";
     var msg = document.createElement("span");
-    msg.textContent = texto;
+    if (texto && typeof texto === "object" && texto.html !== undefined) msg.innerHTML = texto.html;
+    else msg.textContent = texto;
     el.appendChild(icono);
     el.appendChild(msg);
   }
 
+  function quitarTipo(el) {
+    Array.prototype.slice.call(el.classList).forEach(function (c) {
+      if (c.indexOf("feedback--") === 0) el.classList.remove(c);
+    });
+  }
+
   function limpiarFeedback(el) {
-    el.className = "feedback";
+    quitarTipo(el);
+    el.classList.add("feedback");
     el.textContent = "";
   }
 
