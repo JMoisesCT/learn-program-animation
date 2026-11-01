@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Volver a pedir un dato · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: volver a pedir un dato en Python. while True con try y except ValueError, break, .isdigit() frente a int(), revisar el rango con un if y continue, y una función pedir_nota con return.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones:not(:has(> :not([hidden]))) { display: none; }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3em; margin: var(--esp-3) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab .leyenda-red { margin-top: var(--esp-2); }
+
+    /* ---------- Consola que espera una respuesta ---------- */
+    .lab .consola { margin-top: var(--esp-3); }
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 7.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); white-space: pre; }
+    .entrada input:disabled { border-color: var(--color-borde); opacity: 0.6; }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .consola__registro { display: block; max-height: 12.5rem; overflow-y: auto; }
+    @media (min-width: 1024px) { .consola__registro { max-height: 9.6rem; } }
+    .fila-botones--consola { justify-content: flex-start; margin-top: var(--esp-2); font-family: var(--fuente); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); white-space: pre; }
+    .vuelta-actual { margin: 0 0 var(--esp-3); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+    .sugerencias { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .sugerencias .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); white-space: pre; }
+    .sugerencias .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    .lab .traceback:not([hidden]) { margin-top: var(--esp-3); }
+
+    /* ---------- Lo que da int() ---------- */
+    .lab__visual .expresion { margin-top: var(--esp-3); font-size: var(--texto-md); }
+    .expresion { overflow-wrap: anywhere; }
+    .expresion__texto { white-space: pre; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); white-space: pre; }
+    .expresion__final:empty::before { content: "?"; color: var(--color-texto-suave); }
+    .expresion__final--error { background: #fdecea; color: var(--color-error); }
+    .expresion__final--cambio { animation: valor-pulso 300ms ease-out; }
+    .cajas--chicas { padding-top: var(--esp-4); gap: var(--esp-3) 2.6rem; }
+    .cajas--chicas .caja { gap: var(--esp-1); }
+    .cajas--chicas .caja__cuerpo { width: 5.5rem; height: 4.2rem; padding-bottom: var(--esp-2); }
+    .cajas--chicas .caja__valor { max-width: 5rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+
+    /* ---------- isdigit o int ---------- */
+    .predicciones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-3); }
+    .prediccion { display: grid; grid-template-columns: 6.5rem max-content max-content; align-items: center; gap: var(--esp-2) var(--esp-6); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__texto { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); white-space: pre; }
+    .prediccion__grupo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); }
+    .prediccion__rotulo { flex: 0 0 auto; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .prediccion .btn { min-width: 3.4rem; min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-pista); }
+    .prediccion .btn.correcto, .prediccion .btn.correcto:disabled { border-color: var(--color-ok); background: var(--color-superficie); color: var(--color-ok); opacity: 1; }
+    .prediccion .feedback { grid-column: 1 / -1; margin: 0; padding: var(--esp-2) var(--esp-3); }
+    .prediccion .feedback:empty { display: none; }
+    .tarjeta > .feedback { margin-top: var(--esp-4); }
+
+    /* ---------- 25 también es un número ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir .btn code { background: none; padding: 0; }
+    .elegir--columna { flex-direction: column; align-items: stretch; }
+    .elegir--columna .btn { text-align: left; }
+    .pregunta { margin: var(--esp-4) 0 0; font-weight: 700; text-align: center; }
+    .dos-col { display: grid; gap: var(--esp-4); }
+    @media (min-width: 1024px) { .dos-col { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; } }
+    .dos-col .codigo { margin: 0; }
+    .regla-nota { margin-top: var(--esp-5); }
+    .regla-nota[hidden] { display: none; }
+    .regla-nota .regla { margin-bottom: var(--esp-6); }
+    .regla-nota .regla__punto { background: var(--color-pista); }
+    .regla__etiqueta { position: absolute; bottom: calc(100% + 0.5rem); transform: translateX(-50%); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); white-space: nowrap; }
+    .regla-nota__pie { margin: 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+
+    /* ---------- Dos filtros ---------- */
+    .filtros { display: grid; gap: var(--esp-1); justify-items: center; }
+    .dato { display: inline-block; min-width: 4rem; padding: 0.15em 0.7em; border: 2px solid var(--color-borde); border-radius: 999px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; color: var(--tipo-str); text-align: center; white-space: pre; }
+    .dato--cambio { animation: valor-pulso 300ms ease-out; }
+    .filtros__flecha { color: var(--color-texto-suave); font-size: var(--texto-sm); line-height: 1; }
+    .filtro { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-3); width: 100%; max-width: 22rem; padding: var(--esp-1) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur), opacity var(--dur); }
+    .filtro__num { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--color-superficie-2); font-weight: 700; }
+    .filtro__texto { font-size: var(--texto-sm); line-height: 1.3; }
+    .filtro__texto strong { display: block; font-size: var(--texto-sm); }
+    .filtro__texto code { font-size: var(--texto-xs); }
+    .filtro__estado { min-width: 4.5rem; text-align: right; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .filtro--pasa { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .filtro--pasa .filtro__estado { color: var(--color-ok); }
+    .filtro--para { border-color: var(--color-pista); background: var(--color-pista-suave); animation: sacudir 380ms ease; }
+    .filtro--para .filtro__estado { color: var(--color-pista); }
+    .filtro--no-llega { opacity: 0.45; }
+    .filtros .caja { gap: var(--esp-1); }
+    .filtros .caja__cuerpo { width: 5rem; height: 3.6rem; padding-bottom: var(--esp-2); }
+    .filtros .caja__valor { max-width: 4.6rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+
+    /* ---------- La función ---------- */
+    .llamada-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .llamada-actual code { font-weight: 700; color: var(--color-texto); }
+
+    /* ---------- Reto ---------- */
+    .huecos { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .huecos .opciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .huecos legend { float: left; width: 5.5rem; margin: 0; padding: 0; font-size: var(--texto-xs); font-weight: 700; line-height: 1.25; color: var(--color-texto-suave); }
+    .huecos .opcion { flex: 0 1 auto; }
+    .huecos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); white-space: pre; }
+    @media (min-width: 1024px) {
+      .huecos { grid-template-columns: repeat(3, max-content); justify-content: space-between; align-items: start; gap: var(--esp-3); }
+      .huecos .opciones { flex-direction: column; align-items: stretch; }
+      .huecos legend { float: none; width: auto; margin-bottom: var(--esp-1); }
+      .huecos .opcion span { padding: var(--esp-1) var(--esp-3); font-size: 0.85rem; text-align: left; }
+    }
+    .codigo .hueco { white-space: pre; }
+    .codigo--compacto { font-size: 0.95rem; }
+    @media (min-width: 1024px) { .lab .codigo--compacto { font-size: 1rem; } }
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; display: grid; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); font-size: var(--texto-xs); }
+    .misiones strong { font-family: var(--fuente-codigo); color: var(--tipo-str); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+    .misiones li.mision--mal { border-color: var(--color-pista); background: var(--color-pista-suave); animation: sacudir 380ms ease; }
+    .misiones li.mision--mal::before { content: "!"; color: #fff; background: var(--color-pista); border-color: var(--color-pista); }
+    .misiones__titulo { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual, .lab__visual + .lab__resultado, .lab__principal + .lab__resultado { margin-top: var(--esp-4); }
+    }
+    @media (max-width: 480px) {
+      .codigo--compacto, .lab .codigo--compacto { font-size: 0.74rem; }
+      .codigo--compacto .linea { padding: 0 var(--esp-2) 0 2.1rem; }
+      .codigo--compacto .linea::before { width: 1.3rem; }
+      .codigo--compacto .hueco { min-width: 1.6em; padding: 0 0.1em; }
+      .prediccion { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--esp-4); }
+      .prediccion__texto { grid-column: 1 / -1; }
+      .prediccion__rotulo { flex-basis: 100%; }
+      .prediccion .btn { padding: var(--esp-1) var(--esp-2); font-size: var(--texto-xs); }
+      .huecos legend { width: 100%; }
+      .huecos .opcion span { font-size: var(--texto-xs); padding: var(--esp-2); }
+      .filtro { gap: var(--esp-2); }
+      .filtro__estado { min-width: 3.6rem; }
+      .entrada input { width: 6.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="errores-pedir">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. El problema: sin try, un dato malo corta el programa -->
+    <section class="paso" id="paso-problema" data-requiere aria-labelledby="h-problema">
+      <span class="paso__etiqueta">Errores 6/7 · Volver a pedir un dato</span>
+      <h1 class="paso__titulo" id="h-problema">Un dato malo lo corta todo</h1>
+      <p>Este programa pide una nota. Escribe un <strong>número</strong> y después algo que <strong>no</strong> lo sea, como «veinte».</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Código"></pre>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="s1-registro" aria-live="polite"></div>
+            <div class="entrada" id="s1-fila">
+              <label for="s1-campo">Nota:</label>
+              <input type="text" id="s1-campo" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s1-enviar">Enviar ⏎</button>
+            </div>
+            <div class="fila-botones fila-botones--consola">
+              <button type="button" class="btn btn-secundario" id="s1-otra" hidden>↺ Otra vez</button>
+            </div>
+          </div>
+          <div class="sugerencias" id="s1-sugerencias" role="group" aria-label="Respuestas para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="17">17</button>
+            <button type="button" class="btn btn-secundario" data-valor="veinte">veinte</button>
+            <button type="button" class="btn btn-secundario" data-valor="12.5">12.5</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div id="s1-error"></div>
+          <p class="nota" id="s1-nota">Si algo sale mal, aquí verás el mensaje de Python.</p>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. while True + try + break -->
+    <section class="paso" id="paso-repetir" data-requiere aria-labelledby="h-repetir">
+      <h2 class="paso__titulo" id="h-repetir">Una red y otra vuelta</h2>
+      <p>Ahora <code>int()</code> va dentro de un <code>try</code>, y todo dentro de un <code>while True</code>. Escribe primero algo que <strong>no</strong> sea un número.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="v-codigo" aria-label="Código"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: la zona protegida</span><span class="leyenda-red__except">except: la red</span></p>
+          <p class="explicacion" id="v-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="v-vuelta" aria-live="polite"></p>
+          <div class="expresion" aria-live="polite">
+            <span class="expresion__texto" id="v-expr">int(…)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="v-valor"></span>
+          </div>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="v-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nota</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="consola__registro" id="v-registro" aria-live="polite"></div>
+            <div class="entrada" id="v-fila">
+              <label for="v-campo">Nota:</label>
+              <input type="text" id="v-campo" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="v-enviar">Enviar ⏎</button>
+            </div>
+            <div class="fila-botones fila-botones--consola">
+              <button type="button" class="btn btn-secundario" id="v-otra" hidden>↺ Otra vez</button>
+            </div>
+          </div>
+          <div class="feedback" id="v-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. isdigit frente a int -->
+    <section class="paso" id="paso-isdigit" data-requiere aria-labelledby="h-isdigit">
+      <h2 class="paso__titulo" id="h-isdigit">¿isdigit o int?</h2>
+      <p>En Buscar en un texto, <code>.isdigit()</code> revisaba el dato <strong>antes</strong> de <code>int()</code>. ¿Opinan lo mismo? Predice qué da cada uno.</p>
+
+      <div class="tarjeta">
+        <ol class="predicciones" id="s3-predicciones" aria-label="Textos para probar"></ol>
+        <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 4. 25 también es un número -->
+    <section class="paso" id="paso-rango" data-requiere aria-labelledby="h-rango">
+      <h2 class="paso__titulo" id="h-rango">25 también es un número</h2>
+      <p>Las notas van de 0 a 20. Con el programa de la red, ¿qué pasa si alguien escribe 25?</p>
+
+      <div class="tarjeta">
+        <div class="dos-col">
+          <pre class="codigo" id="s4-codigo" aria-label="Código"></pre>
+          <div>
+            <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Consola</span><span class="consola__linea"><span class="registro__pregunta">Nota:</span> <span class="registro__respuesta">25</span></span></div>
+            <p class="pregunta" id="s4-pregunta">¿Qué imprime después?</p>
+            <div class="elegir elegir--columna" id="s4-elegir" role="group" aria-labelledby="s4-pregunta">
+              <button type="button" class="btn btn-secundario" data-valor="aviso" aria-pressed="false">Eso no es un número</button>
+              <button type="button" class="btn btn-secundario" data-valor="nota" aria-pressed="false">Tu nota es 25</button>
+              <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Se corta con un ValueError</button>
+            </div>
+          </div>
+        </div>
+        <div class="regla-nota" id="s4-regla" hidden>
+          <div class="regla" aria-hidden="true">
+            <div class="regla__zona" style="left:14.29%; width:57.14%"></div>
+            <span class="regla__marca" style="left:14.29%">0</span>
+            <span class="regla__marca" style="left:71.43%">20</span>
+            <span class="regla__punto" style="left:85.71%"><span class="regla__etiqueta">25</span></span>
+          </div>
+          <p class="regla-nota__pie">En verde, las notas que tienen sentido: de 0 a 20.</p>
+        </div>
+        <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. Dos filtros: número y rango -->
+    <section class="paso" id="paso-filtros" data-requiere aria-labelledby="h-filtros">
+      <h2 class="paso__titulo" id="h-filtros">Dos filtros</h2>
+      <p>Primero, que sea un número (<code>try</code>); después, que esté de 0 a 20 (<code>if</code>). Cada filtro que no pasa usa <code>continue</code>: otra vuelta. Haz que <strong>cada filtro</strong> rechace un dato, y luego da una nota válida.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="d-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="d-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="d-vuelta" aria-live="polite"></p>
+          <div class="filtros" aria-live="polite">
+            <span class="dato" id="d-dato">?</span>
+            <span class="filtros__flecha" aria-hidden="true">↓</span>
+            <div class="filtro" id="d-f1">
+              <span class="filtro__num">1</span>
+              <span class="filtro__texto"><strong>¿Es un número?</strong><code>try</code> / <code>except</code></span>
+              <span class="filtro__estado"></span>
+            </div>
+            <span class="filtros__flecha" aria-hidden="true">↓</span>
+            <div class="filtro" id="d-f2">
+              <span class="filtro__num">2</span>
+              <span class="filtro__texto"><strong>¿Va de 0 a 20?</strong><code>if</code></span>
+              <span class="filtro__estado"></span>
+            </div>
+            <span class="filtros__flecha" aria-hidden="true">↓</span>
+            <div class="caja" id="d-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">nota</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="consola__registro" id="d-registro" aria-live="polite"></div>
+            <div class="entrada" id="d-fila">
+              <label for="d-campo">Nota:</label>
+              <input type="text" id="d-campo" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="d-enviar">Enviar ⏎</button>
+            </div>
+            <div class="fila-botones fila-botones--consola">
+              <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Otra vez</button>
+            </div>
+          </div>
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Sin el primer continue -->
+    <section class="paso" id="paso-continue" data-requiere aria-labelledby="h-continue">
+      <h2 class="paso__titulo" id="h-continue">Sin el primer continue</h2>
+      <p>Alguien borró el <code>continue</code> del <code>except</code>. El primer dato es «veinte». ¿Qué pasa? Elige y se ejecuta.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s6-codigo" aria-label="Código"></pre>
+          <div class="elegir elegir--columna" id="s6-elegir" role="group" aria-label="¿Qué pasa con «veinte»?">
+            <button type="button" class="btn btn-secundario" data-valor="vuelve" aria-pressed="false">Avisa «Eso no es un número» y vuelve a preguntar</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">Avisa «Eso no es un número» y se corta con un error</button>
+            <button type="button" class="btn btn-secundario" data-valor="rango" aria-pressed="false">Avisa «La nota va de 0 a 20»</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Consola</span></div>
+          <div id="s6-error"></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. pedir_nota con return dentro del try -->
+    <section class="paso" id="paso-funcion" data-requiere aria-labelledby="h-funcion">
+      <h2 class="paso__titulo" id="h-funcion">Una función que pregunta</h2>
+      <p>Si hay que pedir varias notas, mejor una función. <code>return</code> va <strong>dentro del <code>try</code></strong>: si <code>int()</code> funciona, sale de la función y del bucle a la vez. Equivócate al menos una vez.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="f-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="f-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="f-vuelta" aria-live="polite"></p>
+          <p class="llamada-actual" id="f-llamada" aria-live="polite"></p>
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="f-n1">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">n1</code>
+            </div>
+            <div class="caja" id="f-n2">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">n2</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="consola__registro" id="f-registro" aria-live="polite"></div>
+            <div class="entrada" id="f-fila">
+              <label for="f-campo" id="f-etiqueta">Nota 1:</label>
+              <input type="text" id="f-campo" maxlength="6" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="f-enviar">Enviar ⏎</button>
+            </div>
+            <div class="fila-botones fila-botones--consola">
+              <button type="button" class="btn btn-secundario" id="f-otra" hidden>↺ Otra vez</button>
+            </div>
+          </div>
+          <div class="feedback" id="f-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Reto: completar pedir_nota y probarla -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-reto">Completa pedir_nota</h2>
+      <p>Llena los tres espacios en blanco y prueba tu programa en la consola hasta cumplir las <strong>cuatro misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="r-codigo" aria-label="Código"></pre>
+          <div class="huecos">
+            <fieldset class="opciones opciones--codigo" id="r-op1">
+              <legend>Espacio 1<span class="visualmente-oculto">: el tipo de error del except</span></legend>
+              <label class="opcion"><input type="radio" name="r-h1" value="TypeError"><span>TypeError</span></label>
+              <label class="opcion"><input type="radio" name="r-h1" value="ValueError"><span>ValueError</span></label>
+              <label class="opcion"><input type="radio" name="r-h1" value="ZeroDivisionError"><span>ZeroDivisionError</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo" id="r-op2">
+              <legend>Espacio 2<span class="visualmente-oculto">: la condición del rango</span></legend>
+              <label class="opcion"><input type="radio" name="r-h2" value="and"><span>nota &lt; 0 and nota &gt; 20</span></label>
+              <label class="opcion"><input type="radio" name="r-h2" value="siempre"><span>nota &gt; 0 or nota &lt; 20</span></label>
+              <label class="opcion"><input type="radio" name="r-h2" value="or"><span>nota &lt; 0 or nota &gt; 20</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo" id="r-op3">
+              <legend>Espacio 3<span class="visualmente-oculto">: cómo termina</span></legend>
+              <label class="opcion"><input type="radio" name="r-h3" value="print"><span>print(nota)</span></label>
+              <label class="opcion"><input type="radio" name="r-h3" value="return"><span>return nota</span></label>
+              <label class="opcion"><input type="radio" name="r-h3" value="break"><span>break</span></label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="misiones__titulo">Misiones</p>
+          <ul class="misiones" id="r-misiones" aria-label="Misiones">
+            <li data-mision="palabra"><span><strong>veinte</strong>: avisa y vuelve a preguntar</span></li>
+            <li data-mision="25"><span><strong>25</strong>: avisa y vuelve a preguntar</span></li>
+            <li data-mision="-3"><span><strong>-3</strong>: avisa y vuelve a preguntar</span></li>
+            <li data-mision="17"><span><strong>17</strong>: <code>pedir_nota</code> lo devuelve</span></li>
+          </ul>
+        </div>
+        <div class="lab__resultado">
+          <p class="vuelta-actual" id="r-vuelta" aria-live="polite"></p>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="consola__registro" id="r-registro" aria-live="polite"></div>
+            <p class="consola__vacia" id="r-espera">Llena los tres espacios en blanco para correr el programa.</p>
+            <div class="entrada" id="r-fila">
+              <label for="r-campo">Nota:</label>
+              <input type="text" id="r-campo" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="r-enviar">Enviar ⏎</button>
+            </div>
+            <div class="fila-botones fila-botones--consola">
+              <button type="button" class="btn btn-secundario" id="r-otra" hidden>↺ Otra vez</button>
+            </div>
+          </div>
+          <div class="sugerencias" id="r-sugerencias" role="group" aria-label="Datos para probar">
+            <span>Prueba:</span>
+            <button type="button" class="btn btn-secundario" data-valor="veinte">veinte</button>
+            <button type="button" class="btn btn-secundario" data-valor="25">25</button>
+            <button type="button" class="btn btn-secundario" data-valor="-3">-3</button>
+            <button type="button" class="btn btn-secundario" data-valor="17">17</button>
+          </div>
+          <div id="r-error"></div>
+          <div class="feedback" id="r-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🔁</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Para volver a pedir un dato: <code>while True</code> con un <code>try</code>; si <code>int()</code> falla, el <code>except</code> avisa y el bucle pregunta otra vez. El rango, con un <code>if</code> aparte.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../proyecto/index.html">Siguiente: Proyecto: la calculadora que no se rompe →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/python.js"></script>
+<script src="../../../assets/js/mensaje-error.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function lineas(pre) { return pre.querySelectorAll(".linea"); }
+  function linea(pre, i) { return lineas(pre)[i]; }
+  function comillas(s) { return '"' + s + '"'; }
+  function esc(s) { return Python.escapar(s); }
+
+  // Un texto como lo escribe Python en un mensaje: 'veinte' (o "it's" si lleva comilla simple)
+  function reprPy(s) {
+    if (s.indexOf("'") !== -1 && s.indexOf('"') === -1) return '"' + s + '"';
+    return "'" + s.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
+  }
+
+  /* Lo que hace int() con un texto: ignora los espacios de los lados, acepta un signo
+     (+ o -) y solo cifras (con _ entre ellas, como 1_000). */
+  function intPy(texto) {
+    var t = texto.trim();
+    if (!/^[+-]?\d+(_\d+)*$/.test(t)) return { ok: false };
+    var signo = t[0] === "-" ? -1 : 1;
+    var cifras = t.replace(/^[+-]/, "").replace(/_/g, "");
+    var valor = signo * Number(cifras);
+    var escrito = window.BigInt ? (BigInt(cifras) * BigInt(signo)).toString() : String(valor);
+    return { ok: true, valor: valor, texto: escrito };
+  }
+
+  // Un float como lo imprime Python: 15.0, 15.5
+  function flotante(x) { return Number.isInteger(x) ? x.toFixed(1) : String(x); }
+
+  function reloj() {
+    var ts = [];
+    return {
+      luego: function (fn, ms) { ts.push(setTimeout(fn, Pasos.reducirMovimiento ? 0 : ms)); },
+      cortar: function () { ts.forEach(clearTimeout); ts = []; }
+    };
+  }
+
+  /* Una línea en la consola que vuela desde una línea del código */
+  function imprimir(registro, texto, origen) {
+    Codigo.agregar(registro, texto);
+    var l = registro.lastElementChild;
+    if (origen) Codigo.volar(origen, l, texto, "vuelo--salida");
+    return l;
+  }
+
+  function anotar(registro, pregunta, respuesta) {
+    var l = document.createElement("span");
+    l.className = "consola__linea";
+    l.innerHTML = '<span class="registro__pregunta"></span> <span class="registro__respuesta"></span>';
+    l.children[0].textContent = pregunta;
+    l.children[1].textContent = respuesta;
+    registro.appendChild(l);
+  }
+
+  function pintarValor(el, texto, error) {
+    el.textContent = texto;
+    el.className = "expresion__final" + (error ? " expresion__final--error" : "");
+    void el.offsetWidth;
+    el.classList.add("expresion__final--cambio");
+  }
+
+  /* El except atrapa el error: la ficha vuela de la línea que falla a la red, se imprime
+     el aviso y la flecha vuelve arriba (otra vuelta). Mientras vuela, la consola espera. */
+  function atrapar(o) {
+    o.campo.disabled = true;
+    Codigo.quitarSalto(o.pre);
+    MensajeError.lanzar(o.pre, o.desde, "ValueError", o.red, {
+      alLlegar: function () {
+        imprimir(o.registro, o.aviso, Codigo.piezaEnLinea(linea(o.pre, o.print), ["print"]));
+        Codigo.salto(o.pre, o.salto, o.vuelve);
+        o.campo.disabled = false;
+        if (!o.campo.closest(".paso").hidden && !o.campo.closest("[hidden]")) o.campo.focus();
+      }
+    });
+  }
+
+  /* Botones «Prueba:» que escriben en la consola y envían */
+  function sugerencias(cont, campo, enviar) {
+    cont.querySelectorAll("button[data-valor]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (campo.disabled || campo.closest("[hidden]")) return;
+        campo.value = b.getAttribute("data-valor");
+        enviar.click();
+      });
+    });
+  }
+
+  var leccion;
+
+  /* Las consolas largas se desplazan: siempre a la vista lo último */
+  document.querySelectorAll(".consola__registro").forEach(function (r) {
+    new MutationObserver(function () { r.scrollTop = r.scrollHeight; }).observe(r, { childList: true });
+  });
+
+  /* ---------- 1. Sin try: el programa se corta ---------- */
+  var pre1 = $("s1-codigo");
+  Python.escribir(pre1, [
+    'nota = int(input("Nota: "))',
+    'print("Tu nota es", nota)'
+  ]);
+  var vio1 = { numero: false, error: false };
+  var r1 = reloj();
+
+  function empezar1() {
+    r1.cortar();
+    $("s1-registro").textContent = "";
+    $("s1-error").textContent = "";
+    $("s1-fila").hidden = false;
+    $("s1-otra").hidden = true;
+    $("s1-nota").hidden = false;
+    $("s1-campo").value = "";
+    Codigo.limpiar(pre1);
+    Codigo.marcar(pre1, { activas: [0] });
+  }
+
+  function enviar1() {
+    var texto = $("s1-campo").value;
+    var registro = $("s1-registro");
+    anotar(registro, "Nota:", texto);
+    $("s1-fila").hidden = true;
+    $("s1-otra").hidden = false;
+    var r = intPy(texto);
+    var fb = $("s1-fb");
+    if (r.ok) {
+      vio1.numero = true;
+      Codigo.marcar(pre1, { activas: [1] });
+      imprimir(registro, "Tu nota es " + r.texto, Codigo.piezaEnLinea(linea(pre1, 1), ["print"]));
+    } else {
+      vio1.error = true;
+      $("s1-nota").hidden = true;
+      Codigo.marcar(pre1, {});
+      MensajeError.romper(pre1, 0, { marca: 'int(input("Nota: "))' });
+      var m = MensajeError.crear($("s1-error"), {
+        tipo: "ValueError",
+        mensaje: "invalid literal for int() with base 10: " + reprPy(texto),
+        traduccion: "<code>int()</code> no pudo convertir <code>" + esc(reprPy(texto)) + "</code> en un número entero.",
+        marcos: [{ linea: 1, codigo: 'nota = int(input("Nota: "))' }],
+        codigo: pre1
+      });
+      m.mostrar();
+    }
+    r1.luego(function () {
+      if (vio1.numero && vio1.error) {
+        Pasos.feedback(fb, "ok", "Con un número funciona. Con un texto, int() lanza un ValueError y el programa se corta: la línea 2 ni se ejecuta. Mejor sería volver a preguntar.");
+        leccion.desbloquear();
+      } else if (vio1.numero) {
+        Pasos.feedback(fb, "pista", "Con un número, todo bien. Toca «Otra vez» y escribe algo que no sea un número.");
+      } else {
+        Pasos.feedback(fb, "pista", "El programa se cortó en la línea 1. Toca «Otra vez» y prueba también con un número.");
+      }
+    }, r.ok ? 300 : 1200);
+  }
+
+  $("s1-enviar").addEventListener("click", enviar1);
+  $("s1-campo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    enviar1();
+  });
+  $("s1-otra").addEventListener("click", function () { empezar1(); $("s1-campo").focus(); });
+  sugerencias($("s1-sugerencias"), $("s1-campo"), $("s1-enviar"));
+  empezar1();
+
+  /* ---------- 2. while True con try y break ---------- */
+  var CODIGO2 = [
+    "while True:",
+    "    try:",
+    '        nota = int(input("Nota: "))',
+    "        break",
+    "    except ValueError:",
+    '        print("Eso no es un número")',
+    'print("Tu nota es", nota)'
+  ];
+  var pre2 = $("v-codigo");
+  Python.escribir(pre2, CODIGO2);
+  MensajeError.zona(pre2, { proteger: [2, 3], atrapar: [4, 5] });
+  var malos2 = 0;
+  var ultimo2 = null;
+
+  BucleInput.crear({
+    prefijo: "v",
+    vueltas: null,
+    rotulo: "Vuelta",
+    pregunta: "Nota:",
+    lineaInput: 2,
+    siguiente: "Escribe otro dato.",
+    validar: function () { return null; },
+    alEmpezar: function () {
+      malos2 = 0;
+      Codigo.quitarSalto(pre2);
+      $("v-expr").textContent = "int(…)";
+      var v = $("v-valor");
+      v.textContent = "";
+      v.className = "expresion__final";
+      Caja.vaciar($("v-nota"));
+      $("v-campo").disabled = false;
+      return "<code>while True</code> repite sin parar: solo <code>break</code> lo corta.";
+    },
+    alDato: function (texto) {
+      var r = intPy(texto);
+      $("v-expr").textContent = "int(" + comillas(texto) + ")";
+      if (!r.ok) {
+        malos2++;
+        pintarValor($("v-valor"), "⚠ ValueError", true);
+        atrapar({ pre: pre2, campo: $("v-campo"), registro: $("v-registro"), desde: 2, red: 4, print: 5,
+          aviso: "Eso no es un número", salto: 5, vuelve: 0 });
+        return {
+          texto: "<code>int()</code> falló: el resto del <code>try</code> se salta (<code>break</code> no corre) y la ficha cae en la red. El bucle vuelve arriba.",
+          camino: { activas: [2, 4, 5], saltadas: [3] }
+        };
+      }
+      ultimo2 = r.texto;
+      Codigo.quitarSalto(pre2);
+      pintarValor($("v-valor"), r.texto, false);
+      Caja.poner($("v-nota"), r.texto, Codigo.piezaEnLinea(linea(pre2, 2), ["int"]));
+      return {
+        texto: "<code>int()</code> funcionó: <code>nota</code> guarda " + r.texto + " y <code>break</code> sale del bucle. El <code>except</code> se salta.",
+        camino: { activas: [2, 3], saltadas: [4, 5] },
+        fin: true
+      };
+    },
+    alFinal: function () {
+      return { linea: 6, salida: "Tu nota es " + ultimo2 };
+    },
+    alTerminar: function () {
+      var fb = $("v-fb");
+      if (malos2 > 0) {
+        Pasos.feedback(fb, "ok", "Preguntó " + (malos2 + 1) + (malos2 + 1 === 1 ? " vez" : " veces") + " y no se cortó nunca: cada error cayó en la red y el bucle volvió a preguntar. Solo un número llega al break.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", "¡A la primera! Toca «Otra vez» y escribe primero algo que no sea un número, para ver la red.");
+      }
+    }
+  });
+
+  /* ---------- 3. isdigit frente a int ---------- */
+  var ERR = "💥 ValueError";
+  var PRED3 = [
+    { texto: "17", digito: "True", entero: "17", opciones: ["17", ERR],
+      pistas: { digito: "Mira cada carácter: 1 y 7 son dígitos.", entero: "«17» es un entero escrito como texto: int() lo convierte sin problema." } },
+    { texto: "-3", digito: "False", entero: "-3", opciones: ["-3", ERR],
+      pistas: { digito: "El signo - no es un dígito, y isdigit() revisa todos los caracteres.", entero: "int() sí entiende el signo: -3 es un entero negativo." } },
+    { texto: " 12 ", digito: "False", entero: "12", opciones: ["12", ERR],
+      pistas: { digito: "Mira los lados: un espacio no es un dígito.", entero: "int() no se queja de los espacios a los lados: los ignora." } },
+    { texto: "12.5", digito: "False", entero: ERR, opciones: ["12", ERR],
+      pistas: { digito: "El punto no es un dígito.", entero: "int() no corta los decimales de un texto: «12.5» no es un entero, así que da ValueError." } },
+    { texto: "veinte", digito: "False", entero: ERR, opciones: ["20", ERR],
+      pistas: { digito: "Son letras, no dígitos.", entero: "int() no lee palabras: solo cifras." } }
+  ];
+  var aciertos3 = {};
+
+  function armar3() {
+    var ol = $("s3-predicciones");
+    PRED3.forEach(function (p, k) {
+      var li = document.createElement("li");
+      li.className = "prediccion";
+      li.innerHTML = '<code class="prediccion__texto"></code>' +
+        '<div class="prediccion__grupo" role="group" data-col="digito"><span class="prediccion__rotulo">.isdigit()</span></div>' +
+        '<div class="prediccion__grupo" role="group" data-col="entero"><span class="prediccion__rotulo">int()</span></div>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>';
+      li.querySelector(".prediccion__texto").textContent = comillas(p.texto);
+      var fbFila = li.querySelector(".feedback");
+      var hecho = { digito: false, entero: false };
+      ["digito", "entero"].forEach(function (col) {
+        var grupo = li.querySelector('[data-col="' + col + '"]');
+        grupo.setAttribute("aria-label", (col === "digito" ? comillas(p.texto) + ".isdigit()" : "int(" + comillas(p.texto) + ")"));
+        var ops = col === "digito" ? ["True", "False"] : p.opciones;
+        var botones = ops.map(function (op) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "btn btn-secundario";
+          b.setAttribute("aria-pressed", "false");
+          b.textContent = op;
+          grupo.appendChild(b);
+          return b;
+        });
+        botones.forEach(function (b) {
+          b.addEventListener("click", function () {
+            botones.forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+            if (b.textContent !== p[col]) {
+              Pasos.feedback(fbFila, "pista", p.pistas[col]);
+              return;
+            }
+            Pasos.limpiarFeedback(fbFila);
+            b.classList.add("correcto");
+            botones.forEach(function (x) { x.disabled = true; });
+            hecho[col] = true;
+            if (hecho.digito && hecho.entero) {
+              li.classList.add("prediccion--ok");
+              aciertos3[k] = true;
+              terminar3();
+            }
+          });
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  function terminar3() {
+    var fb = $("s3-fb");
+    var n = Object.keys(aciertos3).length;
+    if (n < PRED3.length) {
+      Pasos.feedback(fb, "ok", "¡Bien! Llevas " + n + " de " + PRED3.length + ".");
+      return;
+    }
+    Pasos.feedback(fb, "ok", "isdigit() es más estricto: dice False con «-3» y « 12 », que int() sí acepta. Con try no hace falta adivinar: se intenta int(), y si falla, la red lo atrapa.");
+    leccion.desbloquear();
+  }
+  armar3();
+
+  /* ---------- 4. 25 también es un número ---------- */
+  Python.escribir($("s4-codigo"), CODIGO2);
+  MensajeError.zona($("s4-codigo"), { proteger: [2, 3], atrapar: [4, 5] });
+  var PISTAS4 = {
+    aviso: "Ese aviso solo sale si int() falla. ¿Falla int(\"25\")?",
+    error: "int(\"25\") da 25 sin problema: 25 es un número entero."
+  };
+
+  function entrar4(paso, l, info) {
+    if (info.desbloqueado) return;
+    $("s4-regla").hidden = true;
+    Codigo.limpiar($("s4-codigo"));
+    var consola = $("s4-consola");
+    while (consola.children.length > 2) consola.lastElementChild.remove();
+    $("s4-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = false; b.setAttribute("aria-pressed", "false"); });
+    Pasos.limpiarFeedback($("s4-fb"));
+  }
+
+  $("s4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var botones = $("s4-elegir").querySelectorAll("button");
+      botones.forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      var v = b.getAttribute("data-valor");
+      var fb = $("s4-fb");
+      if (v !== "nota") { Pasos.feedback(fb, "pista", PISTAS4[v]); return; }
+      botones.forEach(function (x) { x.disabled = true; });
+      var pre = $("s4-codigo");
+      Codigo.marcar(pre, { activas: [2, 3], saltadas: [4, 5] });
+      setTimeout(function () {
+        Codigo.marcar(pre, { activas: [6] });
+        imprimir($("s4-consola"), "Tu nota es 25", Codigo.piezaEnLinea(linea(pre, 6), ["print"]));
+        $("s4-regla").hidden = false;
+        Pasos.feedback(fb, "ok", "int(\"25\") funciona, y break sale. El try solo revisa que sea un número, no que sea una nota posible (con -3 pasaría lo mismo). El rango se revisa aparte.");
+        leccion.desbloquear();
+      }, Pasos.reducirMovimiento ? 0 : 500);
+    });
+  });
+
+  /* ---------- 5. Dos filtros ---------- */
+  var CODIGO5 = [
+    "while True:",
+    "    try:",
+    '        nota = int(input("Nota: "))',
+    "    except ValueError:",
+    '        print("Eso no es un número")',
+    "        continue",
+    "    if nota < 0 or nota > 20:",
+    '        print("La nota va de 0 a 20")',
+    "        continue",
+    "    break",
+    'print("Tu nota es", nota)'
+  ];
+  var pre5 = $("d-codigo");
+  Python.escribir(pre5, CODIGO5);
+  MensajeError.zona(pre5, { proteger: [2, 2], atrapar: [3, 5] });
+  var cuenta5 = { f1: 0, f2: 0 };
+  var ultimo5 = null;
+
+  function filtro(id, estado, texto) {
+    var f = $(id);
+    f.classList.remove("filtro--pasa", "filtro--para", "filtro--no-llega");
+    if (estado) { void f.offsetWidth; f.classList.add("filtro--" + estado); }
+    f.querySelector(".filtro__estado").textContent = texto || "";
+  }
+
+  function dato5(texto) {
+    var d = $("d-dato");
+    d.textContent = texto === null ? "?" : comillas(texto);
+    d.classList.remove("dato--cambio");
+    void d.offsetWidth;
+    if (texto !== null) d.classList.add("dato--cambio");
+  }
+
+  BucleInput.crear({
+    prefijo: "d",
+    vueltas: null,
+    rotulo: "Vuelta",
+    pregunta: "Nota:",
+    lineaInput: 2,
+    siguiente: "Escribe otro dato.",
+    validar: function () { return null; },
+    alEmpezar: function () {
+      cuenta5 = { f1: 0, f2: 0 };
+      Codigo.quitarSalto(pre5);
+      dato5(null);
+      filtro("d-f1", null);
+      filtro("d-f2", null);
+      Caja.vaciar($("d-nota"));
+      $("d-campo").disabled = false;
+      return "Cada dato pasa por los dos filtros, en orden.";
+    },
+    alDato: function (texto) {
+      var r = intPy(texto);
+      dato5(texto);
+      if (!r.ok) {
+        cuenta5.f1++;
+        filtro("d-f1", "para", "✗ no pasa");
+        filtro("d-f2", "no-llega", "—");
+        atrapar({ pre: pre5, campo: $("d-campo"), registro: $("d-registro"), desde: 2, red: 3, print: 4,
+          aviso: "Eso no es un número", salto: 5, vuelve: 0 });
+        return {
+          texto: "Filtro 1: <code>int()</code> falló y la red lo atrapó. <code>continue</code> salta a la siguiente vuelta: el <code>if</code> ni se mira.",
+          camino: { activas: [2, 3, 4, 5], saltadas: [6, 7, 8, 9] }
+        };
+      }
+      filtro("d-f1", "pasa", "✓ pasa");
+      if (r.valor < 0 || r.valor > 20) {
+        cuenta5.f2++;
+        filtro("d-f2", "para", "✗ no pasa");
+        Codigo.quitarSalto(pre5);
+        imprimir($("d-registro"), "La nota va de 0 a 20", Codigo.piezaEnLinea(linea(pre5, 7), ["print"]));
+        Codigo.salto(pre5, 8, 0);
+        return {
+          texto: r.texto + " sí es un número, pero no va de 0 a 20: el <code>if</code> lo para y <code>continue</code> vuelve arriba.",
+          camino: { activas: [2, 6, 7, 8], saltadas: [3, 4, 5, 9] }
+        };
+      }
+      ultimo5 = r.texto;
+      filtro("d-f2", "pasa", "✓ pasa");
+      Codigo.quitarSalto(pre5);
+      Caja.poner($("d-nota"), r.texto, Codigo.piezaEnLinea(linea(pre5, 2), ["int"]));
+      return {
+        texto: r.texto + " pasó los dos filtros: el <code>if</code> es False y llega a <code>break</code>.",
+        camino: { activas: [2, 6, 9], saltadas: [3, 4, 5, 7, 8] },
+        fin: true
+      };
+    },
+    alFinal: function () {
+      return { linea: 10, salida: "Tu nota es " + ultimo5 };
+    },
+    alTerminar: function () {
+      var fb = $("d-fb");
+      var faltan = [];
+      if (!cuenta5.f1) faltan.push("algo que no sea un número (filtro 1)");
+      if (!cuenta5.f2) faltan.push("un número fuera de 0 a 20, como 25 o -3 (filtro 2)");
+      if (!faltan.length) {
+        Pasos.feedback(fb, "ok", "Dos filtros, uno tras otro: el try revisa que sea un número y el if, que esté en el rango. Solo una nota válida llega al break.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", "Llegó al break. Toca «Otra vez» y prueba antes con " + faltan.join(" y con ") + ".");
+      }
+    }
+  });
+
+  /* ---------- 6. Sin el primer continue ---------- */
+  var pre6 = $("s6-codigo");
+  Python.escribir(pre6, [
+    "while True:",
+    "    try:",
+    '        nota = int(input("Nota: "))',
+    "    except ValueError:",
+    '        print("Eso no es un número")',
+    "    if nota < 0 or nota > 20:",
+    '        print("La nota va de 0 a 20")',
+    "        continue",
+    "    break",
+    'print("Tu nota es", nota)'
+  ]);
+  MensajeError.zona(pre6, { proteger: [2, 2], atrapar: [3, 4] });
+  var r6 = reloj();
+  var PISTAS6 = {
+    vuelve: "Sin continue, después del aviso no hay nada que lo mande arriba: sigue a la línea 6. ¿Qué hay en nota?",
+    rango: "Para avisar eso, la línea 6 tendría que comparar nota. ¿Llegó a guardarse algo en nota?"
+  };
+  var acerto6 = false;
+
+  function limpiar6() {
+    r6.cortar();
+    Codigo.limpiar(pre6);
+    Codigo.consola($("s6-consola"), []);
+    $("s6-error").textContent = "";
+  }
+
+  function correr6(eleccion) {
+    limpiar6();
+    var consola = $("s6-consola");
+    var vacia = consola.querySelector(".consola__vacia");
+    if (vacia) vacia.remove();
+    var fb = $("s6-fb");
+    Pasos.limpiarFeedback(fb);
+    Codigo.marcar(pre6, { activas: [2] });
+    anotar(consola, "Nota:", "veinte");
+    r6.luego(function () {
+      MensajeError.lanzar(pre6, 2, "ValueError", 3, {
+        alLlegar: function () {
+          Codigo.marcar(pre6, { activas: [3, 4] });
+          imprimir(consola, "Eso no es un número", Codigo.piezaEnLinea(linea(pre6, 4), ["print"]));
+        }
+      });
+    }, 500);
+    r6.luego(function () {
+      Codigo.marcar(pre6, {});
+      MensajeError.romper(pre6, 5, { marca: "nota" });
+      var m = MensajeError.crear($("s6-error"), {
+        tipo: "NameError",
+        mensaje: "name 'nota' is not defined",
+        traduccion: "El nombre <code>nota</code> no existe: <code>int()</code> falló antes de guardar nada en <code>nota</code>.",
+        marcos: [{ linea: 6, codigo: "if nota < 0 or nota > 20:", marca: "nota" }],
+        codigo: pre6
+      });
+      m.mostrar();
+    }, 2400);
+    r6.luego(function () {
+      if (eleccion === "error") {
+        acerto6 = true;
+        Pasos.feedback(fb, "ok", "Sin continue, después del aviso la ejecución sigue hacia abajo y llega al if. Pero nota nunca se creó: NameError. El continue es el que manda a preguntar otra vez.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", PISTAS6[eleccion] + " Elige otra respuesta.");
+      }
+    }, 3000);
+  }
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("s6-elegir").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      correr6(b.getAttribute("data-valor"));
+    });
+  });
+
+  function entrar6(paso, l, info) {
+    if (info.desbloqueado || acerto6) return;
+    limpiar6();
+    Pasos.limpiarFeedback($("s6-fb"));
+    $("s6-elegir").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+  }
+  limpiar6();
+
+  /* ---------- 7. Una función que pregunta ---------- */
+  var pre7 = $("f-codigo");
+  Python.escribir(pre7, [
+    "def pedir_nota(mensaje):",
+    "    while True:",
+    "        try:",
+    "            return int(input(mensaje))",
+    "        except ValueError:",
+    '            print("Eso no es un número")',
+    "",
+    'n1 = pedir_nota("Nota 1: ")',
+    'n2 = pedir_nota("Nota 2: ")',
+    'print("Promedio:", (n1 + n2) / 2)'
+  ]);
+  MensajeError.zona(pre7, { proteger: [3, 3], atrapar: [4, 5] });
+  var estado7 = { llamada: 1, malos: 0, n1: 0, n2: 0 };
+
+  function llamada7() {
+    $("f-llamada").innerHTML = "Ahora corre: <code>pedir_nota(\"Nota " + estado7.llamada + ": \")</code>";
+    $("f-etiqueta").textContent = "Nota " + estado7.llamada + ":";
+    opc7.pregunta = "Nota " + estado7.llamada + ":";
+  }
+
+  var opc7 = {
+    prefijo: "f",
+    vueltas: null,
+    rotulo: "Dato",
+    pregunta: "Nota 1:",
+    lineaInput: 3,
+    siguiente: "Escribe otro dato.",
+    validar: function () { return null; },
+    alEmpezar: function () {
+      estado7 = { llamada: 1, malos: 0, n1: 0, n2: 0 };
+      llamada7();
+      Codigo.quitarSalto(pre7);
+      Caja.vaciar($("f-n1"));
+      Caja.vaciar($("f-n2"));
+      $("f-campo").disabled = false;
+      return "La línea 8 llama a <code>pedir_nota</code>.";
+    },
+    alDato: function (texto) {
+      var r = intPy(texto);
+      if (!r.ok) {
+        estado7.malos++;
+        atrapar({ pre: pre7, campo: $("f-campo"), registro: $("f-registro"), desde: 3, red: 4, print: 5,
+          aviso: "Eso no es un número", salto: 5, vuelve: 1 });
+        return {
+          texto: "<code>int()</code> falló: <code>return</code> no llegó a correr. La red avisa y el bucle pregunta otra vez, sin salir de la función.",
+          camino: { activas: [3, 4, 5] }
+        };
+      }
+      var origen = Codigo.piezaEnLinea(linea(pre7, 3), ["return"]);
+      if (estado7.llamada === 1) {
+        estado7.n1 = r.valor;
+        Caja.poner($("f-n1"), r.texto, origen);
+        Codigo.salto(pre7, 3, 7);
+        estado7.llamada = 2;
+        llamada7();
+        return {
+          texto: "<code>return</code> devolvió " + r.texto + ": salió del bucle <strong>y</strong> de la función, sin <code>break</code>. Ahora la línea 9 la llama otra vez.",
+          camino: { activas: [3] }
+        };
+      }
+      estado7.n2 = r.valor;
+      Caja.poner($("f-n2"), r.texto, origen);
+      Codigo.salto(pre7, 3, 8);
+      $("f-llamada").innerHTML = "Las dos llamadas volvieron.";
+      return {
+        texto: "La segunda llamada devolvió " + r.texto + ".",
+        camino: { activas: [3] },
+        fin: true
+      };
+    },
+    alFinal: function () {
+      return { linea: 9, salida: "Promedio: " + flotante((estado7.n1 + estado7.n2) / 2) };
+    },
+    alTerminar: function () {
+      $("f-vuelta").textContent = "Las dos notas llegaron";
+      var fb = $("f-fb");
+      if (estado7.malos > 0) {
+        Pasos.feedback(fb, "ok", "Una sola función para pedir cada nota. return dentro del try sale apenas int() funciona; si falla, la red atrapa el error y el bucle vuelve a preguntar.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", "Funcionó, pero no viste la red. Toca «Otra vez» y escribe algo que no sea un número en alguna de las notas.");
+      }
+    }
+  };
+  BucleInput.crear(opc7);
+
+  /* ---------- 8. Reto ---------- */
+  var pre8 = $("r-codigo");
+  Python.escribir(pre8, [
+    "def pedir_nota(mensaje):",
+    "    while True:",
+    "        try:",
+    "            nota = int(input(mensaje))",
+    "        except ▢:",
+    '            print("Eso no es un número")',
+    "            continue",
+    "        if ▢:",
+    '            print("La nota va de 0 a 20")',
+    "            continue",
+    "        ▢",
+    "",
+    'nota = pedir_nota("Nota: ")',
+    'print("Tu nota es", nota)'
+  ], { huecos: ["r-h1", "r-h2", "r-h3"] });
+  MensajeError.zona(pre8, { proteger: [3, 3], atrapar: [4, 6] });
+  var misiones8 = {};
+  var cortado8 = false;
+  var final8 = null;
+
+  function elegido(nombre) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    return r ? r.value : null;
+  }
+  function eleccion8() { return { h1: elegido("r-h1"), h2: elegido("r-h2"), h3: elegido("r-h3") }; }
+  function completo8() { var e = eleccion8(); return !!(e.h1 && e.h2 && e.h3); }
+
+  function mision(clave, estado) {
+    var li = document.querySelector('#r-misiones [data-mision="' + clave + '"]');
+    if (!li || (misiones8[clave] && estado !== null)) return;
+    li.classList.remove("mision--hecha", "mision--mal");
+    if (estado) { void li.offsetWidth; li.classList.add("mision--" + estado); }
+    if (estado === "hecha") misiones8[clave] = true;
+  }
+
+  function borrarMisiones() {
+    misiones8 = {};
+    document.querySelectorAll("#r-misiones li").forEach(function (li) { li.classList.remove("mision--hecha", "mision--mal"); });
+  }
+
+  var PISTAS8 = {
+    tipo: function (h1) { return "El programa se cortó: int() lanza un ValueError, y la red del except es para " + h1 + ". Una red solo atrapa su tipo."; },
+    and: "pedir_nota devolvió ese número: el if no lo paró. ¿Puede una nota ser menor que 0 y mayor que 20 a la vez? Revisa el espacio 2.",
+    siempre: "17 es una nota válida, pero el if la rechazó: nota > 0 or nota < 20 es True con cualquier número. Revisa el espacio 2.",
+    "break": "Imprimió «Tu nota es None»: break sale del bucle, pero la función termina sin return y devuelve None. Revisa el espacio 3.",
+    print: "Mostró 17 y volvió a preguntar: print() no sale del bucle ni devuelve nada. Revisa el espacio 3."
+  };
+
+  var bucle8 = BucleInput.crear({
+    prefijo: "r",
+    vueltas: null,
+    rotulo: "Vuelta",
+    pregunta: "Nota:",
+    lineaInput: 3,
+    siguiente: "",
+    validar: function () { return null; },
+    alEmpezar: function () {
+      cortado8 = false;
+      final8 = null;
+      Codigo.quitarSalto(pre8);
+      MensajeError.limpiar(pre8);
+      $("r-error").textContent = "";
+      $("r-campo").disabled = false;
+      var listo = completo8();
+      $("r-fila").hidden = !listo;
+      $("r-espera").hidden = listo;
+      $("r-vuelta").hidden = !listo;
+      $("r-sugerencias").hidden = !listo;
+      if (!listo) Codigo.marcar(pre8, {});
+      return "";
+    },
+    alDato: function (texto) {
+      var e = eleccion8();
+      var r = intPy(texto);
+      var fb = $("r-fb");
+      if (!r.ok) {
+        if (e.h1 !== "ValueError") {
+          // La red no es de su tipo: el error rebota y el programa se corta
+          cortado8 = true;
+          mision("palabra", "mal");
+          Pasos.feedback(fb, "pista", PISTAS8.tipo(e.h1));
+          var m = MensajeError.crear($("r-error"), {
+            tipo: "ValueError",
+            mensaje: "invalid literal for int() with base 10: " + reprPy(texto),
+            traduccion: "<code>int()</code> no pudo convertir <code>" + esc(reprPy(texto)) + "</code>, y la red era para <code>" + e.h1 + "</code>: el error no cayó en ella.",
+            marcos: [
+              { linea: 13, codigo: 'nota = pedir_nota("Nota: ")' },
+              { linea: 4, codigo: "nota = int(input(mensaje))", funcion: "pedir_nota" }
+            ],
+            codigo: pre8
+          });
+          $("r-campo").disabled = true;
+          MensajeError.lanzar(pre8, 3, "ValueError", 4, {
+            atrapa: false,
+            siguiente: $("r-error"),
+            alSeguir: function () {
+              MensajeError.romper(pre8, 3, { cortadas: [13] });
+              m.mostrar();
+            }
+          });
+          return { texto: "", camino: { activas: [3, 4] }, fin: true };
+        }
+        mision("palabra", "hecha");
+        atrapar({ pre: pre8, campo: $("r-campo"), registro: $("r-registro"), desde: 3, red: 4, print: 5,
+          aviso: "Eso no es un número", salto: 6, vuelve: 1 });
+        revisar8();
+        return { texto: "", camino: { activas: [3, 4, 5, 6], saltadas: [7, 8, 9, 10] } };
+      }
+      var n = r.valor;
+      var clave = n === 25 ? "25" : n === -3 ? "-3" : n === 17 ? "17" : null;
+      var rechaza = e.h2 === "or" ? (n < 0 || n > 20) : e.h2 === "and" ? (n < 0 && n > 20) : (n > 0 || n < 20);
+      var valida = n >= 0 && n <= 20;
+      if (rechaza) {
+        if (clave === "17") { mision("17", "mal"); Pasos.feedback(fb, "pista", PISTAS8.siempre); }
+        else if (clave) mision(clave, "hecha");
+        Codigo.quitarSalto(pre8);
+        imprimir($("r-registro"), "La nota va de 0 a 20", Codigo.piezaEnLinea(linea(pre8, 8), ["print"]));
+        Codigo.salto(pre8, 9, 1);
+        revisar8();
+        return { texto: "", camino: { activas: [3, 7, 8, 9], saltadas: [4, 5, 6, 10] } };
+      }
+      // Pasó el if
+      if (!valida) {
+        if (clave) mision(clave, "mal");
+        Pasos.feedback(fb, "pista", PISTAS8.and);
+      }
+      Codigo.quitarSalto(pre8);
+      if (e.h3 === "print") {
+        if (clave === "17") { mision("17", "mal"); Pasos.feedback(fb, "pista", PISTAS8.print); }
+        imprimir($("r-registro"), r.texto, Codigo.piezaEnLinea(linea(pre8, 10), ["print"]));
+        Codigo.salto(pre8, 10, 1);
+        revisar8();
+        return { texto: "", camino: { activas: [3, 7, 10], saltadas: [4, 5, 6, 8, 9] } };
+      }
+      if (e.h3 === "break") {
+        if (clave === "17") { mision("17", "mal"); Pasos.feedback(fb, "pista", PISTAS8["break"]); }
+        final8 = "None";
+      } else {
+        if (clave === "17" && valida) mision("17", "hecha");
+        final8 = r.texto;
+      }
+      return { texto: "", camino: { activas: [3, 7, 10], saltadas: [4, 5, 6, 8, 9] }, fin: true };
+    },
+    alFinal: function () {
+      if (cortado8) return {};
+      return { linea: 13, salida: "Tu nota es " + final8 };
+    },
+    alTerminar: function () {
+      $("r-vuelta").textContent = cortado8 ? "El programa se cortó" : "pedir_nota volvió";
+      revisar8();
+    }
+  });
+
+  function revisar8() {
+    var fb = $("r-fb");
+    var faltan = ["palabra", "25", "-3", "17"].filter(function (k) { return !misiones8[k]; });
+    if (!faltan.length) {
+      Pasos.feedback(fb, "ok", "¡Lo lograste! pedir_nota atrapa el ValueError, filtra el rango con or y devuelve la nota con return. «-3» pasa por int() pero no por el if.");
+      leccion.desbloquear();
+      return;
+    }
+    if (fb.classList.contains("feedback--pista")) return;
+    if (Object.keys(misiones8).length) {
+      Pasos.feedback(fb, "ok", "Vas " + (4 - faltan.length) + " de 4. " + (faltan.indexOf("17") === -1 ? "Toca «Otra vez» para seguir probando." : "Sigue probando."));
+    }
+  }
+
+  function cambiar8(e) {
+    var r = e.target;
+    $(r.name).textContent = r.nextElementSibling.textContent;
+    borrarMisiones();
+    Pasos.limpiarFeedback($("r-fb"));
+    bucle8.empezar();
+    if (completo8()) $("r-campo").focus({ preventScroll: true });
+  }
+  document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) {
+    r.addEventListener("change", cambiar8);
+  });
+  sugerencias($("r-sugerencias"), $("r-campo"), $("r-enviar"));
+
+  /* ---------- Resumen ---------- */
+  Python.escribir($("resumen-codigo"), [
+    "def pedir_nota(mensaje):",
+    "    while True:",
+    "        try:",
+    "            nota = int(input(mensaje))",
+    "        except ValueError:",
+    '            print("Eso no es un número")',
+    "            continue       # 1: ¿es un número?",
+    "        if nota < 0 or nota > 20:",
+    '            print("La nota va de 0 a 20")',
+    "            continue       # 2: ¿va de 0 a 20?",
+    "        return nota        # sale del bucle y de la función"
+  ]);
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-rango": entrar4,
+      "paso-continue": entrar6
+    }
+  });
+})();
+</script>
+</body>
+</html>
