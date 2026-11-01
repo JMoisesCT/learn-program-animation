@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caso 01 · El vuelto de la cafetería · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: dar el vuelto con la menor cantidad de billetes y monedas usando //, % y un for, con la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- Billetes y monedas ---------- */
+    .pieza { display: inline-grid; place-items: center; flex: 0 0 auto; font: 700 0.8rem var(--fuente-codigo); color: #1f2a44; user-select: none; }
+    .pieza--billete { width: 3.4rem; height: 1.9rem; border-radius: 4px; background: var(--c, #9fb5a5); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), 0 1px 2px rgba(0, 0, 0, 0.25); }
+    .pieza--billete::before { content: "S/"; font-size: 0.55rem; margin-right: 0.1em; opacity: 0.7; }
+    .pieza--moneda { width: 2rem; height: 2rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff8 0 20%, transparent 21%), var(--c, #c9ced6); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.25); }
+    .v200 { --c: #b9a3dc; } .v100 { --c: #9cc0e8; } .v50 { --c: #eaa6c0; } .v20 { --c: #f2bf86; } .v10 { --c: #9fd1a8; }
+    .v5 { --c: #e3d39a; } .v2 { --c: #e8cf6d; } .v1 { --c: #cfd5dd; } .vraro { --c: #d6c7b3; }
+    .pieza--vuela { position: fixed; z-index: 60; margin: 0; pointer-events: none; }
+
+    /* ---------- La caja registradora (escena del reproductor) ---------- */
+    .caja-reg { display: grid; gap: var(--esp-3); }
+    .caja-reg__arriba { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); }
+    .caja-reg__pantalla { padding: 0.2em 0.7em; border-radius: 8px; background: #1f2a44; color: #9dffb5; font: 700 var(--texto-lg) var(--fuente-codigo); letter-spacing: 0.04em; box-shadow: inset 0 0 0 2px #36456b; }
+    .caja-reg__pantalla small { color: #8ea2c8; font-size: 0.6em; letter-spacing: 0.08em; margin-right: 0.4em; }
+    .caja-reg__pantalla--cambia { animation: valor-pulso 360ms ease-out; }
+    .caja-reg__cuenta { min-height: 1.8rem; padding: 0.1em 0.6em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-sm) var(--fuente-codigo); color: var(--azul-tinta); transition: opacity 200ms; }
+    .caja-reg__cuenta:empty { opacity: 0; }
+    .caja-reg__cajon { display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); gap: 0.35rem; padding: 0.45rem; border-radius: 10px; background: #5b4636; box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.35); }
+    .ranura { position: relative; display: grid; justify-items: center; align-content: end; gap: 0.25rem; min-height: 5.2rem; padding: 0.35rem 0.1rem; border-radius: 6px; background: #3f3026; transition: background-color var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .ranura .pieza { transform: scale(0.9); box-shadow: 0 3px 0 -1px rgba(0,0,0,0.25), 0 6px 0 -2px rgba(255,255,255,0.15); }
+    .ranura__valor { font: 700 0.72rem var(--fuente); color: #e9dccb; }
+    .ranura--foco { background: #6b5240; box-shadow: 0 0 0 3px #ffd479; }
+    .ranura--hecha { opacity: 0.55; }
+    .caja-reg__bandeja { min-height: 4.2rem; padding: 0.5rem; border: 2px dashed #c9bda6; border-radius: 10px; background: #fff; }
+    .caja-reg__bandeja-titulo { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-suave); }
+    .caja-reg__piezas { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; min-height: 2rem; }
+    .caja-reg__total { margin-left: auto; font: 700 var(--texto-xs) var(--fuente); color: var(--tinta-suave); }
+    @media (max-width: 480px) {
+      .pieza--billete { width: 2.6rem; height: 1.5rem; font-size: 0.68rem; }
+      .pieza--moneda { width: 1.6rem; height: 1.6rem; font-size: 0.68rem; }
+      .ranura { min-height: 4.4rem; }
+      .caja-reg__pantalla { font-size: var(--texto-md); }
+    }
+
+    /* ---------- Demo: ¿cuántas caben y cuánto sobra? ---------- */
+    .tira { display: flex; height: 2.6rem; margin: var(--esp-3) 0; border-radius: 8px; overflow: hidden; border: 2px solid var(--tinta); background: #fff; }
+    .tira__bloque { display: grid; place-items: center; flex: 0 0 auto; border-right: 2px solid #fff; background: var(--azul-tinta); color: #fff; font: 700 0.78rem var(--fuente-codigo); transition: width 300ms ease; animation: aparecer 300ms ease both; }
+    .tira__resto { display: grid; place-items: center; flex: 0 0 auto; background: repeating-linear-gradient(45deg, #fde6d8 0 6px, #fff 6px 12px); color: var(--lapiz); font: 700 0.78rem var(--fuente-codigo); transition: width 300ms ease; }
+    .tira__vacio { flex: 1; background: var(--papel); }
+
+    /* ---------- Demo: recorrer la lista ---------- */
+    .dedo-lista { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: var(--esp-3) 0 0; padding: 0; list-style: none; }
+    .dedo-lista li { min-width: 3rem; padding: 0.35em 0.6em; border: 2px solid var(--papel-borde); border-radius: 8px; background: #fff; text-align: center; font: 700 var(--texto-sm) var(--fuente-codigo); transition: border-color 200ms, background-color 200ms, transform 200ms; }
+    .dedo-lista li.aqui { border-color: var(--azul-tinta); background: var(--azul-tinta-suave); transform: translateY(-4px); }
+
+    /* ---------- Demo: lo que falta se achica ---------- */
+    .achica { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.4rem; margin: var(--esp-3) 0 0; font: 700 var(--texto-lg) var(--fuente-codigo); }
+    .achica span { opacity: 0.2; transition: opacity 400ms; }
+    .achica .flecha { font-size: var(--texto-sm); color: var(--tinta-suave); }
+    .achica.visible span { opacity: 1; }
+    .achica.visible span:nth-child(1) { transition-delay: 0ms; } .achica.visible span:nth-child(2) { transition-delay: 300ms; }
+    .achica.visible span:nth-child(3) { transition-delay: 600ms; } .achica.visible span:nth-child(4) { transition-delay: 900ms; }
+    .achica.visible span:nth-child(5) { transition-delay: 1200ms; } .achica.visible span:nth-child(6) { transition-delay: 1500ms; }
+    .achica.visible span:nth-child(7) { transition-delay: 1800ms; } .achica.visible span:nth-child(8) { transition-delay: 2100ms; }
+    .achica.visible span:nth-child(9) { transition-delay: 2400ms; } .achica.visible span:nth-child(10) { transition-delay: 2700ms; }
+    .achica.visible span:nth-child(11) { transition-delay: 3000ms; }
+    .achica .c-resto { color: var(--lapiz); }
+
+    /* ---------- Sello de resuelto ---------- */
+    .sello { display: none; width: fit-content; margin: var(--esp-5) auto 0; padding: 0.3em 1em; border: 4px double var(--color-ok); border-radius: 8px; color: var(--color-ok); font: 700 var(--texto-xl) var(--serif); letter-spacing: 0.12em; text-transform: uppercase; transform: rotate(-6deg); }
+    .sello--puesto { display: block; animation: sello 500ms var(--curva-rebote) both; }
+    @keyframes sello { from { transform: rotate(-6deg) scale(2.2); opacity: 0; } }
+
+    .monedas-raras { display: flex; gap: var(--esp-5); flex-wrap: wrap; justify-content: center; margin: var(--esp-4) 0; }
+    .monedas-raras figure { margin: 0; text-align: center; }
+    .monedas-raras figcaption { margin-top: var(--esp-2); font-size: var(--texto-sm); }
+    .monedas-raras .piezas { display: flex; gap: 0.3rem; justify-content: center; }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso 01</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Partes del caso">
+    <ol>
+      <li><a href="#caso">El caso</a></li>
+      <li><a href="#saber">Lo que necesitas</a></li>
+      <li><a href="#idea">La idea</a></li>
+      <li><a href="#codigo">El código</a></li>
+      <li><a href="#ejecucion">La ejecución</a></li>
+      <li><a href="#entendiste">¿Lo entendiste?</a></li>
+      <li><a href="#siempre">¿Siempre funciona?</a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja" data-caso="problema-vuelto">
+
+    <section class="caso-portada">
+      <div>
+        <p class="caso-num">Caso 01</p>
+        <h1>El vuelto de la cafetería</h1>
+        <p class="caso-bajada">Un programa que da el vuelto con la menor cantidad posible de billetes y monedas.</p>
+        <div class="caso-ficha">
+          <span class="caso-dificultad" aria-label="Dificultad: 1 de 3">★☆☆</span>
+          <ul class="caso-temas" aria-label="Temas que usa">
+            <li><a href="../../lecciones/variables/formulas/index.html">// y %</a></li>
+            <li><a href="../../lecciones/bucles/index.html">for</a></li>
+            <li><a href="../../lecciones/condicionales/index.html">if</a></li>
+            <li><a href="../../lecciones/listas/index.html">listas</a></li>
+          </ul>
+        </div>
+      </div>
+      <svg class="caso-ilustracion" viewBox="0 0 240 180" role="img" aria-label="Una caja registradora con billetes saliendo del cajón">
+        <rect x="40" y="30" width="160" height="80" rx="12" fill="#1f2a44"/>
+        <rect x="58" y="44" width="124" height="34" rx="6" fill="#2b3a5e"/>
+        <text x="120" y="68" text-anchor="middle" font-family="monospace" font-size="20" font-weight="700" fill="#9dffb5">S/ 87</text>
+        <g fill="#3a4a72"><circle cx="70" cy="94" r="6"/><circle cx="90" cy="94" r="6"/><circle cx="110" cy="94" r="6"/><circle cx="130" cy="94" r="6"/><circle cx="150" cy="94" r="6"/><circle cx="170" cy="94" r="6"/></g>
+        <rect x="24" y="110" width="192" height="44" rx="8" fill="#5b4636"/>
+        <rect x="34" y="118" width="172" height="28" rx="5" fill="#3f3026"/>
+        <g transform="rotate(-14 150 104)"><rect x="128" y="88" width="56" height="28" rx="3" fill="#eaa6c0" stroke="#fff" stroke-width="2"/><text x="156" y="107" text-anchor="middle" font-family="monospace" font-size="13" font-weight="700" fill="#1f2a44">50</text></g>
+        <g transform="rotate(10 90 104)"><rect x="66" y="90" width="52" height="26" rx="3" fill="#f2bf86" stroke="#fff" stroke-width="2"/><text x="92" y="108" text-anchor="middle" font-family="monospace" font-size="13" font-weight="700" fill="#1f2a44">20</text></g>
+        <circle cx="200" cy="150" r="13" fill="#e3d39a" stroke="#b9a95f" stroke-width="2"/><text x="200" y="155" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#1f2a44">5</text>
+        <circle cx="222" cy="160" r="10" fill="#e8cf6d" stroke="#b9a95f" stroke-width="2"/><text x="222" y="164" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#1f2a44">2</text>
+      </svg>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="caso-seccion" id="caso">
+      <h2><span class="caso-n">1</span> El caso</h2>
+      <p class="aparece">En la cafetería del colegio se forma una fila larga en el recreo. Rosa, la cajera, pierde tiempo contando el vuelto, y a veces se queda sin monedas porque las entrega de más.</p>
+      <p class="aparece">Quiere un programa que le diga qué billetes y monedas dar para entregar <span class="resalta">la menor cantidad de piezas posible</span>. En la caja hay billetes de 50, 20 y 10 soles, y monedas de 5, 2 y 1 sol.</p>
+      <div class="ticket aparece" aria-label="Ticket de ejemplo">
+        <h3>CAFETERÍA · TICKET</h3>
+        <div class="ticket__fila"><span>Sánguche y jugo</span><span>S/ 13</span></div>
+        <div class="ticket__fila"><span>Paga con</span><span>S/ 100</span></div>
+        <div class="ticket__fila ticket__fila--total"><span>Vuelto</span><span>S/ 87</span></div>
+      </div>
+      <p class="aparece">Para 87 soles hay muchas formas: 87 monedas de 1, o 8 billetes de 10 y 7 monedas de 1… La mejor usa solo <strong>5 piezas</strong>: 50 + 20 + 10 + 5 + 2. <span class="nota-margen">¿Cómo la encuentra una computadora, sin probar todas las formas?</span></p>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="caso-seccion" id="saber">
+      <h2><span class="caso-n">2</span> Lo que necesitas saber</h2>
+
+      <div class="concepto aparece">
+        <h3>¿Cuántas caben y cuánto sobra?</h3>
+        <p><code>//</code> cuenta cuántos billetes enteros caben en una cantidad; <code>%</code> dice cuánto sobra. Mueve el vuelto y elige un billete.</p>
+        <div class="control-fila">
+          <label for="d1-vuelto">Vuelto: <span id="d1-num">87</span></label>
+          <input type="range" id="d1-vuelto" min="0" max="99" value="87">
+        </div>
+        <div class="control-fila">
+          <span class="control-fila__titulo"><strong>Billete:</strong></span>
+          <div class="chips-elegir" id="d1-billetes" role="group" aria-label="Valor del billete">
+            <button type="button" data-v="50" aria-pressed="false">50</button>
+            <button type="button" data-v="20" aria-pressed="true">20</button>
+            <button type="button" data-v="10" aria-pressed="false">10</button>
+            <button type="button" data-v="5" aria-pressed="false">5</button>
+          </div>
+        </div>
+        <div class="tira" id="d1-tira" aria-hidden="true"></div>
+        <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+      </div>
+
+      <div class="concepto aparece">
+        <h3>Recorrer una lista en orden</h3>
+        <p>Un <code>for</code> sobre una lista visita sus valores en el orden en que están escritos. Si van de mayor a menor, primero se prueba el billete más grande.</p>
+        <pre class="codigo" id="d2-codigo"></pre>
+        <ul class="dedo-lista" id="d2-lista" aria-label="La lista que recorre el for">
+          <li>50</li><li>20</li><li>10</li><li>5</li><li>2</li><li>1</li>
+        </ul>
+      </div>
+
+      <div class="concepto aparece">
+        <h3>Lo que falta se va achicando</h3>
+        <p>Después de entregar los billetes que caben, lo que falta entregar es lo que sobró: <code>vuelto = vuelto % valor</code>. Con 87:</p>
+        <p class="achica" id="d3-achica" aria-label="87, luego 37, 17, 7, 2 y 0">
+          <span>87</span><span class="flecha">%50 →</span><span>37</span><span class="flecha">%20 →</span><span>17</span><span class="flecha">%10 →</span><span>7</span><span class="flecha">%5 →</span><span>2</span><span class="flecha">%2 →</span><span class="c-resto">0</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="caso-seccion" id="idea">
+      <h2><span class="caso-n">3</span> La idea</h2>
+      <p class="aparece">Rosa ya lo hace sin pensarlo: <strong>siempre entrega primero el billete más grande que cabe</strong>. Escrito en pasos:</p>
+      <ol class="idea aparece">
+        <li class="idea--1" data-idea="1"><strong>Calcula el vuelto</strong> Lo que pagó menos lo que costó.</li>
+        <li class="idea--2" data-idea="2"><strong>Revisa los valores del más grande al más chico</strong> 50, 20, 10, 5, 2 y 1, uno por uno.</li>
+        <li class="idea--3" data-idea="3"><strong>¿Cuántos caben?</strong> Si cabe al menos uno, entrégalos.</li>
+        <li class="idea--4" data-idea="4"><strong>Lo que falta es lo que sobró</strong> Sigue con el siguiente valor hasta llegar a 0.</li>
+      </ol>
+      <p class="aparece nota-margen">Esta forma de resolver, «toma lo más grande que puedas ahora», se llama estrategia <em>voraz</em>.</p>
+    </section>
+
+    <!-- 4. El código -->
+    <section class="caso-seccion codigo-ancho" id="codigo">
+      <h2><span class="caso-n">4</span> El código</h2>
+      <p class="aparece">Cada bloque tiene el color del paso de la idea que resuelve. Pasa el mouse por un paso o por una línea.</p>
+      <div class="codigo-comentado aparece">
+        <pre class="codigo" id="codigo-comentado" aria-label="El programa completo"></pre>
+        <ul class="notas-codigo nota-margen">
+          <li>La lista va de mayor a menor: <strong>el orden es la estrategia</strong>.</li>
+          <li><code>//</code> da cuántos billetes enteros caben.</li>
+          <li>Sin el <code>if</code>, imprimiría «0 de 20» para los que no caben.</li>
+          <li><code>%</code> deja solo lo que falta entregar.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5. La ejecución -->
+    <section class="caso-seccion caso-ancha" id="ejecucion">
+      <div class="escenario-titulo">
+        <h2><span class="caso-n">5</span> La ejecución</h2>
+        <p class="aparece">Elige los datos y mira el programa correr. Puedes pausarlo, ir paso a paso o arrastrar la barra hacia atrás. Los rombos de la barra son los momentos importantes.</p>
+      </div>
+      <div id="reproductor"></div>
+    </section>
+
+    <!-- 6. ¿Lo entendiste? -->
+    <section class="caso-seccion" id="entendiste">
+      <h2><span class="caso-n">6</span> ¿Lo entendiste?</h2>
+      <p class="aparece">Responde mirando la ejecución con los datos <strong>«Pagó 100 · costó 13»</strong>. Si dudas, vuelve a ella.</p>
+      <div class="pregunta aparece" id="q1"><h3>¿Cuántas veces se ejecutó la línea <code>cantidad = vuelto // valor</code>?</h3></div>
+      <div class="pregunta aparece" id="q2"><h3>¿Cuánto valía <code>vuelto</code> justo antes de revisar la moneda de 5?</h3></div>
+      <div class="pregunta aparece" id="q3"><h3>¿Por qué no se imprimió nada para la moneda de 1?</h3></div>
+      <p class="sello" id="sello" role="status">Caso resuelto</p>
+    </section>
+
+    <!-- 7. ¿Siempre funciona? -->
+    <section class="caso-seccion" id="siempre">
+      <h2><span class="caso-n">7</span> ¿Siempre funciona?</h2>
+      <p class="aparece">Con los billetes de verdad, sí. Pero imagina un país con monedas de 4, 3 y 1, y un vuelto de 6:</p>
+      <div class="monedas-raras aparece">
+        <figure>
+          <div class="piezas"><span class="pieza pieza--moneda vraro">4</span><span class="pieza pieza--moneda v1">1</span><span class="pieza pieza--moneda v1">1</span></div>
+          <figcaption>El programa: <strong>3 monedas</strong></figcaption>
+        </figure>
+        <figure>
+          <div class="piezas"><span class="pieza pieza--moneda vraro">3</span><span class="pieza pieza--moneda vraro">3</span></div>
+          <figcaption>Lo mejor: <strong>2 monedas</strong></figcaption>
+        </figure>
+      </div>
+      <p class="aparece">Tomar el 4 parecía buena idea, pero dejó un 2 que solo se paga con dos monedas de 1. La estrategia voraz es rápida, pero <span class="resalta">no siempre da la mejor respuesta</span>: funciona porque nuestros billetes están pensados para eso.</p>
+      <p class="aparece" style="text-align:center"><button type="button" class="btn btn-secundario" id="ver-raras">Verlo en la ejecución ↑</button></p>
+    </section>
+
+    <div class="caso-fin">
+      <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+      <a class="btn btn-primario" href="../laberinto/index.html">Siguiente caso: El laberinto →</a>
+    </div>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+
+  Problemas.iniciar({ id: "problema-vuelto" });
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "precio = " + d.precio,
+      "pago = " + d.pago,
+      "vuelto = pago - precio",
+      'print("Vuelto:", vuelto)',
+      "for valor in [" + d.valores.join(", ") + "]:",
+      "    cantidad = vuelto // valor",
+      "    if cantidad > 0:",
+      '        print(cantidad, "de", valor)',
+      "        vuelto = vuelto % valor",
+      'print("Listo")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 1, 2, 3, 3, 3, 4, 0];
+  var BASE = { precio: 13, pago: 100, valores: [50, 20, 10, 5, 2, 1] };
+
+  /* ---------- 2. Demos ---------- */
+  var d1Valor = 20;
+  function pintarD1() {
+    var n = Number($("d1-vuelto").value);
+    $("d1-num").textContent = n;
+    var cabe = Math.floor(n / d1Valor), sobra = n % d1Valor;
+    var tira = $("d1-tira");
+    tira.textContent = "";
+    for (var k = 0; k < cabe; k++) {
+      var b = document.createElement("span");
+      b.className = "tira__bloque";
+      b.style.width = (d1Valor / 99 * 100) + "%";
+      b.textContent = d1Valor;
+      tira.appendChild(b);
+    }
+    if (sobra) {
+      var r = document.createElement("span");
+      r.className = "tira__resto";
+      r.style.width = (sobra / 99 * 100) + "%";
+      r.textContent = sobra >= 4 ? sobra : "";
+      tira.appendChild(r);
+    }
+    var v = document.createElement("span");
+    v.className = "tira__vacio";
+    tira.appendChild(v);
+    $("d1-cuenta").innerHTML = n + " // " + d1Valor + " = <span class=\"c-cociente\">" + cabe + "</span>" +
+      "&nbsp;&nbsp;·&nbsp;&nbsp;" + n + " % " + d1Valor + " = <span class=\"c-resto\">" + sobra + "</span>";
+  }
+  $("d1-vuelto").addEventListener("input", pintarD1);
+  $("d1-billetes").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      d1Valor = Number(b.getAttribute("data-v"));
+      $("d1-billetes").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD1();
+    });
+  });
+  pintarD1();
+
+  Python.escribir($("d2-codigo"), ["for valor in [50, 20, 10, 5, 2, 1]:", "    print(valor)"]);
+  (function () {
+    var lis = $("d2-lista").querySelectorAll("li");
+    var k = 0;
+    if (reducir) { lis[0].classList.add("aqui"); return; }
+    setInterval(function () {
+      lis.forEach(function (li, m) { li.classList.toggle("aqui", m === k); });
+      k = (k + 1) % (lis.length + 1);
+    }, 800);
+  })();
+
+  // La tira que se achica se enciende al llegar a ella
+  (function () {
+    var el = $("d3-achica");
+    if (reducir || !window.IntersectionObserver) { el.classList.add("visible"); return; }
+    var obs = new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { el.classList.add("visible"); obs.disconnect(); }
+    }, { threshold: 0.8 });
+    obs.observe(el);
+  })();
+
+  /* ---------- 4. El código comentado ---------- */
+  Problemas.codigo($("codigo-comentado"), programa(BASE), IDEAS);
+
+  /* ---------- 5. La ejecución ---------- */
+  function nombrePieza(v) { return v >= 10 ? "Billete de " + v : "Moneda de " + v; }
+
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var bandeja = [];
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.bandeja = bandeja.slice();
+      p.falta = vars.vuelto;
+      pasos.push(p);
+    }
+    vars.precio = d.precio;
+    paso({ linea: 0, escribe: "precio", nota: "Guardamos lo que costó: <code>precio</code> vale " + d.precio + "." });
+    vars.pago = d.pago;
+    paso({ linea: 1, escribe: "pago", nota: "Y con cuánto pagó: " + d.pago + "." });
+    vars.vuelto = d.pago - d.precio;
+    paso({ linea: 2, escribe: "vuelto", lee: ["pago", "precio"], capitulo: "Calcular el vuelto",
+      cuenta: d.pago + " - " + d.precio + " = " + vars.vuelto,
+      nota: "<code>vuelto = " + d.pago + " - " + d.precio + "</code>: hay que devolver <strong>" + vars.vuelto + "</strong>. La pantalla de la caja lo muestra." });
+    paso({ linea: 3, salida: "Vuelto: " + vars.vuelto, lee: ["vuelto"], nota: "Lo anuncia en la consola." });
+
+    var primeraDiv = true, primeraResta = true, primerCero = true;
+    d.valores.forEach(function (v) {
+      vars.valor = v;
+      paso({ linea: 4, escribe: "valor", foco: v, capitulo: nombrePieza(v),
+        nota: "El <code>for</code> toma el siguiente valor de la lista: <code>valor = " + v + "</code>." });
+      var antes = vars.vuelto;
+      vars.cantidad = Math.floor(antes / v);
+      var claveDiv = primeraDiv;
+      primeraDiv = false;
+      paso({ linea: 5, escribe: "cantidad", lee: ["vuelto", "valor"], foco: v,
+        cuenta: antes + " // " + v + " = " + vars.cantidad, pausa: claveDiv,
+        nota: claveDiv
+          ? "<code>" + antes + " // " + v + " = " + vars.cantidad + "</code>: en " + antes + " caben <strong>" + vars.cantidad + "</strong> de " + v + ". El <code>//</code> cuenta solo los enteros."
+          : "<code>" + antes + " // " + v + "</code> da <strong>" + vars.cantidad + "</strong>." });
+      var entra = vars.cantidad > 0;
+      var claveCero = !entra && primerCero && antes === 0;
+      if (!entra && antes === 0) primerCero = false;
+      paso({ linea: 6, lee: ["cantidad"], foco: v, pausa: claveCero,
+        cuenta: vars.cantidad + " > 0 → " + (entra ? "True" : "False"),
+        nota: entra
+          ? "<code>" + vars.cantidad + " > 0</code> es <strong>True</strong>: hay algo que entregar."
+          : "<code>0 > 0</code> es <strong>False</strong>: " + (antes === 0
+            ? "ya no falta nada, pero el <code>for</code> sigue revisando los valores que quedan."
+            : antes + " no alcanza para uno de " + v + ". Se salta el bloque del <code>if</code>.") });
+      if (!entra) return;
+      for (var c = 0; c < vars.cantidad; c++) bandeja.push(v);
+      paso({ linea: 7, salida: vars.cantidad + " de " + v, lee: ["cantidad", "valor"], foco: v, entrega: vars.cantidad,
+        nota: "Imprime <code>" + vars.cantidad + " de " + v + "</code> y Rosa saca " + (vars.cantidad === 1 ? "esa pieza" : "esas piezas") + " del cajón." });
+      vars.vuelto = antes % v;
+      var claveResta = primeraResta;
+      primeraResta = false;
+      paso({ linea: 8, escribe: "vuelto", lee: ["vuelto", "valor"], foco: v, pausa: claveResta,
+        cuenta: antes + " % " + v + " = " + vars.vuelto,
+        nota: claveResta
+          ? "<code>" + antes + " % " + v + " = " + vars.vuelto + "</code>: lo que sobra es lo que <strong>falta entregar</strong>. Fíjate en el rastro de <code>vuelto</code>: el " + antes + " quedó tachado."
+          : "<code>" + antes + " % " + v + " = " + vars.vuelto + "</code>: ahora falta " + vars.vuelto + "." });
+    });
+    var total = bandeja.length;
+    var raro = d.valores.join() === "4,3,1";
+    paso({ linea: 9, salida: "Listo", capitulo: "Fin", pausa: true, flecha: false, fin: true,
+      nota: raro
+        ? "Entregó <strong>" + total + " monedas</strong> (4 + 1 + 1). Pero con dos de 3 bastaba: con estas monedas, empezar por la más grande <strong>no da lo mejor</strong>."
+        : total
+          ? "Listo: <strong>" + total + (total === 1 ? " pieza" : " piezas") + "</strong> en total. La barra de cada línea dice cuántas veces se ejecutó: el <code>for</code> revisó los " + d.valores.length + " valores."
+          : "No había vuelto: el <code>for</code> revisó los " + d.valores.length + " valores y ningún <code>if</code> fue True." });
+    return pasos;
+  }
+
+  /* La escena: la caja registradora */
+  var escena = (function () {
+    var cont, pantalla, cuentaEl, cajon, piezasEl, totalEl, ranuras = {};
+    function clasePieza(v) {
+      var conocida = [200, 100, 50, 20, 10, 5, 2, 1].indexOf(v) !== -1;
+      return "pieza " + (v >= 10 ? "pieza--billete" : "pieza--moneda") + " " + (conocida ? "v" + v : "vraro");
+    }
+    function pieza(v) {
+      var p = document.createElement("span");
+      p.className = clasePieza(v);
+      p.textContent = v;
+      return p;
+    }
+    function crear(c) {
+      cont = c;
+      c.innerHTML =
+        '<div class="caja-reg">' +
+        '  <div class="caja-reg__arriba"><span class="caja-reg__pantalla" aria-live="polite"><small>FALTA</small><span></span></span>' +
+        '  <span class="caja-reg__cuenta"></span></div>' +
+        '  <div class="caja-reg__cajon" aria-label="Cajón de la caja"></div>' +
+        '  <div class="caja-reg__bandeja"><p class="caja-reg__bandeja-titulo">Para el cliente</p>' +
+        '    <div class="caja-reg__piezas"><span class="caja-reg__total"></span></div></div>' +
+        "</div>";
+      pantalla = c.querySelector(".caja-reg__pantalla");
+      cuentaEl = c.querySelector(".caja-reg__cuenta");
+      cajon = c.querySelector(".caja-reg__cajon");
+      piezasEl = c.querySelector(".caja-reg__piezas");
+      totalEl = c.querySelector(".caja-reg__total");
+    }
+    function reiniciar(d) {
+      cajon.textContent = "";
+      cajon.style.setProperty("--n", d.valores.length);
+      ranuras = {};
+      d.valores.forEach(function (v) {
+        var r = document.createElement("div");
+        r.className = "ranura";
+        r.appendChild(pieza(v));
+        var et = document.createElement("span");
+        et.className = "ranura__valor";
+        et.textContent = v >= 10 ? "S/ " + v : v + (v === 1 ? " sol" : " soles");
+        r.appendChild(et);
+        cajon.appendChild(r);
+        ranuras[v] = r;
+      });
+    }
+    function volarPieza(desde, nueva, retraso) {
+      if (!document.body.animate) return;
+      var a = desde.getBoundingClientRect();
+      var b = nueva.getBoundingClientRect();
+      nueva.style.visibility = "hidden";
+      var copia = nueva.cloneNode(true);
+      copia.classList.add("pieza--vuela");
+      copia.style.visibility = "visible";
+      copia.style.left = b.left + "px";
+      copia.style.top = b.top + "px";
+      document.body.appendChild(copia);
+      var dx = a.left + a.width / 2 - (b.left + b.width / 2);
+      var dy = a.top + a.height / 2 - (b.top + b.height / 2);
+      var anim = copia.animate([
+        { transform: "translate(" + dx + "px, " + dy + "px) scale(0.8)", opacity: 0.6 },
+        { transform: "translate(" + dx * 0.5 + "px, " + (dy * 0.5 - 40) + "px) scale(1.1) rotate(-8deg)", opacity: 1, offset: 0.5 },
+        { transform: "none", opacity: 1 }
+      ], { duration: 650, delay: retraso, easing: "ease-in-out", fill: "both" });
+      anim.onfinish = function () { nueva.style.visibility = ""; copia.remove(); };
+    }
+    function pintar(p, op) {
+      var falta = p && p.falta !== undefined ? p.falta : null;
+      var span = pantalla.lastChild;
+      var nuevo = falta === null ? "—" : "S/ " + falta;
+      if (span.textContent !== nuevo) {
+        span.textContent = nuevo;
+        if (op.animar) { pantalla.classList.remove("caja-reg__pantalla--cambia"); void pantalla.offsetWidth; pantalla.classList.add("caja-reg__pantalla--cambia"); }
+      }
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      var foco = p ? p.foco : null;
+      var pasados = {};
+      if (p) op.pasos.slice(0, op.i).forEach(function (q) { if (q.foco !== undefined && q.foco !== foco) pasados[q.foco] = true; });
+      Object.keys(ranuras).forEach(function (v) {
+        ranuras[v].classList.toggle("ranura--foco", String(foco) === v);
+        ranuras[v].classList.toggle("ranura--hecha", !!pasados[v] && !(p && p.fin));
+      });
+      // La bandeja: piezas nuevas que vuelan desde su ranura
+      var bandeja = p ? p.bandeja : [];
+      var actuales = piezasEl.querySelectorAll(".pieza");
+      var conservar = op.animar && actuales.length <= bandeja.length;
+      if (!conservar) {
+        actuales.forEach(function (x) { x.remove(); });
+        actuales = [];
+      }
+      for (var m = actuales.length; m < bandeja.length; m++) {
+        var nueva = pieza(bandeja[m]);
+        piezasEl.insertBefore(nueva, totalEl);
+        if (op.animar && ranuras[bandeja[m]]) volarPieza(ranuras[bandeja[m]], nueva, (m - actuales.length) * 140);
+      }
+      totalEl.textContent = bandeja.length ? bandeja.length + (bandeja.length === 1 ? " pieza" : " piezas") : "";
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Pagó 100 · costó 13", datos: BASE },
+    { nombre: "Pagó 200 · costó 12", datos: { precio: 12, pago: 200, valores: [50, 20, 10, 5, 2, 1] } },
+    { nombre: "Pagó justo: 20", datos: { precio: 20, pago: 20, valores: [50, 20, 10, 5, 2, 1] } },
+    { nombre: "Monedas raras: 4, 3 y 1", datos: { precio: 4, pago: 10, valores: [4, 3, 1] } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    lineasDatos: [0, 1, 4],
+    variables: ["precio", "pago", "vuelto", "valor", "cantidad"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1100
+  });
+
+  /* ---------- 6. Preguntas ---------- */
+  var acertadas = {};
+  function acierto(k) {
+    acertadas[k] = true;
+    if (acertadas.q1 && acertadas.q2 && acertadas.q3) {
+      $("sello").classList.add("sello--puesto");
+      Problemas.completar("problema-vuelto");
+    }
+  }
+  Problemas.pregunta($("q1"), {
+    opciones: ["5", "6", "4"], correcta: "6",
+    ok: "6 veces: una por cada valor de la lista, aunque al final el vuelto ya sea 0. Es lo que marca la barra de esa línea.",
+    pistas: { "5": "Se imprimieron 5 líneas «de», pero la línea del // corre en todas las vueltas del for. Mira su barra al final.", "4": "Cuenta las vueltas del for: una por cada valor de la lista." },
+    alAcertar: function () { acierto("q1"); }
+  });
+  Problemas.pregunta($("q2"), {
+    opciones: ["17", "7", "2"], correcta: "7",
+    ok: "7: el 10 dejó 17 % 10 = 7. El rastro de vuelto lo muestra: 87, 37, 17, 7…",
+    pistas: { "17": "17 era antes del billete de 10. Busca el rombo «Moneda de 5» en la barra.", "2": "2 es lo que quedó después de la moneda de 5." },
+    alAcertar: function () { acierto("q2"); }
+  });
+  Problemas.pregunta($("q3"), {
+    opciones: ["Porque cantidad era 0", "Porque el for terminó antes", "Porque 1 no está en la lista"], correcta: "Porque cantidad era 0",
+    ok: "Exacto: vuelto ya era 0, 0 // 1 = 0 y el if fue False. El for sí llegó hasta el 1.",
+    pistas: { "Porque el for terminó antes": "El for visita todos los valores. Ve al último rombo de moneda y mira qué pasa en el if.", "Porque 1 no está en la lista": "Mira la línea del for: el 1 sí está, al final." },
+    alAcertar: function () { acierto("q3"); }
+  });
+  if (window.Progreso && (Progreso.obtener("problema-vuelto") || {}).completada) $("sello").classList.add("sello--puesto");
+
+  /* ---------- 7. Verlo en la ejecución ---------- */
+  $("ver-raras").addEventListener("click", function () {
+    rep.entrada(3);
+    $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
+  });
+})();
+</script>
+</body>
+</html>
