@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El podio de la carrera · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: ordenar tres tiempos con comparaciones, and e if dentro de otro if, con un árbol de decisiones, su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- Los corredores (escena, demos y detalles) ---------- */
+    :root { --c-ana: #7c3aed; --c-beto: #0e7490; --c-lucia: #be185d; --oro: #e2b33c; --plata: #b9c1cc; --bronce: #c98a4b; }
+    .corr { display: inline-grid; justify-items: center; gap: 0.05rem; min-width: 2.9rem; font: 700 0.66rem var(--fuente); color: var(--tinta); line-height: 1.15; }
+    .corr__cara { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--c); color: #fff; font-size: 0.85rem; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18); }
+    .corr small { font: 700 0.62rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .corr--ana { --c: var(--c-ana); } .corr--beto { --c: var(--c-beto); } .corr--lucia { --c: var(--c-lucia); }
+    .t-ana { color: var(--c-ana); } .t-beto { color: var(--c-beto); } .t-lucia { color: var(--c-lucia); }
+    .v-si { color: var(--color-ok); } .v-no { color: var(--color-error); }
+
+    /* ---------- La escena: el árbol de decisiones y el podio ---------- */
+    .pd { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--esp-2); }
+    .pd__medio { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: var(--esp-2); align-self: center; }
+    .pd--chico .pd__abajo { flex-wrap: wrap; row-gap: var(--esp-3); }
+    .pd--chico .pd__medio { order: -1; flex-basis: 100%; flex-direction: row; justify-content: space-between; }
+    .pd__cuenta { min-height: 1.7rem; padding: 0.1em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .pd__cuenta:empty { opacity: 0; }
+    .pd__contador { font: 700 0.72rem var(--fuente); color: var(--tinta-suave); }
+    .pd__contador b { font: 700 var(--texto-md) var(--fuente-codigo); color: var(--azul-tinta); }
+    .pd__arbol { flex: 1 1 auto; min-height: 7rem; width: 100%; }
+    .pd__leyenda { margin: 0; font: 700 0.68rem var(--fuente); color: var(--tinta-suave); text-align: center; }
+    .pd__leyenda[hidden] { display: none; }
+    .pd__abajo { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--esp-3); }
+    .pd__banca { display: grid; gap: 0.15rem; justify-items: center; }
+    .pd__banca-titulo { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-suave); }
+    .pd__lugares { display: flex; gap: 0.2rem; padding: 0.3rem 0.35rem; border-radius: 10px; background: repeating-linear-gradient(90deg, #f0e5cf 0 22px, #f7efdf 22px 44px); }
+    .pd__lugar, .pd__sitio { display: grid; place-items: end center; min-width: 2.9rem; min-height: 2.75rem; }
+    .pd__podio { display: grid; grid-template-columns: repeat(3, 3.6rem); align-items: end; }
+    .pd__escalon { display: grid; justify-items: center; }
+    .pd__escalon b { display: grid; place-items: center; width: 100%; border-radius: 4px 4px 0 0; font: 700 var(--texto-sm) var(--serif); color: #3b2f17; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12); }
+    .pd__escalon--1 b { height: 2.6rem; background: var(--oro); }
+    .pd__escalon--2 b { height: 1.8rem; background: var(--plata); }
+    .pd__escalon--3 b { height: 1.25rem; background: var(--bronce); }
+    .pd__podio--listo .pd__sitio .corr { animation: salto-podio 600ms var(--curva-rebote) both; }
+    .pd__podio--listo .pd__escalon--2 .corr { animation-delay: 120ms; }
+    .pd__podio--listo .pd__escalon--3 .corr { animation-delay: 240ms; }
+    @keyframes salto-podio { 40% { transform: translateY(-10px); } }
+
+    /* El árbol (SVG) */
+    .arb-arista line { stroke: #b9b2a2; stroke-width: 2; transition: stroke 250ms, stroke-width 250ms, opacity 250ms; }
+    .arb-arista text { font: 700 10px var(--fuente); fill: var(--tinta-suave); paint-order: stroke; stroke: #f8f4ea; stroke-width: 4px; text-anchor: middle; }
+    .arb-arista--tomada line { stroke: var(--azul-tinta); stroke-width: 3.5; }
+    .arb-arista--tomada text { fill: var(--azul-tinta); }
+    .arb-nodo rect { fill: #fff; stroke: #b9b2a2; stroke-width: 1.5; transition: fill 250ms, stroke 250ms; }
+    .arb-nodo text { font: 12px var(--fuente-codigo); fill: var(--tinta); text-anchor: middle; }
+    .arb--chico .arb-nodo text { font-size: 13px; }
+    .arb--chico .arb-hoja text { font-size: 13px; }
+    .arb--chico .arb-arista text { font-size: 12px; }
+    .arb-nodo .arb-gana { font: 700 11px var(--fuente) !important; fill: #8a6400; }
+    .arb-nodo--hecho rect { fill: var(--azul-tinta-suave); stroke: var(--azul-tinta); }
+    .arb-nodo--actual rect { fill: var(--resaltador); stroke: #a86400; stroke-width: 2.5; }
+    .arb-apagado { opacity: 0.2; transition: opacity 300ms; }
+    .arb-nodo, .arb-arista { transition: opacity 300ms; }
+    .arb-t--si { fill: #0b7a3e; font-weight: 700; }
+    .arb-t--no { fill: #b42318; font-weight: 700; }
+    .arb-t--cortada { fill: #9aa1ad; text-decoration: line-through; }
+    .arb-hoja rect { fill: #fff; stroke: #d9cfb8; stroke-width: 1.5; }
+    .arb-hoja text { font: 700 11.5px var(--fuente); fill: var(--tinta); }
+    .arb-hoja .arb-puesto { fill: var(--tinta-suave); font-weight: 400; }
+    .arb-hoja--llega rect { fill: #e5f6ea; stroke: var(--color-ok); stroke-width: 2.5; }
+    .pd--quieto * { transition: none !important; }
+    #reproductor .rep__calor--nunca .rep__calor-num { color: #7d8794; font-weight: 400; }
+
+    /* ---------- Demos del bloque 2 ---------- */
+    .pista { display: grid; gap: 0.3rem; margin: var(--esp-2) 0; }
+    .pista__fila { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr); align-items: center; gap: var(--esp-2); font: 700 var(--texto-xs) var(--fuente); }
+    .pista__barra { height: 1.4rem; border-radius: 0 6px 6px 0; background: var(--c); color: #fff; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.4em; box-sizing: border-box; font: 700 0.7rem var(--fuente-codigo); transition: width 200ms ease; }
+    .pista__nota { margin: 0 !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .compara { display: grid; gap: 0.2rem; margin: var(--esp-2) 0; font: 700 var(--texto-sm) var(--fuente-codigo); }
+    .compara span.suave { font-weight: 400; color: var(--tinta-suave); }
+    .libreta-mini { display: flex; gap: var(--esp-3); justify-content: center; margin: var(--esp-2) 0; padding: var(--esp-2); border-radius: var(--radio-sm); background: var(--papel); font: 700 var(--texto-xs) var(--fuente-codigo); }
+    .and-expr { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.2rem 0.4rem; align-items: center; text-align: center; font: 700 0.8rem var(--fuente-codigo); }
+    .and-expr .op { color: var(--tk-palabra, #7c3aed); }
+    .and-expr .val { padding: 0.15em 0.3em; border-radius: 6px; background: var(--papel); transition: opacity 200ms; }
+    .and-expr .val.si { background: #e5f6ea; color: var(--color-ok); }
+    .and-expr .val.no { background: #fde8e6; color: var(--color-error); }
+    .and-expr .val.corta { color: #9aa1ad; text-decoration: line-through; }
+    .and-res { margin: var(--esp-2) 0 0 !important; font-weight: 700; }
+    .concepto .codigo.codigo--chico { font-size: 0.78rem; line-height: 1.55; }
+    .elegir-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; margin: 0.35rem 0; font: 700 var(--texto-xs) var(--fuente-codigo); }
+    .elegir-fila .chips-elegir button { min-height: 2rem; }
+    .elegir-fila.apagada { opacity: 0.4; }
+    .anidado-txt { margin: var(--esp-2) 0 0 !important; min-height: 2.8em; font-size: var(--texto-xs) !important; }
+
+    /* ---------- Detalles ---------- */
+    .tabla-ordenes button { all: unset; cursor: pointer; display: inline-flex; gap: 0.3em; font: 700 var(--texto-xs) var(--fuente); }
+    .tabla-ordenes button:focus-visible { outline: 3px solid var(--azul-tinta); outline-offset: 2px; border-radius: 4px; }
+    .tabla-ordenes tr.elegida td { background: var(--azul-tinta-suave); }
+    .tabla-ordenes td:first-child { text-align: left; font-family: var(--fuente); }
+    .secuencia { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: var(--esp-2) 0; min-height: 3.6rem; align-content: flex-start; padding: 0; list-style: none; }
+    .secuencia li { padding: 0.1em 0.45em; border-radius: 6px; background: var(--papel); font: 700 0.72rem var(--fuente-codigo) !important; line-height: 1.5 !important; }
+    .secuencia li.si { color: var(--color-ok); }
+    .secuencia li.no { color: var(--color-error); }
+    .secuencia li.corta { color: #9aa1ad; text-decoration: line-through; }
+    .secuencia li.tiempos { color: var(--tinta-suave); }
+    .dos-versiones { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .dos-versiones div { padding: var(--esp-2); border-radius: var(--radio-sm); background: var(--papel); }
+    .dos-versiones h4 { margin: 0 0 0.2rem; font: 700 0.68rem var(--fuente); letter-spacing: 0.04em; text-transform: uppercase; color: var(--tinta-suave); }
+    .dos-versiones pre { margin: 0; font: 700 0.76rem/1.45 var(--fuente-codigo); white-space: pre; }
+    .dos-versiones .mal { color: var(--color-error); }
+    .dos-versiones .veredicto { margin: 0.2rem 0 0; font-size: 0.72rem; font-weight: 700; }
+    .podio-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 0.15rem; }
+    .podio-mini > div { display: grid; justify-items: center; gap: 0.15rem; }
+    .podio-mini .nombres { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.1rem; min-height: 1.1rem; font: 700 0.66rem var(--fuente); }
+    .podio-mini b { display: grid; place-items: center; width: 100%; border-radius: 3px 3px 0 0; font: 700 0.72rem var(--serif); color: #3b2f17; }
+    .podio-mini .p1 b { height: 1.7rem; background: var(--oro); }
+    .podio-mini .p2 b { height: 1.15rem; background: var(--plata); }
+    .podio-mini .p3 b { height: 0.8rem; background: var(--bronce); }
+    .podio-mini .vacio b { opacity: 0.3; }
+    .consola-mini { margin: 0; padding: var(--esp-2); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 0.74rem/1.45 var(--fuente-codigo); white-space: pre; }
+
+    /* ---------- 6. ¿Y con cuatro corredores? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 0.85fr 1.25fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-3); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    @media (min-width: 1024px) { .mas__dibujo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+    .explota { display: grid; gap: var(--esp-2); }
+    #idea .recorrido { margin-top: var(--esp-2); }
+    #idea .recorrido .btn { min-height: 2.6rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
+    @media (max-width: 1023.98px) {
+      /* En el móvil, los números y el adelanto van en dos tarjetas del carrusel */
+      .mas__dibujo { display: contents; }
+      .explota, .adelanto { align-self: start; padding: var(--esp-3); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    }
+    .explota .control-fila { margin: 0; }
+    .hojas-num { margin: 0 !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .hojas-num strong { font: 700 var(--texto-xl) var(--serif); color: var(--azul-tinta); }
+    .puntos { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 1.5px; height: 4.6rem; overflow: hidden; padding: 0.3rem; border-radius: var(--radio-sm); background: var(--papel); }
+    .puntos i { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--azul-tinta); }
+    .puntos--grandes i { width: 12px; height: 12px; }
+    .lineas-comp { display: grid; gap: 0.35rem; }
+    .lineas-comp span { font-size: var(--texto-xs); font-weight: 700; color: var(--tinta-suave); }
+    .lineas-comp .barra { height: 0.8rem; min-width: 4px; border-radius: 4px; background: repeating-linear-gradient(45deg, #f2a75e 0 6px, #f8d2a6 6px 12px); transition: width 250ms ease; }
+    .lineas-comp .barra--sorted { background: var(--color-ok); }
+    .adelanto { display: grid; gap: var(--esp-1); }
+    .adelanto p { margin: 0 !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .adelanto .codigo { font-size: 0.74rem; line-height: 1.45; padding: var(--esp-2) 0; }
+    .adelanto .codigo .linea { padding-right: var(--esp-3); padding-left: 2.6rem; }
+    .adelanto .codigo .linea::before { width: 1.8rem; }
+
+    /* ---------- El reproductor: un código largo ---------- */
+    #reproductor .rep__codigo .codigo { font-size: 0.8rem; line-height: 1.38; padding: var(--esp-2) 0; }
+    #reproductor .rep__codigo .codigo .linea { min-height: 1.38em; }
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.3fr) minmax(10.5rem, 0.5fr); }
+    }
+    @media (max-width: 640px) {
+      #reproductor .rep__codigo .codigo { font-size: 0.76rem; }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #cuatro .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #cuatro .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .pd__podio { grid-template-columns: repeat(3, 3.2rem); }
+      .concepto .codigo.codigo--chico { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Condicionales</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#cuatro"><span>6 · ¿Y con cuatro corredores?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Condicionales</p>
+          <h1>El podio de la carrera</h1>
+          <p class="caso-bajada">Un programa que arma el podio de una carrera de tres solo comparando sus tiempos de a dos.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 5"><span class="estrellas__llenas">★★★</span>☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/condicionales/index.html">if, elif y else</a></li>
+              <li><a href="../../lecciones/condicionales/logicos/index.html">and</a></li>
+              <li><a href="../../lecciones/condicionales/anidados/index.html">if dentro de if</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 190" role="img" aria-label="Un podio con tres corredores y un cronómetro">
+          <circle cx="196" cy="40" r="26" fill="#fff" stroke="#1f2a44" stroke-width="4"/>
+          <rect x="190" y="6" width="12" height="8" rx="2" fill="#1f2a44"/>
+          <line x1="196" y1="40" x2="196" y2="22" stroke="#b4400e" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="196" y1="40" x2="209" y2="46" stroke="#1f2a44" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="196" cy="40" r="3.5" fill="#1f2a44"/>
+          <text x="196" y="84" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#2445b0">13.8 s</text>
+          <rect x="20" y="128" width="62" height="44" rx="3" fill="#b9c1cc"/>
+          <rect x="82" y="104" width="66" height="68" rx="3" fill="#e2b33c"/>
+          <rect x="148" y="142" width="62" height="30" rx="3" fill="#c98a4b"/>
+          <g font-family="Georgia, serif" font-size="20" font-weight="700" fill="#3b2f17" text-anchor="middle"><text x="51" y="158">2</text><text x="115" y="146">1</text><text x="179" y="164">3</text></g>
+          <circle cx="51" cy="108" r="16" fill="#7c3aed"/><text x="51" y="114" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="#fff">A</text>
+          <circle cx="115" cy="84" r="16" fill="#0e7490"/><text x="115" y="90" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="#fff">B</text>
+          <circle cx="179" cy="122" r="16" fill="#be185d"/><text x="179" y="128" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="#fff">L</text>
+          <line x1="10" y1="172" x2="230" y2="172" stroke="#1f2a44" stroke-width="3"/>
+          <path d="M100 58 l15 -12 l15 12" fill="none" stroke="#e2b33c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>En Educación Física, el profe organizó una carrera de 100 metros. Corrieron Ana, Beto y Lucía, y él anotó cada tiempo en su libreta: <span class="resalta">gana quien tardó menos</span>.</p>
+            <p>Ahora hay que armar el podio: oro, plata y bronce. A ojo es fácil con tres números. <span class="nota-margen">¿Cómo lo hace una computadora que solo sabe comparar dos números a la vez?</span></p>
+            <div class="ticket" aria-label="La libreta del profe">
+              <h3>LIBRETA · 100 m</h3>
+              <div class="ticket__fila"><span>Ana</span><span>14.2 s</span></div>
+              <div class="ticket__fila"><span>Beto</span><span>13.8 s</span></div>
+              <div class="ticket__fila"><span>Lucía</span><span>15.1 s</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Podio</span><span>¿?</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dados los tiempos de Ana, Beto y Lucía, imprima el podio: <strong>quién quedó primero, segundo y tercero</strong>, usando solo comparaciones e <code>if</code>.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>ana</code>, <code>beto</code> y <code>lucia</code>: los tiempos en segundos, números decimales mayores que 0. Gana el menor.</li>
+              <li>Puede haber empates: en un empate va antes quien se nombra primero (Ana, luego Beto, luego Lucía).</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Tres líneas: <code>1.° nombre</code>, <code>2.° nombre</code> y <code>3.° nombre</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>ana = 14.2
+beto = 13.8
+lucia = 15.1</td><td>1.° Beto
+2.° Ana
+3.° Lucía</td></tr>
+                <tr><td>ana = 15.0
+beto = 14.6
+lucia = 13.9</td><td>1.° Lucía
+2.° Beto
+3.° Ana</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>El menor tiempo gana: <code>&lt;=</code></h3>
+            <p><code>ana &lt;= beto</code> pregunta si Ana tardó menos que Beto, <strong>o lo mismo</strong>. Mueve el tiempo de Ana:</p>
+            <div class="control-fila">
+              <label for="d1-ana">ana = <span id="d1-num">14.2</span></label>
+              <input type="range" id="d1-ana" min="12.5" max="15.5" step="0.1" value="14.2">
+            </div>
+            <div class="pista" id="d1-pista" aria-hidden="true">
+              <div class="pista__fila"><span class="t-ana">Ana</span><span class="pista__barra" id="d1-barra-ana" style="--c: var(--c-ana)"></span></div>
+              <div class="pista__fila"><span class="t-beto">Beto</span><span class="pista__barra" id="d1-barra-beto" style="--c: var(--c-beto)"></span></div>
+            </div>
+            <p class="compara" id="d1-cuenta" aria-live="polite"></p>
+            <p class="pista__nota" id="d1-nota"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3><code>and</code>: las dos tienen que ser verdad</h3>
+            <p>Ana gana si no tardó más que Beto <strong>y</strong> tampoco más que Lucía. Si la primera ya es False, Python ni mira la segunda.</p>
+            <div class="chips-elegir" id="d2-chips" role="group" aria-label="Elige una carrera">
+              <button type="button" data-k="0" aria-pressed="true">Carrera 1</button>
+              <button type="button" data-k="1" aria-pressed="false">Carrera 2</button>
+              <button type="button" data-k="2" aria-pressed="false">Carrera 3</button>
+            </div>
+            <div class="libreta-mini" id="d2-libreta"></div>
+            <div class="and-expr" id="d2-expr" aria-live="polite"></div>
+            <p class="and-res" id="d2-res"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Un <code>if</code> dentro de otro</h3>
+            <p>Primero se decide quién ganó; <strong>solo dentro de ese caso</strong> se pregunta quién va segundo.</p>
+            <pre class="codigo codigo--chico" id="d3-codigo"></pre>
+            <div class="elegir-fila" id="d3-fila1"><span>¿gana Ana?</span>
+              <div class="chips-elegir" role="group" aria-label="¿Gana Ana?" id="d3-afuera">
+                <button type="button" data-v="1" aria-pressed="true">True</button>
+                <button type="button" data-v="0" aria-pressed="false">False</button>
+              </div>
+            </div>
+            <div class="elegir-fila" id="d3-fila2"><span>beto &lt;= lucia</span>
+              <div class="chips-elegir" role="group" aria-label="beto <= lucia" id="d3-adentro">
+                <button type="button" data-v="1" aria-pressed="true">True</button>
+                <button type="button" data-v="0" aria-pressed="false">False</button>
+              </div>
+            </div>
+            <p class="anidado-txt" id="d3-txt" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguirlo con 14.2, 13.8 y 15.1</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>No hace falta ordenar todo de una vez: <strong>primero se decide quién ganó y, dentro de cada caso, quién va segundo</strong>. El que queda, va tercero.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota los tiempos</strong> Ana 14.2, Beto 13.8 y Lucía 15.1.</li>
+              <li data-idea="2"><strong>¿Quién ganó?</strong> Ana, si no tardó más que ninguno; si no, Beto o Lucía.</li>
+              <li data-idea="3"><strong>¿Quién va segundo?</strong> Compara a los dos que quedan.</li>
+              <li data-idea="4"><strong>Imprime el podio</strong> Primero, segundo y tercero.</li>
+            </ol>
+            <p class="nota-margen">Tres ganadores posibles y dos órdenes para cada uno: 6 podios distintos.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuántas comparaciones hace?</h3>
+            <p>Depende del orden en que llegaron. Toca un podio para ver sus comparaciones:</p>
+            <table class="mini-tabla tabla-ordenes">
+              <thead><tr><th>podio</th><th>con el corte</th><th>sin el corte</th></tr></thead>
+              <tbody id="c-filas"></tbody>
+            </table>
+            <ul class="secuencia" id="c-secuencia" aria-live="polite"></ul>
+            <p class="nota-margen" style="margin-top:auto">Siempre 3 o 4. Con 2 no alcanza: dos preguntas de sí o no separan como mucho 4 casos, y hay 6 podios.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué funciona?</h3>
+            <p>El segundo se elige <strong>entre los que quedan</strong>: nadie repite puesto. Una versión que parece igual decide el primero y el último por separado (el menor y el mayor), y luego el del medio:</p>
+            <div class="chips-elegir" id="v-chips" role="group" aria-label="Elige los tiempos">
+              <button type="button" data-k="0" aria-pressed="false">Beto gana</button>
+              <button type="button" data-k="2" aria-pressed="false">Empate arriba</button>
+              <button type="button" data-k="3" aria-pressed="true">Los tres iguales</button>
+            </div>
+            <div class="dos-versiones" aria-live="polite">
+              <div><h4>Este programa</h4><pre id="v-bien"></pre></div>
+              <div><h4>Por separado</h4><pre id="v-mal"></pre><p class="veredicto" id="v-veredicto"></p></div>
+            </div>
+            <p class="nota-margen" id="v-nota" style="margin-top:auto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Empates: ¿quién gana?</h3>
+            <p>Con un empate, el programa pone primero al que se pregunta antes. En una carrera de verdad, <strong>los dos comparten el puesto</strong>.</p>
+            <div class="chips-elegir" id="e-chips" role="group" aria-label="Elige un empate">
+              <button type="button" data-k="0" aria-pressed="true">Empate arriba</button>
+              <button type="button" data-k="1" aria-pressed="false">Empate abajo</button>
+              <button type="button" data-k="2" aria-pressed="false">Los tres iguales</button>
+            </div>
+            <div class="dos-versiones" aria-live="polite">
+              <div><h4>El programa dice</h4><pre class="consola-mini" id="e-dice"></pre></div>
+              <div><h4>Lo justo</h4><div class="podio-mini" id="e-justo"></div></div>
+            </div>
+            <p style="margin-top:var(--esp-2)">Para decirlo, habría que preguntar por cada pareja con <code>==</code> antes de armar el podio:</p>
+            <pre class="codigo codigo--chico" id="e-codigo"></pre>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Y con cuatro corredores? -->
+    <section class="panel" id="cuatro">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Y con cuatro corredores?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Con tres corredores hay 6 podios posibles: el árbol tiene 6 hojas y el programa, 24 líneas de <code>if</code>. Si llega Tomás, cada uno de esos 6 podios se puede completar poniéndolo en 4 lugares distintos: <strong>24 podios</strong>.</p>
+            <p>Con cinco son 120 y con seis, 720. Escribir todos esos <code>if</code> a mano no tiene fin. <span class="resalta">Para eso existen los bucles, las listas y <code>sorted()</code></span>: el programa crece una línea por corredor.</p>
+            <p class="nota-margen">Lo verás en <a href="../../lecciones/bucles/index.html">Bucles</a>, <a href="../../lecciones/listas/index.html">Listas</a> y <a href="../../lecciones/ordenar/index.html">Ordenar</a>.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="explota">
+              <div class="control-fila">
+                <label for="m-n">Corredores: <span id="m-num">4</span></label>
+                <input type="range" id="m-n" min="2" max="6" value="4">
+              </div>
+              <p class="hojas-num" aria-live="polite"><strong id="m-hojas">24</strong> podios posibles: las hojas del árbol</p>
+              <div class="puntos" id="m-puntos" aria-hidden="true"></div>
+              <div class="lineas-comp" aria-live="polite">
+                <span id="m-txt-if"></span><div class="barra" id="m-barra-if"></div>
+                <span id="m-txt-sorted"></span><div class="barra barra--sorted" id="m-barra-sorted"></div>
+              </div>
+            </div>
+            <div class="adelanto">
+              <p>Un adelanto: lo mismo con una lista y <code>sorted()</code>.</p>
+              <pre class="codigo" id="m-codigo"></pre>
+            </div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../bisiesto/index.html">← <span class="largo">Caso anterior: </span>¿Es año bisiesto?</a>
+          <a class="btn btn-primario" href="../estacionamiento/index.html"><span class="largo">Siguiente caso: </span>El estacionamiento →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+
+  /* Un tiempo como lo escribe Python: siempre con su decimal (14.0, no 14) */
+  function f1(v) { return Number.isInteger(v) ? v + ".0" : String(v); }
+  function b(v) { return v ? "True" : "False"; }
+  function vb(v) { return '<span class="' + (v ? "v-si" : "v-no") + '">' + b(v) + "</span>"; }
+
+  var NOMBRE = { ana: "Ana", beto: "Beto", lucia: "Lucía" };
+  var INICIAL = { ana: "A", beto: "B", lucia: "L" };
+  function nom(k) { return '<span class="t-' + k + '">' + NOMBRE[k] + "</span>"; }
+
+  /* El podio que arma el programa del caso (verificado con python3) */
+  function podio(t) {
+    if (t.ana <= t.beto && t.ana <= t.lucia) return t.beto <= t.lucia ? ["ana", "beto", "lucia"] : ["ana", "lucia", "beto"];
+    if (t.beto <= t.lucia) return t.ana <= t.lucia ? ["beto", "ana", "lucia"] : ["beto", "lucia", "ana"];
+    return t.ana <= t.beto ? ["lucia", "ana", "beto"] : ["lucia", "beto", "ana"];
+  }
+  /* Las comparaciones que hace, en orden: { texto, valor } o { texto, corta: true } */
+  function comparaciones(t) {
+    var r = [];
+    function c(x, y) { var v = t[x] <= t[y]; r.push({ texto: x + " <= " + y, valor: v }); return v; }
+    var ganaAna;
+    if (c("ana", "beto")) ganaAna = c("ana", "lucia");
+    else { r.push({ texto: "ana <= lucia", corta: true }); ganaAna = false; }
+    if (ganaAna) c("beto", "lucia");
+    else if (c("beto", "lucia")) c("ana", "lucia");
+    else c("ana", "beto");
+    return r;
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "ana = " + f1(d.ana),
+      "beto = " + f1(d.beto),
+      "lucia = " + f1(d.lucia),
+      "",
+      "if ana <= beto and ana <= lucia:",
+      '    primero = "Ana"',
+      "    if beto <= lucia:",
+      '        segundo = "Beto"',
+      '        tercero = "Lucía"',
+      "    else:",
+      '        segundo = "Lucía"',
+      '        tercero = "Beto"',
+      "elif beto <= lucia:",
+      '    primero = "Beto"',
+      "    if ana <= lucia:",
+      '        segundo = "Ana"',
+      '        tercero = "Lucía"',
+      "    else:",
+      '        segundo = "Lucía"',
+      '        tercero = "Ana"',
+      "else:",
+      '    primero = "Lucía"',
+      "    if ana <= beto:",
+      '        segundo = "Ana"',
+      '        tercero = "Beto"',
+      "    else:",
+      '        segundo = "Beto"',
+      '        tercero = "Ana"',
+      "",
+      'print(f"1.° {primero}")',
+      'print(f"2.° {segundo}")',
+      'print(f"3.° {tercero}")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 0, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 3, 3, 3, 3, 3, 3, 0, 4, 4, 4];
+
+  /* ---------- 2. Demos ---------- */
+  function pintarD1() {
+    var a = Number($("d1-ana").value), bt = 13.8;
+    var sa = a.toFixed(1);
+    $("d1-num").textContent = sa;
+    var max = 15.5;
+    $("d1-barra-ana").style.width = (a / max * 100) + "%";
+    $("d1-barra-ana").textContent = sa + " s";
+    $("d1-barra-beto").style.width = (bt / max * 100) + "%";
+    $("d1-barra-beto").textContent = "13.8 s";
+    var le = Number(sa) <= bt, lt = Number(sa) < bt;
+    $("d1-cuenta").innerHTML = "<span>" + sa + " &lt;= 13.8 → " + vb(le) + "</span>" +
+      '<span class="suave">' + sa + " &lt; 13.8 → " + b(lt) + "</span>";
+    $("d1-nota").textContent = sa === "13.8"
+      ? "¡Empate! Con <= da True; con < daría False."
+      : (le ? "Ana llegó antes: la barra más corta gana." : "Beto llegó antes: Ana tardó más.");
+  }
+  $("d1-ana").addEventListener("input", pintarD1);
+  pintarD1();
+
+  var CARRERAS = [
+    { ana: 13.6, beto: 13.8, lucia: 15.1 },
+    { ana: 14.2, beto: 13.8, lucia: 15.1 },
+    { ana: 14.2, beto: 14.6, lucia: 13.9 }
+  ];
+  function pintarD2(k) {
+    var t = CARRERAS[k];
+    $("d2-libreta").innerHTML = ["ana", "beto", "lucia"].map(function (n) { return '<span class="t-' + n + '">' + NOMBRE[n] + " " + f1(t[n]) + "</span>"; }).join("");
+    var p1 = t.ana <= t.beto, p2 = t.ana <= t.lucia;
+    $("d2-expr").innerHTML =
+      "<span>ana &lt;= beto</span><span class=\"op\">and</span><span>ana &lt;= lucia</span>" +
+      "<span>" + f1(t.ana) + " &lt;= " + f1(t.beto) + "</span><span></span><span class=\"" + (p1 ? "" : "corta") + "\">" + f1(t.ana) + " &lt;= " + f1(t.lucia) + "</span>" +
+      '<span class="val ' + (p1 ? "si" : "no") + '">' + b(p1) + "</span><span class=\"op\">and</span>" +
+      (p1 ? '<span class="val ' + (p2 ? "si" : "no") + '">' + b(p2) + "</span>" : '<span class="val corta">no la mira</span>');
+    var res = p1 && p2;
+    $("d2-res").innerHTML = "→ " + vb(res) + ": " + (res ? "<strong>Ana gana</strong>." : (p1 ? "Lucía le ganó a Ana." : "Beto le ganó a Ana; no hace falta mirar a Lucía."));
+  }
+  $("d2-chips").querySelectorAll("button").forEach(function (bt) {
+    bt.addEventListener("click", function () {
+      $("d2-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === bt)); });
+      pintarD2(Number(bt.getAttribute("data-k")));
+    });
+  });
+  pintarD2(0);
+
+  Python.escribir($("d3-codigo"), [
+    "if ana <= beto and ana <= lucia:",
+    '    primero = "Ana"',
+    "    if beto <= lucia:",
+    '        segundo = "Beto"',
+    "    else:",
+    '        segundo = "Lucía"'
+  ]);
+  var d3 = { afuera: true, adentro: true };
+  function pintarD3() {
+    var corren, salta;
+    if (!d3.afuera) { corren = [0]; salta = [1, 2, 3, 4, 5]; }
+    else if (d3.adentro) { corren = [0, 1, 2, 3]; salta = [4, 5]; }
+    else { corren = [0, 1, 2, 4, 5]; salta = [3]; }
+    Codigo.marcar($("d3-codigo"), { activas: corren, saltadas: salta });
+    $("d3-fila2").classList.toggle("apagada", !d3.afuera);
+    $("d3-adentro").querySelectorAll("button").forEach(function (x) { x.disabled = !d3.afuera; });
+    $("d3-txt").innerHTML = !d3.afuera
+      ? "Solo corre la línea 1. El <code>if</code> de adentro <strong>ni se pregunta</strong>: si Ana no ganó, su segundo no importa."
+      : "Corren las líneas " + corren.map(function (n) { return n + 1; }).join(", ").replace(/, (\d+)$/, " y $1") + ": " +
+        (d3.adentro ? "<code>segundo</code> es <strong>'Beto'</strong>." : "<code>segundo</code> es <strong>'Lucía'</strong>.");
+  }
+  [["d3-afuera", "afuera"], ["d3-adentro", "adentro"]].forEach(function (g) {
+    $(g[0]).querySelectorAll("button").forEach(function (bt) {
+      bt.addEventListener("click", function () {
+        $(g[0]).querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === bt)); });
+        d3[g[1]] = bt.getAttribute("data-v") === "1";
+        pintarD3();
+      });
+    });
+  });
+  pintarD3();
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 42,
+    anchoNodo: 270,
+    columnas: [0.22, 1.5, 1],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota los tres tiempos", col: 1, fila: 1, idea: 1 },
+      { id: "d1", tipo: "decision", texto: "¿<code>ana &lt;= beto and ana &lt;= lucia</code>?", col: 1, fila: 2, idea: 2 },
+      { id: "ana", tipo: "proceso", texto: "gana Ana", col: 2, fila: 2, idea: 2 },
+      { id: "d2", tipo: "decision", texto: "¿<code>beto &lt;= lucia</code>?", col: 1, fila: 3, idea: 2 },
+      { id: "beto", tipo: "proceso", texto: "gana Beto", col: 2, fila: 3, idea: 2 },
+      { id: "lucia", tipo: "proceso", texto: "gana Lucía", col: 1, fila: 4, idea: 2 },
+      { id: "seg", tipo: "proceso", texto: "el menor de los otros dos: 2.°", col: 1, fila: 5, idea: 3 },
+      { id: "imp", tipo: "datos", texto: "imprime el podio", col: 1, fila: 6, idea: 4 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 1, fila: 7 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "d1" },
+      { de: "d1", a: "ana", texto: "sí" },
+      { de: "d1", a: "d2", texto: "no" },
+      { de: "d2", a: "beto", texto: "sí" },
+      { de: "d2", a: "lucia", texto: "no" },
+      { de: "ana", a: "seg", por: "derecha", carril: 1 },
+      { de: "beto", a: "seg", por: "derecha", carril: 0 },
+      { de: "lucia", a: "seg" },
+      { de: "seg", a: "imp" },
+      { de: "imp", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Termina la carrera" },
+    { nodo: "datos", nota: "ana = 14.2 · beto = 13.8 · lucia = 15.1" },
+    { nodo: "d1", nota: "14.2 <= 13.8 es False: ni mira a Lucía. Ana no ganó" },
+    { nodo: "d2", nota: "13.8 <= 15.1 es True" },
+    { nodo: "beto", nota: "Gana Beto" },
+    { nodo: "seg", nota: "Quedan Ana y Lucía: 14.2 <= 15.1 → Ana 2.°, Lucía 3.°" },
+    { nodo: "imp", nota: "1.° Beto · 2.° Ana · 3.° Lucía" },
+    { nodo: "fin", nota: "Fin: 3 comparaciones" }
+  ];
+  var recorrido = null;
+  var TEXTO_RECORRER = "▶ Seguirlo con 14.2, 13.8 y 15.1";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1700 : 1200,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  // Cada ganador: la línea de primero, su nodo en el árbol, a quiénes compara y sus dos hojas
+  var RAMAS = {
+    ana: { linea: 5, nodo: "sa", x: "beto", y: "lucia", si: 6, hojas: ["h1", "h2"] },
+    beto: { linea: 13, nodo: "sb", x: "ana", y: "lucia", si: 14, hojas: ["h3", "h4"] },
+    lucia: { linea: 21, nodo: "sl", x: "ana", y: "beto", si: 22, hojas: ["h5", "h6"] }
+  };
+
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = { res: {}, comps: 0, tiempos: {}, puestos: {}, and1: null, and2: null };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var A = d.ana, B = d.beto, L = d.lucia;
+    var iguales = A === B && B === L;
+    function cmp(x, y) { return "<code>" + f1(d[x]) + " &lt;= " + f1(d[y]) + "</code>"; }
+    function cuenta(x, y, v) { return { texto: f1(d[x]) + " <= " + f1(d[y]), valor: v }; }
+    function limpio() { est.actual = null; est.cuenta = null; }
+
+    vars.ana = A; est.tiempos.ana = A;
+    paso({ linea: 0, escribe: "ana", capitulo: "Los tiempos",
+      nota: "El profe anota el tiempo de Ana: <strong>" + f1(A) + "</strong> segundos." });
+    vars.beto = B; est.tiempos.beto = B;
+    paso({ linea: 1, escribe: "beto", nota: "Beto: <strong>" + f1(B) + "</strong> segundos." });
+    vars.lucia = L; est.tiempos.lucia = L;
+    paso({ linea: 2, escribe: "lucia",
+      nota: iguales
+        ? "Lucía: <strong>" + f1(L) + "</strong>. ¡Los tres marcaron lo mismo!"
+        : "Lucía: <strong>" + f1(L) + "</strong>. Gana quien tardó <strong>menos</strong>." });
+
+    // ¿Gana Ana? Las dos mitades del and
+    var c1 = A <= B;
+    est.comps++; est.actual = "r"; est.and1 = c1; est.cuenta = cuenta("ana", "beto", c1);
+    var ganaAna = false, corto = false;
+    if (!c1) {
+      est.res.r = false; est.and2 = "corta"; corto = true;
+      paso({ linea: 4, lee: ["ana", "beto"], capitulo: "¿Quién ganó?", pausa: true,
+        nota: cmp("ana", "beto") + " es <strong>False</strong>: Beto llegó antes que Ana. Con una mitad en False, el <code>and</code> ya no puede ser True: Python <strong>ni mira</strong> <code>ana &lt;= lucia</code>. Ana no ganó." });
+    } else {
+      paso({ linea: 4, lee: ["ana", "beto"], capitulo: "¿Quién ganó?",
+        nota: A === B
+          ? cmp("ana", "beto") + " es <strong>True</strong>: Ana y Beto <strong>empataron</strong>, y con <code>&lt;=</code> un empate cuenta. Falta la otra mitad del <code>and</code>."
+          : cmp("ana", "beto") + " es <strong>True</strong>: Ana no tardó más que Beto. Falta la otra mitad del <code>and</code>." });
+      var c2 = A <= L;
+      est.comps++; est.and2 = c2; est.res.r = c2; est.cuenta = cuenta("ana", "lucia", c2);
+      ganaAna = c2;
+      paso({ linea: 4, ejecuta: [], lee: ["ana", "lucia"], pausa: true,
+        nota: c2
+          ? cmp("ana", "lucia") + " también es <strong>True</strong>: las dos mitades son True, así que el <code>and</code> es True. " +
+            (iguales || A === B ? "Ana empató arriba, pero su <code>if</code> es el primero que se pregunta: <strong>Ana queda primera</strong>." : "<strong>Ana ganó</strong>.")
+          : cmp("ana", "lucia") + " es <strong>False</strong>: Lucía le ganó a Ana. Una mitad en False basta: el <code>and</code> es False." });
+    }
+
+    var ganador;
+    if (ganaAna) ganador = "ana";
+    else {
+      var c3 = B <= L;
+      est.comps++; est.actual = "b"; est.res.b = c3; est.cuenta = cuenta("beto", "lucia", c3);
+      paso({ linea: 12, lee: ["beto", "lucia"], flecha: true, pausa: true,
+        nota: "Ana no ganó, así que el ganador es Beto o Lucía: <strong>basta compararlos entre ellos</strong>, sin volver a mirar a Ana. " +
+          cmp("beto", "lucia") + " es <strong>" + b(c3) + "</strong>: " + (c3 ? "gana Beto." : "Beto tampoco ganó.") });
+      if (c3) ganador = "beto";
+      else {
+        limpio();
+        paso({ linea: 20, flecha: true,
+          nota: "Ni el <code>if</code> ni el <code>elif</code> fueron True. El <code>else</code> no pregunta nada: es lo que queda. <strong>Gana Lucía</strong>." });
+        ganador = "lucia";
+      }
+    }
+    var R = RAMAS[ganador];
+    limpio();
+    vars.primero = NOMBRE[ganador]; est.puestos.oro = ganador;
+    paso({ linea: R.linea, escribe: "primero",
+      nota: "<strong>" + NOMBRE[ganador] + "</strong> sube al primer lugar del podio. En el árbol se apagan las ramas de los otros ganadores: no van a correr." });
+
+    // ¿Quién va segundo? Solo entre los dos que quedan
+    var vx = d[R.x], vy = d[R.y];
+    var c4 = vx <= vy;
+    est.comps++; est.actual = R.nodo; est.res[R.nodo] = c4; est.cuenta = cuenta(R.x, R.y, c4); est.hoja = c4 ? R.hojas[0] : R.hojas[1];
+    var seg = c4 ? R.x : R.y, ter = c4 ? R.y : R.x;
+    paso({ linea: R.si, lee: [R.x, R.y], capitulo: "¿Quién va segundo?",
+      nota: "Quedan " + NOMBRE[R.x] + " y " + NOMBRE[R.y] + ". " + cmp(R.x, R.y) + " es <strong>" + b(c4) + "</strong>: " +
+        (vx === vy ? "empataron, y con <code>&lt;=</code> va antes " + NOMBRE[R.x] + "."
+          : (c4 ? NOMBRE[R.x] : NOMBRE[R.y]) + " llegó antes.") });
+    var base = R.si;
+    if (!c4) {
+      limpio();
+      base = R.si + 3;
+      paso({ linea: base, flecha: true, nota: "La condición fue False: salta al <code>else</code>." });
+    }
+    limpio();
+    vars.segundo = NOMBRE[seg]; est.puestos.plata = seg;
+    paso({ linea: base + 1, escribe: "segundo", nota: "<strong>" + NOMBRE[seg] + "</strong>, a la plata." });
+    vars.tercero = NOMBRE[ter]; est.puestos.bronce = ter;
+    paso({ linea: base + 2, escribe: "tercero",
+      nota: "Y <strong>" + NOMBRE[ter] + "</strong>, al bronce. Este <code>if</code> está dentro de la rama de " + NOMBRE[ganador] + ": los otros dos <code>if</code> del segundo puesto nunca se preguntaron." });
+
+    // El podio
+    paso({ linea: 29, salida: "1.° " + vars.primero, lee: ["primero"], capitulo: "El podio", flecha: true,
+      nota: "El <code>if</code> terminó: salta al final, a los <code>print</code>." });
+    paso({ linea: 30, salida: "2.° " + vars.segundo, lee: ["segundo"], nota: "Segundo puesto." });
+    est.fin = true;
+    var corrieron = 0;
+    pasos.forEach(function (p) { if (p.linea >= 4 && p.linea <= 27 && !(p.ejecuta && !p.ejecuta.length)) corrieron++; });
+    var final;
+    if (iguales) {
+      final = "Los tres empataron y el podio dice Ana, Beto, Lucía: <strong>el orden en que están escritos</strong>. Con <code>&lt;=</code>, cada empate lo gana el primero que se pregunta.";
+    } else if (A === B && ganador === "ana") {
+      final = "Ana y Beto empataron en " + f1(A) + ", pero el programa pone a <strong>Ana primera</strong> solo porque su <code>if</code> se pregunta antes. ¿No deberían compartir el oro? Eso está en los detalles.";
+    } else if (ganador === "lucia" && !c4) {
+      final = "Lucía llegó a la <strong>última hoja</strong> del árbol: pasó por el <code>if</code>, el <code>elif</code> y los dos <code>else</code>. Aun así, solo <strong>" + est.comps + " comparaciones</strong>" + (corto ? ": el <code>and</code> se cortó en su primera mitad." : ".");
+    } else {
+      final = "Podio listo con <strong>" + est.comps + " comparaciones</strong>. De las 24 líneas del <code>if</code> corrieron " + corrieron + ": las demás tienen ×0 en el mapa de calor.";
+    }
+    paso({ linea: 31, salida: "3.° " + vars.tercero, lee: ["tercero"], pausa: true, fin: true, nota: final });
+    return pasos;
+  }
+
+  /* La escena: el árbol de decisiones y el podio */
+  var escena = (function () {
+    var cont, svg, cuentaEl, contadorEl, leyenda, podioEl, pre = null;
+    var lugares = {}, sitios = {}, fichas = {};
+    var compacto = null, ultimo = null;
+    var ARBOL = {
+      r: { si: "sa", no: "b" }, b: { si: "sb", no: "sl" },
+      sa: { si: "h1", no: "h2" }, sb: { si: "h3", no: "h4" }, sl: { si: "h5", no: "h6" }
+    };
+    var HOJAS = { h1: ["ana", "beto", "lucia"], h2: ["ana", "lucia", "beto"], h3: ["beto", "ana", "lucia"],
+      h4: ["beto", "lucia", "ana"], h5: ["lucia", "ana", "beto"], h6: ["lucia", "beto", "ana"] };
+    var GANA = { sa: "ana", sb: "beto", sl: "lucia" };
+    var COND = { sa: ["beto", "lucia"], sb: ["ana", "lucia"], sl: ["ana", "beto"], b: ["beto", "lucia"] };
+    var NS = "http://www.w3.org/2000/svg";
+    function el(tag, at, padre) {
+      var e = document.createElementNS(NS, tag);
+      for (var k in at) e.setAttribute(k, at[k]);
+      if (padre) padre.appendChild(e);
+      return e;
+    }
+
+    function crear(c) {
+      cont = c;
+      c.innerHTML =
+        '<div class="pd">' +
+        '  <svg class="pd__arbol" role="img" aria-label="Árbol de decisiones con los seis podios posibles"></svg>' +
+        '  <p class="pd__leyenda" hidden>A = Ana · B = Beto · L = Lucía</p>' +
+        '  <div class="pd__abajo">' +
+        '    <div class="pd__banca"><span class="pd__banca-titulo">En la pista</span><div class="pd__lugares">' +
+        '      <span class="pd__lugar" data-r="ana"></span><span class="pd__lugar" data-r="beto"></span><span class="pd__lugar" data-r="lucia"></span>' +
+        "    </div></div>" +
+        '    <div class="pd__medio"><span class="pd__cuenta" aria-live="polite"></span>' +
+        '      <span class="pd__contador">comparaciones: <b>0</b></span></div>' +
+        '    <div class="pd__podio" aria-label="El podio">' +
+        '      <div class="pd__escalon pd__escalon--2"><span class="pd__sitio" data-p="plata"></span><b>2</b></div>' +
+        '      <div class="pd__escalon pd__escalon--1"><span class="pd__sitio" data-p="oro"></span><b>1</b></div>' +
+        '      <div class="pd__escalon pd__escalon--3"><span class="pd__sitio" data-p="bronce"></span><b>3</b></div>' +
+        "    </div>" +
+        "  </div>" +
+        "</div>";
+      svg = c.querySelector(".pd__arbol");
+      cuentaEl = c.querySelector(".pd__cuenta");
+      contadorEl = c.querySelector(".pd__contador b");
+      leyenda = c.querySelector(".pd__leyenda");
+      podioEl = c.querySelector(".pd__podio");
+      c.querySelectorAll(".pd__lugar").forEach(function (l) { lugares[l.getAttribute("data-r")] = l; });
+      c.querySelectorAll(".pd__sitio").forEach(function (s) { sitios[s.getAttribute("data-p")] = s; });
+      ["ana", "beto", "lucia"].forEach(function (k) {
+        var f = document.createElement("span");
+        f.className = "corr corr--" + k;
+        f.innerHTML = '<span class="corr__cara">' + INICIAL[k] + "</span>" + NOMBRE[k] + "<small>? s</small>";
+        lugares[k].appendChild(f);
+        fichas[k] = f;
+      });
+      if (window.ResizeObserver) new ResizeObserver(function () {
+        if (cont.clientWidth && (cont.clientWidth < 440) !== compacto && ultimo) pintar(ultimo.p, { animar: false, datos: ultimo.datos });
+      }).observe(c);
+    }
+
+    /* Arma el árbol: normal (con el código de cada condición) o compacto (con iniciales) */
+    function armar(chico) {
+      compacto = chico;
+      leyenda.hidden = !chico;
+      svg.classList.toggle("arb--chico", chico);
+      cont.querySelector(".pd").classList.toggle("pd--chico", chico);
+      svg.textContent = "";
+      var W = chico ? 360 : 540, dx = W / 6;
+      var Y = chico ? { r: 14, b: 74, s: 140, h: 222 } : { r: 6, b: 60, s: 118, h: 192 };
+      var H = chico ? 286 : 250;
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      var X = { r: dx * 2.5, b: dx * 4, sa: dx, sb: dx * 3, sl: dx * 5 };
+      var cw = chico ? 7.9 : 7.3;
+      var aristas = el("g", {}, svg), nodos = el("g", {}, svg);
+      function texto(k) { return chico ? INICIAL[k] : k; }
+      function op() { return chico ? " ≤ " : " <= "; }
+      var caja = {};
+      // Nodos de decisión
+      var partes = [texto("ana") + op() + texto("beto"), " and ", texto("ana") + op() + texto("lucia")];
+      var anchoR = partes.join("").length * cw + 16;
+      var alto = chico ? 30 : 28;
+      caja.r = { x: X.r, y: Y.r, w: anchoR, h: alto };
+      var gr = el("g", { "class": "arb-nodo", "data-n": "r" }, nodos);
+      el("rect", { x: X.r - anchoR / 2, y: Y.r, width: anchoR, height: alto, rx: 8 }, gr);
+      var tr = el("text", { x: X.r, y: Y.r + alto / 2 + 4.5 }, gr);
+      partes.forEach(function (t, k) {
+        var s = el("tspan", { "data-p": String(k) }, tr);
+        s.textContent = t;
+      });
+      function decision(id, x, y, gana) {
+        var t = texto(COND[id][0]) + op() + texto(COND[id][1]);
+        var w = Math.max(t.length * cw + 14, chico ? 46 : 60);
+        var h = gana ? (chico ? 44 : 42) : (chico ? 30 : 28);
+        caja[id] = { x: x, y: y, w: w, h: h };
+        var g = el("g", { "class": "arb-nodo", "data-n": id }, nodos);
+        el("rect", { x: x - w / 2, y: y, width: w, height: h, rx: 8 }, g);
+        if (gana) {
+          var t1 = el("text", { x: x, y: y + 15, "class": "arb-gana" }, g);
+          t1.textContent = "1.° " + (chico ? INICIAL[gana] : NOMBRE[gana]);
+          var t2 = el("text", { x: x, y: y + h - 9 }, g);
+          t2.textContent = t;
+        } else {
+          var t3 = el("text", { x: x, y: y + h / 2 + 4.5 }, g);
+          t3.textContent = t;
+        }
+      }
+      decision("b", X.b, Y.b);
+      decision("sa", X.sa, Y.s, "ana");
+      decision("sb", X.sb, Y.s, "beto");
+      decision("sl", X.sl, Y.s, "lucia");
+      // Hojas
+      var hw = chico ? 52 : 80, hh = chico ? 56 : 56;
+      ["h1", "h2", "h3", "h4", "h5", "h6"].forEach(function (h, i) {
+        var x = dx * (i + 0.5);
+        caja[h] = { x: x, y: Y.h, w: hw, h: hh };
+        var g = el("g", { "class": "arb-hoja", "data-n": h }, nodos);
+        el("rect", { x: x - hw / 2, y: Y.h, width: hw, height: hh, rx: 6 }, g);
+        HOJAS[h].forEach(function (k, p) {
+          var t = el("text", { x: x - hw / 2 + (chico ? 10 : 9), y: Y.h + 16 + p * 15 }, g);
+          var a = el("tspan", { "class": "arb-puesto" }, t);
+          a.textContent = (p + 1) + " ";
+          var n = el("tspan", { "class": "t-" + k, fill: "currentColor" }, t);
+          n.textContent = chico ? INICIAL[k] : NOMBRE[k];
+          n.style.fill = getComputedStyle(document.documentElement).getPropertyValue("--c-" + k);
+        });
+      });
+      // Aristas: de abajo del padre a arriba del hijo, con su True o False
+      Object.keys(ARBOL).forEach(function (p) {
+        ["si", "no"].forEach(function (lado) {
+          var h = ARBOL[p][lado], a = caja[p], z = caja[h];
+          var g = el("g", { "class": "arb-arista", "data-de": p, "data-a": h }, aristas);
+          var x1 = a.x, y1 = a.y + a.h, x2 = z.x, y2 = z.y;
+          el("line", { x1: x1, y1: y1, x2: x2, y2: y2 }, g);
+          var t = el("text", { x: (x1 + x2) / 2 + (x2 < x1 ? -4 : 4), y: (y1 + y2) / 2 + 3 }, g);
+          t.textContent = chico ? (lado === "si" ? "T" : "F") : (lado === "si" ? "True" : "False");
+        });
+      });
+    }
+
+    function reiniciar() { ultimo = null; }
+
+    function vivos(res) {
+      var v = {};
+      (function marcar(n, vivo) {
+        v[n] = vivo;
+        if (!ARBOL[n]) return;
+        var r = res[n];
+        marcar(ARBOL[n].si, vivo && r !== false);
+        marcar(ARBOL[n].no, vivo && r !== true);
+      })("r", true);
+      return v;
+    }
+
+    function saltadas(res) {
+      var s = [];
+      function rango(a, z) { for (var k = a; k <= z; k++) s.push(k); }
+      if (res.r === true) rango(12, 27);
+      if (res.r === false) rango(5, 11);
+      if (res.b === true) rango(20, 27);
+      if (res.b === false) rango(13, 19);
+      if (res.sa === true) rango(9, 11);
+      if (res.sa === false) rango(7, 8);
+      if (res.sb === true) rango(17, 19);
+      if (res.sb === false) rango(15, 16);
+      if (res.sl === true) rango(25, 27);
+      if (res.sl === false) rango(23, 24);
+      return s;
+    }
+
+    function mover(f, destino, animar) {
+      if (f.parentNode === destino) return;
+      var a = f.getBoundingClientRect();
+      destino.appendChild(f);
+      if (!animar || !f.animate || !a.width) return;
+      var z = f.getBoundingClientRect();
+      f.animate([
+        { transform: "translate(" + (a.left - z.left) + "px, " + (a.top - z.top) + "px)" },
+        { transform: "translate(" + (a.left - z.left) * 0.4 + "px, " + ((a.top - z.top) * 0.4 - 26) + "px)", offset: 0.55 },
+        { transform: "none" }
+      ], { duration: 700, easing: "ease-in-out" });
+    }
+
+    function pintar(p, op) {
+      ultimo = { p: p, datos: op.datos };
+      if (!pre) pre = cont.parentNode.querySelector(".rep__codigo pre");
+      var ancho = cont.clientWidth;
+      var chico = ancho ? ancho < 440 : (compacto === null ? false : compacto);
+      if (chico !== compacto) armar(chico);
+      var e = p ? p.est : { res: {}, comps: 0, tiempos: {}, puestos: {} };
+      cont.querySelector(".pd").classList.toggle("pd--quieto", !op.animar);
+
+      // El rótulo y el contador
+      cuentaEl.innerHTML = e.cuenta ? e.cuenta.texto.replace("<=", "&lt;=") + " → " + vb(e.cuenta.valor) : "";
+      contadorEl.textContent = e.comps;
+
+      // El árbol: lo que ya se decidió, lo que se decide ahora y lo que se apagó
+      var v = vivos(e.res);
+      svg.querySelectorAll(".arb-nodo, .arb-hoja").forEach(function (g) {
+        var n = g.getAttribute("data-n");
+        g.classList.toggle("arb-apagado", !v[n]);
+        g.classList.toggle("arb-nodo--actual", e.actual === n);
+        g.classList.toggle("arb-nodo--hecho", e.res[n] !== undefined && e.actual !== n);
+        g.classList.toggle("arb-hoja--llega", e.hoja === n);
+      });
+      svg.querySelectorAll(".arb-arista").forEach(function (g) {
+        var de = g.getAttribute("data-de"), a = g.getAttribute("data-a");
+        var r = e.res[de];
+        var tomada = r !== undefined && ARBOL[de][r ? "si" : "no"] === a;
+        g.classList.toggle("arb-arista--tomada", tomada);
+        g.classList.toggle("arb-apagado", !v[a]);
+      });
+      var ts = svg.querySelectorAll('[data-n="r"] tspan');
+      ts.forEach(function (t) { t.removeAttribute("class"); });
+      if (e.and1 !== null && e.and1 !== undefined) ts[0].setAttribute("class", e.and1 ? "arb-t--si" : "arb-t--no");
+      if (e.and2 === "corta") ts[2].setAttribute("class", "arb-t--cortada");
+      else if (e.and2 !== null && e.and2 !== undefined) ts[2].setAttribute("class", e.and2 ? "arb-t--si" : "arb-t--no");
+
+      // Las líneas de las ramas que no se toman, apagadas en el código
+      var fuera = saltadas(e.res);
+      if (pre && p) Codigo.marcar(pre, { activas: [p.linea], saltadas: fuera });
+      var calores = cont.parentNode.querySelectorAll(".rep__calor");
+      calores.forEach(function (c) { c.classList.remove("rep__calor--nunca"); });
+      fuera.forEach(function (k) {
+        var c = calores[k];
+        if (c && c.classList.contains("rep__calor--cero")) { c.firstChild.textContent = "×0"; c.classList.add("rep__calor--nunca"); }
+      });
+
+      // Los corredores: en la pista o en su escalón
+      var donde = {};
+      Object.keys(e.puestos).forEach(function (pt) { donde[e.puestos[pt]] = pt; });
+      ["ana", "beto", "lucia"].forEach(function (k) {
+        var t = e.tiempos[k];
+        fichas[k].querySelector("small").textContent = (t === undefined ? "?" : f1(t)) + " s";
+        mover(fichas[k], donde[k] ? sitios[donde[k]] : lugares[k], op.animar);
+      });
+      podioEl.classList.toggle("pd__podio--listo", !!(e.fin && op.animar));
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Beto gana", datos: { ana: 14.2, beto: 13.8, lucia: 15.1 } },
+    { nombre: "Lucía remonta", datos: { ana: 15.0, beto: 14.6, lucia: 13.9 } },
+    { nombre: "Empate arriba", datos: { ana: 13.8, beto: 13.8, lucia: 15.1 } },
+    { nombre: "Los tres iguales", datos: { ana: 14.0, beto: 14.0, lucia: 14.0 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1, 2],
+    variables: ["ana", "beto", "lucia", "primero", "segundo", "tercero"],
+    generar: generar,
+    escena: escena,
+    formato: function (nombre, v) { return typeof v === "number" ? f1(v) : Reproductor.python(v); },
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // Los seis podios, en el orden de las hojas del árbol; los tiempos 13.8, 14.6 y 15.1
+  var ORDENES = [["ana", "beto", "lucia"], ["ana", "lucia", "beto"], ["beto", "ana", "lucia"],
+    ["beto", "lucia", "ana"], ["lucia", "ana", "beto"], ["lucia", "beto", "ana"]];
+  var TIEMPOS = [13.8, 14.6, 15.1];
+  function tiemposDe(orden) { var t = {}; orden.forEach(function (k, i) { t[k] = TIEMPOS[i]; }); return t; }
+  function pintarSecuencia(k) {
+    var t = tiemposDe(ORDENES[k]);
+    $("c-filas").querySelectorAll("tr").forEach(function (tr, m) { tr.classList.toggle("elegida", m === k); });
+    $("c-secuencia").innerHTML = '<li class="tiempos">' +
+      ["ana", "beto", "lucia"].map(function (n) { return INICIAL[n] + " " + f1(t[n]); }).join(" · ") + "</li>" +
+      comparaciones(t).map(function (c) {
+        if (c.corta) return '<li class="corta">' + c.texto.replace("<=", "&lt;=") + "</li>";
+        var p = c.texto.split(" <= ");
+        return '<li class="' + (c.valor ? "si" : "no") + '">' + f1(t[p[0]]) + " &lt;= " + f1(t[p[1]]) + " " + b(c.valor) + "</li>";
+      }).join("");
+  }
+  $("c-filas").innerHTML = ORDENES.map(function (o, k) {
+    var cs = comparaciones(tiemposDe(o));
+    var con = cs.filter(function (c) { return !c.corta; }).length;
+    var sin = cs.length;
+    return "<tr><td><button type=\"button\" data-k=\"" + k + "\">" + o.map(nom).join(" · ") + "</button></td><td>" + con + "</td><td>" + sin + "</td></tr>";
+  }).join("");
+  $("c-filas").querySelectorAll("button").forEach(function (bt) {
+    bt.addEventListener("click", function () { pintarSecuencia(Number(bt.getAttribute("data-k"))); });
+  });
+  pintarSecuencia(2);
+
+  /* La versión «por separado» (verificada con python3): el menor primero, el mayor último, y el del medio */
+  function porSeparado(t) {
+    var p, u, s;
+    if (t.ana <= t.beto && t.ana <= t.lucia) p = "ana";
+    else if (t.beto <= t.ana && t.beto <= t.lucia) p = "beto";
+    else p = "lucia";
+    if (t.ana >= t.beto && t.ana >= t.lucia) u = "ana";
+    else if (t.beto >= t.ana && t.beto >= t.lucia) u = "beto";
+    else u = "lucia";
+    if (p !== "ana" && u !== "ana") s = "ana";
+    else if (p !== "beto" && u !== "beto") s = "beto";
+    else s = "lucia";
+    return [p, s, u];
+  }
+  function lineasPodio(o) { return o.map(function (k, i) { return (i + 1) + ".° " + NOMBRE[k]; }); }
+  function pintarVersiones(k) {
+    var t = ENTRADAS[k].datos;
+    var bien = podio(t), mal = porSeparado(t);
+    $("v-bien").textContent = lineasPodio(bien).join("\n");
+    var repetido = mal[0] === mal[2];
+    $("v-mal").innerHTML = lineasPodio(mal).map(function (l, i) { return repetido && i !== 1 ? '<span class="mal">' + l + "</span>" : l; }).join("\n");
+    $("v-veredicto").innerHTML = repetido ? '<span class="v-no">✗ Ana dos veces, sin Lucía</span>' : '<span class="v-si">✓ igual</span>';
+    $("v-nota").textContent = repetido
+      ? "Con 14.0, 14.0 y 14.0, Ana es la menor y también la mayor: sale primera y última, y Lucía se queda sin puesto."
+      : "Con " + f1(t.ana) + ", " + f1(t.beto) + " y " + f1(t.lucia) + " las dos dan un podio válido. Prueba con los tres iguales.";
+  }
+  $("v-chips").querySelectorAll("button").forEach(function (bt) {
+    bt.addEventListener("click", function () {
+      $("v-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === bt)); });
+      pintarVersiones(Number(bt.getAttribute("data-k")));
+    });
+  });
+  pintarVersiones(3);
+
+  // Empates: lo que dice el programa y el podio justo (puestos compartidos)
+  var EMPATES = [
+    { ana: 13.8, beto: 13.8, lucia: 15.1 },
+    { ana: 13.8, beto: 15.1, lucia: 15.1 },
+    { ana: 14.0, beto: 14.0, lucia: 14.0 }
+  ];
+  function puestosJustos(t) {
+    // Puesto de cada uno: 1 + cuántos tardaron menos (como en los Juegos Olímpicos)
+    var r = { 1: [], 2: [], 3: [] };
+    ["ana", "beto", "lucia"].forEach(function (k) {
+      var antes = ["ana", "beto", "lucia"].filter(function (j) { return t[j] < t[k]; }).length;
+      r[antes + 1].push(k);
+    });
+    return r;
+  }
+  function pintarEmpate(k) {
+    var t = EMPATES[k];
+    $("e-dice").textContent = lineasPodio(podio(t)).join("\n");
+    var j = puestosJustos(t);
+    $("e-justo").innerHTML = [2, 1, 3].map(function (n) {
+      var quien = j[n];
+      return '<div class="p' + n + (quien.length ? "" : " vacio") + '"><span class="nombres">' +
+        (quien.length ? quien.map(nom).join(" ") : "—") + "</span><b>" + n + "</b></div>";
+    }).join("");
+  }
+  $("e-chips").querySelectorAll("button").forEach(function (bt) {
+    bt.addEventListener("click", function () {
+      $("e-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === bt)); });
+      pintarEmpate(Number(bt.getAttribute("data-k")));
+    });
+  });
+  pintarEmpate(0);
+  Python.escribir($("e-codigo"), ["if ana == beto:", '    print("Empate: Ana y Beto")']);
+
+  /* ---------- 6. ¿Y con cuatro corredores? ---------- */
+  var GENTE = [[14.2, "Ana"], [13.8, "Beto"], [15.1, "Lucía"], [14.9, "Tomás"], [13.5, "Rosa"], [14.4, "Hugo"]];
+  function factorial(n) { return n <= 1 ? 1 : n * factorial(n - 1); }
+  // Líneas de if a mano: n salidas (if, elif…, else) y en cada una, primero = … y los if de los que quedan
+  function lineasIf(n) { return n <= 1 ? 1 : n * (2 + lineasIf(n - 1)); }
+  function pintarMas() {
+    var n = Number($("m-n").value);
+    $("m-num").textContent = n;
+    var hojas = factorial(n);
+    $("m-hojas").textContent = hojas;
+    var pts = $("m-puntos");
+    pts.classList.toggle("puntos--grandes", hojas <= 24);
+    pts.innerHTML = new Array(hojas + 1).join("<i></i>");
+    var li = lineasIf(n), ls = n + 6;
+    $("m-txt-if").textContent = "Con if a mano: " + (n <= 3 ? "" : "unas ") + li + " líneas de if";
+    $("m-txt-sorted").textContent = "Con sorted(): " + ls + " líneas en total";
+    var max = lineasIf(6);
+    $("m-barra-if").style.width = Math.max(0.6, li / max * 100) + "%";
+    $("m-barra-sorted").style.width = Math.max(0.6, ls / max * 100) + "%";
+    var lineas = ["corredores = ["];
+    GENTE.slice(0, n).forEach(function (g) { lineas.push("    [" + f1(g[0]) + ', "' + g[1] + '"],'); });
+    lineas.push("]", "podio = sorted(corredores)", "for i in range(len(podio)):", "    nombre = podio[i][1]", '    print(f"{i + 1}.° {nombre}")');
+    Python.escribir($("m-codigo"), lineas);
+  }
+  $("m-n").addEventListener("input", pintarMas);
+  pintarMas();
+
+  Problemas.iniciar({ id: "problema-podio" });
+})();
+</script>
+</body>
+</html>
