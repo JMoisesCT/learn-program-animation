@@ -57,7 +57,9 @@
 
   /* En escritorio, la salida (.lab__resultado) va a la derecha, bajo lo que se ve.
      Si esa columna queda mucho más alta que la del código, pasa a la izquierda,
-     bajo el código (clase paso--salida-abajo), para que el paso entre en la pantalla. */
+     bajo el código (clase paso--salida-abajo), para que el paso entre en la pantalla.
+     Se decide al entrar al paso, al cambiar el tamaño de la ventana y cuando lo que se
+     ve o la salida cambian de alto (ResizeObserver). */
   var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
 
   function equilibrar(paso) {
@@ -289,6 +291,21 @@
         clearTimeout(esperaEquilibrio);
         esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual]); }, 150);
       });
+      // Si después de entrar crece lo que se ve o la salida (un mensaje de error, el
+      // feedback de «Comprobar», una consola que se llena), se vuelve a decidir dónde va
+      // la salida. Si el reparto no cambia, el paso queda igual: no hay vaivén.
+      if (window.ResizeObserver) {
+        var esperaCrece;
+        var observador = new ResizeObserver(function () {
+          clearTimeout(esperaCrece);
+          esperaCrece = setTimeout(function () { if (pasos[actual]) equilibrar(pasos[actual]); }, 250);
+        });
+        pasos.forEach(function (p) {
+          p.querySelectorAll(":scope > .lab > .lab__visual, :scope > .lab > .lab__resultado").forEach(function (el) {
+            observador.observe(el);
+          });
+        });
+      }
     }
 
     pasos.forEach(function (p) { p.hidden = true; });
