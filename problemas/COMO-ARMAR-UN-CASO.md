@@ -94,6 +94,8 @@ Siete `.panel`; **cada uno cabe en una pantalla** (1366×657, 1280×800 y 390×8
 
 ## 7. Texto y estilo
 
+- **Que nada se preste a malinterpretarse** (pedido por el autor): las reglas del problema como pasos numerados o casos, cada uno con un ejemplo, no encadenadas en una frase («salvo…, salvo…» confundió); «divisible entre 4» en vez de «se divide entre 4»; sin dobles negaciones («no tardó más que ninguno»); singular y plural según el dato en las notas que arma el JS. Al terminar, releer todo el texto visible (también esas notas) como lo leería un alumno de 13 años.
+
 - Español neutro latinoamericano (ver `CLAUDE.md`): tú, pretérito simple, «computadora», «toca», «lugar», «espacio en blanco».
 - Frases cortas; una idea por tarjeta. Los textos de tarjetas y notas, de una a tres frases.
 - El estilo de cuaderno ya está en `problemas.css`: resaltador (`.resalta`) para la frase clave del bloque, nota al margen en lápiz para la pregunta o la conclusión. El CSS propio de la escena va en el `<style>` de la página.
@@ -134,10 +136,8 @@ Para proponer al autor. Cada una con su tema, nivel, idea central, escena posibl
 
 **Condicionales**
 - **La taquilla del cine** ★★: precio según edad y día (niño, adulto, mayor; martes a mitad de precio). Escena: la fila con su entrada. Giro: el orden de los `elif` importa. (Se parece al proyecto de Condicionales, la taquilla: cambiarle el giro si se hace.)
-- Ya publicados: ¿Es año bisiesto? ★★, El podio de la carrera ★★★ y El estacionamiento ★★★.
-- **¿Qué plan de celular me conviene?** ★★★: el costo de tres planes (uno por tramos) y el menor sin `min()`. Escena: las tres rectas de costo según los GB. Giro: en qué GB conviene cambiar de plan (los cruces).
-- **El día de mañana** ★★★★: dada una fecha, la de mañana (meses de 30 y 31, febrero con bisiesto, fin de año). Escena: un calendario de taco que arranca la hoja. Giro: ¿y si la fecha no existe (31/04)?
-- **¿Se puede armar el triángulo?** ★★★: tres palos, la suma de dos lados mayor que el tercero, y qué tipo es (y si es rectángulo, `a*a + b*b == c*c`). Escena: los palos que se cierran o no. Giro: con 2, 3 y 5 se aplana: `>` o `>=`.
+- Ya publicados: ¿Es año bisiesto? ★★, El podio de la carrera ★★★, ¿Se puede armar el triángulo? ★★★, ¿Qué plan de celular me conviene? ★★★, El estacionamiento ★★★ y El día de mañana ★★★★.
+- **El semáforo de la libreta** ★★: la nota final de 0 a 20 a una letra (AD 18–20, A 14–17, B 11–13, C 0–10) con `elif` en orden. Escena: una regla de 0 a 20 con sus zonas. Giro: con los `elif` en otro orden (empezar por `>= 11`) nadie saca AD.
 
 **Bucles**
 - **La alcancía** ★★: ahorrar cada semana hasta llegar a una meta, con un `while`. Giro: ¿y si cada semana ahorra un sol más?
