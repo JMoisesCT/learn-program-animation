@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Se puede armar el triángulo? · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: decidir si con tres palitos se arma un triángulo (a + b > c), de qué tipo es según sus lados y si es rectángulo, con condiciones anidadas, and y or, su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    :root {
+      --palo-a: #2f74c0; --palo-a-texto: #1d5594;
+      --palo-b: #d08a1f; --palo-b-texto: #8a5600;
+      --palo-c: #7a5230; --palo-c-texto: #63401f;
+    }
+
+    /* ---------- Los palitos (un SVG que se usa en la escena y en las demos) ---------- */
+    .palos { display: block; overflow: visible; }
+    .palo { stroke-linecap: round; transition: opacity 250ms; }
+    .palo--a { stroke: var(--palo-a); }
+    .palo--b { stroke: var(--palo-b); }
+    .palo--c { stroke: var(--palo-c); }
+    .palo--fantasma { stroke: #b9c1cf; stroke-dasharray: 0.1 9; opacity: 0.8; }
+    .palo--resalta { filter: drop-shadow(0 0 3px #ffb000) drop-shadow(0 0 2px #ffb000); }
+    .palos__arco { fill: none; stroke-width: 1.4; stroke-dasharray: 3 4; opacity: 0.6; }
+    .palos__arco--a { stroke: var(--palo-a); }
+    .palos__arco--b { stroke: var(--palo-b); }
+    .palos__clavo { fill: var(--tinta); }
+    .palos__etiqueta { font-family: var(--fuente-codigo); font-weight: 700; }
+    .palos__etiqueta--a { fill: var(--palo-a-texto); }
+    .palos__etiqueta--b { fill: var(--palo-b-texto); }
+    .palos__etiqueta--c { fill: var(--palo-c-texto); }
+    .palos__marcas line { stroke: var(--tinta); stroke-width: 2.2; stroke-linecap: round; }
+    .palos__recto { fill: none; stroke: var(--tinta); stroke-width: 1.8; }
+    .palos__hueco path { fill: none; stroke: var(--lapiz); stroke-width: 1.6; }
+    .palos__hueco text { fill: var(--lapiz); font-family: var(--fuente); font-weight: 700; }
+    .palos__toque { fill: none; stroke: var(--lapiz); stroke-width: 2; }
+
+    /* ---------- La escena ---------- */
+    .tri { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--esp-2); }
+    .tri__cuenta { align-self: center; min-height: 1.8rem; margin: 0; padding: 0.1em 0.8em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.8rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .tri__cuenta:empty { opacity: 0; }
+    .tri__dibujo { position: relative; flex: 1 1 0; min-height: 8rem; }
+    .tri__dibujo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .tri__pie { margin: 0; min-height: 1.5em; text-align: center; font: 700 var(--texto-sm) var(--serif); color: var(--tinta-suave); }
+    .tri__pie--si { color: var(--color-ok); }
+    .tri__pie--no { color: var(--lapiz); }
+    .tri__leyenda { margin: 0; text-align: center; font-size: 0.7rem; color: var(--tinta-suave); }
+    .tri__leyenda i { display: inline-block; width: 1.4em; margin-right: 0.3em; border-top: 2px dashed #9aa4b2; vertical-align: 0.25em; }
+
+    /* ---------- El reproductor: 16 líneas de código ---------- */
+    #reproductor .rep__codigo .codigo { font-size: 0.8rem; line-height: 1.38; padding: var(--esp-2) 0; }
+    #reproductor .rep__codigo .codigo .linea { min-height: 1.38em; }
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(10.5rem, 0.55fr); }
+    }
+    @media (max-width: 640px) {
+      #reproductor .rep__codigo .codigo { font-size: 0.76rem; }
+      .rep__codigo .codigo .linea { padding-left: 2.15rem; }
+      .rep__codigo .codigo .linea::before { width: 1.45rem; }
+      .rep[data-vista="escena"] .rep__escena { padding: var(--esp-2); }
+    }
+
+    @media (min-width: 641px) {
+      #flujo .flujo__nodo { font-size: 0.82rem; }
+      #flujo .flujo__nodo--decision { padding: 0.8em 1.5em; }
+    }
+    /* El diagrama deja lugar a su derecha para las flechas que vuelven */
+    @media (min-width: 701px) { #flujo-caja { padding: 0 2.6rem 0 1.6rem; } }
+    @media (max-width: 700px) { #flujo-caja { padding-left: 1.4rem; } }
+
+    /* ---------- Enunciado ---------- */
+    @media (min-width: 1180px) { .enunciado__hojas { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); } }
+    @media (max-width: 640px) {
+      .caso-ilustracion { max-height: 30vh; }
+      #caso .hoja-enunciado p, #caso .hoja-enunciado ul { margin-bottom: var(--esp-2); }
+    }
+    .tipos-lista { margin: 0.2rem 0 0.5rem; padding-left: 1.3rem; }
+    .tipos-lista li { margin: 0.05rem 0; }
+    .tipos-lista span { color: var(--tinta-suave); font-size: 0.92em; white-space: nowrap; }
+
+    /* ---------- Demos ---------- */
+    .concepto .chips-elegir { gap: 0.35rem; }
+    .concepto .chips-elegir button { min-height: 2.05rem; padding: 0 0.6rem; }
+    .demo-palos { display: block; width: 100%; height: 9rem; margin: var(--esp-1) 0; }
+    .demo-palos--chico { height: 6.6rem; }
+    .idea code { white-space: nowrap; }
+    .concepto .codigo { margin: var(--esp-2) 0; }
+    .concepto .codigo .linea { position: relative; }
+    .marca-cond { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0 0.45em; border-radius: 999px; font: 700 0.66rem var(--fuente); line-height: 1.5; }
+    .marca-cond--si { background: rgba(80, 200, 130, 0.25); color: #9ff0bf; }
+    .marca-cond--no { background: rgba(255, 255, 255, 0.1); color: #c7ced8; }
+    .marca-cond--nada { background: none; color: #8b96a3; font-style: italic; font-weight: 400; }
+    .cuenta-grande { margin: 0 !important; }
+    .cuenta-grande .ok { color: var(--color-ok); }
+    .cuenta-grande .mal { color: var(--lapiz); }
+    .leyenda-chica { margin: 0 !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .leyenda-chica i { display: inline-block; width: 1.4em; margin-right: 0.3em; border-top: 2px dashed #9aa4b2; vertical-align: 0.25em; }
+    .linea-eval { display: grid; gap: 0.15rem; margin: 0 0 var(--esp-2); font: 700 0.76rem var(--fuente-codigo); }
+    .linea-eval .gris { color: var(--tinta-suave); font-weight: 400; }
+    .cuadrados { display: block; width: 100%; height: 10rem; margin: var(--esp-1) 0; }
+    .cuadrados text { font-family: var(--fuente-codigo); font-weight: 700; }
+    .consola-mini { margin: 0 0 var(--esp-2); padding: 0.35rem var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs) var(--fuente-codigo); min-height: 1.4em; white-space: pre; }
+    .consola-mini::before { content: "Consola  "; color: #8b96a3; font-weight: 400; font-size: 0.85em; }
+
+    /* ---------- Detalles ---------- */
+    .deslizadores { display: grid; gap: 0.1rem; margin: 0 0 var(--esp-2); }
+    .deslizadores .control-fila { margin: 0; }
+    .deslizadores label { min-width: 3.6rem; font-family: var(--fuente-codigo); }
+    .reglas3 { display: grid; gap: 0.3rem; margin: 0 0 var(--esp-2); padding: 0; list-style: none; }
+    .reglas3 li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 var(--esp-2); padding: 0.3rem var(--esp-3); border-radius: var(--radio-sm); background: var(--papel); font: 700 0.8rem/1.4 var(--fuente-codigo) !important; }
+    .reglas3 li small { font: 600 0.7rem var(--fuente); color: var(--tinta-suave); }
+    .reglas3 .ok { color: var(--color-ok); }
+    .reglas3 .mal { color: var(--lapiz); }
+    .reglas3 li.decide { box-shadow: inset 4px 0 0 var(--azul-tinta); }
+    .recta { position: relative; height: 3.2rem; margin: var(--esp-2) 0.6rem var(--esp-1); }
+    .recta__eje { position: absolute; left: 0; right: 0; top: 1.6rem; border-top: 2px solid var(--tinta-suave); }
+    .recta__num { position: absolute; top: 1.85rem; transform: translateX(-50%); font: 600 0.66rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .recta__num::before { content: ""; position: absolute; left: 50%; top: -0.4rem; height: 0.35rem; border-left: 1.5px solid var(--tinta-suave); }
+    .recta__zona { position: absolute; top: 1.25rem; height: 0.7rem; border-radius: 999px; background: rgba(36, 69, 176, 0.18); transition: left 200ms, width 200ms; }
+    .recta__pin { position: absolute; top: 0; transform: translateX(-50%); display: grid; place-items: center; min-width: 1.5rem; height: 1.3rem; padding: 0 0.25em; border-radius: 6px; color: #fff; font: 700 0.72rem var(--fuente-codigo); transition: left 200ms; }
+    .recta__pin::after { content: ""; position: absolute; left: 50%; bottom: -0.35rem; transform: translateX(-50%); border: 0.2rem solid transparent; border-top-color: inherit; }
+    .recta__pin--a { background: var(--palo-a); border-color: var(--palo-a); }
+    .recta__pin--b { background: var(--palo-b); border-color: var(--palo-b); top: -0.05rem; }
+    .recta__pin--c { background: var(--palo-c); border-color: var(--palo-c); }
+    .recta__pin--junto { opacity: 0.9; }
+    .evals { display: flex; flex-wrap: wrap; gap: 0.3rem 0.5rem; margin: 0 0 var(--esp-2); font: 700 0.76rem var(--fuente-codigo); }
+    .evals span { padding: 0.1em 0.5em; border-radius: 6px; background: var(--papel); }
+    .evals .si { background: var(--color-ok-suave); color: var(--color-ok); }
+    .evals .gris { padding: 0.1em 0; background: none; color: var(--tinta-suave); }
+    .veredicto .gris { color: var(--tinta-suave); }
+    .veredicto { margin: 0 !important; font-size: var(--texto-xs) !important; line-height: 1.45 !important; }
+    .veredicto--ok { color: var(--color-ok); }
+    .veredicto--mal { color: var(--lapiz); }
+    .veredicto strong { color: inherit; }
+    .borde-fila { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--esp-2); align-items: center; }
+    .borde-fila .codigo { margin: 0; font-size: 0.74rem !important; line-height: 1.5; padding: var(--esp-2) 0; }
+    .borde-fila .codigo .linea { padding-left: 2.2rem; padding-right: var(--esp-2); }
+    .borde-fila .codigo .linea::before { width: 1.5rem; }
+    .borde-fila svg { display: block; width: 100%; height: 6rem; }
+    .borde-fila__real { margin: 0 !important; text-align: center; font-size: 0.68rem !important; color: var(--tinta-suave); line-height: 1.3 !important; }
+
+    /* ---------- 6. ¿Y con decimales? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1.05fr 1fr; } }
+    .mas p { margin: 0 0 var(--esp-3); }
+    .mas .codigo { margin: 0 0 var(--esp-3); font-size: 0.8rem; line-height: 1.55; padding: var(--esp-2) 0; }
+    .mas .codigo .linea { padding-left: 2.4rem; padding-right: var(--esp-3); }
+    .mas .codigo .linea::before { width: 1.6rem; }
+    .mas__dibujo { display: grid; gap: var(--esp-3); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .mas__dibujo h3 { margin: 0; font-size: var(--texto-md); }
+    .tabla-dec { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .tabla-dec th, .tabla-dec td { padding: 0.3em 0.4em; border-bottom: 1px dashed var(--papel-borde); text-align: left; vertical-align: baseline; }
+    .tabla-dec th { font-weight: 600; color: var(--tinta-suave); white-space: nowrap; }
+    .tabla-dec td { font-family: var(--fuente-codigo); font-weight: 700; overflow-wrap: anywhere; }
+    .tabla-dec tr.sep th, .tabla-dec tr.sep td { border-top: 2px solid var(--tinta); }
+    .tabla-dec .ok { color: var(--color-ok); }
+    .tabla-dec .mal { color: var(--lapiz); }
+    .tabla-dec .gris { color: var(--tinta-suave); font-weight: 400; }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); gap: var(--esp-2); }
+      .mas .codigo { font-size: 0.68rem; }
+      #decimales .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #decimales .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .concepto .codigo .linea { padding-left: 2.3rem; padding-right: 0.5rem; }
+      .concepto .codigo .linea::before { width: 1.6rem; }
+      .borde-fila { grid-template-columns: minmax(0, 1fr); }
+      .borde-fila svg { height: 5rem; }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Condicionales</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#decimales"><span>6 · ¿Y con decimales?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Condicionales</p>
+          <h1>¿Se puede armar el triángulo?</h1>
+          <p class="caso-bajada">Con tres palitos no siempre se arma un triángulo. Un programa que lo decide con una sola comparación y dice qué triángulo sale.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 5"><span class="estrellas__llenas">★★★</span>☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/condicionales/index.html">if, elif y else</a></li>
+              <li><a href="../../lecciones/condicionales/logicos/index.html">and y or</a></li>
+              <li><a href="../../lecciones/condicionales/anidados/index.html">condiciones anidadas</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 230" role="img" aria-label="Tres palitos de 3, 4 y 5 que cierran un triángulo con una esquina recta, y debajo tres palitos de 2, 3 y 8 cuyas puntas no llegan a tocarse">
+          <g fill="none" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.55">
+            <path d="M40 40 A90 90 0 0 1 130 130" stroke="#2f74c0"/>
+            <path d="M190 10 A120 120 0 0 0 70 130" stroke="#d08a1f"/>
+          </g>
+          <g stroke-linecap="round" stroke-width="8">
+            <line x1="40" y1="130" x2="190" y2="130" stroke="#7a5230"/>
+            <line x1="40" y1="130" x2="94" y2="58" stroke="#2f74c0"/>
+            <line x1="190" y1="130" x2="94" y2="58" stroke="#d08a1f"/>
+          </g>
+          <path d="M88 66 L96 72 L102 64" fill="none" stroke="#1f2a44" stroke-width="1.8"/>
+          <g fill="#1f2a44"><circle cx="40" cy="130" r="3"/><circle cx="190" cy="130" r="3"/></g>
+          <g font-family="monospace" font-weight="700" font-size="14">
+            <text x="56" y="92" text-anchor="middle" fill="#1d5594">3</text>
+            <text x="152" y="88" text-anchor="middle" fill="#8a5600">4</text>
+            <text x="115" y="150" text-anchor="middle" fill="#63401f">5</text>
+          </g>
+          <g fill="none" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.55">
+            <path d="M48 168 A36 36 0 0 1 84 204" stroke="#2f74c0"/>
+            <path d="M192 150 A54 54 0 0 0 138 204" stroke="#d08a1f"/>
+          </g>
+          <g stroke-linecap="round" stroke-width="6">
+            <line x1="48" y1="210" x2="192" y2="210" stroke="#7a5230"/>
+            <line x1="48" y1="203" x2="84" y2="203" stroke="#2f74c0"/>
+            <line x1="138" y1="203" x2="192" y2="203" stroke="#d08a1f"/>
+          </g>
+          <path d="M84 196 V192 H138 V196" fill="none" stroke="#b4400e" stroke-width="1.5"/>
+          <text x="111" y="187" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-weight="700" font-size="13" fill="#b4400e">¿?</text>
+          <g font-family="monospace" font-weight="700" font-size="11">
+            <text x="66" y="196" text-anchor="middle" fill="#1d5594">2</text>
+            <text x="165" y="196" text-anchor="middle" fill="#8a5600">3</text>
+            <text x="120" y="226" text-anchor="middle" fill="#63401f">8</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>En el taller de Arte, Tomás arma triángulos con <strong>palitos de madera</strong> para un móvil. En la bolsa hay palitos de varias medidas, en centímetros.</p>
+            <p>Con 3, 4 y 5 cm, el triángulo se cerró enseguida. Con 2, 3 y 8 cm, <span class="resalta">por más que giró los dos cortos, sus puntas no se tocaron</span>. <span class="nota-margen">¿Cómo saber, antes de pegar, si tres palitos cierran? ¿Y qué triángulo sale?</span></p>
+            <div class="ticket" aria-label="Los palitos de Tomás">
+              <h3>BOLSA DE PALITOS</h3>
+              <div class="ticket__fila"><span>Trío 1</span><span>3 · 4 · 5 cm ✓</span></div>
+              <div class="ticket__fila"><span>Trío 2</span><span>2 · 3 · 8 cm ✗</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Trío 3</span><span>5 · 5 · 8 cm ¿?</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dadas las medidas de tres palitos, diga si <strong>se puede armar un triángulo</strong> con ellos y, si se puede, de qué tipo es según sus lados:</p>
+            <ol class="tipos-lista">
+              <li><strong>Equilátero</strong>: los tres lados iguales <span>(6, 6, 6)</span>.</li>
+              <li><strong>Isósceles</strong>: solo dos lados iguales <span>(5, 5, 8)</span>.</li>
+              <li><strong>Escaleno</strong>: los tres lados distintos <span>(3, 4, 5)</span>.</li>
+            </ol>
+            <p>Y si además es <strong>rectángulo</strong>: si tiene una esquina recta, como la de un cuaderno.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>a</code>, <code>b</code>, <code>c</code>: medidas en cm, enteros mayores que 0.</li>
+              <li>Vienen <strong>de menor a mayor</strong>: a ≤ b ≤ c.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Si no se arma, <code>No se puede armar</code>. Si se arma, <code>Triángulo</code> y el tipo; si además es rectángulo, otra línea: <code>Y es rectángulo</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>a = 3
+b = 4
+c = 5</td><td>Triángulo escaleno
+Y es rectángulo</td></tr>
+                <tr><td>a = 5
+b = 5
+c = 8</td><td>Triángulo isósceles</td></tr>
+                <tr><td>a = 2
+b = 3
+c = 8</td><td>No se puede armar</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>La regla de los palitos</h3>
+            <p>Los dos cortos giran desde las puntas del largo. Se tocan arriba solo si, juntos, son <strong>más largos</strong> que él: <code>a + b &gt; c</code>.</p>
+            <div class="control-fila">
+              <label for="d1-c">a = 3 · b = 4 · c = <span id="d1-num">6</span></label>
+              <input type="range" id="d1-c" min="4" max="10" value="6">
+            </div>
+            <svg class="demo-palos" id="d1-svg" aria-hidden="true"></svg>
+            <p class="leyenda-chica"><i></i>hasta dónde llega la punta de cada corto</p>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3><code>and</code> y <code>or</code> cuentan lados iguales</h3>
+            <p>De menor a mayor, dos lados iguales quedan juntos: <code>a</code> con <code>b</code>, o <code>b</code> con <code>c</code>.</p>
+            <div class="chips-elegir" id="d2-chips" role="group" aria-label="Elige tres palitos">
+              <button type="button" data-t="6,6,6" aria-pressed="false">6, 6, 6</button>
+              <button type="button" data-t="5,5,8" aria-pressed="true">5, 5, 8</button>
+              <button type="button" data-t="4,7,7" aria-pressed="false">4, 7, 7</button>
+              <button type="button" data-t="3,4,5" aria-pressed="false">3, 4, 5</button>
+            </div>
+            <svg class="demo-palos demo-palos--chico" id="d2-svg" aria-hidden="true"></svg>
+            <pre class="codigo" id="d2-codigo"></pre>
+            <div class="linea-eval" id="d2-eval" aria-live="polite"></div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>El cuadrado de un número</h3>
+            <p><code>a * a</code> es el área de un cuadrado de lado <code>a</code>. Si los cuadrados de los dos cortos juntos son iguales al del largo, la esquina es recta (Pitágoras).</p>
+            <div class="chips-elegir" id="d3-chips" role="group" aria-label="Elige tres palitos">
+              <button type="button" data-t="3,4,5" aria-pressed="true">3, 4, 5</button>
+              <button type="button" data-t="6,8,10" aria-pressed="false">6, 8, 10</button>
+              <button type="button" data-t="5,5,8" aria-pressed="false">5, 5, 8</button>
+              <button type="button" data-t="4,5,6" aria-pressed="false">4, 5, 6</button>
+            </div>
+            <svg class="cuadrados" id="d3-svg" aria-hidden="true"></svg>
+            <p class="cuenta-grande" id="d3-cuenta" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo-caja"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 3, 4 y 5</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Primero se pregunta si se arma. <strong>Solo si se arma</strong> tiene sentido preguntar de qué tipo es: por eso esas preguntas van dentro del <code>else</code>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota los palitos</strong> De menor a mayor: 3, 4 y 5.</li>
+              <li data-idea="2"><strong>¿Cierran?</strong> Si los dos cortos juntos no pasan al largo (<code>a + b &lt;= c</code>), no se arma.</li>
+              <li data-idea="3"><strong>¿Cuántos lados iguales?</strong> Tres: equilátero. Dos: isósceles. Ninguno: escaleno.</li>
+              <li data-idea="4"><strong>¿Tiene esquina recta?</strong> Si <code>a * a + b * b</code> es igual a <code>c * c</code>, es rectángulo.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Por qué basta una comparación?</h3>
+            <p>En un triángulo, <strong>cada</strong> lado es más corto que los otros dos juntos: son tres reglas. Mueve los palitos (siempre quedan de menor a mayor):</p>
+            <div class="deslizadores">
+              <div class="control-fila"><label for="u-a">a = <span id="u-a-n"></span></label><input type="range" id="u-a" min="1" max="10" value="3"></div>
+              <div class="control-fila"><label for="u-b">b = <span id="u-b-n"></span></label><input type="range" id="u-b" min="1" max="10" value="4"></div>
+              <div class="control-fila"><label for="u-c">c = <span id="u-c-n"></span></label><input type="range" id="u-c" min="1" max="10" value="8"></div>
+            </div>
+            <ul class="reglas3" id="u-reglas" aria-live="polite"></ul>
+            <p class="nota-margen" style="margin:0">Si los datos vinieran desordenados, harían falta las tres, u ordenarlos primero, como en <a href="../podio/index.html">El podio</a>.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué no hace falta <code>a == c</code>?</h3>
+            <p>De menor a mayor, <code>b</code> siempre queda entre <code>a</code> y <code>c</code> (la franja azul). Acerca <code>a</code> y <code>c</code>:</p>
+            <div class="deslizadores">
+              <div class="control-fila"><label for="i-a">a = <span id="i-a-n"></span></label><input type="range" id="i-a" min="1" max="8" value="2"></div>
+              <div class="control-fila"><label for="i-c">c = <span id="i-c-n"></span></label><input type="range" id="i-c" min="1" max="8" value="7"></div>
+            </div>
+            <div class="recta" id="i-recta" aria-hidden="true"></div>
+            <div class="evals" id="i-evals" aria-live="polite"></div>
+            <p class="veredicto" id="i-texto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <p>Dos datos que ponen a prueba el programa. Elige uno:</p>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso">
+              <button type="button" data-k="0" aria-pressed="true">2, 3, 5</button>
+              <button type="button" data-k="1" aria-pressed="false">2, 3, 5 con &lt;</button>
+              <button type="button" data-k="2" aria-pressed="false">8, 2, 3</button>
+            </div>
+            <div class="borde-fila">
+              <pre class="codigo" id="b-codigo"></pre>
+              <div>
+                <svg id="b-svg" aria-hidden="true"></svg>
+                <p class="borde-fila__real">los palitos de verdad</p>
+              </div>
+            </div>
+            <p class="consola-mini" id="b-salida" aria-live="polite"></p>
+            <p class="veredicto" id="b-texto"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Y con decimales? -->
+    <section class="panel" id="decimales">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Y con decimales?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Para la pared del salón, Tomás quiere un triángulo grande, en metros: <strong>0.5, 1.2 y 1.3</strong>. Es como el de 5, 12 y 13 (25 + 144 = 169): tiene esquina recta. Pero el programa solo dice «Triángulo escaleno».</p>
+            <p>En Python, <code>0.5 * 0.5 + 1.2 * 1.2</code> da <code>1.69</code>, pero <code>1.3 * 1.3</code> da <code>1.6900000000000002</code>. La computadora guarda los decimales en binario y casi nunca exactos: <span class="resalta">con decimales, no se puede confiar en <code>==</code></span>.</p>
+            <pre class="codigo" id="m-codigo" aria-label="El arreglo"></pre>
+            <p class="nota-margen" style="margin:0">El arreglo: si la diferencia es menor que una millonésima (0.000001), se cuenta como igual.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <h3>Prueba con decimales</h3>
+            <div class="chips-elegir" id="m-chips" role="group" aria-label="Elige tres palitos en metros">
+              <button type="button" data-k="0" aria-pressed="false">0.3, 0.4, 0.5</button>
+              <button type="button" data-k="1" aria-pressed="true">0.5, 1.2, 1.3</button>
+              <button type="button" data-k="2" aria-pressed="false">0.8, 1.5, 1.7</button>
+              <button type="button" data-k="3" aria-pressed="false">0.6, 0.8, 1.0</button>
+              <button type="button" data-k="4" aria-pressed="false">0.5, 1.2, 1.4</button>
+            </div>
+            <table class="tabla-dec" aria-live="polite">
+              <tbody id="m-tabla"></tbody>
+            </table>
+            <p class="veredicto" id="m-texto"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../podio/index.html">← <span class="largo">Caso anterior: </span>El podio de la carrera</a>
+          <a class="btn btn-primario" href="../celular/index.html"><span class="largo">Siguiente caso: </span>¿Qué plan de celular me conviene? →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function py(b) { return b ? "True" : "False"; }
+  function bool(b) { return '<span class="booleano booleano--' + (b ? "true" : "false") + '">' + py(b) + "</span>"; }
+  // Cómo escribe Python un decimal: 1.0 y no 1
+  function pyf(x) { return Number.isInteger(x) ? x.toFixed(1) : String(x); }
+  function elegir(grupo, alElegir) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        grupo.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        alElegir(b);
+      });
+    });
+  }
+  function trio(b) { return b.getAttribute("data-t").split(",").map(Number); }
+  // Lo que imprime el programa con a, b y c (con <= o con <)
+  function salida(a, b, c, estricto) {
+    var no = estricto ? a + b < c : a + b <= c;
+    if (no) return ["No se puede armar"];
+    var tipo = a === b && b === c ? "equilátero" : a === b || b === c ? "isósceles" : "escaleno";
+    var r = ["Triángulo " + tipo];
+    if (a * a + b * b === c * c) r.push("Y es rectángulo");
+    return r;
+  }
+  function pose(a, b, c) { return a + b > c ? "cerrado" : a + b === c ? "plano" : "abierto"; }
+  function igualesDe(a, b, c) {
+    if (a === b && b === c) return ["a", "b", "c"];
+    if (a === b) return ["a", "b"];
+    if (b === c) return ["b", "c"];
+    return [];
+  }
+
+  /* ---------- Los palitos: el largo abajo y los dos cortos que giran desde sus puntas ----------
+     crearPalos(svg, { u, ancho, alto, base, grosor, letra, cortas, huecoTexto })
+       .pintar({ a, b, c, vistos, pose, arcos, iguales, recto, resalta }, animar, duracion)
+     pose: "parados" (los cortos de pie), "cerrado" (se tocan arriba), "abierto" (acostados,
+     sin llegar) o "plano" (acostados, apenas se tocan). */
+  var NS = "http://www.w3.org/2000/svg";
+  function nodoSvg(tag, at, padre) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in at) e.setAttribute(k, at[k]);
+    if (padre) padre.appendChild(e);
+    return e;
+  }
+  function crearPalos(svg, o) {
+    var g = o.grosor || 7, letra = o.letra || 12;
+    svg.setAttribute("viewBox", "0 0 " + o.ancho + " " + o.alto);
+    svg.classList.add("palos");
+    var gArcos = nodoSvg("g", {}, svg);
+    var arcos = {
+      a: nodoSvg("path", { "class": "palos__arco palos__arco--a" }, gArcos),
+      b: nodoSvg("path", { "class": "palos__arco palos__arco--b" }, gArcos)
+    };
+    var palo = {};
+    ["c", "a", "b"].forEach(function (k) {
+      palo[k] = nodoSvg("line", { "class": "palo palo--" + k, "stroke-width": k === "c" ? g + 1 : g }, svg);
+    });
+    var hueco = nodoSvg("g", { "class": "palos__hueco" }, svg);
+    var huecoRaya = nodoSvg("path", {}, hueco);
+    var huecoTexto = nodoSvg("text", { "text-anchor": "middle", "font-size": letra - 1 }, hueco);
+    var marcas = nodoSvg("g", { "class": "palos__marcas" }, svg);
+    var recto = nodoSvg("path", { "class": "palos__recto" }, svg);
+    var toque = nodoSvg("circle", { "class": "palos__toque", r: g * 0.9 }, svg);
+    var clavos = [0, 1].map(function () { return nodoSvg("circle", { "class": "palos__clavo", r: Math.max(2, g * 0.38) }, svg); });
+    var etiq = {};
+    ["a", "b", "c"].forEach(function (k) {
+      etiq[k] = nodoSvg("text", { "class": "palos__etiqueta palos__etiqueta--" + k, "text-anchor": "middle", "font-size": letra }, svg);
+    });
+    var dibujado = null, anim = null;
+
+    function linea(l, p, q) { l.setAttribute("x1", p[0]); l.setAttribute("y1", p[1]); l.setAttribute("x2", q[0]); l.setAttribute("y2", q[1]); }
+    function ver(el, si) { el.style.display = si ? "" : "none"; }
+    function unidad(p, q) { var dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; }
+
+    function finales(e) {
+      if (e.pose === "cerrado") {
+        return {
+          ta: Math.acos((e.a * e.a + e.c * e.c - e.b * e.b) / (2 * e.a * e.c)),
+          tb: Math.acos((e.b * e.b + e.c * e.c - e.a * e.a) / (2 * e.b * e.c))
+        };
+      }
+      if (e.pose === "abierto" || e.pose === "plano") return { ta: 0, tb: 0 };
+      return { ta: Math.PI / 2, tb: Math.PI / 2 };
+    }
+
+    function dibujar(e, ang, moviendo) {
+      var u = o.u, cu = e.c * u, x0 = (o.ancho - cu) / 2, y0 = o.base;
+      var vistos = e.vistos === undefined ? 3 : e.vistos;
+      var acostado = e.pose === "abierto" || e.pose === "plano";
+      // Acostados, los cortos quedan encima del largo (se ven los dos)
+      function alzar(t) { return acostado ? (g + 0.5) * Math.max(0, 1 - t / 0.3) : 0; }
+      var la = alzar(ang.ta), lb = alzar(ang.tb);
+      var A0 = [x0, y0 - la], A1 = [x0 + e.a * u * Math.cos(ang.ta), y0 - la - e.a * u * Math.sin(ang.ta)];
+      var B0 = [x0 + cu, y0 - lb], B1 = [x0 + cu - e.b * u * Math.cos(ang.tb), y0 - lb - e.b * u * Math.sin(ang.tb)];
+      linea(palo.c, [x0, y0], [x0 + cu, y0]);
+      linea(palo.a, A0, A1);
+      linea(palo.b, B0, B1);
+      var visto = { a: vistos >= 1, b: vistos >= 2, c: vistos >= 3 };
+      var resalta = e.resalta || [];
+      ["a", "b", "c"].forEach(function (k) {
+        palo[k].setAttribute("class", "palo palo--" + (visto[k] ? k : "fantasma") + (visto[k] && resalta.indexOf(k) !== -1 ? " palo--resalta" : ""));
+      });
+      clavos[0].setAttribute("cx", x0); clavos[0].setAttribute("cy", y0);
+      clavos[1].setAttribute("cx", x0 + cu); clavos[1].setAttribute("cy", y0);
+      clavos.forEach(function (c) { ver(c, visto.c); });
+
+      // Hasta dónde llega cada punta: un cuarto de círculo
+      var conArcos = !!e.arcos && visto.c;
+      ver(arcos.a, conArcos); ver(arcos.b, conArcos);
+      if (conArcos) {
+        var ra = e.a * u, rb = e.b * u;
+        arcos.a.setAttribute("d", "M" + x0 + " " + (y0 - ra) + " A" + ra + " " + ra + " 0 0 1 " + (x0 + ra) + " " + y0);
+        arcos.b.setAttribute("d", "M" + (x0 + cu) + " " + (y0 - rb) + " A" + rb + " " + rb + " 0 0 0 " + (x0 + cu - rb) + " " + y0);
+      }
+
+      // Etiquetas, del lado de afuera de cada palito
+      var off = g / 2 + letra * 0.75;
+      var corto = { a: o.cortas ? String(e.a) : "a = " + e.a, b: o.cortas ? String(e.b) : "b = " + e.b, c: o.cortas ? String(e.c) : "c = " + e.c };
+      function etiquetar(k, p, q, n) {
+        // Del lado de afuera: si el palito está de pie, el texto cuelga hacia ese lado
+        var ancla = n[0] < -0.3 ? "end" : n[0] > 0.3 ? "start" : "middle";
+        var dist = ancla === "middle" ? off : g / 2 + letra * 0.45;
+        // Si el lado lleva la rayita de «igual» en el medio, la etiqueta se corre hacia la punta fija
+        var f = (e.iguales || []).indexOf(k) !== -1 && k !== "c" ? 0.28 : 0.5;
+        var m = [p[0] + (q[0] - p[0]) * f + n[0] * dist, p[1] + (q[1] - p[1]) * f + n[1] * dist + letra * 0.35];
+        etiq[k].setAttribute("text-anchor", ancla);
+        etiq[k].setAttribute("x", m[0]); etiq[k].setAttribute("y", m[1]);
+        etiq[k].textContent = corto[k];
+        ver(etiq[k], visto[k] && !(o.sin && o.sin.indexOf(k) !== -1));
+      }
+      etiquetar("a", A0, A1, [-Math.sin(ang.ta), -Math.cos(ang.ta)]);
+      etiquetar("b", B0, B1, [Math.sin(ang.tb), -Math.cos(ang.tb)]);
+      etiquetar("c", [x0, y0], [x0 + cu, y0], [0, 1]);
+
+      // Los lados iguales llevan una rayita
+      marcas.textContent = "";
+      if (!moviendo) (e.iguales || []).forEach(function (k) {
+        var p = k === "a" ? A0 : k === "b" ? B0 : [x0, y0], q = k === "a" ? A1 : k === "b" ? B1 : [x0 + cu, y0];
+        var d = unidad(p, q), n = [-d[1], d[0]], m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], t = g * 0.95;
+        nodoSvg("line", { x1: m[0] - n[0] * t, y1: m[1] - n[1] * t, x2: m[0] + n[0] * t, y2: m[1] + n[1] * t }, marcas);
+      });
+
+      // La esquina recta, con su cuadradito
+      var conRecto = !moviendo && !!e.recto && e.pose === "cerrado";
+      ver(recto, conRecto);
+      if (conRecto) {
+        var s = Math.max(7, u * 0.42), u1 = unidad(A1, A0), u2 = unidad(A1, B0);
+        recto.setAttribute("d", "M" + (A1[0] + s * u1[0]) + " " + (A1[1] + s * u1[1]) +
+          " L" + (A1[0] + s * (u1[0] + u2[0])) + " " + (A1[1] + s * (u1[1] + u2[1])) +
+          " L" + (A1[0] + s * u2[0]) + " " + (A1[1] + s * u2[1]));
+      }
+
+      // El hueco que falta (no llegan) o el punto donde apenas se tocan (se aplanan)
+      var conHueco = !moviendo && e.pose === "abierto" && visto.c;
+      ver(hueco, conHueco);
+      if (conHueco) {
+        // La raya del hueco va por encima de las etiquetas de los cortos
+        var yp = y0 - la - g / 2 - 2, yh = yp - letra - 6;
+        huecoRaya.setAttribute("d", "M" + A1[0] + " " + yp + " V" + yh + " H" + B1[0] + " V" + yp);
+        huecoTexto.setAttribute("x", (A1[0] + B1[0]) / 2);
+        huecoTexto.setAttribute("y", yh - 5);
+        huecoTexto.textContent = o.huecoTexto === false ? "" : (o.cortas ? "faltan " : "faltan ") + (e.c - e.a - e.b) + (o.cortas ? "" : " cm");
+      }
+      var conToque = !moviendo && e.pose === "plano" && visto.c;
+      ver(toque, conToque);
+      if (conToque) { toque.setAttribute("cx", A1[0]); toque.setAttribute("cy", A1[1]); }
+      dibujado = ang;
+    }
+
+    function pintar(e, animar, duracion) {
+      if (anim) { cancelAnimationFrame(anim); anim = null; }
+      var fin = finales(e);
+      var desde = dibujado;
+      if (!animar || !desde || (Math.abs(desde.ta - fin.ta) < 1e-6 && Math.abs(desde.tb - fin.tb) < 1e-6)) {
+        dibujar(e, fin, false);
+        return;
+      }
+      var t0 = null, dur = duracion || 900;
+      function cuadro(t) {
+        if (t0 === null) t0 = t;
+        var k = Math.min(1, (t - t0) / dur);
+        var s = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        dibujar(e, { ta: desde.ta + (fin.ta - desde.ta) * s, tb: desde.tb + (fin.tb - desde.tb) * s }, k < 1);
+        if (k < 1) anim = requestAnimationFrame(cuadro);
+        else anim = null;
+      }
+      anim = requestAnimationFrame(cuadro);
+    }
+    function olvidar() { if (anim) cancelAnimationFrame(anim); anim = null; dibujado = null; }
+    return { pintar: pintar, olvidar: olvidar };
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "a = " + d.a,
+      "b = " + d.b,
+      "c = " + d.c,
+      "",
+      "if a + b <= c:",
+      '    print("No se puede armar")',
+      "else:",
+      "    if a == b and b == c:",
+      '        tipo = "equilátero"',
+      "    elif a == b or b == c:",
+      '        tipo = "isósceles"',
+      "    else:",
+      '        tipo = "escaleno"',
+      '    print(f"Triángulo {tipo}")',
+      "    if a * a + b * b == c * c:",
+      '        print("Y es rectángulo")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 0, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4];
+
+  /* ---------- 2. Demos ---------- */
+  // La regla de los palitos: a = 3, b = 4 y el largo se mueve
+  var d1 = crearPalos($("d1-svg"), { u: 22, ancho: 10 * 22 + 40, alto: 112, base: 84, grosor: 6, letra: 12, huecoTexto: false, sin: ["c"] });
+  function pintarD1() {
+    var c = Number($("d1-c").value), s = 7, p = pose(3, 4, c);
+    $("d1-num").textContent = c;
+    d1.pintar({ a: 3, b: 4, c: c, pose: p, arcos: true, recto: 9 + 16 === c * c }, false);
+    $("d1-cuenta").innerHTML = p === "cerrado"
+      ? '3 + 4 = 7 &gt; ' + c + ' <span class="ok">→ se arma</span>'
+      : p === "plano"
+        ? '3 + 4 = 7 = ' + c + ' <span class="mal">→ se aplanan</span>'
+        : '3 + 4 = 7 &lt; ' + c + ' <span class="mal">→ faltan ' + (c - s) + " cm</span>";
+  }
+  $("d1-c").addEventListener("input", pintarD1);
+  pintarD1();
+
+  // and y or: cuántos lados iguales
+  var d2 = crearPalos($("d2-svg"), { u: 14, ancho: 8 * 14 + 40, alto: 96, base: 80, grosor: 5, letra: 11, cortas: true });
+  function marcaCond(linea, clase, texto) {
+    var m = linea.querySelector(".marca-cond");
+    if (!m) { m = document.createElement("span"); linea.appendChild(m); }
+    m.className = "marca-cond marca-cond--" + clase;
+    m.textContent = texto;
+  }
+  function pintarD2(t) {
+    var a = t[0], b = t[1], c = t[2];
+    var ab = a === b, bc = b === c, y = ab && bc, o = ab || bc;
+    Python.escribir($("d2-codigo"), [
+      "if a == b and b == c:",
+      '    tipo = "equilátero"',
+      "elif a == b or b == c:",
+      '    tipo = "isósceles"',
+      "else:",
+      '    tipo = "escaleno"'
+    ]);
+    var ls = $("d2-codigo").querySelectorAll(".linea");
+    var corre = y ? 1 : o ? 3 : 5;
+    var activas = y ? [0, 1] : o ? [0, 2, 3] : [0, 2, 4, 5];
+    Codigo.marcar($("d2-codigo"), { activas: [corre], saltadas: [0, 1, 2, 3, 4, 5].filter(function (k) { return activas.indexOf(k) === -1; }) });
+    marcaCond(ls[0], y ? "si" : "no", py(y));
+    if (y) marcaCond(ls[2], "nada", "ni se pregunta");
+    else marcaCond(ls[2], o ? "si" : "no", py(o));
+    d2.pintar({ a: a, b: b, c: c, pose: "cerrado", iguales: igualesDe(a, b, c) }, false);
+    var tipo = y ? "equilátero" : o ? "isósceles" : "escaleno";
+    $("d2-eval").innerHTML = '<span class="gris">a == b → ' + py(ab) + " · b == c → " + py(bc) + "</span>" +
+      "<span>tipo = '" + tipo + "'</span>";
+  }
+  elegir($("d2-chips"), function (b) { pintarD2(trio(b)); });
+  pintarD2([5, 5, 8]);
+
+  // El cuadrado de un número: cuadrados sobre los lados
+  function pintarCuadrados(svg, a, b, c) {
+    svg.textContent = "";
+    var x = (a * a + c * c - b * b) / (2 * c), y = Math.sqrt(Math.max(0, a * a - x * x));
+    var L = [0, 0], R = [c, 0], P = [x, -y];
+    var G = [(L[0] + R[0] + P[0]) / 3, (L[1] + R[1] + P[1]) / 3];
+    var lados = [[L, P, a, "a"], [R, P, b, "b"], [L, R, c, "c"]];
+    var COL = { a: "#2f74c0", b: "#d08a1f", c: "#7a5230" };
+    var minx = 0, maxx = c, miny = -y, maxy = 0;
+    var dibujos = lados.map(function (l) {
+      var U = l[0], V = l[1], n = l[2];
+      var d = [(V[0] - U[0]) / n, (V[1] - U[1]) / n];
+      var nn = [-d[1], d[0]];
+      if (nn[0] * (G[0] - U[0]) + nn[1] * (G[1] - U[1]) > 0) nn = [-nn[0], -nn[1]];
+      var esq = [U, V, [V[0] + nn[0] * n, V[1] + nn[1] * n], [U[0] + nn[0] * n, U[1] + nn[1] * n]];
+      esq.forEach(function (p) { minx = Math.min(minx, p[0]); maxx = Math.max(maxx, p[0]); miny = Math.min(miny, p[1]); maxy = Math.max(maxy, p[1]); });
+      return { U: U, d: d, nn: nn, n: n, esq: esq, k: l[3] };
+    });
+    var m = c * 0.08;
+    svg.setAttribute("viewBox", (minx - m) + " " + (miny - m) + " " + (maxx - minx + 2 * m) + " " + (maxy - miny + 2 * m));
+    var w = c / 60;
+    dibujos.forEach(function (q) {
+      var col = COL[q.k];
+      nodoSvg("polygon", { points: q.esq.map(function (p) { return p.join(","); }).join(" "), fill: col, "fill-opacity": "0.14", stroke: col, "stroke-width": w * 1.4 }, svg);
+      var rejilla = "";
+      for (var i = 1; i < q.n; i++) {
+        var p1 = [q.U[0] + q.d[0] * i, q.U[1] + q.d[1] * i];
+        rejilla += "M" + p1[0] + " " + p1[1] + " l" + q.nn[0] * q.n + " " + q.nn[1] * q.n + " ";
+        var p2 = [q.U[0] + q.nn[0] * i, q.U[1] + q.nn[1] * i];
+        rejilla += "M" + p2[0] + " " + p2[1] + " l" + q.d[0] * q.n + " " + q.d[1] * q.n + " ";
+      }
+      nodoSvg("path", { d: rejilla, stroke: col, "stroke-opacity": "0.35", "stroke-width": w * 0.7, fill: "none" }, svg);
+      var cx = (q.esq[0][0] + q.esq[2][0]) / 2, cy = (q.esq[0][1] + q.esq[2][1]) / 2;
+      var t = nodoSvg("text", { x: cx, y: cy + c * 0.07, "text-anchor": "middle", "font-size": c * 0.2, fill: col }, svg);
+      t.textContent = q.n * q.n;
+    });
+    nodoSvg("polygon", { points: [L, R, P].map(function (p) { return p.join(","); }).join(" "), fill: "#fffbea", stroke: "#1f2a44", "stroke-width": w * 2.4, "stroke-linejoin": "round" }, svg);
+    if (a * a + b * b === c * c) {
+      var s = c * 0.07;
+      var u1 = [(L[0] - P[0]) / a, (L[1] - P[1]) / a], u2 = [(R[0] - P[0]) / b, (R[1] - P[1]) / b];
+      nodoSvg("path", { d: "M" + (P[0] + s * u1[0]) + " " + (P[1] + s * u1[1]) + " L" + (P[0] + s * (u1[0] + u2[0])) + " " + (P[1] + s * (u1[1] + u2[1])) + " L" + (P[0] + s * u2[0]) + " " + (P[1] + s * u2[1]), fill: "none", stroke: "#1f2a44", "stroke-width": w * 1.6 }, svg);
+    }
+  }
+  function pintarD3(t) {
+    var a = t[0], b = t[1], c = t[2], s = a * a + b * b, cc = c * c, ok = s === cc;
+    pintarCuadrados($("d3-svg"), a, b, c);
+    $("d3-cuenta").innerHTML = a * a + " + " + b * b + " = " + s + (ok ? " = " : " ≠ ") + cc +
+      (ok ? ' <span class="ok">→ esquina recta</span>' : ' <span class="mal">→ no es recta</span>');
+  }
+  elegir($("d3-chips"), function (b) { pintarD3(trio(b)); });
+  pintarD3([3, 4, 5]);
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 700px)");
+  function opcionesFlujo(chico) {
+    var t = chico
+      ? { datos: "anota <code>a</code>, <code>b</code>, <code>c</code>", d1: "¿<code>a+b &lt;= c</code>?", no: "«No se puede armar»",
+          d2: "¿<code>a==b and b==c</code>?", equ: "equilátero", d3: "¿<code>a==b or b==c</code>?", iso: "isósceles", esc: "escaleno",
+          imp: "«Triángulo…»", d4: "¿<code>a*a+b*b == c*c</code>?", rect: "«Y es rectángulo»" }
+      : { datos: "anota <code>a</code>, <code>b</code> y <code>c</code>", d1: "¿<code>a + b &lt;= c</code>?", no: "«No se puede armar»",
+          d2: "¿<code>a == b and b == c</code>?", equ: '<code>tipo = "equilátero"</code>', d3: "¿<code>a == b or b == c</code>?",
+          iso: '<code>tipo = "isósceles"</code>', esc: '<code>tipo = "escaleno"</code>', imp: "«Triángulo {tipo}»",
+          d4: "¿<code>a*a + b*b == c*c</code>?", rect: "«Y es rectángulo»" };
+    return {
+      fila: chico ? 38 : 40,
+      anchoNodo: chico ? 118 : 230,
+      columnas: chico ? [0.78, 1.22, 1] : [0.85, 1.45, 1.05],
+      nodos: [
+        { id: "ini", tipo: "inicio", texto: "Inicio", col: 0, fila: 0 },
+        { id: "datos", tipo: "datos", texto: t.datos, col: 1, fila: 0, idea: 1 },
+        { id: "d1", tipo: "decision", texto: t.d1, col: 1, fila: 1, idea: 2 },
+        { id: "no", tipo: "datos", texto: t.no, col: 0, fila: 1, idea: 2 },
+        { id: "d2", tipo: "decision", texto: t.d2, col: 1, fila: 2, idea: 3 },
+        { id: "equ", tipo: "proceso", texto: t.equ, col: 2, fila: 2, idea: 3 },
+        { id: "d3", tipo: "decision", texto: t.d3, col: 1, fila: 3, idea: 3 },
+        { id: "iso", tipo: "proceso", texto: t.iso, col: 2, fila: 3, idea: 3 },
+        { id: "esc", tipo: "proceso", texto: t.esc, col: 1, fila: 4, idea: 3 },
+        { id: "imp", tipo: "datos", texto: t.imp, col: 2, fila: 4, idea: 3 },
+        { id: "d4", tipo: "decision", texto: t.d4, col: 1, fila: 5, idea: 4 },
+        { id: "rect", tipo: "datos", texto: t.rect, col: 2, fila: 5, idea: 4 },
+        { id: "fin", tipo: "fin", texto: "Fin", col: 1, fila: 6 }
+      ],
+      flechas: [
+        { de: "ini", a: "datos" },
+        { de: "datos", a: "d1" },
+        { de: "d1", a: "no", texto: "sí" },
+        { de: "d1", a: "d2", texto: "no" },
+        { de: "d2", a: "equ", texto: "sí" },
+        { de: "d2", a: "d3", texto: "no" },
+        { de: "d3", a: "iso", texto: "sí" },
+        { de: "d3", a: "esc", texto: "no" },
+        { de: "equ", a: "imp", por: "derecha" },
+        { de: "iso", a: "imp" },
+        { de: "esc", a: "imp" },
+        { de: "imp", a: "d4" },
+        { de: "d4", a: "rect", texto: "sí" },
+        { de: "d4", a: "fin", texto: "no" },
+        { de: "rect", a: "fin" },
+        { de: "no", a: "fin", por: "izquierda" }
+      ]
+    };
+  }
+  var flujo = null, flujoVisto = false;
+  function armarFlujo() {
+    var caja = $("flujo-caja");
+    caja.textContent = "";
+    var el = document.createElement("div");
+    el.id = "flujo";
+    caja.appendChild(el);
+    flujo = Flujo.crear(el, opcionesFlujo(movil.matches));
+    if (flujoVisto) flujo.dibujar();
+  }
+  armarFlujo();
+  if (movil.addEventListener) movil.addEventListener("change", function () { detenerRecorrido(); armarFlujo(); });
+  Problemas.alVer($("flujo-caja"), function () { flujoVisto = true; flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Tomás saca tres palitos" },
+    { nodo: "datos", nota: "a = 3 · b = 4 · c = 5" },
+    { nodo: "d1", nota: "3 + 4 = 7, y 7 <= 5 → no: sí cierran" },
+    { nodo: "d2", nota: "3 == 4 → no: no son los tres iguales" },
+    { nodo: "d3", nota: "3 == 4 no, 4 == 5 no → no" },
+    { nodo: "esc", nota: "tipo = \"escaleno\"" },
+    { nodo: "imp", nota: "Triángulo escaleno" },
+    { nodo: "d4", nota: "9 + 16 = 25, y 5 * 5 = 25 → sí" },
+    { nodo: "rect", nota: "Y es rectángulo" },
+    { nodo: "fin", nota: "Fin: escaleno y rectángulo" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 3, 4 y 5";
+  function detenerRecorrido() {
+    if (recorrido) { recorrido.detener(); recorrido = null; }
+    $("recorrer").textContent = TEXTO_RECORRER;
+  }
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { detenerRecorrido(); return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function cod(t) { return "<code>" + t + "</code>"; }
+
+  function generar(d) {
+    var A = d.a, B = d.b, C = d.c;
+    var pasos = [], vars = {};
+    var est = { a: A, b: B, c: C, vistos: 0, pose: "parados", arcos: false, iguales: [], recto: false, resalta: [], pie: "Tomás saca los palitos", clase: "" };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+
+    vars.a = A; est.vistos = 1; est.resalta = ["a"];
+    paso({ linea: 0, escribe: "a", capitulo: "Los palitos", cuenta: "a = " + A,
+      nota: "Tomás saca el palito más corto: " + cod("a = " + A) + ". Las medidas van en cm, de menor a mayor." });
+    vars.b = B; est.vistos = 2; est.resalta = ["b"];
+    paso({ linea: 1, escribe: "b", cuenta: "b = " + B,
+      nota: "El del medio: " + cod("b = " + B) + "." + (A === B ? " Mide lo mismo que " + cod("a") + "." : "") });
+    vars.c = C; est.vistos = 3; est.resalta = ["c"]; est.pie = "¿Se podrá armar?";
+    paso({ linea: 2, escribe: "c", cuenta: "c = " + C,
+      nota: "El más largo: " + cod("c = " + C) + ". Tomás lo pone abajo y para los otros dos en sus puntas." });
+
+    // ¿Cierran?
+    var suma = A + B, no = suma <= C, p = pose(A, B, C);
+    est.resalta = []; est.arcos = true; est.pose = p;
+    est.pie = p === "cerrado" ? "Las puntas se tocan arriba: se arma" : p === "plano" ? "Se tocan, pero acostados: no hay triángulo" : "No llegan: faltan " + (C - suma) + " cm";
+    est.clase = p === "cerrado" ? "si" : "no";
+    var notaIf;
+    if (p === "cerrado") {
+      notaIf = "Los cortos giran hacia adentro. " + cod(A + " + " + B) + " da <strong>" + suma + "</strong>, y " + cod(suma + " &lt;= " + C) +
+        " es " + cod("False") + ": juntos son más largos que el largo, así que sus puntas se encuentran arriba. Se salta el " + cod("print") + " y sigue en el " + cod("else") + ".";
+    } else if (p === "abierto") {
+      notaIf = "Los cortos giran hacia adentro. " + cod(A + " + " + B) + " da <strong>" + suma + "</strong>, y " + cod(suma + " &lt;= " + C) +
+        " es " + cod("True") + ": aun acostados, a sus puntas les faltan <strong>" + (C - suma) + " cm</strong> para tocarse.";
+    } else {
+      notaIf = cod(A + " + " + B) + " da <strong>" + suma + "</strong>, y " + cod(suma + " &lt;= " + C) + " es " + cod("True") +
+        ". Las puntas se tocan, pero solo con los palitos acostados sobre el largo: queda una raya, no un triángulo. Por eso la condición usa " +
+        cod("&lt;=") + " y no " + cod("&lt;") + ".";
+    }
+    paso({ linea: 4, lee: ["a", "b", "c"], capitulo: "¿Cierran?", pausa: true,
+      cuenta: A + " + " + B + " <= " + C + " → " + py(no), nota: notaIf });
+
+    if (no) {
+      var finNo = p === "abierto"
+        ? "<strong>No se puede armar</strong>: los cortos suman " + suma + " cm y el largo mide " + C + ". Todo el bloque del " + cod("else") + " tiene ×0 en el mapa de calor: el tipo ni se preguntó."
+        : "<strong>No se puede armar</strong>. Con " + cod("&lt;") + ", " + cod(suma + " &lt; " + C) + " sería " + cod("False") +
+          " y el programa diría «Triángulo escaleno» de una raya. El bloque del " + cod("else") + " tiene ×0: no corrió.";
+      paso({ linea: 5, salida: "No se puede armar", pausa: true, fin: true, cuenta: "", nota: finNo });
+      return pasos;
+    }
+
+    // ¿Cuántos lados iguales?
+    var ab = A === B, bc = B === C;
+    est.resalta = ab ? ["a", "b", "c"] : ["a", "b"];
+    var nota7;
+    if (!ab) nota7 = "Ya se sabe que se arma. ¿Cuántos lados iguales? " + cod(A + " == " + B) + " es " + cod("False") + ", y con " + cod("and") +
+      " eso basta: Python ni mira " + cod("b == c") + ". No son los tres iguales.";
+    else if (!bc) nota7 = "Ya se sabe que se arma. ¿Cuántos lados iguales? " + cod(A + " == " + B) + " es " + cod("True") + ", pero " + cod(B + " == " + C) +
+      " es " + cod("False") + ": con " + cod("and") + " tienen que ser verdad las dos. No son los tres iguales.";
+    else nota7 = "Ya se sabe que se arma. " + cod(A + " == " + B) + " y " + cod(B + " == " + C) + " son " + cod("True") + ": son los tres iguales.";
+    paso({ linea: 7, ejecuta: [6, 7], flecha: true, lee: ab ? ["a", "b", "c"] : ["a", "b"], capitulo: "¿Cuántos iguales?",
+      cuenta: ab ? A + " == " + B + " and " + B + " == " + C + " → " + py(bc) : A + " == " + B + " and … → False", nota: nota7 });
+
+    var tipo, lineaTipo;
+    if (ab && bc) { tipo = "equilátero"; lineaTipo = 8; }
+    else {
+      est.resalta = ab ? ["a", "b"] : ["a", "b", "c"];
+      var nota9;
+      if (ab) nota9 = cod(A + " == " + B) + " es " + cod("True") + ", y con " + cod("or") + " basta una: Python ni mira " + cod("b == c") + ". Hay dos lados iguales.";
+      else if (bc) nota9 = cod(A + " == " + B) + " es " + cod("False") + ", pero " + cod(B + " == " + C) + " es " + cod("True") + ": con " + cod("or") + " basta una. Hay dos lados iguales.";
+      else nota9 = cod(A + " == " + B) + " es " + cod("False") + " y " + cod(B + " == " + C) + " también. Con " + cod("or") + " bastaría una, pero no hay ninguna: no hay dos lados iguales.";
+      paso({ linea: 9, lee: ab ? ["a", "b"] : ["a", "b", "c"],
+        cuenta: ab ? A + " == " + B + " or … → True" : A + " == " + B + " or " + B + " == " + C + " → " + py(bc), nota: nota9 });
+      if (ab || bc) { tipo = "isósceles"; lineaTipo = 10; } else { tipo = "escaleno"; lineaTipo = 12; }
+    }
+    vars.tipo = tipo;
+    est.resalta = []; est.iguales = igualesDe(A, B, C); est.pie = "Triángulo " + tipo;
+    var notaTipo = tipo === "equilátero" ? cod('tipo = "equilátero"') + ": los tres lados llevan la misma rayita."
+      : tipo === "isósceles" ? cod('tipo = "isósceles"') + ". En el dibujo, los dos lados iguales llevan una rayita."
+      : "Ninguna condición fue " + cod("True") + ": corre el " + cod("else") + ". " + cod('tipo = "escaleno"') + ": los tres lados son distintos.";
+    paso({ linea: lineaTipo, ejecuta: lineaTipo === 12 ? [11, 12] : undefined, flecha: lineaTipo === 12 ? true : undefined,
+      escribe: "tipo", cuenta: 'tipo = "' + tipo + '"', nota: notaTipo });
+    paso({ linea: 13, flecha: lineaTipo !== 12, salida: "Triángulo " + tipo, cuenta: "",
+      nota: "El f-string cambia " + cod("{tipo}") + " por <strong>" + tipo + "</strong>." });
+
+    // ¿Esquina recta?
+    var sa = A * A, sb = B * B, sc = C * C, recto = sa + sb === sc;
+    est.recto = recto;
+    est.pie = "Triángulo " + tipo + (recto ? " y rectángulo" : ", sin esquina recta");
+    var cuentaRecto = sa + " + " + sb + " == " + sc + " → " + py(recto);
+    if (recto) {
+      paso({ linea: 14, lee: ["a", "b", "c"], capitulo: "¿Esquina recta?", cuenta: cuentaRecto,
+        nota: "¿Tiene esquina recta? " + cod(A + " * " + A + " + " + B + " * " + B) + " da <strong>" + (sa + sb) + "</strong>, y " + cod(C + " * " + C) +
+          " también: " + cod("True") + ". Por Pitágoras, la esquina entre los dos cortos es recta." });
+      paso({ linea: 15, salida: "Y es rectángulo", pausa: true, fin: true, cuenta: "",
+        nota: "Con " + A + ", " + B + " y " + C + " cm sale un <strong>triángulo " + tipo + " y rectángulo</strong>, como una escuadra. Las líneas con ×0 no corrieron con estos palitos." });
+    } else {
+      paso({ linea: 14, lee: ["a", "b", "c"], capitulo: "¿Esquina recta?", pausa: true, fin: true, cuenta: cuentaRecto,
+        nota: "¿Tiene esquina recta? " + cod(A + " * " + A + " + " + B + " * " + B) + " da <strong>" + (sa + sb) + "</strong> y " + cod(C + " * " + C) +
+          " da <strong>" + sc + "</strong>: " + cod("False") + ". Sale un <strong>triángulo " + tipo + "</strong>, sin esquina recta. El último " +
+          cod("print") + " tiene ×0: con estos palitos no corrió." });
+    }
+    return pasos;
+  }
+
+  /* La escena: el largo abajo y los dos cortos que giran para tocarse */
+  var escena = (function () {
+    var cuentaEl, pie, palos, datos;
+    function crear(cont) {
+      cont.innerHTML = '<div class="tri">' +
+        '<p class="tri__cuenta" aria-live="polite"></p>' +
+        '<div class="tri__dibujo"><svg aria-label="Los tres palitos"></svg></div>' +
+        '<div><p class="tri__pie"></p><p class="tri__leyenda"><i></i>hasta dónde llega la punta de cada corto</p></div>' +
+        "</div>";
+      cuentaEl = cont.querySelector(".tri__cuenta");
+      pie = cont.querySelector(".tri__pie");
+      palos = crearPalos(cont.querySelector("svg"), { u: 26, ancho: 8 * 26 + 60, alto: 192, base: 160, grosor: 7, letra: 12 });
+    }
+    function reiniciar(d) { datos = d; palos.olvidar(); }
+    function pintar(p, op) {
+      var e = p ? p.est : { a: datos.a, b: datos.b, c: datos.c, vistos: 0, pose: "parados", pie: "Tomás saca los palitos", clase: "" };
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      palos.pintar(e, op.animar, Math.max(350, Math.min(1100, (op.intervalo || 1300) * 0.85)));
+      pie.textContent = e.pie;
+      pie.className = "tri__pie" + (e.clase ? " tri__pie--" + e.clase : "");
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "3, 4 y 5", datos: { a: 3, b: 4, c: 5 } },
+    { nombre: "5, 5 y 8", datos: { a: 5, b: 5, c: 8 } },
+    { nombre: "2, 3 y 8 · no llegan", datos: { a: 2, b: 3, c: 8 } },
+    { nombre: "2, 3 y 5 · el borde", datos: { a: 2, b: 3, c: 5 } }
+  ];
+
+  Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1, 2],
+    variables: ["a", "b", "c", "tipo"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // Una sola comparación: las otras dos reglas siempre se cumplen si vienen ordenados
+  function pintarReglas(quien) {
+    var a = Number($("u-a").value), b = Number($("u-b").value), c = Number($("u-c").value);
+    // Siguen de menor a mayor: el que se mueve empuja a los otros
+    if (quien === "a") { if (b < a) b = a; if (c < b) c = b; }
+    else if (quien === "b") { if (a > b) a = b; if (c < b) c = b; }
+    else if (quien === "c") { if (b > c) b = c; if (a > b) a = b; }
+    $("u-a").value = a; $("u-b").value = b; $("u-c").value = c;
+    $("u-a-n").textContent = a; $("u-b-n").textContent = b; $("u-c-n").textContent = c;
+    function fila(x, y, z, nx, ny, nz, nota, decide) {
+      var ok = x + y > z;
+      return '<li class="' + (decide ? "decide" : "") + '"><span>' + nx + " + " + ny + " &gt; " + nz + "</span>" +
+        '<span class="' + (ok ? "ok" : "mal") + '">' + x + " + " + y + " = " + (x + y) + (ok ? " &gt; " : " ≤ ") + z + (ok ? " ✓" : " ✗") + "</span>" +
+        "<small>" + nota + "</small></li>";
+    }
+    $("u-reglas").innerHTML =
+      fila(a, b, c, "a", "b", "c", "la única que puede fallar: es la que pregunta el programa", true) +
+      fila(a, c, b, "a", "c", "b", "siempre ✓: c ya es al menos b, y se le suma a", false) +
+      fila(b, c, a, "b", "c", "a", "siempre ✓: c ya es al menos a, y se le suma b", false);
+  }
+  ["a", "b", "c"].forEach(function (k) { $("u-" + k).addEventListener("input", function () { pintarReglas(k); }); });
+  pintarReglas(null);
+
+  // a == c: b queda apretado entre a y c
+  var recta = $("i-recta");
+  (function () {
+    var html = '<div class="recta__eje"></div><div class="recta__zona"></div>';
+    for (var n = 1; n <= 8; n++) html += '<span class="recta__num" style="left:' + ((n - 1) / 7 * 100) + '%">' + n + "</span>";
+    html += '<span class="recta__pin recta__pin--a">a</span><span class="recta__pin recta__pin--c">c</span><span class="recta__pin recta__pin--b">b</span>';
+    recta.innerHTML = html;
+  })();
+  function pintarIguales(quien) {
+    var a = Number($("i-a").value), c = Number($("i-c").value);
+    if (quien === "a" && c < a) c = a;
+    if (quien === "c" && a > c) a = c;
+    $("i-a").value = a; $("i-c").value = c;
+    var b = Math.min(Math.max(4, a), c);
+    $("i-a-n").textContent = a; $("i-c-n").textContent = c;
+    function x(n) { return ((n - 1) / 7 * 100) + "%"; }
+    var zona = recta.querySelector(".recta__zona");
+    zona.style.left = "calc(" + x(a) + " - 0.35rem)";
+    zona.style.width = "calc(" + ((c - a) / 7 * 100) + "% + 0.7rem)";
+    var pa = recta.querySelector(".recta__pin--a"), pb = recta.querySelector(".recta__pin--b"), pc = recta.querySelector(".recta__pin--c");
+    pa.style.left = x(a); pc.style.left = x(c); pb.style.left = x(b);
+    // Si coinciden en el mismo número, se corren un poco para que se lean
+    pa.style.marginLeft = a === b ? "-0.85rem" : "0";
+    pc.style.marginLeft = c === b ? "0.85rem" : "0";
+    if (a === b && b === c) { pa.style.marginLeft = "-1.7rem"; pc.style.marginLeft = "1.7rem"; }
+    var ab = a === b, bc = b === c, ac = a === c;
+    function ev(t, v) { return '<span class="' + (v ? "si" : "") + '">' + t + " → " + py(v) + "</span>"; }
+    $("i-evals").innerHTML = '<span class="gris">b = ' + b + "</span>" + ev("a == b", ab) + ev("b == c", bc) + ev("a == c", ac);
+    var tipo = ab && bc ? "equilátero" : ab || bc ? "isósceles" : "escaleno";
+    $("i-texto").innerHTML = (ac
+      ? "Con <code>a == c</code>, a <code>b</code> no le queda lugar: es igual a los dos, y <code>a == b</code> ya lo dice. Tipo: <strong>" + tipo + "</strong>."
+      : "Tipo: <strong>" + tipo + "</strong>. <code>a == c</code> solo puede ser <code>True</code> si los tres son iguales.") +
+      " <span class=\"gris\">Desordenados (5, 8, 5), <code>a == b or b == c</code> daría <code>False</code> y el programa diría «escaleno».</span>";
+  }
+  $("i-a").addEventListener("input", function () { pintarIguales("a"); });
+  $("i-c").addEventListener("input", function () { pintarIguales("c"); });
+  pintarIguales(null);
+
+  // Casos borde: 2, 3, 5 (con <= y con <) y 8, 2, 3 desordenados
+  var bPalos = crearPalos($("b-svg"), { u: 14, ancho: 8 * 14 + 24, alto: 66, base: 52, grosor: 5, letra: 10, cortas: true });
+  var BORDES = [
+    { a: 2, b: 3, c: 5, op: "<=", ok: true,
+      texto: "<strong>Bien.</strong> 5 &lt;= 5 es <code>True</code>: los palitos se aplanan sobre el largo y no encierran nada." },
+    { a: 2, b: 3, c: 5, op: "<", ok: false,
+      texto: "<strong>Mal.</strong> 5 &lt; 5 es <code>False</code>: pasa al <code>else</code> y dice «escaleno» de una raya. Por eso va <code>&lt;=</code>." },
+    { a: 8, b: 2, c: 3, op: "<=", ok: false,
+      texto: "<strong>Mal, pero por el dato.</strong> Compara 8 + 2 con 3 en vez de 2 + 3 con 8. La entrada pedía de menor a mayor: el programa no se equivocó." }
+  ];
+  function pintarBorde(k) {
+    var x = BORDES[k];
+    Python.escribir($("b-codigo"), ["a = " + x.a, "b = " + x.b, "c = " + x.c, "if a + b " + x.op + " c:"]);
+    Codigo.marcar($("b-codigo"), { activas: [3] });
+    $("b-salida").textContent = salida(x.a, x.b, x.c, x.op === "<").join("\n");
+    var s = [x.a, x.b, x.c].sort(function (m, n) { return m - n; });
+    bPalos.pintar({ a: s[0], b: s[1], c: s[2], pose: pose(s[0], s[1], s[2]), arcos: true }, false);
+    $("b-texto").className = "veredicto " + (x.ok ? "veredicto--ok" : "veredicto--mal");
+    $("b-texto").innerHTML = x.texto;
+  }
+  elegir($("b-chips"), function (b) { pintarBorde(Number(b.getAttribute("data-k"))); });
+  pintarBorde(0);
+
+  /* ---------- 6. ¿Y con decimales? ---------- */
+  Python.escribir($("m-codigo"), [
+    "dif = a * a + b * b - c * c",
+    "if dif < 0.000001 and dif > -0.000001:",
+    '    print("Y es rectángulo")'
+  ]);
+  // [a, b, c] en metros y el trío en centímetros (enteros) para saber si es rectángulo de verdad
+  var DECIMALES = [
+    { t: ["0.3", "0.4", "0.5"], cm: [3, 4, 5] },
+    { t: ["0.5", "1.2", "1.3"], cm: [5, 12, 13] },
+    { t: ["0.8", "1.5", "1.7"], cm: [8, 15, 17] },
+    { t: ["0.6", "0.8", "1.0"], cm: [6, 8, 10] },
+    { t: ["0.5", "1.2", "1.4"], cm: [5, 12, 14] }
+  ];
+  function pintarDecimales(k) {
+    var x = DECIMALES[k];
+    var a = Number(x.t[0]), b = Number(x.t[1]), c = Number(x.t[2]);
+    var s = a * a + b * b, cc = c * c, igual = s === cc, dif = a * a + b * b - c * c;
+    var casi = dif < 0.000001 && dif > -0.000001;
+    var de = x.cm, real = de[0] * de[0] + de[1] * de[1] === de[2] * de[2];
+    function marca(v) { return v === real ? '<span class="ok">' + py(v) + " ✓</span>" : '<span class="mal">' + py(v) + " ✗</span>"; }
+    $("m-tabla").innerHTML =
+      "<tr><th><code>a * a + b * b</code></th><td>" + pyf(s) + "</td></tr>" +
+      "<tr><th><code>c * c</code></th><td>" + pyf(cc) + "</td></tr>" +
+      "<tr><th>con <code>==</code></th><td>" + marca(igual) + "</td></tr>" +
+      '<tr class="sep"><th><code>dif</code></th><td>' + pyf(dif) + "</td></tr>" +
+      "<tr><th>casi igual</th><td>" + marca(casi) + "</td></tr>";
+    var trio = de.join(", ");
+    $("m-texto").className = "veredicto " + (igual === real ? "veredicto--ok" : "veredicto--mal");
+    $("m-texto").innerHTML = real
+      ? (igual ? "Es rectángulo (como " + trio + "), y esta vez <code>==</code> acierta: los decimales salieron justos."
+               : "Es rectángulo (como " + trio + "), pero <code>==</code> dice que no. «Casi igual» acierta.")
+      : "No es rectángulo (" + de[0] * de[0] + " + " + de[1] * de[1] + " no es " + de[2] * de[2] + "). Los dos lo dicen: «casi igual» no confunde números que sí son distintos.";
+  }
+  elegir($("m-chips"), function (b) { pintarDecimales(Number(b.getAttribute("data-k"))); });
+  pintarDecimales(1);
+
+  Problemas.iniciar({ id: "problema-triangulo" });
+})();
+</script>
+</body>
+</html>
