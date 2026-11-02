@@ -98,6 +98,16 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-02 · Problemas resueltos: tres casos más de Condicionales y textos revisados
+
+- **Textos revisados** en bisiesto, podio y estacionamiento (pedido por el autor: buen sentido gramatical y nada que se preste a malinterpretarse). El bisiesto dice la regla en tres pasos numerados con «divisible entre 4 / 100 / 400», sin «salvo… salvo» ni «excepciones»; el podio quitó una doble negación; el estacionamiento explica «hora o fracción adicional» y su nota del pago concuerda con 1, 2 o más horas. La guía suma esas reglas en «Texto y estilo».
+- **Tres casos nuevos** en la sección Condicionales (orden: bisiesto → podio → triángulo → celular → estacionamiento → mañana → El vuelto):
+  - **¿Se puede armar el triángulo?** ★★★ (`problemas/triangulo/`): lados de menor a mayor, `a + b <= c`, tipo con `and`/`or` y rectángulo con Pitágoras. Detalles: por qué basta una comparación y no hace falta `a == c` (con datos desordenados, 8, 2, 3 da «Triángulo escaleno»). Enseñanza: «¿Y con decimales?» (0.5, 1.2, 1.3 y la tolerancia; la línea del arreglo mide 38 caracteres, fuera del reproductor).
+  - **¿Qué plan de celular me conviene?** ★★★ (`problemas/celular/`): el mejor hasta ahora con `<` (empate: gana el primero del folleto). La salida dice «Conviene el plan …» (con «Te conviene» pasaba de 36 caracteres). `elif plan_c < costo` no falla con estos precios: el detalle muestra comparar C con `plan_a` (falla de 14 a 20 GB). Enseñanza: el más barato cambia tres veces (C hasta 4, A de 5 a 9, C de 10 a 13, B desde 14).
+  - **El día de mañana** ★★★★ (`problemas/manana/`): 27 líneas; nudillos y `% 2`, el bisiesto resumido en un nodo del diagrama. Detalles: 353 / 11 / 1 días en 2026; `30 + mes % 2` para todos falla en 5 días y `>=` en 12. Enseñanza: fechas imposibles y la revisión con `or` (el código del arreglo se muestra resumido).
+- **`problemas.css`**: en el móvil, el carrusel del bloque 1 no dejaba pasar de la historia a la hoja del enunciado (las hojas están en `.enunciado__hojas`, con `display: contents`, sin punto de imán). Arreglado para todos los casos.
+- **Para revisar**: a 1366×657 el código del reproductor se desplaza en celular (21 líneas) y mañana (27), como en el podio. En el móvil, en el diagrama del celular la etiqueta «no» entre dos rombos seguidos roza el borde.
+
 ### 2026-11-01 · Problemas resueltos: tres casos de Condicionales
 
 - **Sección nueva del catálogo, Condicionales** (entre Variables y fórmulas y Texto a fondo, con su botón en el filtro de tema), con tres casos elegidos por el autor entre seis propuestas:

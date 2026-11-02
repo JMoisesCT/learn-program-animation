@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El día de mañana · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: dada una fecha, la del día siguiente. Cuántos días tiene cada mes (la regla de los nudillos con %), febrero y el año bisiesto, y el día que vuelve a 1 y empuja al mes y al año, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- El taco de calendario (la historia) ---------- */
+    .taco-mini { position: relative; width: 10.5rem; margin: var(--esp-4) auto 0; padding-top: 0.55rem; transform: rotate(-1.5deg); }
+    .taco-mini__anillas { position: absolute; left: 0; right: 0; top: 0; height: 0.9rem; border-radius: 4px 4px 0 0; background: #3a4458; }
+    .taco-mini__anillas::before { content: ""; position: absolute; left: 22%; right: 22%; top: -0.3rem; height: 0.6rem; background: radial-gradient(circle, #9aa4b2 0 0.2rem, transparent 0.23rem) 0 0 / 33.3% 100% repeat-x; }
+    .taco-mini__hoja { position: relative; display: grid; justify-items: center; padding: 0 0 0.5rem; background: #fff; border: 1px solid var(--papel-borde); box-shadow: 0 2px 0 #f1ead9, 0 4px 0 #e8dfca, 0 6px 0 #ded3ba, var(--sombra-alta); }
+    .taco-mini__mes { width: 100%; padding: 0.25rem 0; background: var(--lapiz); color: #fff; font: 700 0.78rem var(--serif); letter-spacing: 0.12em; text-align: center; }
+    .taco-mini__num { font: 700 3.6rem/1.05 var(--serif); color: var(--tinta); }
+    .taco-mini__sem { font-size: var(--texto-xs); color: var(--tinta-suave); }
+    .taco-mini__pregunta { margin: var(--esp-3) 0 0 !important; text-align: center; font: italic 700 var(--texto-sm) var(--serif) !important; color: var(--lapiz); }
+    .reglas-meses { margin: 0.1rem 0 var(--esp-3) !important; padding-left: 1.2rem !important; }
+    .reglas-meses li { margin: 0.1rem 0; }
+    .reglas-meses span, .reglas-meses__ej { color: var(--tinta-suave); font-size: 0.92em; white-space: nowrap; }
+
+    /* ---------- La escena: la tira de días y el taco ---------- */
+    .tc { flex: 1; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: var(--esp-3); align-content: start; }
+    .tc__cuenta { justify-self: center; min-height: 1.8rem; margin: 0; padding: 0.1em 0.8em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.8rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .tc__cuenta:empty { opacity: 0; }
+    .tc__tira { display: grid; gap: 0.3rem; }
+    .tc__tira-rotulo { margin: 0; min-height: 1.3em; font: 700 var(--texto-xs) var(--fuente); color: var(--tinta-suave); text-align: center; }
+    .tc__tira-rotulo b { color: var(--tinta); }
+    .tc__tira-rotulo--mal b { color: var(--lapiz); }
+    .tc__dias { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 2px; }
+    .tc__dia { position: relative; display: grid; place-items: center; height: 1.55rem; border-radius: 4px; background: #fff; border: 1px solid var(--papel-borde); font: 700 0.64rem var(--fuente-codigo); color: var(--tinta-suave); transition: background-color 200ms, color 200ms, opacity 200ms; }
+    .tc__dia--duda { border-style: dashed; border-color: #b9c1cf; background: transparent; color: #9aa4b2; }
+    .tc__dia--fuera { background: repeating-linear-gradient(-45deg, #efe6d2 0 3px, #f8f4ea 3px 6px); border-color: transparent; color: #b8ae98; text-decoration: line-through; }
+    .tc__dia--corte { box-shadow: 3px 0 0 -1px var(--lapiz); }
+    .tc__dia--extra { visibility: hidden; }
+    .tc__dia--nuevo { opacity: 0.35; }
+    .tc__dia--actual { z-index: 1; background: #ffd479; border-color: #a86400; color: #3d2a00; transform: scale(1.18); }
+    .tc__dia--pasada { visibility: visible; background: var(--lapiz); border-color: var(--lapiz); color: #fff; text-decoration: none; }
+    .tc__dia--llega { animation: dia-llega 420ms var(--curva-rebote) both; }
+    @keyframes dia-llega { from { transform: scale(0.4); } }
+
+    .tc__taco { display: grid; justify-items: center; align-content: center; gap: var(--esp-2); min-height: 0; }
+    .tc__bloque { position: relative; width: 11.5rem; padding-top: 0.7rem; }
+    .tc__anillas { position: absolute; z-index: 3; left: 0; right: 0; top: 0; height: 1rem; border-radius: 5px 5px 0 0; background: #3a4458; }
+    .tc__anillas::before { content: ""; position: absolute; left: 20%; right: 20%; top: -0.32rem; height: 0.64rem; background: radial-gradient(circle, #9aa4b2 0 0.22rem, transparent 0.25rem) 0 0 / 33.3% 100% repeat-x; }
+    .tc__hoja { position: relative; display: grid; justify-items: center; padding: 0 0 0.55rem; background: #fff; border: 1px solid var(--papel-borde); transition: border-color 200ms; }
+    .tc__hoja--abajo { box-shadow: 0 2px 0 #f1ead9, 0 4px 0 #e8dfca, 0 6px 0 #ded3ba, 0 14px 22px -12px rgba(31, 42, 68, 0.45); }
+    .tc__hoja--hoy { position: absolute; z-index: 2; left: 0; right: 0; top: 0.7rem; transform-origin: 85% 0; }
+    .tc__hoja--hoy[hidden] { display: none; }
+    .tc__mes { width: 100%; box-sizing: border-box; padding: 0.3rem 0.4rem; background: var(--lapiz); color: #fff; font: 700 0.8rem var(--serif); letter-spacing: 0.1em; text-align: center; text-transform: uppercase; transition: background-color 200ms; }
+    .tc__num { font: 700 4.2rem/1.05 var(--serif); color: var(--tinta); transition: color 200ms; }
+    .tc__sem { min-height: 1.3em; font-size: var(--texto-xs); color: var(--tinta-suave); }
+    .tc__hoja--mal { border: 2px dashed var(--lapiz); }
+    .tc__hoja--mal .tc__num { color: var(--lapiz); }
+    .tc__hoja--mal .tc__sem { font-weight: 700; color: var(--lapiz); }
+    .tc__hoja--mesmal .tc__mes { background: #8a93a6; }
+    .tc__num--cambia { animation: num-cambia 380ms var(--curva-rebote) both; }
+    @keyframes num-cambia { from { transform: scale(0.6); opacity: 0.3; } }
+    .tc__sello { position: absolute; right: -1.3rem; top: 2.3rem; padding: 0.05em 0.5em; border: 2.5px double var(--color-ok); border-radius: 6px; background: #fff; color: var(--color-ok); font: 700 0.72rem var(--serif); letter-spacing: 0.08em; text-transform: uppercase; transform: rotate(-8deg); }
+    .tc__sello[hidden] { display: none; }
+    .tc__pie { margin: 0; min-height: 1.3em; font: 700 var(--texto-xs) var(--fuente); color: var(--tinta-suave); text-align: center; }
+    .tc__pie--ok { color: var(--color-ok); }
+    .tc--quieto * { transition: none !important; }
+    #reproductor .rep__calor--nunca .rep__calor-num { color: #7d8794; font-weight: 400; }
+    @media (max-width: 640px) {
+      .rep[data-vista="escena"] .rep__escena { padding: var(--esp-2); }
+      .tc { gap: var(--esp-2); }
+      .tc__dia { height: 1.45rem; font-size: 0.58rem; }
+      .tc__bloque { width: 10rem; }
+      .tc__num { font-size: 3.6rem; }
+    }
+
+    /* ---------- El reproductor: un código largo (como el podio) ---------- */
+    #reproductor .rep__codigo .codigo { font-size: 0.8rem; line-height: 1.38; padding: var(--esp-2) 0; }
+    #reproductor .rep__codigo .codigo .linea { min-height: 1.38em; }
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(10.5rem, 0.5fr); }
+    }
+    @media (max-width: 640px) {
+      #reproductor .rep__codigo .codigo { font-size: 0.76rem; }
+      /* Un poco menos de margen para los números de línea: la última línea es larga */
+      #reproductor .rep__codigo .codigo .linea { padding-left: 2.15rem; }
+      #reproductor .rep__codigo .codigo .linea::before { width: 1.45rem; }
+    }
+
+    /* El diagrama deja lugar a su derecha para las flechas que bajan a «dia + 1» */
+    @media (min-width: 701px) { #flujo-caja { padding-right: 3.2rem; } }
+    @media (min-width: 1024px) {
+      #idea .idea-bloque { grid-template-columns: minmax(0, 1.75fr) minmax(15rem, 1fr); gap: var(--esp-4); }
+      #flujo .flujo__nodo { font-size: 0.82rem; }
+      #flujo .flujo__nodo--decision { padding: 0.75em 1.5em; }
+    }
+
+    /* ---------- Demos del bloque 2 ---------- */
+    .punos { display: block; width: 100%; height: auto; margin: var(--esp-1) 0; }
+    .punos .mano { fill: #f6dcc0; stroke: var(--tinta); stroke-width: 1.6; stroke-linejoin: round; }
+    .punos .mes-txt { font: 700 9.5px var(--fuente-codigo); fill: var(--tinta-suave); text-anchor: middle; }
+    .punos .dias-txt { font: 700 9px var(--fuente-codigo); text-anchor: middle; }
+    .punos .d31 { fill: var(--azul-tinta); }
+    .punos .d30 { fill: var(--lapiz); }
+    .punos .d28 { fill: #8a93a6; }
+    .punos .elegido .mes-txt { fill: var(--tinta); }
+    .punos .marca { fill: #ffd479; stroke: #a86400; stroke-width: 2; }
+    .punos .marca[hidden] { display: none; }
+    .leyenda-punos { margin: 0 0 var(--esp-2) !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .leyenda-punos b.d31 { color: var(--azul-tinta); }
+    .leyenda-punos b.d30 { color: var(--lapiz); }
+    .concepto .cuenta-grande { margin: var(--esp-2) 0 0; font-size: var(--texto-sm); }
+    .reglas-feb { margin: calc(-1 * var(--esp-2)) 0 var(--esp-2); padding-left: 1.3rem; }
+    .reglas-feb li { margin: 0.05rem 0; font-size: var(--texto-xs) !important; line-height: 1.45 !important; }
+    .pildoras { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin: var(--esp-2) 0; }
+    .pildora { padding: 0.15em 0.55em; border-radius: 999px; border: 1.5px solid var(--papel-borde); background: #fff; font: 700 0.72rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .pildora--si { border-color: var(--azul-tinta); background: var(--azul-tinta-suave); color: var(--azul-tinta); }
+    .pildora--nada { opacity: 0.4; text-decoration: line-through; }
+    .fin-feb { display: flex; gap: 3px; margin: var(--esp-2) 0; }
+    .fin-feb span { position: relative; display: grid; place-items: center; flex: 1; height: 2rem; border-radius: 5px; background: var(--papel); border: 1.5px solid var(--papel-borde); font: 700 0.78rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .fin-feb .si { background: var(--color-ok); border-color: var(--color-ok); color: #fff; }
+    .fin-feb .no { border-style: dashed; border-color: var(--lapiz); color: var(--lapiz); }
+    .fin-feb .no::after { content: ""; position: absolute; left: 18%; right: 18%; top: 50%; height: 2px; background: var(--lapiz); transform: rotate(-30deg); }
+    .ruedas { display: flex; justify-content: center; align-items: end; gap: 0.35rem; margin: var(--esp-2) 0; }
+    .rueda { display: grid; justify-items: center; gap: 0.15rem; }
+    .rueda small { font: 700 0.66rem var(--fuente); color: var(--tinta-suave); text-transform: uppercase; letter-spacing: 0.06em; }
+    .rueda__ventana { display: grid; place-items: center; min-width: 2.6rem; height: 2.6rem; padding: 0 0.35rem; overflow: hidden; border-radius: 8px; background: var(--tinta); color: #fff; font: 700 1.3rem var(--fuente-codigo); box-shadow: inset 0 6px 8px -6px rgba(0, 0, 0, 0.8), inset 0 -6px 8px -6px rgba(0, 0, 0, 0.8); }
+    .rueda__ventana--anio { min-width: 3.9rem; }
+    .rueda__ventana span { display: block; }
+    .rueda--gira .rueda__ventana span { animation: rueda-gira 420ms ease-out both; }
+    .rueda--vuelta .rueda__ventana { background: var(--lapiz); }
+    @keyframes rueda-gira { from { transform: translateY(-110%); } }
+    .ruedas__barra { padding-bottom: 0.7rem; font: 700 1.2rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .demo-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); }
+    .demo-fila .btn { min-height: 2.3rem; padding: 0.2rem 1rem; font-size: var(--texto-sm); }
+    .explica { margin: var(--esp-2) 0 0 !important; min-height: 3em; font-size: var(--texto-xs) !important; }
+
+    /* ---------- Detalles ---------- */
+    .anio-mapa { display: grid; grid-template-columns: 1.6rem repeat(31, minmax(0, 1fr)); gap: 1.5px; margin: var(--esp-2) 0; align-items: center; }
+    .anio-mapa i { font: 700 0.56rem var(--fuente-codigo); font-style: normal; color: var(--tinta-suave); }
+    .anio-mapa span { aspect-ratio: 1; border-radius: 1.5px; background: #c9d0dc; }
+    .anio-mapa .vacia { background: none; }
+    .anio-mapa .m { background: var(--lapiz); }
+    .anio-mapa .a { background: var(--c-idea-4); }
+    .anio-mapa .actual { outline: 2.5px solid #ffb000; outline-offset: 1px; position: relative; z-index: 1; }
+    .leyenda-mapa { display: grid; gap: 0.1rem; margin: 0 0 var(--esp-2); padding: 0; list-style: none; }
+    .leyenda-mapa li { font-size: var(--texto-xs) !important; line-height: 1.4 !important; }
+    .leyenda-mapa i { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.35em; border-radius: 2px; vertical-align: -0.05em; background: var(--c); }
+    .dia-elegido { margin: 0 !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--azul-tinta); min-height: 1.4em; }
+    #v-codigo { min-height: 8.2rem; box-sizing: border-box; }
+    .concepto .codigo.codigo--chico { margin: var(--esp-2) 0; font-size: 0.74rem; line-height: 1.45; }
+    .concepto .codigo.codigo--chico .linea { padding-left: 2.4rem; padding-right: var(--esp-2); }
+    .concepto .codigo.codigo--chico .linea::before { width: 1.7rem; }
+    .codigo .linea--cambia { background: rgba(255, 143, 143, 0.16); box-shadow: inset 3px 0 0 #ff8f8f; }
+    .veredicto { margin: 0 0 var(--esp-1) !important; font: 700 var(--texto-sm) var(--serif) !important; }
+    .veredicto--ok { color: var(--color-ok); }
+    .veredicto--mal { color: var(--lapiz); }
+    .fallas { display: grid; gap: 0.15rem; margin: 0; padding: 0; list-style: none; }
+    .fallas li { font: 700 0.72rem var(--fuente-codigo) !important; line-height: 1.45 !important; }
+    .fallas .gris { color: var(--tinta-suave); font-weight: 400; }
+    .consola-mini { margin: var(--esp-2) 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs) var(--fuente-codigo); white-space: pre; min-height: 1.4em; }
+    .borde-datos { margin: var(--esp-2) 0 0 !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+
+    /* ---------- 6. ¿Y si la fecha no existe? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .fecha-fila { display: flex; flex-wrap: wrap; align-items: end; gap: var(--esp-2) var(--esp-3); }
+    .fecha-fila .chips-elegir { flex: 1 1 12rem; }
+    .fecha-campos { display: flex; flex-wrap: wrap; align-items: end; gap: var(--esp-2); }
+    .fecha-campos label { display: grid; gap: 0.1rem; font: 700 0.7rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .fecha-campos input { width: 4.2rem; min-height: 2.2rem; box-sizing: border-box; padding: 0 0.4rem; border: 2px solid var(--papel-borde); border-radius: 8px; background: var(--papel); color: var(--tinta); font: 700 var(--texto-sm) var(--fuente-codigo); }
+    .fecha-campos input.anio { width: 5.4rem; }
+    .fecha-campos input:focus-visible { outline: 3px solid var(--azul-tinta); outline-offset: 1px; }
+    .mas__dibujo .chips-elegir button { min-height: 2rem; padding: 0 var(--esp-2); }
+    .mas__dibujo .codigo { margin: 0; font-size: 0.74rem; line-height: 1.45; padding: var(--esp-2) 0; }
+    .mas__dibujo .codigo .linea { padding-left: 2.4rem; padding-right: var(--esp-2); }
+    .mas__dibujo .codigo .linea::before { width: 1.7rem; }
+    .codigo .linea--nueva { background: rgba(80, 200, 130, 0.14); box-shadow: inset 3px 0 0 #50c882; }
+    .dos-salidas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--esp-2); }
+    .salida-caja { display: grid; gap: 0.2rem; }
+    .salida-caja > span { font: 700 0.68rem var(--fuente); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-suave); }
+    .salida-caja .consola-mini { margin: 0; white-space: normal; }
+    .salida-caja p { margin: 0 !important; font: 700 var(--texto-xs) var(--fuente) !important; min-height: 1.3em; }
+    @media (max-width: 640px) {
+      .mas__dibujo .codigo { font-size: 0.68rem; }
+      .mas__dibujo .codigo .linea { padding-left: 2.1rem; padding-right: var(--esp-1); }
+      .mas__dibujo .codigo .linea::before { width: 1.4rem; }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      .dos-salidas { gap: var(--esp-1); }
+      #existe .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #existe .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Condicionales</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#existe"><span>6 · ¿Y si la fecha no existe?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Condicionales</p>
+          <h1>El día de mañana</h1>
+          <p class="caso-bajada">Un programa que dice qué hoja del calendario viene mañana. Casi siempre basta con sumar 1, pero los meses se acaban y después de diciembre cambia el año.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 4 de 5"><span class="estrellas__llenas">★★★★</span>☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/formulas/index.html">%</a></li>
+              <li><a href="../../lecciones/condicionales/index.html">if, elif y else</a></li>
+              <li><a href="../../lecciones/condicionales/anidados/index.html">condiciones anidadas</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+              <li><a href="../bisiesto/index.html">caso: ¿es año bisiesto?</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Un taco de calendario: la hoja del 31 de diciembre sale volando y debajo aparece la del 1 de enero">
+          <rect x="26" y="40" width="124" height="146" fill="#fff" stroke="#ded3ba" stroke-width="2"/>
+          <path d="M28 190 h120 M31 194 h114" stroke="#ded3ba" stroke-width="2"/>
+          <rect x="26" y="46" width="124" height="28" fill="#b4400e"/>
+          <text x="88" y="65" text-anchor="middle" font-family="Georgia, serif" font-size="12" font-weight="700" fill="#fff" letter-spacing="2">ENERO 2027</text>
+          <text x="88" y="148" text-anchor="middle" font-family="Georgia, serif" font-size="66" font-weight="700" fill="#1f2a44">1</text>
+          <text x="88" y="174" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#556074">viernes</text>
+          <rect x="22" y="30" width="132" height="16" rx="4" fill="#3a4458"/>
+          <g fill="#9aa4b2"><circle cx="58" cy="30" r="5"/><circle cx="88" cy="30" r="5"/><circle cx="118" cy="30" r="5"/></g>
+          <g transform="translate(172 52) rotate(16)">
+            <path d="M0 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 V100 H0 Z" fill="#fff" stroke="#c9c2b2" stroke-width="1.5"/>
+            <rect x="0" y="8" width="60" height="17" fill="#d9764a"/>
+            <text x="30" y="20" text-anchor="middle" font-family="Georgia, serif" font-size="8.5" font-weight="700" fill="#fff" letter-spacing="1">DIC 2026</text>
+            <text x="30" y="72" text-anchor="middle" font-family="Georgia, serif" font-size="38" font-weight="700" fill="#9aa4b2">31</text>
+            <text x="30" y="90" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#9aa4b2">jueves</text>
+          </g>
+          <path d="M146 36 C 158 18, 176 16, 190 30" fill="none" stroke="#b4400e" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 4"/>
+          <path d="M184 30 l7 1 l-1 -7" fill="none" stroke="#b4400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="160" y="14" font-family="Georgia, serif" font-style="italic" font-size="15" font-weight="700" fill="#b4400e">+1</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>En la cocina de Martín cuelga un <strong>taco de calendario</strong>: un bloque con una hoja para cada día. Cada mañana, alguien arranca la hoja de ayer y aparece la de hoy.</p>
+            <p>Casi siempre, la hoja nueva tiene el número siguiente. Pero después del 30 de abril viene el 1 de mayo, y después del 31 de diciembre, el 1 de enero. Martín quiere un programa que <span class="resalta">diga qué hoja viene mañana</span>. <span class="nota-margen">¿Cómo sabe el programa cuándo se acaba un mes?</span></p>
+            <div class="taco-mini" aria-label="La hoja de hoy: jueves 30 de abril de 2026">
+              <span class="taco-mini__anillas" aria-hidden="true"></span>
+              <div class="taco-mini__hoja">
+                <span class="taco-mini__mes">ABRIL 2026</span>
+                <span class="taco-mini__num">30</span>
+                <span class="taco-mini__sem">jueves</span>
+              </div>
+            </div>
+            <p class="taco-mini__pregunta">¿Y mañana?</p>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dada una fecha, diga <strong>la fecha del día siguiente</strong>. Cada mes tiene estos días:</p>
+            <ol class="reglas-meses">
+              <li>Febrero: 29 si el año es bisiesto; si no, 28.</li>
+              <li>Abril, junio, septiembre y noviembre: 30.</li>
+              <li>Los otros siete meses: 31.</li>
+            </ol>
+            <p>Después del último día de un mes viene el día 1 del mes siguiente <span class="reglas-meses__ej">(30/4 → 1/5)</span>. Después del 31 de diciembre viene el 1 de enero del año siguiente.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>dia</code>, <code>mes</code> y <code>anio</code>: tres enteros que forman una fecha que existe (el año se escribe sin ñ).</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Una línea: <code>Mañana: D/M/A</code>, sin ceros delante (<code>1/5/2026</code>).</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>dia = 30
+mes = 4
+anio = 2026</td><td>Mañana: 1/5/2026</td></tr>
+                <tr><td>dia = 31
+mes = 12
+anio = 2026</td><td>Mañana: 1/1/2027</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿30 o 31? Los nudillos</h3>
+            <p>Junta los dos puños y cuenta los meses sobre los nudillos: cada nudillo es un mes de <b>31</b> días y cada hueco, uno de <b>30</b> (febrero va aparte). Julio y agosto caen en dos nudillos seguidos.</p>
+            <svg class="punos" id="d1-punos" viewBox="0 0 300 96" aria-hidden="true"></svg>
+            <div class="control-fila">
+              <label for="d1-mes">mes = <span id="d1-num">4</span></label>
+              <input type="range" id="d1-mes" min="1" max="12" value="4">
+            </div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+            <p class="explica" id="d1-texto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Febrero y el año bisiesto</h3>
+            <p>Febrero tiene 29 días si el año es bisiesto. El programa pregunta en este orden (lo explica el caso <a href="../bisiesto/index.html">¿Es año bisiesto?</a>):</p>
+            <ol class="reglas-feb">
+              <li>¿El año es divisible entre 400? Febrero tiene 29.</li>
+              <li>Si no, ¿es divisible entre 100? Tiene 28.</li>
+              <li>Si no, ¿es divisible entre 4? Tiene 29.</li>
+              <li>Si no, tiene 28.</li>
+            </ol>
+            <div class="chips-elegir" id="d2-chips" role="group" aria-label="Elige un año">
+              <button type="button" data-a="2024" aria-pressed="true">2024</button>
+              <button type="button" data-a="2026" aria-pressed="false">2026</button>
+              <button type="button" data-a="1900" aria-pressed="false">1900</button>
+              <button type="button" data-a="2000" aria-pressed="false">2000</button>
+            </div>
+            <div class="pildoras" id="d2-pildoras" aria-hidden="true"></div>
+            <div class="fin-feb" id="d2-feb" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d2-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Se pasa, vuelve a 1 y empuja</h3>
+            <p>Como el cuentakilómetros de un auto: cuando una rueda se pasa del máximo, vuelve a empezar y empuja a la de al lado. En una fecha, las ruedas empiezan en 1.</p>
+            <div class="chips-elegir" id="d3-chips" role="group" aria-label="Fecha de partida">
+              <button type="button" data-f="14/10/2026" aria-pressed="false">14/10/2026</button>
+              <button type="button" data-f="30/4/2026" aria-pressed="false">30/4/2026</button>
+              <button type="button" data-f="30/12/2026" aria-pressed="true">30/12/2026</button>
+            </div>
+            <div class="ruedas" aria-hidden="true">
+              <div class="rueda" id="d3-r0"><small>día</small><span class="rueda__ventana"><span>30</span></span></div>
+              <span class="ruedas__barra">/</span>
+              <div class="rueda" id="d3-r1"><small>mes</small><span class="rueda__ventana"><span>12</span></span></div>
+              <span class="ruedas__barra">/</span>
+              <div class="rueda" id="d3-r2"><small>año</small><span class="rueda__ventana rueda__ventana--anio"><span>2026</span></span></div>
+            </div>
+            <div class="demo-fila">
+              <button type="button" class="btn btn-secundario" id="d3-mas">+1 día</button>
+            </div>
+            <p class="explica" id="d3-texto" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo-caja"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 31/12/2026</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Sumar 1 es lo fácil. Antes hay que saber <strong>cuántos días tiene el mes</strong>: así se sabe si el día se pasó.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota la fecha</strong> El día, el mes y el año, en tres variables.</li>
+              <li data-idea="2"><strong>¿Cuántos días tiene el mes?</strong> Febrero, según si el año es bisiesto. Los demás, con los nudillos y <code>% 2</code>.</li>
+              <li data-idea="3"><strong>Suma un día</strong> Si el día se pasó del mes, el día vuelve a 1 y el mes avanza.</li>
+              <li data-idea="4"><strong>¿Cambia el año?</strong> Si el mes se pasó de 12, vuelve a 1 y el año avanza. Al final, muestra la fecha.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuánto trabajo hace?</h3>
+            <p>El programa no cuenta día por día: hace como mucho 6 preguntas. Y casi siempre solo cambia el día. Cada fila es un mes:</p>
+            <div class="anio-mapa" id="t-mapa" aria-hidden="true"></div>
+            <ul class="leyenda-mapa" id="t-leyenda"></ul>
+            <div class="chips-elegir" id="t-anios" role="group" aria-label="Elige un año">
+              <button type="button" data-a="2026" aria-pressed="true">2026</button>
+              <button type="button" data-a="2024" aria-pressed="false">2024</button>
+            </div>
+            <div class="control-fila">
+              <label for="t-dia">Un día del año</label>
+              <input type="range" id="t-dia" min="1" max="365" value="120">
+            </div>
+            <p class="dia-elegido" id="t-texto" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué funciona?</h3>
+            <p>Hay versiones que parecen iguales y fallan. Elige una y mira en qué días de 2026 se equivoca:</p>
+            <div class="chips-elegir" id="v-chips" role="group" aria-label="Elige una versión">
+              <button type="button" data-v="0" aria-pressed="true">el programa</button>
+              <button type="button" data-v="1" aria-pressed="false">siempre 30 + mes % 2</button>
+              <button type="button" data-v="2" aria-pressed="false">&gt;= en vez de &gt;</button>
+            </div>
+            <pre class="codigo codigo--chico" id="v-codigo"></pre>
+            <p class="veredicto" id="v-veredicto" aria-live="polite"></p>
+            <ul class="fallas" id="v-fallas"></ul>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <p>Los días más difíciles: el fin de febrero en los años que terminan en 00 y el fin de año.</p>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">28/2/1900</button>
+              <button type="button" data-b="1" aria-pressed="false">28/2/2000</button>
+              <button type="button" data-b="2" aria-pressed="false">29/2/2024</button>
+              <button type="button" data-b="3" aria-pressed="false">31/12/2026</button>
+            </div>
+            <p class="borde-datos" id="b-datos"></p>
+            <div class="consola-mini" id="b-consola"></div>
+            <p id="b-texto" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Y si la fecha no existe? -->
+    <section class="panel" id="existe">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Y si la fecha no existe?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>El enunciado pide una fecha que exista. ¿Y si alguien escribe <strong>31/4/2026</strong>? Abril tiene 30 días, pero el programa no se queja: responde <code>Mañana: 1/5/2026</code>.</p>
+            <p>Con 30/2/2026 dice <code>Mañana: 1/3/2026</code>, y con 45/13/2026, <code>Mañana: 1/1/2027</code>. <span class="resalta">Responde muy seguro a una pregunta que no tiene sentido.</span></p>
+            <p>El arreglo: <strong>revisar el dato antes de calcular</strong>. Si el mes no está entre 1 y 12, o el día no está entre 1 y los días de ese mes, el programa avisa y no suma nada. Usa <a href="../../lecciones/condicionales/logicos/index.html"><code>or</code></a> para juntar las dos condiciones de cada revisión.</p>
+            <p class="nota-margen">Nunca confíes en los datos que te dan: revísalos. En la lección <a href="../../lecciones/errores/pedir/index.html">Volver a pedir un dato</a>, el programa insiste hasta recibir uno válido.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="fecha-fila">
+            <div class="fecha-campos">
+              <label>dia<input type="number" id="x-dia" min="0" max="99" value="31" inputmode="numeric"></label>
+              <label>mes<input type="number" id="x-mes" min="0" max="99" value="4" inputmode="numeric"></label>
+              <label>anio<input type="number" id="x-anio" class="anio" min="1" max="9999" value="2026" inputmode="numeric"></label>
+            </div>
+            <div class="chips-elegir" id="x-chips" role="group" aria-label="Elige una fecha">
+              <button type="button" data-f="31/4/2026" aria-pressed="true">31/4/2026</button>
+              <button type="button" data-f="30/2/2026" aria-pressed="false">30/2/2026</button>
+              <button type="button" data-f="45/13/2026" aria-pressed="false">45/13/2026</button>
+              <button type="button" data-f="29/2/2024" aria-pressed="false">29/2/2024</button>
+            </div>
+            </div>
+            <pre class="codigo" id="x-codigo"></pre>
+            <div class="dos-salidas" aria-live="polite">
+              <div class="salida-caja">
+                <span>Sin revisar</span>
+                <div class="consola-mini" id="x-sin"></div>
+                <p id="x-sin-v"></p>
+              </div>
+              <div class="salida-caja">
+                <span>Con la revisión</span>
+                <div class="consola-mini" id="x-con"></div>
+                <p id="x-con-v"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../estacionamiento/index.html">← <span class="largo">Caso anterior: </span>El estacionamiento</a>
+          <a class="btn btn-primario" href="../vuelto/index.html"><span class="largo">Siguiente caso: </span>El vuelto →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function py(b) { return b ? "True" : "False"; }
+  // El % de Python (con negativos da otro resultado que el de JavaScript)
+  function mod(a, b) { return ((a % b) + b) % b; }
+  function elegir(grupo, alElegir) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        grupo.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        alElegir(b);
+      });
+    });
+  }
+
+  var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  var SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  function nombreMes(m) { return m >= 1 && m <= 12 ? MESES[m - 1] : "mes " + m; }
+
+  /* El programa, tal cual (también con fechas que no existen) */
+  function esBisiesto(a) { return mod(a, 400) === 0 ? true : mod(a, 100) === 0 ? false : mod(a, 4) === 0; }
+  function diasMes(m, a) {
+    if (m === 2) return esBisiesto(a) ? 29 : 28;
+    if (m <= 7) return 30 + mod(m, 2);
+    return 31 - mod(m, 2);
+  }
+  function manana(d, m, a) {
+    var dm = diasMes(m, a);
+    d = d + 1;
+    if (d > dm) {
+      d = 1;
+      m = m + 1;
+      if (m > 12) { m = 1; a = a + 1; }
+    }
+    return [d, m, a];
+  }
+  function existe(d, m, a) { return m >= 1 && m <= 12 && d >= 1 && d <= diasMes(m, a); }
+  function fecha(f) { return f[0] + "/" + f[1] + "/" + f[2]; }
+  function larga(d, m, a) { return d + " de " + nombreMes(m) + " de " + a; }
+  function diaSemana(d, m, a) {
+    if (!existe(d, m, a)) return "";
+    var x = new Date(2000, 0, 1);
+    x.setFullYear(a, m - 1, d);
+    return SEMANA[x.getDay()];
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "dia = " + d.dia,
+      "mes = " + d.mes,
+      "anio = " + d.anio,
+      "",
+      "if mes == 2:",
+      "    if anio % 400 == 0:",
+      "        dias_mes = 29",
+      "    elif anio % 100 == 0:",
+      "        dias_mes = 28",
+      "    elif anio % 4 == 0:",
+      "        dias_mes = 29",
+      "    else:",
+      "        dias_mes = 28",
+      "elif mes <= 7:",
+      "    dias_mes = 30 + mes % 2",
+      "else:",
+      "    dias_mes = 31 - mes % 2",
+      "",
+      "dia = dia + 1",
+      "if dia > dias_mes:",
+      "    dia = 1",
+      "    mes = mes + 1",
+      "    if mes > 12:",
+      "        mes = 1",
+      "        anio = anio + 1",
+      "",
+      'print(f"Mañana: {dia}/{mes}/{anio}")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 3, 3, 3, 4, 4, 4, 0, 4];
+
+  /* ---------- 2. Demos ---------- */
+  // Los dos puños: enero a julio en el primero, agosto a diciembre en el segundo
+  var punos = $("d1-punos");
+  var PX = [];
+  (function () {
+    var SVGNS = "http://www.w3.org/2000/svg";
+    function el(tag, at, padre) {
+      var e = document.createElementNS(SVGNS, tag);
+      for (var k in at) e.setAttribute(k, at[k]);
+      (padre || punos).appendChild(e);
+      return e;
+    }
+    for (var m = 1; m <= 12; m++) PX.push(18 + (m - 1) * 22.4 + (m >= 8 ? 14 : 0));
+    function arriba(m) { return m === 2 ? 34 : diasMes(m, 2026) === 31 ? 16 : 32; }
+    function mano(desde, hasta) {
+      var x0 = PX[desde - 1] - 12, x1 = PX[hasta - 1] + 12;
+      var d = "M" + x0 + " 60 L" + x0 + " " + (arriba(desde) + 6) + " Q" + x0 + " " + arriba(desde) + " " + PX[desde - 1] + " " + arriba(desde);
+      for (var m = desde; m < hasta; m++) {
+        var xm = (PX[m - 1] + PX[m]) / 2, ym = (arriba(m) + arriba(m + 1)) / 2;
+        d += " Q" + PX[m - 1] + " " + arriba(m) + " " + xm + " " + ym;
+      }
+      d += " Q" + PX[hasta - 1] + " " + arriba(hasta) + " " + x1 + " " + (arriba(hasta) + 6) + " L" + x1 + " 60 Z";
+      el("path", { d: d, "class": "mano" });
+    }
+    mano(1, 7);
+    mano(8, 12);
+    for (var k = 1; k <= 12; k++) {
+      var g = el("g", { "class": "mes-g", "data-m": String(k) });
+      var dd = k === 2 ? 28 : diasMes(k, 2026);
+      el("circle", { cx: PX[k - 1], cy: arriba(k) - 1, r: 6, "class": "marca", hidden: "" }, g);
+      var t1 = el("text", { x: PX[k - 1], y: 75, "class": "mes-txt" }, g);
+      t1.textContent = MESES[k - 1].slice(0, 3);
+      var t2 = el("text", { x: PX[k - 1], y: 89, "class": "dias-txt " + (k === 2 ? "d28" : dd === 31 ? "d31" : "d30") }, g);
+      t2.textContent = k === 2 ? "28/29" : String(dd);
+    }
+  })();
+  function pintarD1() {
+    var m = Number($("d1-mes").value);
+    $("d1-num").textContent = m;
+    punos.querySelectorAll(".mes-g").forEach(function (g) {
+      var si = Number(g.getAttribute("data-m")) === m;
+      g.classList.toggle("elegido", si);
+      if (si) g.querySelector(".marca").removeAttribute("hidden");
+      else g.querySelector(".marca").setAttribute("hidden", "");
+    });
+    var r = mod(m, 2), par = r === 0 ? "par" : "impar";
+    if (m === 2) {
+      $("d1-cuenta").innerHTML = "febrero: 28 o 29";
+      $("d1-texto").innerHTML = "Febrero no sigue los nudillos: depende del año (la siguiente tarjeta).";
+    } else if (m <= 7) {
+      $("d1-cuenta").innerHTML = "30 + " + m + " % 2 = 30 + <span class=\"c-resto\">" + r + "</span> = " + (30 + r);
+      $("d1-texto").innerHTML = "Hasta julio, los meses impares caen en un nudillo. " + MESES[m - 1].charAt(0).toUpperCase() + MESES[m - 1].slice(1) + " (" + m + ") es " + par + ": <strong>" + (30 + r) + " días</strong>.";
+    } else {
+      $("d1-cuenta").innerHTML = "31 - " + m + " % 2 = 31 - <span class=\"c-resto\">" + r + "</span> = " + (31 - r);
+      $("d1-texto").innerHTML = "Desde agosto (el segundo puño) es al revés: los meses pares caen en un nudillo. " + MESES[m - 1].charAt(0).toUpperCase() + MESES[m - 1].slice(1) + " (" + m + ") es " + par + ": <strong>" + (31 - r) + " días</strong>.";
+    }
+  }
+  $("d1-mes").addEventListener("input", pintarD1);
+  pintarD1();
+
+  function pintarD2(a) {
+    var orden = [400, 100, 4], html = "", gano = -1;
+    orden.forEach(function (div, k) {
+      var cls;
+      if (gano >= 0) cls = "pildora--nada";
+      else if (a % div === 0) { cls = "pildora--si"; gano = k; }
+      else cls = "";
+      html += (k ? '<span aria-hidden="true">→</span>' : "") + '<span class="pildora ' + cls + '">% ' + div + (gano === k ? " = 0 ✓" : gano >= 0 ? "" : " ≠ 0") + "</span>";
+    });
+    if (gano < 0) html += '<span aria-hidden="true">→</span><span class="pildora pildora--si">else</span>';
+    $("d2-pildoras").innerHTML = html;
+    var b = esBisiesto(a);
+    $("d2-feb").innerHTML = "<span>25</span><span>26</span><span>27</span><span>28</span>" + '<span class="' + (b ? "si" : "no") + '">29</span>';
+    $("d2-cuenta").innerHTML = "Febrero de " + a + ": " + (b ? 29 : 28) + " días";
+  }
+  elegir($("d2-chips"), function (b) { pintarD2(Number(b.getAttribute("data-a"))); });
+  pintarD2(2024);
+
+  // El cuentakilómetros de fechas
+  var d3 = [30, 12, 2026];
+  function ponerRuedas(gira, vuelta) {
+    for (var k = 0; k < 3; k++) {
+      var r = $("d3-r" + k);
+      var s = r.querySelector(".rueda__ventana span");
+      s.textContent = d3[k];
+      r.classList.remove("rueda--gira");
+      r.classList.toggle("rueda--vuelta", vuelta.indexOf(k) !== -1);
+      if (gira.indexOf(k) !== -1 && !reducir) { void r.offsetWidth; r.classList.add("rueda--gira"); }
+    }
+  }
+  function partirD3(f) {
+    d3 = f.split("/").map(Number);
+    ponerRuedas([], []);
+    var dm = diasMes(d3[1], d3[2]);
+    $("d3-texto").innerHTML = "Hoy: " + larga(d3[0], d3[1], d3[2]) + ". " + MESES[d3[1] - 1].charAt(0).toUpperCase() + MESES[d3[1] - 1].slice(1) + " tiene " + dm + " días. Toca <strong>+1 día</strong>.";
+  }
+  $("d3-mas").addEventListener("click", function () {
+    var d = d3[0], m = d3[1], a = d3[2];
+    var dm = diasMes(m, a);
+    var t;
+    if (d + 1 <= dm) {
+      d3 = [d + 1, m, a];
+      ponerRuedas([0], []);
+      t = "<code>" + d + " + 1 = " + (d + 1) + "</code>: " + nombreMes(m) + " tiene " + dm + " días, así que solo avanza el día.";
+    } else if (m + 1 <= 12) {
+      d3 = [1, m + 1, a];
+      ponerRuedas([0, 1], [0]);
+      t = "<code>" + d + " + 1 = " + (d + 1) + "</code>, pero " + nombreMes(m) + " tiene " + dm + " días: el día vuelve a 1 y empuja al mes, que pasa a " + (m + 1) + ".";
+    } else {
+      d3 = [1, 1, a + 1];
+      ponerRuedas([0, 1, 2], [0, 1]);
+      t = "<code>" + d + " + 1 = " + (d + 1) + "</code>: el día vuelve a 1 y empuja al mes. Pero <code>12 + 1 = 13</code>: el mes también vuelve a 1 y empuja al año. ¡Cambiaron los tres!";
+    }
+    $("d3-texto").innerHTML = t;
+    $("d3-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+  });
+  elegir($("d3-chips"), function (b) { partirD3(b.getAttribute("data-f")); });
+  partirD3("30/12/2026");
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 700px)");
+  function opcionesFlujo(chico) {
+    var t = chico
+      ? { datos: "la fecha", feb: "¿febrero?", bis: "28 o 29", jul: "¿mes ≤ 7?", n31: "<code>30 + mes % 2</code>", n30: "<code>31 - mes % 2</code>",
+          suma: "<code>dia + 1</code>", pasa: "¿se pasó?", reset: "día 1 · mes+1", d12: "¿mes &gt; 12?", reset2: "mes 1 · año+1", out: "«Mañana: …»" }
+      : { datos: "anota <code>dia</code>, <code>mes</code>, <code>anio</code>", feb: "¿<code>mes == 2</code>?", bis: "<code>dias_mes</code>: 28 o 29 (bisiesto)",
+          jul: "¿<code>mes &lt;= 7</code>?", n31: "<code>dias_mes = 30 + mes % 2</code>", n30: "<code>dias_mes = 31 - mes % 2</code>",
+          suma: "<code>dia = dia + 1</code>", pasa: "¿<code>dia &gt; dias_mes</code>?", reset: "<code>dia = 1</code> · <code>mes = mes + 1</code>",
+          d12: "¿<code>mes &gt; 12</code>?", reset2: "<code>mes = 1</code> · <code>anio = anio + 1</code>", out: "«Mañana: dia/mes/anio»" };
+    var b = chico ? 1 : 0;
+    return {
+      fila: 40,
+      anchoNodo: chico ? 118 : 230,
+      columnas: chico ? [0.62, 1.2, 1.2] : [1, 1.1, 1.15],
+      nodos: [
+        { id: "ini", tipo: "inicio", texto: "Inicio", col: 0, fila: 0 },
+        { id: "datos", tipo: "datos", texto: t.datos, col: 1, fila: 0, idea: 1 },
+        { id: "feb", tipo: "decision", texto: t.feb, col: 1, fila: 1, idea: 2 },
+        { id: "bis", tipo: "proceso", texto: t.bis, col: 2, fila: 1, idea: 2 },
+        { id: "jul", tipo: "decision", texto: t.jul, col: 1, fila: 2, idea: 2 },
+        { id: "n31", tipo: "proceso", texto: t.n31, col: 2, fila: 2, idea: 2 },
+        // En el móvil, «31 - mes % 2» va debajo del rombo (no cabe a su izquierda): todo baja una fila
+        { id: "n30", tipo: "proceso", texto: t.n30, col: chico ? 1 : 0, fila: chico ? 3 : 2, idea: 2 },
+        { id: "suma", tipo: "proceso", texto: t.suma, col: 1, fila: 3 + b, idea: 3 },
+        { id: "pasa", tipo: "decision", texto: t.pasa, col: 1, fila: 4 + b, idea: 3 },
+        { id: "reset", tipo: "proceso", texto: t.reset, col: 2, fila: 4 + b, idea: 3 },
+        { id: "d12", tipo: "decision", texto: t.d12, col: 1, fila: 5 + b, idea: 4 },
+        { id: "reset2", tipo: "proceso", texto: t.reset2, col: 2, fila: 5 + b, idea: 4 },
+        { id: "out", tipo: "datos", texto: t.out, col: 1, fila: 6 + b, idea: 4 },
+        { id: "fin", tipo: "fin", texto: "Fin", col: 2, fila: 6 + b }
+      ],
+      flechas: [
+        { de: "ini", a: "datos" },
+        { de: "datos", a: "feb" },
+        { de: "feb", a: "bis", texto: "sí" },
+        { de: "feb", a: "jul", texto: "no" },
+        { de: "jul", a: "n31", texto: "sí" },
+        { de: "jul", a: "n30", texto: "no" },
+        { de: "bis", a: "suma", por: "derecha", carril: 1 },
+        { de: "n31", a: "suma", por: "derecha", carril: 0 },
+        { de: "n30", a: "suma" },
+        { de: "suma", a: "pasa" },
+        { de: "pasa", a: "reset", texto: "sí" },
+        { de: "pasa", a: "out", texto: "no", por: "izquierda" },
+        { de: "reset", a: "d12" },
+        { de: "d12", a: "reset2", texto: "sí" },
+        { de: "d12", a: "out", texto: "no" },
+        { de: "reset2", a: "out" },
+        { de: "out", a: "fin" }
+      ]
+    };
+  }
+  var flujo = null, flujoVisto = false;
+  function armarFlujo() {
+    var caja = $("flujo-caja");
+    caja.textContent = "";
+    var el = document.createElement("div");
+    el.id = "flujo";
+    caja.appendChild(el);
+    flujo = Flujo.crear(el, opcionesFlujo(movil.matches));
+    if (flujoVisto) flujo.dibujar();
+  }
+  armarFlujo();
+  if (movil.addEventListener) movil.addEventListener("change", function () { detenerRecorrido(); armarFlujo(); });
+  Problemas.alVer($("flujo-caja"), function () { flujoVisto = true; flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Hoy es 31/12/2026" },
+    { nodo: "datos", nota: "dia = 31 · mes = 12 · anio = 2026" },
+    { nodo: "feb", nota: "12 == 2 → no" },
+    { nodo: "jul", nota: "12 <= 7 → no" },
+    { nodo: "n30", nota: "31 - 12 % 2 = 31: diciembre tiene 31 días" },
+    { nodo: "suma", nota: "dia = 31 + 1 = 32" },
+    { nodo: "pasa", nota: "32 > 31 → sí: diciembre no tiene 32" },
+    { nodo: "reset", nota: "dia = 1 · mes = 12 + 1 = 13" },
+    { nodo: "d12", nota: "13 > 12 → sí: no hay mes 13" },
+    { nodo: "reset2", nota: "mes = 1 · anio = 2026 + 1 = 2027" },
+    { nodo: "out", nota: "Mañana: 1/1/2027" },
+    { nodo: "fin", nota: "Fin: cambiaron el día, el mes y el año" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 31/12/2026";
+  function detenerRecorrido() {
+    if (recorrido) { recorrido.detener(); recorrido = null; }
+    $("recorrer").textContent = TEXTO_RECORRER;
+  }
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { detenerRecorrido(); return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var D = d.dia, M = d.mes, A = d.anio;
+    var pasos = [], vars = {};
+    var est = { dia: D, mes: M, anio: A, dm: null, arrancada: false, fin: false };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var Mes = MESES[M - 1];
+
+    vars.dia = D;
+    paso({ linea: 0, escribe: "dia", capitulo: "La fecha",
+      nota: "La hoja de hoy dice <strong>" + larga(D, M, A) + "</strong>. El programa anota la fecha en tres variables. Primero, el día." });
+    vars.mes = M;
+    paso({ linea: 1, escribe: "mes", nota: "Después, el mes: <code>" + M + "</code> es " + Mes + "." });
+    vars.anio = A;
+    paso({ linea: 2, escribe: "anio", nota: "Y el año, en <code>anio</code> (sin ñ). Antes de sumar 1, hay que saber cuántos días tiene " + Mes + "." });
+
+    var dm, ultima;
+    if (M === 2) {
+      paso({ linea: 4, lee: ["mes"], capitulo: "¿Cuántos días?", cuenta: "2 == 2 → True",
+        nota: "¿Es febrero? <code>2 == 2</code> es <code>True</code>. Febrero depende del año: ahora vienen las preguntas del año bisiesto." });
+      var DIV = [400, 100, 4], LIF = [5, 7, 9], LAS = [6, 8, 10], VAL = [29, 28, 29];
+      var decide = 3;
+      for (var k = 0; k < 3; k++) {
+        var r = mod(A, DIV[k]);
+        paso({ linea: LIF[k], lee: ["anio"], cuenta: A + " % " + DIV[k] + " = " + r + " → " + py(r === 0),
+          nota: r === 0
+            ? "<code>" + A + " % " + DIV[k] + "</code> da <strong>0</strong>: la condición es <code>True</code>."
+            : "<code>" + A + " % " + DIV[k] + "</code> da <strong>" + r + "</strong>: no se divide exacto, la condición es <code>False</code>." + (k < 2 ? " Sigue con la pregunta de abajo." : " No quedan preguntas: le toca al <code>else</code>.") });
+        if (r === 0) { decide = k; break; }
+      }
+      if (decide < 3) {
+        dm = VAL[decide];
+        vars.dias_mes = dm; est.dm = dm;
+        paso({ linea: LAS[decide], escribe: "dias_mes", cuenta: "dias_mes = " + dm, pausa: dm === 29,
+          nota: "<code>dias_mes = " + dm + "</code>: en " + A + ", febrero tiene <strong>" + dm + " días</strong>" + (dm === 29 ? " porque " + A + " es bisiesto" : "") + ". Las demás ramas se saltan: ya se sabe cuántos días tiene el mes." });
+        ultima = LAS[decide];
+      } else {
+        dm = 28;
+        vars.dias_mes = dm; est.dm = dm;
+        paso({ linea: 12, ejecuta: [11, 12], escribe: "dias_mes", cuenta: "dias_mes = 28",
+          nota: A + " no es bisiesto: <code>dias_mes = 28</code>. Febrero tiene <strong>28 días</strong>." });
+        ultima = 12;
+      }
+    } else {
+      paso({ linea: 4, lee: ["mes"], capitulo: "¿Cuántos días?", cuenta: M + " == 2 → False",
+        nota: "¿Es febrero? <code>" + M + " == 2</code> es <code>False</code>: todo el bloque de febrero se salta y Python pasa al <code>elif</code>." });
+      var r2 = mod(M, 2), par = r2 === 0 ? "par" : "impar";
+      if (M <= 7) {
+        paso({ linea: 13, lee: ["mes"], cuenta: M + " <= 7 → True",
+          nota: "¿Es un mes hasta julio? <code>" + M + " &lt;= 7</code> es <code>True</code>. Hasta julio, los meses impares tienen 31 días y los pares, 30." });
+        dm = 30 + r2;
+        vars.dias_mes = dm; est.dm = dm;
+        paso({ linea: 14, escribe: "dias_mes", cuenta: "30 + " + M + " % 2 = " + dm,
+          nota: "<code>" + M + " % 2</code> da <strong>" + r2 + "</strong> (" + Mes + " es " + par + "), así que <code>30 + " + r2 + "</code> = <strong>" + dm + "</strong>. " + Mes.charAt(0).toUpperCase() + Mes.slice(1) + " tiene " + dm + " días." });
+        ultima = 14;
+      } else {
+        paso({ linea: 13, lee: ["mes"], cuenta: M + " <= 7 → False",
+          nota: "¿Es un mes hasta julio? <code>" + M + " &lt;= 7</code> es <code>False</code>: " + Mes + " viene después de julio. Corre el <code>else</code>." });
+        dm = 31 - r2;
+        vars.dias_mes = dm; est.dm = dm;
+        paso({ linea: 16, ejecuta: [15, 16], escribe: "dias_mes", cuenta: "31 - " + M + " % 2 = " + dm,
+          nota: "Desde agosto es al revés: <code>" + M + " % 2</code> da <strong>" + r2 + "</strong> (" + Mes + " es " + par + "), así que <code>31 - " + r2 + "</code> = <strong>" + dm + "</strong>. " + Mes.charAt(0).toUpperCase() + Mes.slice(1) + " tiene " + dm + " días." });
+        ultima = 16;
+      }
+    }
+
+    var dia = D + 1;
+    vars.dia = dia; est.dia = dia; est.arrancada = true;
+    paso({ linea: 18, lee: ["dia"], escribe: "dia", capitulo: "Un día más", cuenta: D + " + 1 = " + dia,
+      nota: "Se arranca la hoja de hoy y se suma 1 al día: <code>" + D + " + 1</code> = <strong>" + dia + "</strong>." + (dia > dm ? " Pero ¿existe el " + dia + " de " + Mes + "?" : "") });
+    var pasa = dia > dm;
+    paso({ linea: 19, lee: ["dia", "dias_mes"], cuenta: dia + " > " + dm + " → " + py(pasa), pausa: pasa && M !== 12,
+      nota: pasa
+        ? "¿El día se pasó del mes? <code>" + dia + " &gt; " + dm + "</code> es <code>True</code>: " + Mes + " no tiene " + dia + " días. El día tiene que volver a 1 y el mes, avanzar."
+        : "¿El día se pasó del mes? <code>" + dia + " &gt; " + dm + "</code> es <code>False</code>: el " + dia + " de " + Mes + " existe" + (M === 2 ? " en " + A : "") + ". Todo el bloque del <code>if</code> se salta." });
+    var mes = M, anio = A;
+    if (pasa) {
+      dia = 1;
+      vars.dia = 1; est.dia = 1;
+      paso({ linea: 20, escribe: "dia", cuenta: "dia = 1",
+        nota: "El día vuelve a <strong>1</strong>, como la rueda de un cuentakilómetros que da la vuelta." });
+      mes = M + 1;
+      vars.mes = mes; est.mes = mes;
+      paso({ linea: 21, lee: ["mes"], escribe: "mes", cuenta: M + " + 1 = " + mes,
+        nota: mes <= 12
+          ? "Y empuja al mes: <code>" + M + " + 1</code> = <strong>" + mes + "</strong>, " + MESES[mes - 1] + "."
+          : "Y empuja al mes: <code>" + M + " + 1</code> = <strong>" + mes + "</strong>. ¿Mes 13? No existe." });
+      var pasa12 = mes > 12;
+      paso({ linea: 22, lee: ["mes"], cuenta: mes + " > 12 → " + py(pasa12), pausa: pasa12,
+        nota: pasa12
+          ? "¿El mes se pasó de 12? <code>13 &gt; 12</code> es <code>True</code>: después de diciembre no hay mes 13. Ahora el que da la vuelta es el mes."
+          : "¿El mes se pasó de 12? <code>" + mes + " &gt; 12</code> es <code>False</code>: " + MESES[mes - 1] + " existe, así que el año no cambia." });
+      if (pasa12) {
+        mes = 1;
+        vars.mes = 1; est.mes = 1;
+        paso({ linea: 23, escribe: "mes", cuenta: "mes = 1",
+          nota: "El mes vuelve a <strong>1</strong>: enero." });
+        anio = A + 1;
+        vars.anio = anio; est.anio = anio;
+        paso({ linea: 24, lee: ["anio"], escribe: "anio", cuenta: A + " + 1 = " + anio,
+          nota: "Y empuja al año: <code>" + A + " + 1</code> = <strong>" + anio + "</strong>." });
+      }
+    }
+
+    var FINAL;
+    if (!pasa) {
+      FINAL = "La hoja de mañana es el <strong>" + larga(dia, mes, anio) + "</strong>. " +
+        (M === 2 && D === 28 && dm === 29 ? A + " es bisiesto: después del 28 viene el 29. En un año que no es bisiesto, como 2026, saldría <code>Mañana: 1/3/2026</code>."
+          : "Solo cambió el día. Las líneas del bloque del <code>if</code> tienen ×0: con este dato no corrieron. Así pasa casi todos los días del año.");
+    } else if (anio === A) {
+      FINAL = "Después del " + larga(D, M, A).replace(" de " + A, "") + " viene el <strong>" + larga(dia, mes, anio) + "</strong>. El día dio la vuelta y empujó al mes. El año no cambió: sus dos líneas tienen ×0.";
+    } else {
+      FINAL = "Cambiaron los tres: <strong>" + larga(dia, mes, anio) + "</strong>. Es el único día del año en que corren todas las líneas del final.";
+    }
+    est.fin = true;
+    paso({ linea: 26, capitulo: "La hoja de mañana", salida: "Mañana: " + dia + "/" + mes + "/" + anio, pausa: true, fin: true, nota: FINAL });
+    return pasos;
+  }
+
+  /* La escena: la tira de días del mes y el taco de calendario */
+  var escena = (function () {
+    var raiz, cuentaEl, rotulo, celdas = [], hoja, mesEl, numEl, semEl, sello, hoy, hoyMes, hoyNum, hoySem, pie;
+    var D = null, hoyVisible = true, numAntes = null;
+    function crear(c) {
+      var html = '<div class="tc">' +
+        '<p class="tc__cuenta" aria-live="polite"></p>' +
+        '<div class="tc__tira"><p class="tc__tira-rotulo"></p><div class="tc__dias" aria-hidden="true"></div></div>' +
+        '<div class="tc__taco">' +
+        '<div class="tc__bloque">' +
+        '<span class="tc__anillas" aria-hidden="true"></span>' +
+        '<div class="tc__hoja tc__hoja--abajo"><span class="tc__mes"></span><span class="tc__num"></span><span class="tc__sem"></span><span class="tc__sello" hidden>Mañana ✓</span></div>' +
+        '<div class="tc__hoja tc__hoja--hoy" aria-hidden="true"><span class="tc__mes"></span><span class="tc__num"></span><span class="tc__sem"></span></div>' +
+        "</div>" +
+        '<p class="tc__pie"></p>' +
+        "</div></div>";
+      c.innerHTML = html;
+      raiz = c.querySelector(".tc");
+      cuentaEl = c.querySelector(".tc__cuenta");
+      rotulo = c.querySelector(".tc__tira-rotulo");
+      var dias = c.querySelector(".tc__dias");
+      for (var n = 1; n <= 32; n++) {
+        var s = document.createElement("span");
+        s.className = "tc__dia";
+        s.textContent = n;
+        dias.appendChild(s);
+        celdas.push(s);
+      }
+      hoja = c.querySelector(".tc__hoja--abajo");
+      mesEl = hoja.querySelector(".tc__mes");
+      numEl = hoja.querySelector(".tc__num");
+      semEl = hoja.querySelector(".tc__sem");
+      sello = hoja.querySelector(".tc__sello");
+      hoy = c.querySelector(".tc__hoja--hoy");
+      hoyMes = hoy.querySelector(".tc__mes");
+      hoyNum = hoy.querySelector(".tc__num");
+      hoySem = hoy.querySelector(".tc__sem");
+      pie = c.querySelector(".tc__pie");
+    }
+    function reiniciar(d) {
+      D = d;
+      hoyMes.textContent = MESES[d.mes - 1] + " " + d.anio;
+      hoyNum.textContent = d.dia;
+      hoySem.textContent = diaSemana(d.dia, d.mes, d.anio);
+      numAntes = null;
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : { dia: D.dia, mes: D.mes, anio: D.anio, dm: null, arrancada: false, fin: false };
+      raiz.classList.toggle("tc--quieto", !op.animar);
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+
+      // La tira: los días del mes de hoy, hasta que el día da la vuelta
+      var mismoMes = e.mes === D.mes && e.anio === D.anio;
+      var pasada = e.dm !== null && e.dia > e.dm;
+      celdas.forEach(function (s, k) {
+        var n = k + 1, cls = "tc__dia";
+        if (mismoMes) {
+          if (n === 32) cls += " tc__dia--extra";
+          else if (n > 28 && e.dm === null) cls += " tc__dia--duda";
+          else if (e.dm !== null && n > e.dm) cls += " tc__dia--fuera";
+          if (e.dm !== null && n === e.dm) cls += " tc__dia--corte";
+        } else if (n > 1) cls += n === 32 ? " tc__dia--extra" : " tc__dia--nuevo";
+        if (n === e.dia) {
+          cls += " tc__dia--actual" + (pasada ? " tc__dia--pasada" : "");
+          if (op.animar && s.className.indexOf("tc__dia--actual") === -1) cls += " tc__dia--llega";
+        }
+        s.className = cls;
+        s.textContent = n > 28 && e.dm === null && mismoMes && n !== e.dia ? "?" : n;
+      });
+      var Mes = MESES[D.mes - 1];
+      var MesM = Mes.charAt(0).toUpperCase() + Mes.slice(1);
+      rotulo.classList.toggle("tc__tira-rotulo--mal", pasada || e.mes > 12);
+      if (!mismoMes) {
+        rotulo.innerHTML = e.mes > 12 ? "<b>¿Mes 13?</b> No existe" : "<b>" + MESES[e.mes - 1].charAt(0).toUpperCase() + MESES[e.mes - 1].slice(1) + (e.anio !== D.anio ? " de " + e.anio : "") + "</b>: empieza otra vez en 1";
+      } else if (e.dm === null) {
+        rotulo.innerHTML = "¿Cuántos días tiene <b>" + Mes + (D.mes === 2 ? " de " + D.anio : "") + "</b>?";
+      } else if (pasada) {
+        rotulo.innerHTML = "<b>" + e.dia + " &gt; " + e.dm + "</b>: " + Mes + " no tiene día " + e.dia;
+      } else {
+        rotulo.innerHTML = "<b>" + MesM + (D.mes === 2 ? " de " + D.anio : "") + "</b> tiene " + e.dm + " días";
+      }
+
+      // La hoja de mañana (debajo): lo que dicen las variables ahora
+      var ok = existe(e.dia, e.mes, e.anio);
+      mesEl.textContent = nombreMes(e.mes) + " " + e.anio;
+      numEl.textContent = e.dia;
+      // Mientras se arma la hoja de mañana, el día de la semana no se escribe (todavía puede cambiar)
+      semEl.textContent = !ok ? "¡no existe!" : e.fin || !e.arrancada ? diaSemana(e.dia, e.mes, e.anio) : "…";
+      hoja.classList.toggle("tc__hoja--mal", e.arrancada && !ok);
+      hoja.classList.toggle("tc__hoja--mesmal", e.mes > 12);
+      if (op.animar && e.arrancada && numAntes !== null && numAntes !== e.dia + "/" + e.mes + "/" + e.anio) {
+        numEl.classList.remove("tc__num--cambia");
+        void numEl.offsetWidth;
+        numEl.classList.add("tc__num--cambia");
+      }
+      numAntes = e.dia + "/" + e.mes + "/" + e.anio;
+      if (e.fin) sello.removeAttribute("hidden"); else sello.setAttribute("hidden", "");
+
+      // La hoja de hoy: se arranca al sumar 1
+      if (e.arrancada && hoyVisible) {
+        hoyVisible = false;
+        if (op.animar && hoy.animate) {
+          hoy.animate([
+            { transform: "none", opacity: 1 },
+            { transform: "translate(1.4rem, -0.6rem) rotate(14deg)", opacity: 1, offset: 0.35 },
+            { transform: "translate(5rem, 4rem) rotate(38deg)", opacity: 0 }
+          ], { duration: 750, easing: "ease-in" }).onfinish = function () { if (!hoyVisible) hoy.hidden = true; };
+        } else hoy.hidden = true;
+      } else if (!e.arrancada) {
+        hoyVisible = true;
+        hoy.getAnimations && hoy.getAnimations().forEach(function (a) { a.cancel(); });
+        hoy.hidden = false;
+      }
+
+      pie.className = "tc__pie" + (e.fin ? " tc__pie--ok" : "");
+      var hoyTxt = D.dia + "/" + D.mes + "/" + D.anio;
+      pie.textContent = e.fin ? "Mañana: " + diaSemana(e.dia, e.mes, e.anio) + " " + larga(e.dia, e.mes, e.anio)
+        : e.arrancada ? "La hoja de hoy (" + hoyTxt + ") ya se arrancó"
+        : "Hoy: " + diaSemana(D.dia, D.mes, D.anio) + " " + larga(D.dia, D.mes, D.anio);
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "14/10/2026", datos: { dia: 14, mes: 10, anio: 2026 } },
+    { nombre: "30/4 · se acaba el mes", datos: { dia: 30, mes: 4, anio: 2026 } },
+    { nombre: "28/2/2024 · bisiesto", datos: { dia: 28, mes: 2, anio: 2024 } },
+    { nombre: "31/12 · cambian los tres", datos: { dia: 31, mes: 12, anio: 2026 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1, 2],
+    variables: ["dia", "mes", "anio", "dias_mes"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  var tAnio = 2026;
+  function pintarMapa() {
+    var mapa = $("t-mapa"), html = "", cuenta = { d: 0, m: 0, a: 0 };
+    for (var m = 1; m <= 12; m++) {
+      html += "<i>" + MESES[m - 1].slice(0, 3) + "</i>";
+      var dm = diasMes(m, tAnio);
+      for (var d = 1; d <= 31; d++) {
+        if (d > dm) { html += '<span class="vacia"></span>'; continue; }
+        var f = manana(d, m, tAnio);
+        var cls = f[2] !== tAnio ? "a" : f[1] !== m ? "m" : "";
+        cuenta[cls || "d"]++;
+        html += '<span data-d="' + d + '" data-m="' + m + '"' + (cls ? ' class="' + cls + '"' : "") + "></span>";
+      }
+    }
+    mapa.innerHTML = html;
+    $("t-leyenda").innerHTML =
+      '<li><i style="--c: #c9d0dc"></i>Cambia solo el día: <strong>' + cuenta.d + "</strong> días</li>" +
+      '<li><i style="--c: var(--lapiz)"></i>Cambia también el mes: <strong>' + cuenta.m + "</strong> días</li>" +
+      '<li><i style="--c: var(--c-idea-4)"></i>Cambian los tres: <strong>' + cuenta.a + "</strong> día</li>";
+    var total = cuenta.d + cuenta.m + cuenta.a;
+    var t = $("t-dia");
+    t.max = String(total);
+    if (Number(t.value) > total) t.value = String(total);
+    pintarDiaMapa();
+  }
+  function pintarDiaMapa() {
+    var n = Number($("t-dia").value);
+    var celdas = $("t-mapa").querySelectorAll("span[data-d]");
+    celdas.forEach(function (c) { c.classList.remove("actual"); });
+    var c = celdas[n - 1];
+    c.classList.add("actual");
+    var d = Number(c.getAttribute("data-d")), m = Number(c.getAttribute("data-m"));
+    var f = manana(d, m, tAnio);
+    var que = f[2] !== tAnio ? "cambian los tres" : f[1] !== m ? "cambian el día y el mes" : "cambia solo el día";
+    $("t-texto").textContent = d + "/" + m + "/" + tAnio + " → " + fecha(f) + ": " + que;
+  }
+  $("t-dia").addEventListener("input", pintarDiaMapa);
+  elegir($("t-anios"), function (b) { tAnio = Number(b.getAttribute("data-a")); pintarMapa(); });
+  pintarMapa();
+
+  // Versiones que parecen iguales
+  var VERSIONES = [
+    { codigo: ["elif mes <= 7:", "    dias_mes = 30 + mes % 2", "else:", "    dias_mes = 31 - mes % 2", "dia = dia + 1", "if dia > dias_mes:"], cambia: [],
+      dm: diasMes, mayorIgual: false },
+    { codigo: ["else:  # todos menos febrero", "    dias_mes = 30 + mes % 2", "dia = dia + 1", "if dia > dias_mes:"], cambia: [0, 1],
+      dm: function (m, a) { return m === 2 ? diasMes(m, a) : 30 + mod(m, 2); }, mayorIgual: false },
+    { codigo: ["elif mes <= 7:", "    dias_mes = 30 + mes % 2", "else:", "    dias_mes = 31 - mes % 2", "dia = dia + 1", "if dia >= dias_mes:"], cambia: [5],
+      dm: diasMes, mayorIgual: true }
+  ];
+  function correVersion(v, d, m, a) {
+    var dm = v.dm(m, a);
+    d = d + 1;
+    if (v.mayorIgual ? d >= dm : d > dm) {
+      d = 1; m = m + 1;
+      if (m > 12) { m = 1; a = a + 1; }
+    }
+    return [d, m, a];
+  }
+  function pintarVersion(k) {
+    var v = VERSIONES[k];
+    Python.escribir($("v-codigo"), v.codigo);
+    $("v-codigo").querySelectorAll(".linea").forEach(function (l, i) { l.classList.toggle("linea--cambia", v.cambia.indexOf(i) !== -1); });
+    var fallas = [];
+    for (var m = 1; m <= 12; m++) {
+      for (var d = 1; d <= diasMes(m, 2026); d++) {
+        var bien = manana(d, m, 2026), dice = correVersion(v, d, m, 2026);
+        if (fecha(bien) !== fecha(dice)) fallas.push({ hoy: d + "/" + m, dice: dice, bien: bien });
+      }
+    }
+    var ver = $("v-veredicto");
+    if (!fallas.length) {
+      ver.className = "veredicto veredicto--ok";
+      ver.textContent = "✓ Acierta los 365 días de 2026.";
+      $("v-fallas").innerHTML = '<li class="gris">Probado día por día.</li>';
+      return;
+    }
+    ver.className = "veredicto veredicto--mal";
+    ver.textContent = "✗ Se equivoca en " + fallas.length + " días de 2026." + (k === 1 ? " Dice que agosto tiene 30 días y septiembre, 31." : " Se salta el último día de cada mes.");
+    var html = "";
+    fallas.slice(0, 3).forEach(function (f) {
+      var noExiste = !existe(f.dice[0], f.dice[1], f.dice[2]);
+      html += "<li>" + f.hoy + " → dice " + f.dice.slice(0, 2).join("/") + ' <span class="gris">(' + (noExiste ? "¡no existe! Es " + f.bien.slice(0, 2).join("/") : "se salta el " + f.bien.slice(0, 2).join("/")) + ")</span></li>";
+    });
+    if (fallas.length > 3) html += '<li class="gris">… y ' + (fallas.length - 3) + " más</li>";
+    $("v-fallas").innerHTML = html;
+  }
+  elegir($("v-chips"), function (b) { pintarVersion(Number(b.getAttribute("data-v"))); });
+  pintarVersion(0);
+
+  var BORDES = [
+    { f: [28, 2, 1900], texto: "1900 es divisible entre 100, pero no entre 400: no es bisiesto. Febrero tiene 28 días, así que mañana es 1 de marzo." },
+    { f: [28, 2, 2000], texto: "2000 se divide entre 400: sí es bisiesto. Después del 28 de febrero viene el 29." },
+    { f: [29, 2, 2024], texto: "El 29 es el último día de febrero de 2024: <code>30 &gt; 29</code> es <code>True</code>, así que mañana es 1 de marzo." },
+    { f: [31, 12, 2026], texto: "El único día del año en que cambian los tres: <code>32 &gt; 31</code> y después <code>13 &gt; 12</code>." }
+  ];
+  function pintarBorde(k) {
+    var b = BORDES[k];
+    $("b-datos").textContent = "dia = " + b.f[0] + " · mes = " + b.f[1] + " · anio = " + b.f[2];
+    $("b-consola").textContent = "Mañana: " + fecha(manana(b.f[0], b.f[1], b.f[2]));
+    $("b-texto").innerHTML = b.texto;
+  }
+  elegir($("b-chips"), function (b) { pintarBorde(Number(b.getAttribute("data-b"))); });
+  pintarBorde(0);
+
+  /* ---------- 6. ¿Y si la fecha no existe? ---------- */
+  Python.escribir($("x-codigo"), [
+    "# antes: la fecha y dias_mes",
+    "if mes < 1 or mes > 12:",
+    '    print("Esa fecha no existe")',
+    "elif dia < 1 or dia > dias_mes:",
+    '    print("Esa fecha no existe")',
+    "else:",
+    "    dia = dia + 1",
+    "    # lo demás, igual, más adentro"
+  ]);
+  $("x-codigo").querySelectorAll(".linea").forEach(function (l, i) { l.classList.toggle("linea--nueva", i >= 1 && i <= 5); });
+  function leer(id) {
+    var t = $(id).value.trim();
+    return /^\d+$/.test(t) ? Number(t) : null;
+  }
+  function pintarExiste() {
+    var d = leer("x-dia"), m = leer("x-mes"), a = leer("x-anio");
+    if (d === null || m === null || a === null) {
+      $("x-sin").textContent = $("x-con").textContent = "—";
+      $("x-sin-v").textContent = $("x-con-v").textContent = "Escribe tres números enteros.";
+      $("x-sin-v").className = $("x-con-v").className = "";
+      return;
+    }
+    var ok = existe(d, m, a);
+    $("x-sin").textContent = "Mañana: " + fecha(manana(d, m, a));
+    $("x-con").textContent = ok ? "Mañana: " + fecha(manana(d, m, a)) : "Esa fecha no existe";
+    $("x-sin-v").className = ok ? "veredicto--ok" : "veredicto--mal";
+    $("x-sin-v").textContent = ok ? "✓ La fecha existe." : "✗ Responde algo que no tiene sentido.";
+    $("x-con-v").className = "veredicto--ok";
+    $("x-con-v").textContent = ok ? "✓ Igual que antes." : "✓ Avisa y no calcula.";
+  }
+  ["x-dia", "x-mes", "x-anio"].forEach(function (id) {
+    $(id).addEventListener("input", function () {
+      $("x-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      pintarExiste();
+    });
+  });
+  elegir($("x-chips"), function (b) {
+    var f = b.getAttribute("data-f").split("/");
+    $("x-dia").value = f[0]; $("x-mes").value = f[1]; $("x-anio").value = f[2];
+    pintarExiste();
+  });
+  pintarExiste();
+
+  Problemas.iniciar({ id: "problema-manana" });
+})();
+</script>
+</body>
+</html>

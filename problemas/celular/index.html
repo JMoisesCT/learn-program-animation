@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Qué plan de celular me conviene? · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: cuánto cuesta cada plan de celular según los GB que se usan (uno por tramos, con un if) y cuál es el más barato, guardando «el mejor hasta ahora», con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    :root { --plan-a: #0e7490; --plan-a-extra: #e07a2e; --plan-b: #7c3aed; --plan-c: #be185d; --oro: #e2b33c; }
+    .t-a { color: var(--plan-a); } .t-b { color: var(--plan-b); } .t-c { color: var(--plan-c); }
+
+    /* ---------- El folleto (bloque 1) ---------- */
+    .ticket__tarifa { margin: var(--esp-2) 0 0; padding-top: var(--esp-2); border-top: 1px dashed #c9c2b2; font-size: 0.68rem; line-height: 1.4; color: var(--tinta-suave); text-align: center; }
+    .hoja-enunciado ul.planes { margin-top: calc(-1 * var(--esp-2)); }
+    .hoja-enunciado ul.planes li { margin-bottom: 0.15rem; }
+    @media (min-width: 1180px) { #caso .enunciado__hojas { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); } }
+    .planes__ej { display: block; font-size: 0.85rem; color: var(--tinta-suave); }
+
+    /* ---------- La escena: el folleto con la raya del mejor ---------- */
+    .cel { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--esp-2); }
+    .cel__arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+    .cel__gb { display: inline-flex; align-items: baseline; gap: 0.4em; padding: 0.15em 0.75em; border-radius: 999px; background: var(--azul-tinta-suave); color: var(--azul-tinta); font: 700 var(--texto-xs) var(--fuente); white-space: nowrap; }
+    .cel__gb b { font: 700 var(--texto-md) var(--fuente-codigo); }
+    .cel__cuenta { min-height: 1.7rem; max-width: 100%; padding: 0.1em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 200ms; }
+    .cel__cuenta:empty { opacity: 0; }
+    .cel__folleto { --gap: 0.5rem; --eje: 2.6rem; flex: 1 1 auto; min-height: 15rem; display: grid; grid-template-columns: var(--eje) repeat(3, minmax(0, 1fr)); grid-template-rows: 1.7rem auto minmax(4.5rem, 1fr) auto; column-gap: var(--gap); }
+    .cel__marco { grid-row: 2 / -1; border: 2px solid var(--papel-borde); border-radius: 10px; background: #fff; box-shadow: var(--sombra); transition: border-color 300ms, box-shadow 300ms, opacity 300ms; }
+    .cel__marco--nada { opacity: 0.55; }
+    .cel__marco--mejor { border-color: var(--oro); box-shadow: 0 0 0 3px rgba(226, 179, 60, 0.35), var(--sombra); }
+    .cel__marco--compara { border-color: var(--azul-tinta); box-shadow: 0 0 0 3px rgba(36, 69, 176, 0.25), var(--sombra); }
+    .cel__cab { grid-row: 2; z-index: 1; display: grid; justify-items: center; gap: 0.1rem; padding: 0.45rem 0.3rem 0.2rem; text-align: center; }
+    .cel__cab b { font: 700 var(--texto-sm) var(--serif); color: var(--c); }
+    .cel__cab small { font: 0.66rem/1.3 var(--fuente); color: var(--tinta-suave); }
+    .cel__columna { grid-row: 3; z-index: 1; position: relative; margin: 0 0.25rem; border-bottom: 2px solid var(--tinta); }
+    .cel__barra { position: absolute; left: 28%; right: 28%; bottom: 0; height: 0; display: flex; flex-direction: column; border-radius: 4px 4px 0 0; overflow: hidden; transition: height 650ms ease; }
+    .cel__barra span { display: block; }
+    .cel__extra { flex: 0 0 auto; height: 0; background: repeating-linear-gradient(45deg, var(--plan-a-extra) 0 5px, #f4a865 5px 10px); transition: height 650ms ease; }
+    .cel__base { flex: 1 1 auto; background: var(--c); }
+    .cel__pie { grid-row: 4; z-index: 1; display: grid; justify-items: center; gap: 0.05rem; padding: 0.3rem 0.25rem 0.45rem; text-align: center; }
+    .cel__precio { font: 700 var(--texto-md) var(--fuente-codigo); color: var(--tinta); line-height: 1.2; white-space: nowrap; }
+    .cel__calc { min-height: 1.25em; padding: 0 !important; background: none !important; font: 700 0.66rem/1.3 var(--fuente-codigo); color: var(--tinta-suave); }
+    .cel__plan--a { --c: var(--plan-a); } .cel__plan--b { --c: var(--plan-b); } .cel__plan--c { --c: var(--plan-c); }
+    /* La raya del mejor hasta ahora (cruza las tres columnas) */
+    .cel__nivel { grid-row: 3; grid-column: 1 / -1; position: relative; z-index: 2; pointer-events: none; }
+    .cel__raya { position: absolute; left: calc(var(--eje) + var(--gap) * 0.5); right: 0; bottom: 0; border-top: 2.5px dashed var(--oro); transition: bottom 650ms ease, opacity 300ms; }
+    .cel__raya-txt { position: absolute; left: 0; bottom: 0; width: var(--eje); transform: translateY(50%); display: grid; justify-items: end; padding-right: 0.15rem; box-sizing: border-box; font: 700 0.6rem/1.15 var(--fuente-codigo); color: #8a6400; text-align: right; transition: bottom 650ms ease, opacity 300ms; }
+    .cel__raya-txt b { font-size: 0.78rem; }
+    .cel__nivel--oculto .cel__raya, .cel__nivel--oculto .cel__raya-txt { opacity: 0; }
+    .cel__nivel--foco .cel__raya { border-top-width: 3.5px; }
+    .cel__nivel--foco .cel__raya-txt { color: #6b4d00; }
+    .cel__nivel--foco .cel__raya-txt b { padding: 0 0.2em; border-radius: 3px; background: var(--resaltador); }
+    /* La corona */
+    .cel__trono { grid-row: 1; grid-column: 2 / -1; position: relative; }
+    .cel__corona { position: absolute; bottom: -0.35rem; left: calc((100% - 2 * var(--gap)) / 3 * (var(--k, 0) + 0.5) + var(--gap) * var(--k, 0)); z-index: 3; display: inline-flex; align-items: center; gap: 0.25rem; transform: translateX(-50%); padding: 0.05rem 0.5rem 0.05rem 0.3rem; border-radius: 999px; background: #fff7dc; border: 1.5px solid var(--oro); font: 700 0.62rem var(--fuente); color: #6b4d00; white-space: nowrap; transition: left 600ms var(--curva-rebote, ease), opacity 300ms; }
+    .cel__corona svg { width: 1.15rem; height: 0.9rem; }
+    .cel__corona[hidden] { display: none; }
+    .cel__corona--salta { animation: corona-salta 600ms ease; }
+    @keyframes corona-salta { 35% { transform: translate(-50%, -0.6rem); } }
+    .cel__aviso { margin: 0 !important; min-height: 2.6em; font: 700 0.8rem/1.3 var(--fuente) !important; color: var(--tinta); text-align: center; }
+    .cel__aviso--si { color: var(--color-ok); }
+    .cel__aviso--no { color: var(--lapiz); }
+    .cel--quieto, .cel--quieto * { transition: none !important; }
+    @media (max-width: 640px) {
+      .cel__folleto { --eje: 2.3rem; --gap: 0.35rem; min-height: 18rem; }
+      .cel__cab small { font-size: 0.6rem; }
+      .cel__precio { font-size: var(--texto-sm); }
+      .cel__calc { font-size: 0.55rem; letter-spacing: -0.02em; }
+      .cel__corona span { display: none; }
+      .cel__corona { padding: 0.05rem 0.35rem; }
+    }
+
+    /* ---------- Demos (bloque 2) ---------- */
+    .concepto .codigo.codigo--chico { font-size: 0.78rem; line-height: 1.55; }
+    .tira-gb { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; margin: var(--esp-2) 0 0.2rem; }
+    .tira-gb span { display: grid; place-items: center; height: 1.6rem; border-radius: 4px; border: 1.5px dashed #b9c0cc; background: #fff; font: 700 0.58rem var(--fuente-codigo); color: transparent; }
+    .tira-gb .incl { border: 1.5px solid #9fd1a8; background: #eef8f0; }
+    .tira-gb .usado { border-color: var(--plan-a); background: var(--plan-a); color: #fff; }
+    .tira-gb .extra { border-color: #b8571c; background: var(--plan-a-extra); color: #fff; }
+    .tira-leyenda { margin: 0 0 var(--esp-2) !important; font-size: 0.72rem !important; color: var(--tinta-suave); }
+    .tira-leyenda i { display: inline-block; width: 0.8em; height: 0.8em; margin: 0 0.25em 0 0.5em; border-radius: 2px; vertical-align: -0.05em; }
+    .tira-leyenda i:first-child { margin-left: 0; }
+    .cuenta-grande .c-ok { color: var(--color-ok); }
+    .cuenta-grande .c-no { color: var(--lapiz); }
+
+    .tiendas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-2); margin: var(--esp-2) 0 0; padding-top: 1.1rem; }
+    .tienda { position: relative; display: grid; justify-items: center; padding: 0.35rem 0.2rem; border: 2px solid var(--papel-borde); border-radius: 8px; background: var(--papel); font: 700 0.72rem var(--fuente); color: var(--tinta-suave); transition: border-color 250ms, background-color 250ms; }
+    .tienda b { font: 700 var(--texto-md) var(--fuente-codigo); color: var(--tinta); }
+    .tienda--mira { border-color: var(--azul-tinta); background: var(--azul-tinta-suave); }
+    .tienda--mejor { border-color: var(--oro); background: #fff7dc; }
+    .tienda__corona { position: absolute; top: -1.05rem; left: 50%; width: 1.3rem; height: 1rem; transform: translateX(-50%); }
+    .cajitas { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: var(--esp-2) 0; }
+    .cajita { display: inline-flex; align-items: baseline; gap: 0.4em; padding: 0.2em 0.6em; border: 2px solid var(--papel-borde); border-radius: 8px; background: #fff; font: 700 var(--texto-xs) var(--fuente-codigo); min-width: 6.5rem; transition: border-color 250ms, box-shadow 250ms; }
+    .cajita code { padding: 0 !important; background: none !important; color: var(--azul-tinta) !important; font-weight: 400; }
+    .cajita--cambia { border-color: var(--color-ok); box-shadow: 0 0 0 3px rgba(11, 122, 62, 0.18); }
+    .paso-txt { margin: 0 0 var(--esp-2) !important; min-height: 4.2em; font-size: var(--texto-xs) !important; }
+    .paso-txt code { white-space: nowrap; }
+
+    .empate-cuenta { margin: var(--esp-2) 0; display: grid; gap: 0.25rem; font: 700 var(--texto-sm) var(--fuente-codigo); }
+    .empate-cuenta .suave { font-weight: 400; color: var(--tinta-suave); font-size: var(--texto-xs); }
+    .gana { display: inline-block; padding: 0.1em 0.6em; border-radius: 999px; background: #fff7dc; border: 1.5px solid var(--oro); font: 700 var(--texto-sm) var(--fuente); color: #6b4d00; }
+    .concepto .codigo.codigo--una { margin-top: var(--esp-2); font-size: 0.82rem; padding: var(--esp-2) 0; }
+    .concepto .codigo.codigo--una .linea { padding-left: 1rem; }
+    .concepto .codigo.codigo--una .linea::before { content: none; }
+
+    /* ---------- Detalles ---------- */
+    .fila-planes { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: var(--esp-2) 0; padding-top: 0.2rem; }
+    .fila-planes span { display: grid; justify-items: center; gap: 0.1rem; min-width: 1.75rem; }
+    .fila-planes b { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 6px; background: var(--papel); border: 1.5px solid var(--papel-borde); font: 700 0.74rem var(--fuente); }
+    .fila-planes span:first-child b { border-color: var(--oro); background: #fff7dc; }
+    .fila-planes small { font: 700 0.56rem var(--fuente-codigo); color: var(--azul-tinta); min-height: 0.8rem; }
+    .num-grande { margin: 0 0 0.3rem !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .num-grande strong { font: 700 var(--texto-xl) var(--serif); color: var(--azul-tinta); }
+    .num-grande--mal strong { color: var(--lapiz); }
+    .versiones { width: 100%; margin: var(--esp-2) 0; border-collapse: collapse; font-size: var(--texto-xs); }
+    .versiones th, .versiones td { padding: 0.3em 0.35em; border-bottom: 1px dashed var(--papel-borde); text-align: center; }
+    .versiones th { border-bottom: 2px solid var(--tinta); color: var(--tinta-suave); }
+    .versiones td { font-family: var(--fuente-codigo); }
+    .versiones td:first-child { text-align: left; white-space: nowrap; }
+    .versiones tr.mal td { color: var(--lapiz); }
+    .versiones tr.ok td { color: var(--color-ok); }
+    .versiones .marca { font-weight: 700; }
+    .precios-linea { margin: 0 0 var(--esp-1) !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+    .borde-datos { margin: var(--esp-2) 0 !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+    .dos-consolas { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); gap: var(--esp-2); }
+    .dos-consolas h4 { margin: 0 0 0.2rem; font: 700 0.68rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .consola-mini { margin: 0; padding: var(--esp-2); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 0.74rem/1.45 var(--fuente-codigo); white-space: pre; overflow: hidden; }
+    .b-texto { margin: var(--esp-2) 0 0 !important; font-size: var(--texto-xs) !important; }
+
+    /* ---------- 6. ¿Siempre conviene el ilimitado? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 0.95fr 1.1fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .mas__dibujo .control-fila { margin: 0; }
+    .grafica { display: block; width: 100%; height: auto; overflow: visible; }
+    .grafica__eje { stroke: var(--tinta); stroke-width: 1.5; }
+    .grafica__rejilla { stroke: var(--papel-borde); stroke-width: 1; }
+    .grafica__txt { font: 700 9px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .grafica__linea { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+    .grafica__nombre { font: 700 11px var(--fuente); }
+    .grafica__guia { stroke: var(--tinta); stroke-width: 1; stroke-dasharray: 3 3; }
+    .grafica__punto { stroke: #fff; stroke-width: 2; }
+    .grafica__celda { stroke: #fff; stroke-width: 1; }
+    .grafica__letra { font: 700 8px var(--fuente); fill: #fff; text-anchor: middle; }
+    .grafica__marca { fill: none; stroke: var(--tinta); stroke-width: 2; }
+    .lectura { margin: 0 !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; min-height: 2.6em; }
+    .lectura .gana { font-size: var(--texto-xs); }
+
+    /* ---------- El reproductor: un código largo ---------- */
+    #reproductor .rep__codigo .codigo { font-size: 0.8rem; line-height: 1.36; padding: var(--esp-2) 0; }
+    #reproductor .rep__codigo .codigo .linea { min-height: 1.36em; }
+    #reproductor .rep__calor--nunca .rep__calor-num { color: #7d8794; font-weight: 400; }
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1.22fr) minmax(10.5rem, 0.52fr); }
+    }
+    #idea .recorrido { margin-top: var(--esp-2); }
+    #flujo .flujo__etiqueta { transform: translateY(-4px); }
+    #flujo .flujo__nodo { padding-top: 0.32em; padding-bottom: 0.32em; }
+    #flujo .flujo__nodo--decision { padding-top: 0.75em; padding-bottom: 0.75em; }
+    #idea .recorrido .btn { min-height: 2.6rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
+    @media (max-width: 640px) {
+      #reproductor .rep__codigo .codigo { font-size: 0.76rem; }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #ilimitado .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #ilimitado .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .concepto .codigo.codigo--chico { font-size: 0.7rem; }
+      .dos-consolas .consola-mini { padding: var(--esp-2) 0.4rem; font-size: 0.62rem; }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Condicionales</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#ilimitado"><span>6 · ¿Siempre conviene el ilimitado?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Condicionales</p>
+          <h1>¿Qué plan de celular me conviene?</h1>
+          <p class="caso-bajada">Un programa que calcula cuánto cuesta cada plan según los GB que usas y se queda con el más barato.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 5"><span class="estrellas__llenas">★★★</span>☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/formulas/index.html">fórmulas</a></li>
+              <li><a href="../../lecciones/condicionales/index.html">if sin else</a></li>
+              <li><a href="../../lecciones/variables/reuso/index.html">reemplazar un valor</a></li>
+              <li><a href="../../lecciones/variables/fstrings/index.html">f-strings</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Un folleto con tres planes de celular, una corona sobre el más barato y un celular que marca 7 GB">
+          <g transform="rotate(-4 80 110)">
+            <rect x="14" y="34" width="132" height="156" rx="6" fill="#fff" stroke="#e3d9c3" stroke-width="2"/>
+            <text x="80" y="56" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#1f2a44" letter-spacing="1.5">PLANES</text>
+            <g font-family="Georgia, serif" font-size="15" font-weight="700">
+              <rect x="26" y="68" width="108" height="32" rx="6" fill="#e6f3f6" stroke="#0e7490" stroke-width="2.5"/>
+              <text x="36" y="89" fill="#0e7490">A</text>
+              <rect x="26" y="108" width="108" height="32" rx="6" fill="#f1ebfd"/>
+              <text x="36" y="129" fill="#7c3aed">B</text>
+              <rect x="26" y="148" width="108" height="32" rx="6" fill="#fbe9f1"/>
+              <text x="36" y="169" fill="#be185d">C</text>
+            </g>
+            <g font-family="monospace" font-size="11" font-weight="700" fill="#1f2a44" text-anchor="end">
+              <text x="126" y="88">S/ 15</text><text x="126" y="128">S/ 40</text><text x="126" y="168">3 x GB</text>
+            </g>
+            <path d="M112 74 l4 -14 l7 8 l6 -11 l6 11 l7 -8 l4 14 z" fill="#e2b33c" stroke="#a86400" stroke-width="1.5" stroke-linejoin="round"/>
+          </g>
+          <rect x="160" y="22" width="66" height="122" rx="12" fill="#1f2a44"/>
+          <rect x="166" y="34" width="54" height="96" rx="4" fill="#e5eafb"/>
+          <g fill="#2445b0"><rect x="174" y="58" width="6" height="8" rx="1"/><rect x="183" y="52" width="6" height="14" rx="1"/><rect x="192" y="46" width="6" height="20" rx="1"/><rect x="201" y="40" width="6" height="26" rx="1" opacity="0.35"/></g>
+          <text x="193" y="94" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#1f2a44">7 GB</text>
+          <text x="193" y="110" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#556074">este mes</text>
+          <circle cx="193" cy="137" r="3.5" fill="#556074"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Valeria va a contratar su primer plan de celular. En la tienda le dan un folleto con tres planes. Ella revisó cuántos datos gasta: unos <strong>7 GB</strong> al mes.</p>
+            <p>Su hermano no lo duda: <span class="resalta">«El ilimitado siempre conviene»</span>. Pero el ilimitado es el plan con el pago fijo más alto… <span class="nota-margen">¿Cuál le sale más barato? ¿Y si usara más GB?</span></p>
+            <div class="ticket" aria-label="El folleto de la tienda">
+              <h3>FOLLETO · PLANES</h3>
+              <div class="ticket__fila"><span>Plan A</span><span>S/ 15 · 6 GB</span></div>
+              <div class="ticket__fila"><span>Plan B</span><span>S/ 40 · ilimitado</span></div>
+              <div class="ticket__fila"><span>Plan C</span><span>S/ 3 por GB</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Valeria: 7 GB</span><span>¿Cuál?</span></div>
+              <p class="ticket__tarifa">Plan A: cada GB que pase de los 6 cuesta S/ 4 más.</p>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dados los GB que alguien usa en un mes, calcule <strong>cuánto pagaría con cada plan</strong> y diga <strong>cuál le conviene</strong>: el más barato.</p>
+            <ul class="planes">
+              <li><strong class="t-a">Plan A</strong>: S/ 15 al mes con 6 GB incluidos. Cada GB de más cuesta S/ 4. <span class="planes__ej">Con 8 GB: 15 + 2 * 4 = S/ 23.</span></li>
+              <li><strong class="t-b">Plan B</strong>: S/ 40 al mes, con GB ilimitados. <span class="planes__ej">Con 8 GB: S/ 40.</span></li>
+              <li><strong class="t-c">Plan C</strong>: S/ 3 por cada GB usado, sin pago fijo. <span class="planes__ej">Con 8 GB: 8 * 3 = S/ 24.</span></li>
+            </ul>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>gb</code>: los GB que usa en el mes, un número entero de 0 en adelante.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Cuatro líneas: <code>A: S/ …</code>, <code>B: S/ …</code>, <code>C: S/ …</code> y <code>Conviene el plan …</code>. Si dos planes cuestan lo mismo, gana el que va primero en el folleto.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>gb = 7</td><td>A: S/ 19
+B: S/ 40
+C: S/ 21
+Conviene el plan A</td></tr>
+                <tr><td>gb = 20</td><td>A: S/ 71
+B: S/ 40
+C: S/ 60
+Conviene el plan B</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Un <code>if</code> sin <code>else</code></h3>
+            <p>El plan A empieza en 15. Solo si usas más de 6 GB, el <code>if</code> cambia el precio. Si no, no hace nada.</p>
+            <pre class="codigo codigo--chico" id="d1-codigo"></pre>
+            <div class="control-fila">
+              <label for="d1-gb">gb = <span id="d1-num">8</span></label>
+              <input type="range" id="d1-gb" min="0" max="12" value="8">
+            </div>
+            <div class="tira-gb" id="d1-tira" aria-hidden="true"></div>
+            <p class="tira-leyenda" aria-hidden="true"><i style="background:#eef8f0;border:1px solid #9fd1a8"></i>incluidos en los 15<i style="background:var(--plan-a-extra)"></i>de más: S/ 4 cada uno</p>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>El mejor hasta ahora</h3>
+            <p>Tres tiendas venden la misma mochila. Para quedarte con la más barata, guarda <strong>dos datos juntos</strong>: cuál es la mejor hasta ahora y cuánto cuesta.</p>
+            <div class="tiendas" id="d2-tiendas" aria-hidden="true"></div>
+            <div class="cajitas" aria-live="polite">
+              <span class="cajita" id="d2-mejor"><code>mejor</code> <span>—</span></span>
+              <span class="cajita" id="d2-costo"><code>costo</code> <span>—</span></span>
+            </div>
+            <p class="paso-txt" id="d2-txt" aria-live="polite"></p>
+            <div class="chips-elegir" style="margin-top:auto"><button type="button" id="d2-paso">Siguiente ▸</button></div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3><code>&lt;</code> o <code>&lt;=</code>: el empate</h3>
+            <p>El C se compara con <code>costo</code>, lo que cuesta el mejor hasta ahora (aquí, el A). ¿Qué pasa si cuestan lo mismo?</p>
+            <div class="chips-elegir" id="d3-op" role="group" aria-label="Elige la comparación">
+              <button type="button" data-op="<" aria-pressed="true">&lt;</button>
+              <button type="button" data-op="<=" aria-pressed="false">&lt;=</button>
+            </div>
+            <pre class="codigo codigo--una" id="d3-codigo"></pre>
+            <div class="control-fila">
+              <label for="d3-gb">gb = <span id="d3-num">5</span></label>
+              <input type="range" id="d3-gb" min="4" max="6" value="5">
+            </div>
+            <div class="empate-cuenta" id="d3-cuenta" aria-live="polite"></div>
+            <p class="nota-margen" style="margin-top:auto">La diferencia entre <code>&lt;</code> y <code>&lt;=</code> solo se nota en un empate. El enunciado pide el primero del folleto: por eso el programa usa <code>&lt;</code>.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 7 GB</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>No hace falta comparar los tres precios a la vez: <strong>se empieza suponiendo que gana el primero, y cada plan que cuesta menos ocupa su lugar</strong>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Lo que cuesta el A</strong> S/ 15 fijos. Si usa más de 6 GB, suma 4 por cada GB de más.</li>
+              <li data-idea="2"><strong>Lo que cuestan el B y el C</strong> El B, 40 siempre. El C, 3 por cada GB.</li>
+              <li data-idea="3"><strong>Supón que gana el A</strong> <code>mejor</code> y <code>costo</code> guardan el mejor hasta ahora.</li>
+              <li data-idea="4"><strong>¿Cuesta menos? Lo reemplaza</strong> El B y después el C se comparan con el mejor hasta ahora.</li>
+            </ol>
+            <p class="nota-margen">Un <code>if</code> por cada plan que se compara, y ninguno tiene <code>else</code>: si el plan no cuesta menos, nada cambia.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuánto trabajo hace?</h3>
+            <p>Uses 1 GB o 1000, el programa siempre hace <strong>2 comparaciones</strong> para elegir: el B y el C contra el mejor hasta ahora. ¿Y si el folleto tuviera más planes?</p>
+            <div class="control-fila">
+              <label for="t-n">Planes: <span id="t-num">3</span></label>
+              <input type="range" id="t-n" min="2" max="10" value="3">
+            </div>
+            <div class="fila-planes" id="t-fila" aria-hidden="true"></div>
+            <p class="num-grande" aria-live="polite"><strong id="t-comp">2</strong> <span id="t-comp-txt">comparaciones para elegir: un <code>if</code> por cada plan después del primero</span></p>
+            <p class="num-grande num-grande--mal" aria-live="polite"><strong id="t-podio">6</strong> <span id="t-podio-txt">órdenes posibles si hubiera que ordenarlos a todos</span></p>
+            <p class="nota-margen" style="margin-top:auto">En <a href="../podio/index.html">El podio de la carrera</a>, cada orden tenía su propia rama. Aquí no hace falta ordenar a todos: basta quedarse con uno.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué funciona?</h3>
+            <p>Cada plan se compara con <code>costo</code>, el precio del <strong>mejor hasta ahora</strong>. Una versión que parece igual compara el C con el A:</p>
+            <div class="control-fila">
+              <label for="v-gb">gb = <span id="v-num">14</span></label>
+              <input type="range" id="v-gb" min="0" max="20" value="14">
+            </div>
+            <p class="precios-linea" id="v-precios"></p>
+            <table class="versiones" aria-live="polite">
+              <thead><tr><th>el C se compara así</th><th>elige</th><th>cuesta</th><th></th></tr></thead>
+              <tbody id="v-filas"></tbody>
+            </table>
+            <p class="nota-margen" id="v-nota" style="margin-top:auto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">Empate</button>
+              <button type="button" data-b="1" aria-pressed="false">0 GB</button>
+              <button type="button" data-b="2" aria-pressed="false">−2 GB</button>
+            </div>
+            <p class="borde-datos" id="b-datos"></p>
+            <div class="dos-consolas" id="b-consolas"></div>
+            <p class="b-texto" id="b-texto" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Siempre conviene el ilimitado? -->
+    <section class="panel" id="ilimitado">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Siempre conviene el ilimitado?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>El hermano de Valeria dice que sí. Mueve los GB y mira qué plan es el más barato en cada caso.</p>
+            <p>El ganador cambia <strong>tres veces</strong>: el C gana hasta 4 GB, el A de 5 a 9, otra vez el C de 10 a 13 y el B desde 14. El C vuelve a ganar después de perder: pasados los 6 GB, el A sube 4 soles por GB y el C, solo 3.</p>
+            <p>Con sus 7 GB, Valeria pagaría <strong>S/ 40</strong> en el ilimitado y <strong>S/ 19</strong> en el A. Su hermano tiene razón solo si usa 14 GB o más.</p>
+            <p class="nota-margen"><span class="resalta">No hay un plan que siempre convenga: lo decide cuánto usas.</span> Por eso el programa recibe los GB y hace las cuentas cada vez.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <svg class="grafica" id="g-svg" aria-hidden="true"></svg>
+            <div class="control-fila">
+              <label for="g-gb">gb = <span id="g-num">7</span></label>
+              <input type="range" id="g-gb" min="0" max="20" value="7">
+            </div>
+            <p class="lectura" id="g-lectura" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../triangulo/index.html">← <span class="largo">Caso anterior: </span>¿Se puede armar el triángulo?</a>
+          <a class="btn btn-primario" href="../estacionamiento/index.html"><span class="largo">Siguiente caso: </span>El estacionamiento →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  var CORONA = '<svg viewBox="0 0 24 18" aria-hidden="true"><path d="M2 16 L4 3 L9 9 L12 1 L15 9 L20 3 L22 16 Z" fill="#e2b33c" stroke="#a86400" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  var LETRAS = ["A", "B", "C"];
+
+  /* Los planes, como los calcula el programa */
+  function planA(gb) { return gb > 6 ? 15 + (gb - 6) * 4 : 15; }
+  function planB() { return 40; }
+  function planC(gb) { return gb * 3; }
+  function costos(gb) { return [planA(gb), planB(gb), planC(gb)]; }
+  // El mejor: se supone el A y cada uno que cuesta menos lo reemplaza (con < o con <=)
+  function elegir(c, igual) {
+    var m = 0;
+    for (var k = 1; k < c.length; k++) if (igual ? c[k] <= c[m] : c[k] < c[m]) m = k;
+    return m;
+  }
+  function salida(gb, igual) {
+    var c = costos(gb);
+    return "A: S/ " + c[0] + "\nB: S/ " + c[1] + "\nC: S/ " + c[2] + "\nConviene el plan " + LETRAS[elegir(c, igual)];
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "gb = " + d.gb,
+      "",
+      "plan_a = 15",
+      "if gb > 6:",
+      "    plan_a = 15 + (gb - 6) * 4",
+      "plan_b = 40",
+      "plan_c = gb * 3",
+      "",
+      'mejor = "A"',
+      "costo = plan_a",
+      "if plan_b < costo:",
+      '    mejor = "B"',
+      "    costo = plan_b",
+      "if plan_c < costo:",
+      '    mejor = "C"',
+      "    costo = plan_c",
+      "",
+      'print(f"A: S/ {plan_a}")',
+      'print(f"B: S/ {plan_b}")',
+      'print(f"C: S/ {plan_c}")',
+      'print(f"Conviene el plan {mejor}")'
+    ];
+  }
+  var IDEAS = [1, 0, 1, 1, 1, 2, 2, 0, 3, 3, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0];
+
+  /* ---------- 2. Demos ---------- */
+  // Un if sin else
+  Python.escribir($("d1-codigo"), ["plan_a = 15", "if gb > 6:", "    plan_a = 15 + (gb - 6) * 4"]);
+  function pintarD1() {
+    var gb = Number($("d1-gb").value), p = planA(gb);
+    $("d1-num").textContent = gb;
+    var tira = $("d1-tira");
+    tira.textContent = "";
+    for (var k = 1; k <= 12; k++) {
+      var s = document.createElement("span");
+      s.className = (k <= 6 ? "incl" : "") + (k <= gb ? (k <= 6 ? " usado" : " extra") : "");
+      s.textContent = k <= gb ? (k <= 6 ? k : "+4") : "";
+      tira.appendChild(s);
+    }
+    var ls = $("d1-codigo").querySelectorAll(".linea");
+    ls[2].classList.toggle("linea--saltada", gb <= 6);
+    $("d1-cuenta").innerHTML = gb > 6
+      ? "15 + (" + gb + " - 6) * 4 = <span class=\"c-cociente\">S/ " + p + "</span>"
+      : "<code>" + gb + " &gt; 6</code> es False → <span class=\"c-cociente\">S/ 15</span>";
+  }
+  $("d1-gb").addEventListener("input", pintarD1);
+  pintarD1();
+
+  // El mejor hasta ahora: tres tiendas
+  var MOCHILAS = [[52, 47, 49], [45, 50, 38], [36, 44, 41]];
+  var d2 = { set: 0, paso: 0 };
+  function pintarD2(animar) {
+    var pr = MOCHILAS[d2.set], n = d2.paso;
+    // estado después del paso n: 1 = supone A; 2 = compara B; 3 = compara C; 4 = final
+    var mejor = null, costo = null, mira = -1, cambia = false, txt;
+    if (n >= 1) { mejor = 0; costo = pr[0]; }
+    for (var k = 1; k <= Math.min(n - 1, 2); k++) {
+      var gana = pr[k] < costo;
+      if (k === n - 1) { mira = k; cambia = gana; }
+      if (gana) { mejor = k; costo = pr[k]; }
+    }
+    if (n === 0) txt = "Toca <strong>Siguiente</strong> para recorrer las tiendas.";
+    else if (n === 1) { txt = "Todavía no compara nada: supone que gana la primera, <code>mejor = \"A\"</code> y <code>costo = " + pr[0] + "</code>."; cambia = true; }
+    else if (n <= 3) {
+      var ant = n === 2 ? pr[0] : (pr[1] < pr[0] ? pr[1] : pr[0]);
+      txt = "<code>" + pr[mira] + " &lt; " + ant + "</code> es <strong>" + (cambia ? "True" : "False") + "</strong>: " +
+        (cambia ? "la " + LETRAS[mira] + " cuesta menos y reemplaza a la mejor. Cambian las dos variables." : "la " + LETRAS[mira] + " no cuesta menos. Nada cambia.");
+    } else txt = "Listo: la más barata es la <strong>" + LETRAS[mejor] + "</strong>, a S/ " + costo + ". Hizo 2 comparaciones.";
+    var cont = $("d2-tiendas");
+    cont.textContent = "";
+    pr.forEach(function (p, k) {
+      var t = document.createElement("div");
+      t.className = "tienda" + (k === mejor ? " tienda--mejor" : "") + (k === mira && n <= 3 ? " tienda--mira" : "");
+      t.innerHTML = "Tienda " + LETRAS[k] + "<b>S/ " + p + "</b>" + (k === mejor ? '<span class="tienda__corona">' + CORONA + "</span>" : "");
+      cont.appendChild(t);
+    });
+    $("d2-mejor").lastElementChild.textContent = mejor === null ? "—" : "'" + LETRAS[mejor] + "'";
+    $("d2-costo").lastElementChild.textContent = costo === null ? "—" : String(costo);
+    $("d2-mejor").classList.toggle("cajita--cambia", !!animar && cambia && n <= 3);
+    $("d2-costo").classList.toggle("cajita--cambia", !!animar && cambia && n <= 3);
+    $("d2-txt").innerHTML = txt;
+    $("d2-paso").textContent = n >= 4 ? "↺ Otros precios" : "Siguiente ▸";
+  }
+  $("d2-paso").addEventListener("click", function () {
+    if (d2.paso >= 4) { d2.set = (d2.set + 1) % MOCHILAS.length; d2.paso = 0; }
+    else d2.paso++;
+    pintarD2(true);
+  });
+  pintarD2(false);
+
+  // < o <= en un empate
+  var d3op = "<";
+  function pintarD3() {
+    var gb = Number($("d3-gb").value), a = planA(gb), c = planC(gb);
+    $("d3-num").textContent = gb;
+    Python.escribir($("d3-codigo"), ["if plan_c " + d3op + " costo:"]);
+    var res = d3op === "<" ? c < a : c <= a;
+    $("d3-cuenta").innerHTML =
+      '<span class="suave">A: S/ ' + a + " · C: S/ " + c + (a === c ? " · ¡empate!" : "") + "</span>" +
+      "<span>" + c + " " + d3op.replace("<", "&lt;") + " " + a + " → " + (res ? '<span class="c-ok">True</span>' : '<span class="c-no">False</span>') + "</span>" +
+      '<span><span class="gana">' + (res ? "Gana el C" : "Se queda el A") + "</span></span>";
+  }
+  $("d3-op").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      d3op = b.getAttribute("data-op");
+      $("d3-op").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD3();
+    });
+  });
+  $("d3-gb").addEventListener("input", pintarD3);
+  pintarD3();
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 640px)").matches;
+  var SEP = movil ? "<br>" : " · ";
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 44,
+    anchoNodo: 250,
+    columnas: movil ? [0.68, 1.4, 1.15] : [0.5, 1.45, 1.3],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 0, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota los GB que usa", col: 1, fila: 0, idea: 1 },
+      { id: "a15", tipo: "proceso", texto: "<code>plan_a = 15</code>", col: 1, fila: 1, idea: 1 },
+      { id: "gb6", tipo: "decision", texto: "¿gb &gt; 6?", col: 1, fila: 2, idea: 1 },
+      { id: "extra", tipo: "proceso", texto: "<code>plan_a = 15 + (gb − 6) * 4</code>", col: 2, fila: 2, idea: 1 },
+      { id: "bc", tipo: "proceso", texto: "<code>plan_b = 40</code>" + SEP + "<code>plan_c = gb * 3</code>", col: 1, fila: 3, idea: 2 },
+      { id: "supone", tipo: "proceso", texto: "<code>mejor = \"A\"</code>" + SEP + "<code>costo = plan_a</code>", col: 1, fila: 4, idea: 3 },
+      { id: "cmpb", tipo: "decision", texto: "¿B cuesta menos?", col: 1, fila: 5, idea: 4 },
+      { id: "ganab", tipo: "proceso", texto: "el B es el mejor", col: 2, fila: 5, idea: 4 },
+      { id: "cmpc", tipo: "decision", texto: "¿C cuesta menos?", col: 1, fila: 6, idea: 4 },
+      { id: "ganac", tipo: "proceso", texto: "el C es el mejor", col: 2, fila: 6, idea: 4 },
+      { id: "imprime", tipo: "datos", texto: "imprime los precios y el mejor", col: 1, fila: 7 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 0, fila: 7 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "a15" },
+      { de: "a15", a: "gb6" },
+      { de: "gb6", a: "extra", texto: "sí" },
+      { de: "gb6", a: "bc", texto: "no" },
+      { de: "extra", a: "bc" },
+      { de: "bc", a: "supone" },
+      { de: "supone", a: "cmpb" },
+      { de: "cmpb", a: "ganab", texto: "sí" },
+      { de: "cmpb", a: "cmpc", texto: "no" },
+      { de: "ganab", a: "cmpc" },
+      { de: "cmpc", a: "ganac", texto: "sí" },
+      { de: "cmpc", a: "imprime", texto: "no" },
+      { de: "ganac", a: "imprime" },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var recorrido = null;
+  var PASOS_FLUJO = [
+    { nodo: "ini", nota: "Valeria abre el folleto" },
+    { nodo: "datos", nota: "gb = 7" },
+    { nodo: "a15", nota: "plan_a = 15" },
+    { nodo: "gb6", nota: "¿7 > 6? sí: se pasó por 1 GB" },
+    { nodo: "extra", nota: "15 + (7 − 6) * 4 = 19" },
+    { nodo: "bc", nota: "plan_b = 40 · plan_c = 7 * 3 = 21" },
+    { nodo: "supone", nota: "el mejor hasta ahora: A, a 19" },
+    { nodo: "cmpb", nota: "¿40 < 19? no" },
+    { nodo: "cmpc", nota: "¿21 < 19? no" },
+    { nodo: "imprime", nota: "A: S/ 19 · B: S/ 40 · C: S/ 21" },
+    { nodo: "fin", nota: "Fin: conviene el plan A" }
+  ];
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 7 GB";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(PASOS_FLUJO, {
+      intervalo: reducir ? 1600 : 1100,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = {};
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var gb = d.gb;
+    vars.gb = gb; est.gb = gb;
+    paso({ linea: 0, escribe: "gb", capitulo: "Los datos",
+      nota: "Esta persona usa <strong>" + gb + " GB</strong> al mes. ¿Qué plan le sale más barato?" });
+
+    vars.plan_a = 15; est.a = 15; est.calcA = "15";
+    paso({ linea: 2, escribe: "plan_a", capitulo: "El plan A",
+      cuenta: "plan_a = 15",
+      nota: "El plan A cobra <strong>15</strong> fijos, con 6 GB incluidos. Por ahora, <code>plan_a</code> vale 15." });
+
+    var pasa = gb > 6;
+    paso({ linea: 3, lee: ["gb"], decideA: true, pasa: pasa,
+      cuenta: gb + " > 6 → " + (pasa ? "True" : "False"),
+      nota: pasa
+        ? "<code>" + gb + " &gt; 6</code> es <strong>True</strong>: usa más de los 6 GB incluidos. Corre la línea de adentro."
+        : "<code>" + gb + " &gt; 6</code> es <strong>False</strong>: le alcanzan los 6 GB incluidos. La línea de adentro se salta y <code>plan_a</code> se queda en 15. Este <code>if</code> no tiene <code>else</code>: si no hace falta cambiar nada, no hace nada." });
+    if (pasa) {
+      var a = 15 + (gb - 6) * 4;
+      vars.plan_a = a; est.a = a; est.extra = a - 15; est.calcA = "15 + (" + gb + " - 6) * 4";
+      paso({ linea: 4, escribe: "plan_a", lee: ["gb"],
+        cuenta: "15 + (" + gb + " - 6) * 4 = " + a,
+        nota: "Se pasó por " + (gb - 6) + " GB y cada uno cuesta 4: <code>15 + (" + gb + " - 6) * 4</code> da <strong>" + a + "</strong>. En el rastro de <code>plan_a</code>, el 15 quedó tachado." });
+    }
+
+    vars.plan_b = 40; est.b = 40; est.calcB = "fijo";
+    paso({ linea: 5, escribe: "plan_b", capitulo: "Los planes B y C",
+      cuenta: "plan_b = 40",
+      nota: "El plan B cuesta <strong>40</strong> siempre, use lo que use." });
+    var c = gb * 3;
+    vars.plan_c = c; est.c = c; est.calcC = gb + " * 3";
+    paso({ linea: 6, escribe: "plan_c", lee: ["gb"],
+      cuenta: gb + " * 3 = " + c,
+      nota: "El plan C cobra 3 por cada GB: <code>" + gb + " * 3</code> da <strong>" + c + "</strong>." });
+
+    vars.mejor = "A"; est.mejor = 0;
+    paso({ linea: 8, escribe: "mejor", capitulo: "El mejor hasta ahora", corona: true,
+      cuenta: 'mejor = "A"',
+      nota: "Todavía no compara nada: empieza suponiendo que gana el <strong>A</strong>, el primero del folleto. La corona marca el mejor hasta ahora." });
+    vars.costo = est.a; est.costo = est.a;
+    paso({ linea: 9, escribe: "costo", lee: ["plan_a"], pausa: d.clave === "normal",
+      cuenta: "costo = " + est.a,
+      nota: "<code>costo</code> guarda lo que cuesta el mejor hasta ahora: <strong>" + est.a + "</strong>. Es la raya dorada. Un plan le gana al mejor solo si su barra queda <strong>debajo</strong> de la raya." });
+
+    // ¿B cuesta menos?
+    var antes = est.costo;
+    var ganaB = 40 < antes;
+    paso({ linea: 10, lee: ["plan_b", "costo"], capitulo: "¿B cuesta menos?", compara: 1, gana: ganaB,
+      cuenta: "40 < " + antes + " → " + (ganaB ? "True" : "False"),
+      nota: ganaB
+        ? "<code>40 &lt; " + antes + "</code> es <strong>True</strong>: el B cuesta menos que el mejor hasta ahora."
+        : "<code>40 &lt; " + antes + "</code> es <strong>False</strong>: el B no cuesta menos. El A sigue siendo el mejor y las dos líneas de adentro se saltan." });
+    if (ganaB) {
+      vars.mejor = "B"; est.mejor = 1;
+      paso({ linea: 11, escribe: "mejor", corona: true,
+        cuenta: 'mejor = "B"',
+        nota: "El B reemplaza al A: la corona salta al B." });
+      vars.costo = 40; est.costo = 40;
+      paso({ linea: 12, escribe: "costo", lee: ["plan_b"], pausa: d.clave === "mucho",
+        cuenta: "costo = 40",
+        nota: "Y <code>costo</code> baja a <strong>40</strong>: las dos variables cambian juntas. Desde ahora, el C tendrá que costar menos que 40, no menos que " + antes + "." });
+    }
+
+    // ¿C cuesta menos?
+    var tope = est.costo;
+    var ganaC = c < tope;
+    var notaC;
+    if (ganaC) notaC = "<code>" + c + " &lt; " + tope + "</code> es <strong>True</strong>: el C cuesta menos que el mejor hasta ahora.";
+    else if (c === tope) notaC = "<code>" + c + " &lt; " + tope + "</code> es <strong>False</strong>: el C cuesta <strong>lo mismo</strong> que el " + LETRAS[est.mejor] + ", no menos. Con <code>&lt;</code>, un empate no reemplaza: se queda el que llegó primero.";
+    else if (ganaB) notaC = "<code>" + c + " &lt; " + tope + "</code> es <strong>False</strong>. Fíjate: el C se compara con " + tope + ", el mejor hasta ahora, y no con los " + est.a + " del A. Le gana al A, pero no al B.";
+    else notaC = "<code>" + c + " &lt; " + tope + "</code> es <strong>False</strong>: el C cuesta más que el mejor hasta ahora. Nada cambia.";
+    paso({ linea: 13, lee: ["plan_c", "costo"], capitulo: "¿C cuesta menos?", compara: 2, gana: ganaC, empate: c === tope, pausa: d.clave === "empate",
+      cuenta: c + " < " + tope + " → " + (ganaC ? "True" : "False"),
+      nota: notaC });
+    if (ganaC) {
+      vars.mejor = "C"; est.mejor = 2;
+      paso({ linea: 14, escribe: "mejor", corona: true,
+        cuenta: 'mejor = "C"',
+        nota: "El C reemplaza al " + LETRAS[pasos[pasos.length - 1].est.mejor] + ": la corona salta al C." });
+      vars.costo = c; est.costo = c;
+      paso({ linea: 15, escribe: "costo", lee: ["plan_c"], pausa: d.clave === "poco",
+        cuenta: "costo = " + c,
+        nota: "Y <code>costo</code> baja a <strong>" + c + "</strong>. Era el último plan: el que tiene la corona es el más barato de los tres." });
+    }
+
+    paso({ linea: 17, salida: "A: S/ " + vars.plan_a, lee: ["plan_a"], capitulo: "Fin",
+      nota: "Imprime lo que cuesta cada plan…" });
+    paso({ linea: 18, salida: "B: S/ " + vars.plan_b, lee: ["plan_b"], nota: "…el B…" });
+    paso({ linea: 19, salida: "C: S/ " + vars.plan_c, lee: ["plan_c"], nota: "…y el C." });
+    var finales = {
+      normal: "Le conviene el <strong>A</strong>: S/ 19 al mes. Ninguna comparación cambió nada: en el mapa de calor, las cuatro líneas de adentro de los dos <code>if</code> quedaron en ×0.",
+      poco: "Con " + gb + " GB, el más barato es el <strong>C</strong>: S/ " + c + ". La línea de adentro del <code>if gb &gt; 6</code> quedó en ×0, y también las del B: nunca fue el mejor.",
+      mucho: "Con " + gb + " GB gana el ilimitado: <strong>S/ 40</strong>. Aquí el hermano de Valeria tiene razón. ¿Pasará lo mismo con cualquier cantidad de GB? Lo verás en el bloque 6.",
+      empate: "El A y el C cuestan lo mismo, S/ " + c + ", y el programa dice <strong>A</strong>: el primero del folleto, como pide el enunciado. Con <code>&lt;=</code> en vez de <code>&lt;</code>, diría C."
+    };
+    paso({ linea: 20, salida: "Conviene el plan " + vars.mejor, lee: ["mejor"], pausa: true, fin: true,
+      nota: finales[d.clave] || "Conviene el plan <strong>" + vars.mejor + "</strong>." });
+    return pasos;
+  }
+
+  /* La escena: el folleto con una barra por plan, la raya del mejor y la corona */
+  var escena = (function () {
+    var raiz, gbEl, cuentaEl, folleto, corona, nivel, raya, rayaTxt, aviso;
+    var planes = [];
+    var escala = 50;
+    var mejorAntes = null;
+    function crear(cont) {
+      var cabs = [
+        "S/ 15 · 6 GB<br>+ S/ 4 por GB extra",
+        "S/ 40<br>GB ilimitados",
+        "S/ 3 por GB<br>sin pago fijo"
+      ];
+      var html = '<div class="cel">' +
+        '<div class="cel__arriba"><span class="cel__gb">usa <b>—</b></span><span class="cel__cuenta"></span></div>' +
+        '<div class="cel__folleto">' +
+        '<div class="cel__trono" style="grid-column: 2 / -1"><span class="cel__corona" hidden>' + CORONA + "<span>el mejor</span></span></div>";
+      LETRAS.forEach(function (L, k) {
+        var col = "grid-column:" + (k + 2);
+        html += '<div class="cel__marco cel__plan--' + L.toLowerCase() + '" style="' + col + '"></div>' +
+          '<div class="cel__cab cel__plan--' + L.toLowerCase() + '" style="' + col + '"><b>Plan ' + L + "</b><small>" + cabs[k] + "</small></div>" +
+          '<div class="cel__columna cel__plan--' + L.toLowerCase() + '" style="' + col + '"><div class="cel__barra">' + (k === 0 ? '<span class="cel__extra"></span>' : "") + '<span class="cel__base"></span></div></div>' +
+          '<div class="cel__pie" style="' + col + '"><span class="cel__precio">S/ —</span><code class="cel__calc"></code></div>';
+      });
+      html += '<div class="cel__nivel cel__nivel--oculto"><span class="cel__raya"></span><span class="cel__raya-txt">costo<b>—</b></span></div>' +
+        "</div>" +
+        '<p class="cel__aviso" aria-live="polite"></p>' +
+        "</div>";
+      cont.innerHTML = html;
+      raiz = cont.querySelector(".cel");
+      gbEl = cont.querySelector(".cel__gb b");
+      cuentaEl = cont.querySelector(".cel__cuenta");
+      folleto = cont.querySelector(".cel__folleto");
+      corona = cont.querySelector(".cel__corona");
+      nivel = cont.querySelector(".cel__nivel");
+      raya = cont.querySelector(".cel__raya");
+      rayaTxt = cont.querySelector(".cel__raya-txt");
+      aviso = cont.querySelector(".cel__aviso");
+      var marcos = cont.querySelectorAll(".cel__marco"), barras = cont.querySelectorAll(".cel__barra");
+      var precios = cont.querySelectorAll(".cel__precio"), calcs = cont.querySelectorAll(".cel__calc");
+      planes = LETRAS.map(function (L, k) {
+        return { marco: marcos[k], barra: barras[k], precio: precios[k], calc: calcs[k], extra: k === 0 ? barras[k].querySelector(".cel__extra") : null };
+      });
+    }
+    function reiniciar(d) {
+      var c = costos(d.gb);
+      escala = Math.max(c[0], c[1], c[2]) * 1.12;
+      mejorAntes = null;
+    }
+    function pct(v) { return Math.max(0, Math.min(100, v / escala * 100)); }
+    function pintar(p, op) {
+      var e = p ? p.est : {};
+      var animar = !!op.animar;
+      if (!animar) raiz.classList.add("cel--quieto");
+      gbEl.textContent = e.gb === undefined ? "—" : e.gb + " GB";
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      var valores = [e.a, e.b, e.c], calcs = [e.calcA, e.calcB, e.calcC];
+      planes.forEach(function (pl, k) {
+        var v = valores[k];
+        pl.barra.style.height = (v === undefined ? 0 : pct(v)) + "%";
+        if (pl.extra) pl.extra.style.height = (e.extra && v ? e.extra / v * 100 : 0) + "%";
+        pl.precio.textContent = v === undefined ? "S/ —" : "S/ " + v;
+        pl.calc.textContent = calcs[k] || "";
+        pl.marco.classList.toggle("cel__marco--nada", v === undefined);
+        pl.marco.classList.toggle("cel__marco--mejor", e.mejor === k);
+        pl.marco.classList.toggle("cel__marco--compara", !!(p && p.compara === k));
+      });
+      // La corona
+      var hay = e.mejor !== undefined;
+      corona.hidden = !hay;
+      if (hay) corona.style.setProperty("--k", String(e.mejor));
+      corona.classList.remove("cel__corona--salta");
+      if (hay && animar && p && p.corona && mejorAntes !== e.mejor) { void corona.offsetWidth; corona.classList.add("cel__corona--salta"); }
+      mejorAntes = hay ? e.mejor : null;
+      // La raya del mejor hasta ahora
+      var conRaya = e.costo !== undefined;
+      nivel.classList.toggle("cel__nivel--oculto", !conRaya);
+      nivel.classList.toggle("cel__nivel--foco", !!(p && p.compara));
+      if (conRaya) {
+        raya.style.bottom = pct(e.costo) + "%";
+        rayaTxt.style.bottom = pct(e.costo) + "%";
+        rayaTxt.lastChild.textContent = String(e.costo);
+      }
+      // El aviso
+      var txt = "", clase = "";
+      if (p && p.decideA) { txt = p.pasa ? "Usa más de 6 GB: paga los GB de más." : "No pasa de 6 GB: el A se queda en 15."; clase = p.pasa ? "no" : "si"; }
+      else if (p && p.compara) {
+        var L = LETRAS[p.compara];
+        if (p.gana) { txt = "La barra del " + L + " queda debajo de la raya: ¡cuesta menos!"; clase = "si"; }
+        else if (p.empate) { txt = "La barra del " + L + " llega justo a la raya: cuesta lo mismo, no menos."; clase = "no"; }
+        else { txt = "La barra del " + L + " pasa la raya: no cuesta menos."; clase = "no"; }
+      } else if (p && p.corona && e.mejor !== undefined) txt = e.costo === undefined ? "Se supone que gana el A." : "Ahora el mejor es el " + LETRAS[e.mejor] + ".";
+      else if (p && p.fin) { txt = "Conviene el plan " + LETRAS[e.mejor] + ": S/ " + e.costo + " al mes."; clase = "si"; }
+      aviso.textContent = txt;
+      aviso.className = "cel__aviso" + (clase ? " cel__aviso--" + clase : "");
+      if (!animar) { void raiz.offsetWidth; raiz.classList.remove("cel--quieto"); }
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "7 GB", datos: { gb: 7, clave: "normal" } },
+    { nombre: "3 GB", datos: { gb: 3, clave: "poco" } },
+    { nombre: "20 GB", datos: { gb: 20, clave: "mucho" } },
+    { nombre: "9 GB: ¿empate?", datos: { gb: 9, clave: "empate" } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0],
+    variables: ["gb", "plan_a", "plan_b", "plan_c", "mejor", "costo"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1300
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // ¿Cuánto trabajo hace?
+  function factorial(n) { var f = 1; for (var k = 2; k <= n; k++) f *= k; return f; }
+  function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function pintarTrabajo() {
+    var n = Number($("t-n").value);
+    $("t-num").textContent = n;
+    var fila = $("t-fila");
+    fila.textContent = "";
+    for (var k = 0; k < n; k++) {
+      var s = document.createElement("span");
+      s.innerHTML = "<b>" + String.fromCharCode(65 + k) + "</b><small>" + (k === 0 ? "" : "if") + "</small>";
+      fila.appendChild(s);
+    }
+    $("t-comp").textContent = n - 1;
+    $("t-comp-txt").innerHTML = (n - 1 === 1 ? "comparación" : "comparaciones") + " para elegir: un <code>if</code> por cada plan después del primero";
+    $("t-podio").textContent = miles(factorial(n));
+    $("t-podio-txt").textContent = "órdenes posibles si hubiera que ordenarlos a todos";
+  }
+  $("t-n").addEventListener("input", pintarTrabajo);
+  pintarTrabajo();
+
+  // ¿Por qué funciona? La versión que compara el C con el A
+  function elegirMal(c) {
+    var m = 0, costo = c[0];
+    if (c[1] < costo) { m = 1; costo = c[1]; }
+    if (c[2] < c[0]) { m = 2; costo = c[2]; }
+    return m;
+  }
+  function pintarVersiones() {
+    var gb = Number($("v-gb").value), c = costos(gb);
+    $("v-num").textContent = gb;
+    $("v-precios").innerHTML = '<span class="t-a">A: S/ ' + c[0] + '</span> · <span class="t-b">B: S/ ' + c[1] + '</span> · <span class="t-c">C: S/ ' + c[2] + "</span>";
+    var bien = elegir(c), mal = elegirMal(c), ok = bien === mal;
+    $("v-filas").innerHTML =
+      '<tr class="ok"><td>plan_c &lt; costo</td><td>' + LETRAS[bien] + "</td><td>S/ " + c[bien] + '</td><td class="marca">✓</td></tr>' +
+      '<tr class="' + (ok ? "ok" : "mal") + '"><td>plan_c &lt; plan_a</td><td>' + LETRAS[mal] + "</td><td>S/ " + c[mal] + '</td><td class="marca">' + (ok ? "=" : "✗") + "</td></tr>";
+    $("v-nota").innerHTML = ok
+      ? "Con " + gb + " GB dicen lo mismo. Prueba con 14 GB o más."
+      : "Con " + gb + " GB, el C le gana al A (" + c[2] + " &lt; " + c[0] + "), pero no al B, que cuesta 40. Esa versión olvida que el B ya era el mejor.";
+  }
+  $("v-gb").addEventListener("input", pintarVersiones);
+  pintarVersiones();
+
+  // Casos borde
+  var BORDES = [
+    { gb: 5, dos: true,
+      texto: "Con 5 GB, el A y el C cuestan S/ 15. Con <code>&lt;</code>, un empate no reemplaza y gana el primero, el A. Con <code>&lt;=</code>, gana el último que empata, el C. Los dos son igual de baratos: el enunciado eligió el primero." },
+    { gb: 0,
+      texto: "Si no usa datos, el C no cuesta nada: <code>0 * 3</code> da 0. El A cobra igual sus 15 fijos y el B, sus 40." },
+    { gb: -2,
+      texto: "El enunciado pide <code>gb</code> de 0 en adelante, y el programa no lo revisa. Con −2, el C «cuesta» −6: ¡la tienda le pagaría 6 soles! Un <code>if gb &lt; 0:</code> al principio podría avisar del error." }
+  ];
+  function pintarBorde(k) {
+    var b = BORDES[k];
+    $("b-datos").textContent = "gb = " + b.gb;
+    var cont = $("b-consolas");
+    cont.style.setProperty("--n", b.dos ? "2" : "1");
+    cont.innerHTML = b.dos
+      ? "<div><h4>con &lt;</h4><pre class=\"consola-mini\">" + salida(b.gb, false) + "</pre></div><div><h4>con &lt;=</h4><pre class=\"consola-mini\">" + salida(b.gb, true) + "</pre></div>"
+      : "<div><pre class=\"consola-mini\">" + salida(b.gb, false) + "</pre></div>";
+    $("b-texto").innerHTML = b.texto;
+  }
+  $("b-chips").querySelectorAll("button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      $("b-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === btn)); });
+      pintarBorde(Number(btn.getAttribute("data-b")));
+    });
+  });
+  pintarBorde(0);
+
+  /* ---------- 6. ¿Siempre conviene el ilimitado? ---------- */
+  var chica = window.matchMedia("(max-width: 640px)").matches;
+  var G = chica ? { x0: 28, x1: 238, y0: 130, y1: 10, maxS: 75, banda: 144, ancho: 252, alto: 184 }
+                : { x0: 30, x1: 340, y0: 102, y1: 10, maxS: 75, banda: 116, ancho: 360, alto: 158 };
+  $("g-svg").setAttribute("viewBox", "0 0 " + G.ancho + " " + G.alto);
+  var W = (G.x1 - G.x0) / 21;   // una casilla por GB, de 0 a 20
+  var COLORES = ["#0e7490", "#7c3aed", "#be185d"];
+  function gx(g) { return G.x0 + W * (g + 0.5); }
+  function gy(s) { return G.y0 - (G.y0 - G.y1) * s / G.maxS; }
+  (function dibujarGrafica() {
+    var s = "";
+    [0, 15, 30, 45, 60, 75].forEach(function (v) {
+      s += '<line class="grafica__rejilla" x1="' + G.x0 + '" x2="' + G.x1 + '" y1="' + gy(v) + '" y2="' + gy(v) + '"/>';
+      s += '<text class="grafica__txt" x="' + (G.x0 - 4) + '" y="' + (gy(v) + 3) + '" text-anchor="end">' + (v === 75 ? "S/ 75" : v) + "</text>";
+    });
+    s += '<line class="grafica__eje" x1="' + G.x0 + '" x2="' + G.x1 + '" y1="' + G.y0 + '" y2="' + G.y0 + '"/>';
+    s += '<line class="grafica__eje" x1="' + G.x0 + '" x2="' + G.x0 + '" y1="' + G.y0 + '" y2="' + G.y1 + '"/>';
+    // Las tres rectas de costo
+    var pa = "M" + gx(0) + " " + gy(15) + " L" + gx(6) + " " + gy(15) + " L" + gx(20) + " " + gy(planA(20));
+    s += '<path class="grafica__linea" stroke="' + COLORES[0] + '" d="' + pa + '"/>';
+    s += '<path class="grafica__linea" stroke="' + COLORES[1] + '" d="M' + gx(0) + " " + gy(40) + " L" + gx(20) + " " + gy(40) + '"/>';
+    s += '<path class="grafica__linea" stroke="' + COLORES[2] + '" d="M' + gx(0) + " " + gy(0) + " L" + gx(20) + " " + gy(60) + '"/>';
+    s += '<text class="grafica__nombre" fill="' + COLORES[0] + '" x="' + (gx(20) + 4) + '" y="' + (gy(71) + 4) + '">A</text>';
+    s += '<text class="grafica__nombre" fill="' + COLORES[1] + '" x="' + (gx(20) + 4) + '" y="' + (gy(40) + 4) + '">B</text>';
+    s += '<text class="grafica__nombre" fill="' + COLORES[2] + '" x="' + (gx(20) + 4) + '" y="' + (gy(60) + 4) + '">C</text>';
+    // La banda: el plan más barato en cada GB
+    var w = W;
+    for (var g = 0; g <= 20; g++) {
+      var m = elegir(costos(g)), x = G.x0 + w * g;
+      s += '<rect class="grafica__celda" x="' + x + '" y="' + G.banda + '" width="' + w + '" height="13" fill="' + COLORES[m] + '"/>';
+      s += '<text class="grafica__letra" x="' + (x + w / 2) + '" y="' + (G.banda + 9.5) + '">' + LETRAS[m] + "</text>";
+    }
+    s += '<rect class="grafica__marca" id="g-marca" y="' + (G.banda - 1.5) + '" width="' + w + '" height="16" rx="2"/>';
+    for (var t = 0; t <= 20; t += 5) s += '<text class="grafica__txt" x="' + (G.x0 + w * t + w / 2) + '" y="' + (G.banda + 25) + '" text-anchor="middle">' + t + " GB</text>";
+    s += '<text class="grafica__txt" x="' + (G.x0 - 4) + '" y="' + (G.banda + 9.5) + '" text-anchor="end">gana</text>';
+    s += '<line class="grafica__guia" id="g-guia"/>';
+    for (var k = 0; k < 3; k++) s += '<circle class="grafica__punto" id="g-p' + k + '" r="4.5" fill="' + COLORES[k] + '"/>';
+    $("g-svg").innerHTML = s;
+  })();
+  function pintarGrafica() {
+    var g = Number($("g-gb").value), c = costos(g), m = elegir(c);
+    $("g-num").textContent = g;
+    var x = gx(g);
+    var guia = $("g-guia");
+    guia.setAttribute("x1", x); guia.setAttribute("x2", x); guia.setAttribute("y1", G.y1); guia.setAttribute("y2", G.y0);
+    for (var k = 0; k < 3; k++) { $("g-p" + k).setAttribute("cx", x); $("g-p" + k).setAttribute("cy", gy(c[k])); }
+    $("g-marca").setAttribute("x", G.x0 + W * g);
+    var empate = c[0] === c[2] && m === 0;
+    $("g-lectura").innerHTML = '<span class="t-a">A: S/ ' + c[0] + '</span> · <span class="t-b">B: S/ ' + c[1] + '</span> · <span class="t-c">C: S/ ' + c[2] + "</span><br>" +
+      '<span class="gana">Conviene el ' + LETRAS[m] + "</span>" + (empate ? " El A y el C empatan: va primero el A." : "");
+  }
+  $("g-gb").addEventListener("input", pintarGrafica);
+  pintarGrafica();
+
+  Problemas.iniciar({ id: "problema-celular" });
+})();
+</script>
+</body>
+</html>
