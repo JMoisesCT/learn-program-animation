@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El papel hasta la Luna · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: cuántas veces hay que doblar una hoja de papel para que su grosor llegue a una altura, con un while que duplica en cada vuelta, su diagrama de flujo y la ejecución animada sobre una escalera que va de la hoja a la Luna.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    :root { --oro: #e2b33c; --capa: #cfc6b0; --pila: #2445b0; --suma: #0e7490; }
+
+    /* ---------- La ficha (bloque 1) ---------- */
+    .ticket__tarifa { margin: var(--esp-2) 0 0; padding-top: var(--esp-2); border-top: 1px dashed #c9c2b2; font-size: 0.68rem; line-height: 1.4; color: var(--tinta-suave); text-align: center; }
+    .conversion { display: block; margin-top: 0.2rem; font-size: 0.85rem; color: var(--tinta-suave); }
+
+    /* ---------- La escena: la escalera de la hoja a la Luna ---------- */
+    .pap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--esp-2); }
+    .pap__arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+    .pap__dob { display: inline-flex; align-items: baseline; gap: 0.4em; padding: 0.15em 0.75em; border-radius: 999px; background: var(--azul-tinta-suave); color: var(--azul-tinta); font: 700 var(--texto-xs) var(--fuente); white-space: nowrap; }
+    .pap__dob b { font: 700 var(--texto-md) var(--fuente-codigo); }
+    .pap__cuenta { min-height: 1.7rem; max-width: 100%; padding: 0.1em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 200ms; }
+    .pap__cuenta:empty { opacity: 0; }
+    .pap__cuerpo { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 8.6rem; grid-template-rows: minmax(0, 1fr); gap: var(--esp-3); }
+    /* La escalera: un peldaño por doblez (cada uno, el doble del de abajo) */
+    .pap__esc { --izq: 6.6rem; position: relative; min-height: 12rem; background: #fff; border: 1px solid var(--papel-borde); border-radius: 10px; }
+    .pap__zona { position: absolute; top: 0.8rem; bottom: 0.8rem; left: 0; right: 0.5rem; }
+    .pap__riel { position: absolute; top: 0; bottom: 0; left: var(--izq); width: 10px; margin-left: -5px; border-radius: 5px; background: linear-gradient(to top, #c9c2b2 0 1px, transparent 1px) left bottom / 100% calc(100% / 43) repeat-y, #f1ece0; }
+    .pap__lleno { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 5px; background: linear-gradient(to top, #6f8cff, var(--pila)); transition: height 500ms ease; }
+    .pap__num { position: absolute; right: calc(100% - var(--izq) + 9px); transform: translateY(50%); font: 700 0.58rem var(--fuente-codigo); color: #8a93a6; }
+    .pap__meta { position: absolute; left: var(--izq); right: 0; height: 0; border-top: 2px dashed var(--oro); }
+    .pap__hito { position: absolute; left: calc(var(--izq) - 4px); right: 0; display: flex; align-items: center; gap: 0.45rem; transform: translateY(50%); font: 600 0.68rem/1.2 var(--fuente); color: var(--tinta-suave); white-space: nowrap; transition: color 300ms; }
+    .pap__hito::before { content: ""; flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: #fff; border: 2px solid #8a93a6; box-sizing: border-box; transition: background-color 300ms, border-color 300ms; }
+    .pap__hito span { overflow: hidden; text-overflow: ellipsis; padding: 0 0.3em; border-radius: 4px; }
+    .pap__hito small { font: 700 0.6rem var(--fuente-codigo); color: #7d8794; }
+    .pap__hito--pasado { color: var(--color-ok); }
+    .pap__hito--pasado::before { background: var(--color-ok); border-color: var(--color-ok); }
+    .pap__hito--meta span { background: #fff7dc; box-shadow: inset 0 0 0 1.5px var(--oro); color: #6b4d00; font-weight: 700; }
+    .pap__hito--recien span { animation: hito-brilla 900ms ease; }
+    @keyframes hito-brilla { 30% { background: var(--resaltador); transform: scale(1.08); } }
+    .pap__marca { position: absolute; z-index: 3; right: calc(100% - var(--izq) + 8px); transform: translateY(50%); display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.1rem 0.4rem; border-radius: 6px; background: var(--pila); color: #fff; font: 700 0.66rem var(--fuente-codigo); white-space: nowrap; transition: bottom 500ms ease; }
+    .pap__marca::after { content: ""; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); border: 6px solid transparent; border-right: 0; border-left-color: var(--pila); }
+    .pap__marca[hidden] { display: none; }
+    .pap__x2 { position: absolute; left: 50%; top: -1.1rem; transform: translateX(-50%); padding: 0 0.3rem; border-radius: 999px; background: var(--resaltador); color: #3d2a00; font: 700 0.62rem var(--fuente-codigo); opacity: 0; pointer-events: none; }
+    .pap__x2--sale { animation: x2-sale 800ms ease; }
+    @keyframes x2-sale { 15% { opacity: 1; } 70% { opacity: 1; transform: translate(-50%, -0.4rem); } 100% { opacity: 0; transform: translate(-50%, -0.6rem); } }
+    /* La pila dibujada: una raya por capa, hasta que ya no cabe */
+    .pap__pila { align-self: start; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: var(--esp-2); background: #fff; border: 1px solid var(--papel-borde); border-radius: 10px; text-align: center; }
+    .pap__pila h4 { margin: 0; font: 700 0.7rem var(--fuente); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-suave); }
+    .pap__dibujo { position: relative; width: 4.2rem; height: 96px; border-bottom: 2px solid var(--tinta); }
+    .pap__pila .pap__dibujo { margin-top: 0.9rem; }
+    .pap__capas { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: repeating-linear-gradient(to top, #fffdf7 0 2px, var(--capa) 2px 3px); box-shadow: inset 0 0 0 1px var(--capa); transition: height 450ms ease; }
+    .pap__sale { position: absolute; left: 50%; top: -0.1rem; transform: translate(-50%, -100%); font: 700 0.6rem/1.15 var(--fuente); color: var(--lapiz); white-space: nowrap; }
+    .pap__sale[hidden] { display: none; }
+    .pap__dato { display: grid; gap: 0; font-size: 0.66rem; color: var(--tinta-suave); line-height: 1.25; }
+    .pap__dato b { font: 700 0.74rem var(--fuente-codigo); color: var(--tinta); white-space: nowrap; }
+    .pap__aviso { margin: 0 !important; min-height: 2.6em; font: 700 0.8rem/1.3 var(--fuente) !important; color: var(--tinta); text-align: center; }
+    .pap__aviso--si { color: var(--color-ok); }
+    .pap--quieto, .pap--quieto * { transition: none !important; }
+    @media (max-width: 640px) {
+      .pap__cuerpo { grid-template-columns: none; grid-template-rows: auto minmax(0, 1fr); gap: var(--esp-2); }
+      .pap__pila { order: -1; align-self: stretch; flex-direction: row; justify-content: space-between; padding: 0.35rem var(--esp-3); }
+      .pap__pila h4 { display: none; }
+      .pap__dibujo { width: 3rem; height: 48px; margin-top: 0.9rem; }
+      .pap__capas { background: repeating-linear-gradient(to top, #fffdf7 0 1px, var(--capa) 1px 1.5px); }
+      .pap__esc { --izq: 5.8rem; min-height: 0; }
+      .pap__marca { font-size: 0.62rem; padding: 0.08rem 0.3rem; }
+      .pap__hito { font-size: 0.64rem; }
+    }
+
+    /* ---------- Demos (bloque 2 y detalles) ---------- */
+    .concepto .codigo.codigo--chico { font-size: 0.78rem; line-height: 1.55; }
+    .concepto .codigo.codigo--una { margin: var(--esp-2) 0; font-size: 0.82rem; padding: var(--esp-2) 0; }
+    .concepto .codigo.codigo--una .linea { padding-left: 1rem; }
+    .concepto .codigo.codigo--una .linea::before { content: none; }
+    .doblar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: var(--esp-3); margin: var(--esp-2) 0; }
+    .doblar .pap__dibujo { margin-top: 1rem; }
+    .doblar__datos { display: grid; gap: 0.35rem; }
+    .cuenta-grande { margin: 0 !important; }
+    .cuenta-grande small { display: block; font: 400 var(--texto-xs) var(--fuente); color: var(--tinta-suave); }
+    .cajitas { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: var(--esp-2) 0; }
+    .cajita { display: inline-flex; align-items: baseline; gap: 0.4em; padding: 0.2em 0.6em; border: 2px solid var(--papel-borde); border-radius: 8px; background: #fff; font: 700 var(--texto-xs) var(--fuente-codigo); min-width: 6.5rem; transition: border-color 250ms, box-shadow 250ms; }
+    .cajita code { padding: 0 !important; background: none !important; color: var(--azul-tinta) !important; font-weight: 400; }
+    .cajita--cambia { border-color: var(--color-ok); box-shadow: 0 0 0 3px rgba(11, 122, 62, 0.18); }
+    .paso-txt { margin: 0 0 var(--esp-2) !important; min-height: 3em; font-size: var(--texto-xs) !important; }
+    .paso-txt code { white-space: nowrap; }
+    .botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: auto; }
+    .botones button { min-height: 2.3rem; padding: 0 var(--esp-3); border: 2px solid var(--azul-tinta); border-radius: 999px; background: #fff; color: var(--azul-tinta); font: 700 var(--texto-xs) var(--fuente); cursor: pointer; }
+    .botones button.principal { background: var(--azul-tinta); color: #fff; }
+    .botones button:disabled { opacity: 0.4; cursor: default; }
+    .botones button:focus-visible { outline: 3px solid var(--azul-tinta); outline-offset: 2px; }
+    .chips-elegir { margin-bottom: var(--esp-2); }
+
+    .unidades { width: 100%; margin: var(--esp-2) 0; border-collapse: collapse; font-size: var(--texto-xs); }
+    .unidades td { padding: 0.3em 0.45em; border-bottom: 1px dashed var(--papel-borde); font-family: var(--fuente-codigo); }
+    .unidades td:first-child { width: 2.8rem; color: var(--tinta-suave); font-weight: 700; }
+    .unidades td:last-child { text-align: right; overflow-wrap: anywhere; }
+    .unidades tr.mejor td { background: #fff7dc; color: #6b4d00; font-weight: 700; }
+    .unidades tr.mejor td:last-child::after { content: " ← se lee mejor"; font: 400 0.68rem var(--fuente); }
+    .regla-u { margin: 0 0 var(--esp-2) !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+
+    .num-grande { margin: 0 0 0.3rem !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .num-grande strong { font: 700 var(--texto-xl) var(--serif); color: var(--azul-tinta); }
+    .num-grande--suma strong { color: var(--suma); }
+    .difer { display: inline-block; margin-left: 0.3em; padding: 0 0.45em; border-radius: 999px; background: var(--azul-tinta-suave); color: var(--azul-tinta); font: 700 0.72rem var(--fuente-codigo); vertical-align: 0.2em; }
+    .num-grande--suma .difer { background: #e0f2f6; color: var(--suma); }
+    .difer:empty { display: none; }
+
+    /* La recta del último doblez */
+    .recta { position: relative; height: 4.6rem; margin: var(--esp-3) 0.4rem var(--esp-2); }
+    .recta__eje { position: absolute; left: 0; right: 0; top: 2rem; height: 10px; border-radius: 5px; background: #f1ece0; }
+    .recta__antes { position: absolute; left: 0; top: 2rem; height: 10px; border-radius: 5px 0 0 5px; background: #b9c6f5; }
+    .recta__salto { position: absolute; top: 2rem; height: 10px; background: repeating-linear-gradient(45deg, var(--pila) 0 4px, #6f8cff 4px 8px); }
+    .recta__marca { position: absolute; top: 1.3rem; width: 0; height: 1.6rem; border-left: 2px solid var(--c); }
+    .recta__marca span { position: absolute; transform: translateX(-50%); white-space: nowrap; font: 700 0.62rem/1.15 var(--fuente-codigo); color: var(--c); text-align: center; }
+    .recta__marca--arriba span { bottom: 100%; margin-bottom: 0.1rem; }
+    .recta__marca--abajo span { top: 100%; margin-top: 0.1rem; }
+    .recta__marca--meta { --c: #8a6400; border-left-style: dashed; }
+    .recta__marca--fin { --c: var(--pila); }
+    .recta__marca--doble { --c: var(--lapiz); }
+    .recta__marca--izq span { transform: translateX(-100%); }
+    .recta__marca--der span { transform: none; }
+    .desig { margin: 0 0 var(--esp-2) !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; text-align: center; }
+    .desig .m { color: #8a6400; } .desig .f { color: var(--pila); } .desig .d { color: var(--lapiz); }
+
+    .consola-mini { margin: 0 0 var(--esp-2); padding: var(--esp-2); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 0.74rem/1.45 var(--fuente-codigo); white-space: pre; overflow: hidden; min-height: 4.4em; }
+    .consola-mini .err { color: #ff9a8a; }
+    .consola-mini .suave { color: #9aa4b2; font-weight: 400; }
+    .borde-datos { margin: var(--esp-2) 0 !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+    .b-texto { margin: 0 0 var(--esp-2) !important; font-size: var(--texto-xs) !important; }
+
+    /* ---------- 6. ¿Sumar o duplicar? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas p { margin: 0 0 var(--esp-3); }
+    .mas__dibujo { display: grid; gap: var(--esp-3); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .carril { display: grid; gap: 0.3rem; }
+    .carril__cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--esp-2); }
+    .carril__cab h4 { margin: 0; font: 700 var(--texto-sm) var(--serif); color: var(--c); }
+    .carril__cab h4 code { font-size: 0.85em; }
+    .carril__valor { font: 700 var(--texto-sm) var(--fuente-codigo); color: var(--tinta); }
+    .carril__pista { position: relative; height: 1.9rem; margin: 0 0.5rem; }
+    .carril__linea { position: absolute; left: 0; right: 0; top: 0.75rem; height: 6px; border-radius: 3px; background: #f1ece0; }
+    .carril__lleno { position: absolute; left: 0; top: 0.75rem; height: 6px; width: 0; border-radius: 3px; background: var(--c); transition: width 400ms ease; }
+    .carril__punto { position: absolute; top: 0.45rem; width: 0.8rem; height: 0.8rem; margin-left: -0.4rem; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px #fff; transition: left 400ms ease; }
+    .carril__hito { position: absolute; top: 1.15rem; transform: translateX(-50%); font: 600 0.58rem var(--fuente); color: var(--tinta-suave); white-space: nowrap; }
+    .carril__hito::before { content: ""; position: absolute; left: 50%; top: -0.55rem; height: 0.5rem; border-left: 1.5px solid #b9b09a; }
+    .carril--suma { --c: var(--suma); }
+    .carril--dobla { --c: var(--pila); }
+    .carril__nota { margin: 0 !important; font-size: 0.72rem !important; color: var(--tinta-suave); }
+    .lectura { margin: 0 !important; min-height: 2.6em; font: 700 var(--texto-xs) var(--fuente) !important; }
+    .mas--quieto * { transition: none !important; }
+
+    /* ---------- El reproductor ---------- */
+    #reproductor .rep__codigo .codigo { font-size: 0.86rem; }
+    #reproductor .rep__var-valor { font-size: var(--texto-sm); }
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.3fr) minmax(11rem, 0.56fr); }
+    }
+    #idea .recorrido { margin-top: var(--esp-2); }
+    @media (max-width: 640px) {
+      #reproductor .rep__codigo .codigo { font-size: 0.78rem; }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #sumar .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #sumar .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .concepto .codigo.codigo--chico { font-size: 0.72rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pap__hito--recien span, .pap__x2--sale { animation: none; }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Bucles</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#sumar"><span>6 · ¿Sumar o duplicar?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Bucles</p>
+          <h1>El papel hasta la Luna</h1>
+          <p class="caso-bajada">Un programa que dobla una hoja una y otra vez hasta que su grosor llega a una altura, y cuenta los dobleces.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 2 de 5"><span class="estrellas__llenas">★★</span>☆☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/bucles/index.html">while</a></li>
+              <li><a href="../../lecciones/bucles/acumular/index.html">contar y acumular</a></li>
+              <li><a href="../../lecciones/variables/formulas/index.html">fórmulas</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Una hoja de papel doblada que crece como una torre hasta la Luna, con una escalera de rayitas al costado">
+          <rect x="0" y="0" width="240" height="200" rx="14" fill="#1f2a44"/>
+          <g fill="#fff">
+            <circle cx="30" cy="30" r="1.4"/><circle cx="70" cy="18" r="1"/><circle cx="118" cy="40" r="1.3"/><circle cx="20" cy="80" r="1"/>
+            <circle cx="210" cy="96" r="1.2"/><circle cx="160" cy="18" r="1"/><circle cx="52" cy="58" r="0.9"/><circle cx="226" cy="140" r="1"/>
+          </g>
+          <circle cx="196" cy="40" r="22" fill="#f4e6b8"/>
+          <circle cx="188" cy="34" r="4" fill="#e2d29b"/><circle cx="203" cy="48" r="3" fill="#e2d29b"/><circle cx="201" cy="30" r="2" fill="#e2d29b"/>
+          <path d="M0 178 Q120 160 240 178 L240 200 L0 200 z" fill="#2f6b4f"/>
+          <!-- La torre de papel -->
+          <g>
+            <rect x="122" y="52" width="16" height="126" fill="#fbf7ee"/>
+            <g stroke="#cfc6b0" stroke-width="1">
+              <line x1="122" y1="166" x2="138" y2="166"/><line x1="122" y1="152" x2="138" y2="152"/><line x1="122" y1="136" x2="138" y2="136"/>
+              <line x1="122" y1="118" x2="138" y2="118"/><line x1="122" y1="98" x2="138" y2="98"/><line x1="122" y1="76" x2="138" y2="76"/>
+            </g>
+            <path d="M122 52 L130 44 L138 52 z" fill="#ffe58f"/>
+          </g>
+          <!-- La escalera de peldaños -->
+          <g stroke="#ffd479" stroke-width="2" stroke-linecap="round">
+            <line x1="104" y1="176" x2="104" y2="50"/>
+            <line x1="98" y1="166" x2="110" y2="166"/><line x1="98" y1="150" x2="110" y2="150"/><line x1="98" y1="134" x2="110" y2="134"/>
+            <line x1="98" y1="118" x2="110" y2="118"/><line x1="98" y1="102" x2="110" y2="102"/><line x1="98" y1="86" x2="110" y2="86"/><line x1="98" y1="70" x2="110" y2="70"/><line x1="98" y1="54" x2="110" y2="54"/>
+          </g>
+          <g font-family="monospace" font-size="9" font-weight="700" fill="#ffd479" text-anchor="end">
+            <text x="94" y="137">×2</text><text x="94" y="105">×2</text><text x="94" y="73">×2</text>
+          </g>
+          <!-- La hoja que se dobla -->
+          <g transform="translate(8 136)">
+            <path d="M0 34 L38 34 L38 10 L0 10 z" fill="#fbf7ee" stroke="#cfc6b0" stroke-width="1.5"/>
+            <path d="M38 10 L60 2 L60 26 L38 34 z" fill="#fff" stroke="#cfc6b0" stroke-width="1.5"/>
+            <path d="M44 -4 q10 -8 18 2" fill="none" stroke="#ffd479" stroke-width="2" stroke-linecap="round"/>
+            <path d="M60 -3 l3 6 l-7 -1 z" fill="#ffd479"/>
+          </g>
+          <g font-family="monospace" font-size="10" font-weight="700" fill="#e6e9ee">
+            <text x="14" y="190">0.1 mm</text>
+            <text x="160" y="78">384 400 km</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Tomás leyó que si doblas una hoja de papel por la mitad <strong>42 veces</strong>, su grosor llegaría hasta la Luna. No le cree: «¡Es una hoja! Ni con mil dobleces».</p>
+            <p>Una hoja mide <strong>0.1 mm</strong> de grosor. Cada doblez pone la hoja encima de sí misma: <span class="resalta">el grosor se duplica</span>. <span class="nota-margen">¿Cuántos dobleces hacen falta para pasar una altura?</span></p>
+            <div class="ticket" aria-label="La ficha con el grosor de la hoja y las alturas">
+              <h3>FICHA · ALTURAS</h3>
+              <div class="ticket__fila"><span>Una hoja</span><span>0.1 mm</span></div>
+              <div class="ticket__fila"><span>Tu altura</span><span>1.60 m</span></div>
+              <div class="ticket__fila"><span>El Everest</span><span>8&nbsp;849 m</span></div>
+              <div class="ticket__fila"><span>La Luna</span><span>384&nbsp;400 km</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>¿Dobleces?</span><span>¿42?</span></div>
+              <p class="ticket__tarifa">1 m = 1&nbsp;000 mm · 1 km = 1&nbsp;000&nbsp;000 mm</p>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Una hoja de papel mide 0.1 mm de grosor, y cada vez que la doblas por la mitad, su grosor se duplica. Escribe un programa que, dada una altura, diga <strong>cuántos dobleces hacen falta</strong> para que el grosor llegue a esa altura o la pase, y <strong>cuánto mide</strong> la hoja doblada.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>meta</code>: la altura que hay que alcanzar, en milímetros. Un número mayor que 0.
+                <span class="conversion">Todo va en milímetros: 1 m = 1&nbsp;000 mm y 1 km = 1&nbsp;000&nbsp;000 mm. Tu altura, 1.60 m, es <code>1600</code> mm.</span></li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Dos líneas: <code>Dobleces: …</code>, con un número entero, y <code>Grosor: … mm</code>, con el grosor de la hoja después del último doblez.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>meta = 1600</td><td>Dobleces: 14
+Grosor: 1638.4 mm</td></tr>
+                <tr><td>meta = 8849000</td><td>Dobleces: 27
+Grosor: 13421772.8 mm</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Multiplicar acumulando</h3>
+            <p>Como al <a href="../../lecciones/bucles/acumular/index.html">acumular</a> una suma, pero multiplicando: la variable se reemplaza por <strong>su doble</strong>. Toca <strong>Doblar</strong>.</p>
+            <pre class="codigo codigo--una" id="d1-codigo"></pre>
+            <div class="doblar">
+              <div class="pap__dibujo" aria-hidden="true"><div class="pap__capas" id="d1-capas"></div><span class="pap__sale" id="d1-sale" hidden>↑ ya no cabe</span></div>
+              <div class="doblar__datos" aria-live="polite">
+                <p class="cuenta-grande" id="d1-cuenta"></p>
+                <span class="cajita"><code>grosor</code> <span id="d1-grosor">0.1</span></span>
+              </div>
+            </div>
+            <div class="botones">
+              <button type="button" class="principal" id="d1-doblar">Doblar ×2</button>
+              <button type="button" id="d1-otra">↺ Otra hoja</button>
+            </div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Un <code>while</code> hasta pasar la meta</h3>
+            <p>No sabemos cuántos dobleces harán falta. El <a href="../../lecciones/bucles/index.html"><code>while</code></a> pregunta antes de cada vuelta y para cuando la respuesta es False.</p>
+            <div class="chips-elegir" id="d2-metas" role="group" aria-label="Elige la meta">
+              <button type="button" data-meta="10" aria-pressed="true">meta = 10</button>
+              <button type="button" data-meta="100" aria-pressed="false">100</button>
+              <button type="button" data-meta="1000" aria-pressed="false">1000</button>
+            </div>
+            <pre class="codigo codigo--chico" id="d2-codigo"></pre>
+            <div class="cajitas" aria-hidden="true">
+              <span class="cajita" id="d2-g"><code>grosor</code> <span>0.1</span></span>
+              <span class="cajita" id="d2-d"><code>dobleces</code> <span>0</span></span>
+            </div>
+            <p class="paso-txt" id="d2-txt" aria-live="polite"></p>
+            <div class="botones">
+              <button type="button" class="principal" id="d2-paso">Otra vuelta ▸</button>
+              <button type="button" id="d2-todo">Hasta el final ▸▸</button>
+            </div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Cambiar de unidad</h3>
+            <p>Un número en milímetros puede ser tan largo que cuesta leerlo. Es el mismo grosor en otra unidad: divide entre 1&nbsp;000 para metros y entre 1&nbsp;000&nbsp;000 para kilómetros.</p>
+            <div class="control-fila">
+              <label for="d3-n">dobleces = <span id="d3-num">14</span></label>
+              <input type="range" id="d3-n" min="0" max="42" value="14">
+            </div>
+            <table class="unidades" aria-live="polite">
+              <tbody id="d3-filas"></tbody>
+            </table>
+            <p class="regla-u">El signo ≈ quiere decir «más o menos»: el número se redondeó para leerlo fácil.</p>
+            <p class="nota-margen" style="margin-top:auto">El programa hace todo en mm. Las otras unidades son solo para entender qué tan grande es.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguirlo con 1.60 m</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>No hace falta saber de antemano cuántos dobleces serán: <strong>mientras el grosor sea menor que la meta, se dobla otra vez y se cuenta</strong>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Empieza con una hoja</strong> El grosor vale 0.1 mm, la meta va en mm y hay 0 dobleces.</li>
+              <li data-idea="2"><strong>¿Todavía no llega?</strong> Si el grosor es menor que la meta, falta doblar.</li>
+              <li data-idea="3"><strong>Dobla y cuenta</strong> El grosor se duplica y el contador suma 1.</li>
+              <li data-idea="4"><strong>Muestra el resultado</strong> Cuántos dobleces hicieron falta y cuánto mide la hoja.</li>
+            </ol>
+            <p class="nota-margen">En <a href="../alcancia/index.html">La alcancía</a>, el <code>while</code> sumaba lo mismo cada semana. Aquí <strong>multiplica</strong> por 2: el paso crece en cada vuelta.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuánto trabajo hace?</h3>
+            <p>Cada vuelta del bucle es un doblez. Duplica la meta y mira cuántos hacen falta. Al lado: cuántas hojas sueltas habría que apilar, sin doblar.</p>
+            <div class="control-fila">
+              <label for="t-k">meta = <span id="t-meta">1 m</span></label>
+              <input type="range" id="t-k" min="0" max="10" value="0" aria-describedby="t-txt">
+            </div>
+            <p class="num-grande" aria-live="polite"><strong id="t-dob">14</strong> <span id="t-dob-txt">dobleces</span><span class="difer" id="t-dob-dif"></span></p>
+            <p class="num-grande num-grande--suma" aria-live="polite"><strong id="t-hojas">10 000</strong> <span>hojas apiladas</span><span class="difer" id="t-hojas-dif"></span></p>
+            <p class="nota-margen" id="t-txt" style="margin-top:auto">Cada vez que la meta se duplica, basta <strong>un doblez más</strong>. Apilando, hace falta el doble de hojas.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué funciona?</h3>
+            <p>El bucle para apenas el grosor llega a la meta. Antes del último doblez era menor que la meta; el último doblez solo lo duplicó.</p>
+            <div class="control-fila">
+              <label for="v-meta">meta = <span id="v-num">1600</span></label>
+              <input type="range" id="v-meta" min="1" max="3000" value="1600">
+            </div>
+            <div class="recta" id="v-recta" aria-hidden="true"></div>
+            <p class="desig" id="v-desig" aria-live="polite"></p>
+            <p class="nota-margen" style="margin-top:auto">Por eso el grosor final <strong>nunca pasa del doble de la meta</strong>: el programa no se pasa de largo.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">grosor = 0</button>
+              <button type="button" data-b="1" aria-pressed="false">meta = 0.05</button>
+              <button type="button" data-b="2" aria-pressed="false">meta = 0.1</button>
+            </div>
+            <p class="borde-datos" id="b-datos"></p>
+            <pre class="consola-mini" id="b-consola" aria-live="polite"></pre>
+            <p class="b-texto" id="b-texto"></p>
+            <div class="botones" id="b-botones"><button type="button" class="principal" id="b-parar">Ctrl+C: detener</button></div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Sumar o duplicar? -->
+    <section class="panel" id="sumar">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Sumar o duplicar?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Apilar hojas sueltas también hace crecer el grosor, pero <strong>sumando</strong> 0.1 mm por vuelta. Para llegar a la Luna harían falta <strong>3&nbsp;844&nbsp;000&nbsp;000&nbsp;000 hojas</strong>: poniendo una por segundo, tardarías unos 122&nbsp;000 años.</p>
+            <p>Doblar no hace aparecer papel: después de 42 dobleces hay 4&nbsp;398&nbsp;046&nbsp;511&nbsp;104 capas: un poco más que esa pila de hojas sueltas. Lo que cambia es el trabajo: <strong>42 vueltas</strong>.</p>
+            <p>Eso sí, una hoja de verdad no se deja doblar tanto: cada doblez la deja la mitad de ancha. En 2002, la estudiante Britney Gallivan fue la primera en doblar un papel <strong>12 veces</strong>, con una tira de 1.2 km de largo.</p>
+            <p class="nota-margen"><span class="resalta">Sumar crece de a poco; duplicar crece cada vez más rápido.</span> Con pocas vueltas se llega lejísimos.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="carril carril--suma">
+              <div class="carril__cab"><h4>Apilar: <code>grosor + 0.1</code></h4><span class="carril__valor" id="s-suma">0.1 mm</span></div>
+              <div class="carril__pista" id="s-pista-suma"></div>
+            </div>
+            <div class="carril carril--dobla">
+              <div class="carril__cab"><h4>Doblar: <code>grosor * 2</code></h4><span class="carril__valor" id="s-dobla">0.1 mm</span></div>
+              <div class="carril__pista" id="s-pista-dobla"></div>
+            </div>
+            <p class="carril__nota">Las dos rayas tienen la misma escalera de la ejecución: cada tramo igual es el doble que el anterior.</p>
+            <p class="lectura" id="s-lectura" aria-live="polite"></p>
+            <div class="botones">
+              <button type="button" class="principal" id="s-una">Una vuelta ▸</button>
+              <button type="button" id="s-diez">10 vueltas ▸▸</button>
+              <button type="button" id="s-otra">↺</button>
+              <button type="button" id="s-ver">Ver la Luna en la ejecución</button>
+            </div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../alcancia/index.html">← <span class="largo">Caso anterior: </span>La alcancía</a>
+          <a class="btn btn-primario" href="../primo/index.html"><span class="largo">Siguiente caso: </span>¿Es primo? →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  var NB = " ";
+
+  /* ---------- Números ---------- */
+  // Un entero con espacios cada tres cifras: 3 844 000 000 000
+  function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, NB); }
+  // Un float como lo escribe Python (0.1 * 2 repetido da decimales limpios)
+  function py(v) { return Number.isInteger(v) ? v + ".0" : String(v); }
+  // Redondea para leer fácil: { s, exacto }
+  function redondeo(x) {
+    var dec = x >= 100 ? 0 : x >= 10 ? 1 : x >= 1 ? 2 : Math.max(2, 1 - Math.floor(Math.log10(x)));
+    var r = Number(x.toFixed(dec));
+    var s = dec === 0 ? miles(Math.round(x)) : String(r);
+    return { s: s, exacto: Math.abs(r - x) <= 1e-9 * Math.max(1, x) };
+  }
+  // Un grosor en mm, escrito en la unidad que mejor se lee (mm, m o km)
+  function unidad(mm) {
+    var u = mm < 1000 ? ["mm", 1] : mm < 1e6 ? ["m", 1000] : ["km", 1e6];
+    if (u[0] === "mm" && String(mm).length <= 7) return String(mm) + " mm";
+    var r = redondeo(mm / u[1]);
+    return (r.exacto ? "" : "≈" + NB) + r.s + " " + u[0];
+  }
+  function veces(n, uno, varios) { return n === 1 ? uno : varios; }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "grosor = 0.1",
+      "meta = " + d.meta,
+      "dobleces = 0",
+      "",
+      "while grosor < meta:",
+      "    grosor = grosor * 2",
+      "    dobleces = dobleces + 1",
+      "",
+      'print("Dobleces:", dobleces)',
+      'print("Grosor:", grosor, "mm")'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 0, 2, 3, 3, 0, 4, 4];
+  // Lo mismo que el programa, para las demos
+  function doblar(meta, inicio) {
+    var g = inicio === undefined ? 0.1 : inicio, n = 0;
+    while (g < meta) { g = g * 2; n = n + 1; }
+    return { n: n, g: g };
+  }
+
+  /* La escalera: un peldaño por doblez. Los lugares que se pasan en el camino */
+  var NMAX = 43;
+  var HITOS = [
+    { mm: 0.1, nombre: "Una hoja", alto: "0.1 mm" },
+    { mm: 2, nombre: "Una moneda", alto: "2 mm", pasa: "¡Más gruesa que una moneda!", cap: "una moneda" },
+    { mm: 180, nombre: "Una mano", alto: "18 cm", pasa: "¡Más alta que una mano!", cap: "una mano" },
+    { mm: 1600, nombre: "Una persona", alto: "1.60 m", pasa: "¡Más alta que una persona!", cap: "una persona" },
+    { mm: 30000, nombre: "Un edificio", alto: "30 m", pasa: "¡Más alta que un edificio de 30 m!", cap: "un edificio" },
+    { mm: 828000, nombre: "La torre más alta", alto: "828 m", pasa: "¡Más alta que la torre más alta del mundo!", cap: "la torre" },
+    { mm: 8849000, nombre: "El Everest", alto: "8" + NB + "849 m", pasa: "¡Más alta que el Everest!", cap: "el Everest" },
+    { mm: 4e8, nombre: "Estación Espacial", alto: "400 km", pasa: "¡Más arriba que la Estación Espacial!", cap: "la Estación" },
+    { mm: 3.6e10, nombre: "Satélites de TV", alto: "36" + NB + "000 km", pasa: "¡Más arriba que los satélites de TV!", cap: "los satélites" },
+    { mm: 3.844e11, nombre: "La Luna", alto: "384" + NB + "400 km", pasa: "¡Llegó a la Luna!", cap: "la Luna" }
+  ];
+  function nivel(mm) { return Math.log2(mm / 0.1); }
+  function pos(l) { return (l / NMAX * 100) + "%"; }
+
+  /* ---------- 2. Demos ---------- */
+  // Multiplicar acumulando
+  Python.escribir($("d1-codigo"), ["grosor = grosor * 2"]);
+  var d1 = 0;
+  function pintarD1(animar) {
+    // Igual que el programa: se multiplica por 2 una vez por doblez
+    var g = 0.1, antes = null;
+    for (var k = 0; k < d1; k++) { antes = g; g = g * 2; }
+    var capas = Math.pow(2, d1);
+    $("d1-capas").style.height = Math.min(capas, 32) / 32 * 100 + "%";
+    $("d1-sale").hidden = capas <= 32;
+    $("d1-grosor").textContent = py(g);
+    $("d1-grosor").parentNode.classList.toggle("cajita--cambia", !!animar);
+    $("d1-cuenta").innerHTML = d1
+      ? py(antes) + " * 2 = <span class=\"c-cociente\">" + py(g) + "</span><small>" + miles(capas) + " capas de papel</small>"
+      : "una hoja: 0.1 mm<small>1 capa de papel</small>";
+    $("d1-doblar").disabled = d1 >= 10;
+  }
+  $("d1-doblar").addEventListener("click", function () { if (d1 < 10) { d1++; pintarD1(true); } });
+  $("d1-otra").addEventListener("click", function () { d1 = 0; pintarD1(false); });
+  pintarD1(false);
+
+  // Un while hasta pasar la meta
+  Python.escribir($("d2-codigo"), ["while grosor < meta:", "    grosor = grosor * 2", "    dobleces = dobleces + 1"]);
+  var d2 = { meta: 10, g: 0.1, n: 0, fin: false, empezo: false };
+  function pintarD2(cambio) {
+    $("d2-g").lastElementChild.textContent = py(d2.g);
+    $("d2-d").lastElementChild.textContent = String(d2.n);
+    $("d2-g").classList.toggle("cajita--cambia", !!cambio);
+    $("d2-d").classList.toggle("cajita--cambia", !!cambio);
+    var txt;
+    if (!d2.empezo) { txt = "Toca <strong>Otra vuelta</strong>: el <code>while</code> pregunta y, si dice True, dobla."; Codigo.marcar($("d2-codigo"), {}); }
+    else if (d2.fin) {
+      txt = "<code>" + py(d2.g) + " &lt; " + d2.meta + "</code> es <strong>False</strong>: termina. Hicieron falta <strong>" + d2.n + " " + veces(d2.n, "doblez", "dobleces") + "</strong>; nadie lo sabía antes de empezar.";
+      Codigo.marcar($("d2-codigo"), { activas: [0], saltadas: [1, 2] });
+    } else {
+      txt = "<code>" + py(d2.g / 2) + " &lt; " + d2.meta + "</code> es <strong>True</strong>: dobla. <code>grosor</code> pasa a " + py(d2.g) + " y van " + d2.n + " " + veces(d2.n, "doblez", "dobleces") + ".";
+      Codigo.marcar($("d2-codigo"), { activas: [0, 1, 2] });
+    }
+    $("d2-txt").innerHTML = txt;
+    $("d2-paso").textContent = d2.fin ? "↺ Otra vez" : "Otra vuelta ▸";
+    $("d2-todo").disabled = d2.fin;
+  }
+  function vueltaD2() {
+    if (d2.fin) { d2.g = 0.1; d2.n = 0; d2.fin = false; d2.empezo = false; pintarD2(false); return; }
+    d2.empezo = true;
+    if (d2.g < d2.meta) { d2.g = d2.g * 2; d2.n = d2.n + 1; pintarD2(true); }
+    else { d2.fin = true; pintarD2(false); }
+  }
+  $("d2-paso").addEventListener("click", vueltaD2);
+  $("d2-todo").addEventListener("click", function () {
+    d2.empezo = true;
+    while (d2.g < d2.meta) { d2.g = d2.g * 2; d2.n = d2.n + 1; }
+    d2.fin = true;
+    pintarD2(false);
+  });
+  $("d2-metas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("d2-metas").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      d2 = { meta: Number(b.getAttribute("data-meta")), g: 0.1, n: 0, fin: false, empezo: false };
+      pintarD2(false);
+    });
+  });
+  pintarD2(false);
+
+  // Cambiar de unidad
+  function pintarD3() {
+    var n = Number($("d3-n").value), g = 0.1;
+    for (var k = 0; k < n; k++) g = g * 2;
+    $("d3-num").textContent = n;
+    var mejor = g < 1000 ? 0 : g < 1e6 ? 1 : 2;
+    var filas = [["mm", py(g)], ["m", g / 1000], ["km", g / 1e6]];
+    $("d3-filas").innerHTML = filas.map(function (f, k) {
+      var t = f[1];
+      if (k > 0) { var r = redondeo(t); t = (r.exacto ? "" : "≈" + NB) + r.s; }
+      return '<tr class="' + (k === mejor ? "mejor" : "") + '"><td>' + f[0] + "</td><td>" + t + "</td></tr>";
+    }).join("");
+  }
+  $("d3-n").addEventListener("input", pintarD3);
+  pintarD3();
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 640px)").matches;
+  var flujo = Flujo.crear($("flujo"), {
+    fila: movil ? 54 : 58,
+    anchoNodo: 250,
+    columnas: movil ? [0.22, 1.75, 0.95] : [0.35, 1.5, 1.05],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "proceso", texto: "<code>grosor = 0.1</code>, la meta" + (movil ? "<br>" : " y ") + "<code>dobleces = 0</code>", col: 1, fila: 1, idea: 1 },
+      { id: "cond", tipo: "decision", texto: "¿grosor &lt; meta?", col: 1, fila: 2, idea: 2 },
+      { id: "dobla", tipo: "proceso", texto: "<code>grosor = grosor * 2</code>", col: 1, fila: 3, idea: 3 },
+      { id: "cuenta", tipo: "proceso", texto: "<code>dobleces = dobleces + 1</code>", col: 1, fila: 4, idea: 3 },
+      { id: "imprime", tipo: "datos", texto: "imprime dobleces y grosor", col: 2, fila: 2, idea: 4 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 2, fila: 3 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "cond" },
+      { de: "cond", a: "dobla", texto: "sí" },
+      { de: "cond", a: "imprime", texto: "no" },
+      { de: "dobla", a: "cuenta" },
+      { de: "cuenta", a: "cond", por: "izquierda", carril: 0 },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  var recorrido = null;
+  function pasosRecorrido(meta) {
+    var p = [{ nodo: "ini", nota: "La meta: 1.60 m = 1600 mm" }, { nodo: "datos", nota: "grosor = 0.1 · dobleces = 0" }];
+    var g = 0.1, n = 0;
+    while (g < meta) {
+      p.push({ nodo: "cond", nota: "¿" + py(g) + " < " + meta + "? sí" });
+      p.push({ nodo: "dobla", nota: py(g) + " * 2 = " + py(g * 2) });
+      g = g * 2; n++;
+      p.push({ nodo: "cuenta", nota: "dobleces = " + n });
+    }
+    p.push({ nodo: "cond", nota: "¿" + py(g) + " < " + meta + "? no" });
+    p.push({ nodo: "imprime", nota: "Dobleces: " + n + " · Grosor: " + py(g) + " mm" });
+    p.push({ nodo: "fin", nota: "Fin: " + n + " dobleces, más alta que tú" });
+    return p;
+  }
+  var TEXTO_RECORRER = "▶ Seguirlo con 1.60 m";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(pasosRecorrido(1600), {
+      intervalo: reducir ? 1000 : 550,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = {};
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var meta = d.meta;
+    vars.grosor = 0.1; est.g = 0.1; est.lvl = 0;
+    paso({ linea: 0, escribe: "grosor", capitulo: "Los datos", tipo: "hoja",
+      cuenta: "una hoja: 0.1 mm",
+      nota: "Empieza con una hoja: <code>grosor</code> vale <strong>0.1</strong>, en milímetros. Es el escalón de abajo de la escalera." });
+    vars.meta = meta; est.meta = meta;
+    paso({ linea: 1, escribe: "meta", tipo: "meta",
+      cuenta: d.conv,
+      nota: "La meta es " + d.texto + ": en milímetros, <code>" + meta + "</code>. En la escalera, es la raya dorada." });
+    vars.dobleces = 0; est.dob = 0;
+    paso({ linea: 2, escribe: "dobleces", tipo: "cero",
+      cuenta: "dobleces = 0",
+      nota: "Todavía no hay ningún doblez: el contador empieza en <strong>0</strong>." });
+
+    var g = 0.1, n = 0;
+    while (g < meta) {
+      // ¿Qué lugar se pasa en esta vuelta?
+      var nuevo = g * 2, hito = -1;
+      HITOS.forEach(function (h, k) { if (h.mm > g && h.mm <= nuevo) hito = k; });
+      var vuelta = n + 1;
+      var cap = vuelta === 1 ? "Doblez 1" : hito !== -1 ? "Doblez " + vuelta + " · " + HITOS[hito].cap : null;
+      paso({ linea: 4, lee: ["grosor", "meta"], tipo: "pregunta", sigue: true, capitulo: cap || undefined,
+        cuenta: py(g) + " < " + meta + " → True",
+        nota: vuelta === 1
+          ? "<code>0.1 &lt; " + meta + "</code> es <strong>True</strong>: la hoja todavía no llega a la meta. Entra al bucle a doblar."
+          : "<code>" + py(g) + " &lt; " + meta + "</code> es <strong>True</strong>: todavía no llega. Vuelta " + vuelta + "." });
+      var antes = g;
+      g = nuevo;
+      vars.grosor = g; est.g = g; est.lvl = vuelta;
+      var notaG = "<code>" + py(antes) + " * 2</code> da <strong>" + py(g) + "</strong> mm";
+      var leible = unidad(g);
+      if (g >= 1000) notaG += ", " + leible.replace("≈" + NB, "unos ");
+      notaG += hito !== -1 ? ". " + HITOS[hito].pasa : ".";
+      var clave = d.pausas.indexOf(vuelta) !== -1;
+      if (vuelta === 1) notaG = "<code>0.1 * 2</code> da <strong>0.2</strong>: al doblar, la hoja queda encima de sí misma y el grosor se duplica. En el rastro de <code>grosor</code>, el 0.1 quedó tachado; en la escalera, el marcador subió <strong>un peldaño</strong>.";
+      if (clave && d.extras[vuelta]) notaG += " " + d.extras[vuelta];
+      paso({ linea: 5, escribe: "grosor", lee: ["grosor"], tipo: "dobla", hito: hito, pausa: clave,
+        cuenta: py(antes) + " * 2 = " + py(g), nota: notaG });
+      n = vuelta;
+      vars.dobleces = n; est.dob = n;
+      paso({ linea: 6, escribe: "dobleces", lee: ["dobleces"], tipo: "cuenta",
+        cuenta: (n - 1) + " + 1 = " + n,
+        nota: n === 1 ? "Cuenta el doblez: va <strong>1</strong>." : "Cuenta el doblez: van <strong>" + n + "</strong>." });
+    }
+    paso({ linea: 4, lee: ["grosor", "meta"], tipo: "pregunta", sigue: false, capitulo: "Fin",
+      cuenta: py(g) + " < " + meta + " → False",
+      nota: "<code>" + py(g) + " &lt; " + meta + "</code> es <strong>False</strong>: ¡ya llegó! El bucle termina y el programa sigue después del <code>while</code>." });
+    paso({ linea: 8, salida: "Dobleces: " + n, lee: ["dobleces"], tipo: "imprime",
+      nota: "Imprime cuántos dobleces hicieron falta…" });
+    paso({ linea: 9, salida: "Grosor: " + py(g) + " mm", lee: ["grosor"], tipo: "fin", pausa: true, fin: true,
+      nota: d.final });
+    return pasos;
+  }
+
+  /* La escena: la escalera de la hoja a la Luna y la pila de papel */
+  var escena = (function () {
+    var raiz, dobEl, cuentaEl, zona, lleno, marca, marcaTxt, x2, metaEl, hitosEl = [], capasEl, saleEl, capasTxt, grosorTxt, aviso;
+    function crear(cont) {
+      var html = '<div class="pap">' +
+        '<div class="pap__arriba"><span class="pap__dob">dobleces <b>—</b></span><span class="pap__cuenta"></span></div>' +
+        '<div class="pap__cuerpo">' +
+        '<div class="pap__esc" aria-hidden="true"><div class="pap__zona">' +
+        '<div class="pap__riel"><div class="pap__lleno"></div></div>';
+      [0, 10, 20, 30, 40].forEach(function (k) { html += '<span class="pap__num" style="bottom:' + pos(k) + '">' + k + "</span>"; });
+      html += '<div class="pap__meta" hidden></div>';
+      HITOS.forEach(function (h) {
+        html += '<div class="pap__hito" style="bottom:' + pos(nivel(h.mm)) + '"><span>' + h.nombre + " <small>" + h.alto + "</small></span></div>";
+      });
+      html += '<span class="pap__marca" hidden><span class="pap__marca-txt"></span><span class="pap__x2">×2</span></span>' +
+        "</div></div>" +
+        '<div class="pap__pila"><h4>La pila</h4>' +
+        '<div class="pap__dibujo" aria-hidden="true"><div class="pap__capas"></div><span class="pap__sale" hidden>↑ ya no cabe</span></div>' +
+        '<span class="pap__dato">capas<b class="pap__capas-txt">—</b></span>' +
+        '<span class="pap__dato">grosor<b class="pap__grosor-txt">—</b></span>' +
+        "</div></div>" +
+        '<p class="pap__aviso" aria-live="polite"></p></div>';
+      cont.innerHTML = html;
+      raiz = cont.querySelector(".pap");
+      dobEl = cont.querySelector(".pap__dob b");
+      cuentaEl = cont.querySelector(".pap__cuenta");
+      zona = cont.querySelector(".pap__zona");
+      lleno = cont.querySelector(".pap__lleno");
+      marca = cont.querySelector(".pap__marca");
+      marcaTxt = cont.querySelector(".pap__marca-txt");
+      x2 = cont.querySelector(".pap__x2");
+      metaEl = cont.querySelector(".pap__meta");
+      hitosEl = Array.prototype.slice.call(cont.querySelectorAll(".pap__hito"));
+      capasEl = cont.querySelector(".pap__capas");
+      saleEl = cont.querySelector(".pap__sale");
+      capasTxt = cont.querySelector(".pap__capas-txt");
+      grosorTxt = cont.querySelector(".pap__grosor-txt");
+      aviso = cont.querySelector(".pap__aviso");
+    }
+    function reiniciar(d) {
+      metaEl.style.bottom = pos(nivel(d.meta));
+      hitosEl.forEach(function (h, k) { h.classList.toggle("pap__hito--meta", HITOS[k].mm === d.meta); });
+    }
+    function pintar(p, op) {
+      var e = p ? p.est : {};
+      var animar = !!op.animar;
+      if (!animar) raiz.classList.add("pap--quieto");
+      var hay = e.lvl !== undefined;
+      marca.hidden = !hay;
+      lleno.style.height = hay ? pos(e.lvl) : "0%";
+      if (hay) { marca.style.bottom = pos(e.lvl); marcaTxt.textContent = unidad(e.g); }
+      metaEl.hidden = e.meta === undefined;
+      dobEl.textContent = e.dob === undefined ? "—" : String(e.dob);
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      hitosEl.forEach(function (h, k) {
+        h.classList.toggle("pap__hito--pasado", hay && k > 0 && HITOS[k].mm <= e.g);
+        h.classList.remove("pap__hito--recien");
+        if (animar && p.tipo === "dobla" && p.hito === k) { void h.offsetWidth; h.classList.add("pap__hito--recien"); }
+      });
+      x2.classList.remove("pap__x2--sale");
+      if (animar && p && p.tipo === "dobla") { void x2.offsetWidth; x2.classList.add("pap__x2--sale"); }
+      // La pila dibujada: una raya por capa, hasta 32
+      var capas = hay ? Math.pow(2, e.lvl) : 0;
+      capasEl.style.height = Math.min(capas, 32) / 32 * 100 + "%";
+      saleEl.hidden = capas <= 32;
+      capasTxt.textContent = hay ? miles(capas) : "—";
+      grosorTxt.textContent = hay ? unidad(e.g) : "—";
+      // El aviso
+      var txt = "", si = false;
+      if (p) {
+        if (p.tipo === "hoja") txt = "Una hoja de papel: 0.1 mm.";
+        else if (p.tipo === "meta") txt = "La meta: " + op.datos.texto + ".";
+        else if (p.tipo === "cero") txt = "Todavía no se dobló.";
+        else if (p.tipo === "pregunta") { txt = p.sigue ? "Todavía no llega a la meta: ¡a doblar!" : "¡Llegó a la meta!"; si = !p.sigue; }
+        else if (p.tipo === "dobla") { txt = p.hito !== -1 ? HITOS[p.hito].pasa : "La pila se duplicó: " + unidad(e.g) + "."; si = p.hito !== -1; }
+        else if (p.tipo === "cuenta") txt = e.dob === 1 ? "El primer doblez." : "Un doblez más: van " + e.dob + ".";
+        else if (p.tipo === "imprime" || p.tipo === "fin") { txt = e.dob + " " + veces(e.dob, "doblez", "dobleces") + ": " + unidad(e.g) + "."; si = true; }
+      }
+      aviso.textContent = txt;
+      aviso.className = "pap__aviso" + (si ? " pap__aviso--si" : "");
+      if (!animar) { void raiz.offsetWidth; raiz.classList.remove("pap--quieto"); }
+      void zona;
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Tu altura: 1.60 m", datos: { meta: 1600, texto: "tu altura, 1.60 m", conv: "1.60 m = 1600 mm", pausas: [1], extras: {},
+      final: "Con <strong>14 dobleces</strong>, la hoja ya es más alta que tú: 1638.4 mm, unos 1.64 m. Mira el mapa de calor: el <code>while</code> preguntó <strong>15 veces</strong> y las dos líneas de adentro corrieron 14. La última vez, la respuesta fue False." } },
+    { nombre: "Un edificio de 30 m", datos: { meta: 30000, texto: "un edificio de 30 m", conv: "30 m = 30" + NB + "000 mm", pausas: [14],
+      extras: { 14: "Ya pasó tu altura con 14 dobleces. El edificio es casi 19 veces más alto que tú: ¿cuántos dobleces más harán falta?" },
+      final: "<strong>19 dobleces</strong>: unos 52.4 m. El edificio es casi 19 veces más alto que tú, pero bastaron <strong>5 dobleces más</strong>. En el mapa de calor, la línea que dobla corrió 19 veces." } },
+    { nombre: "El Everest", datos: { meta: 8849000, texto: "el Everest, 8" + NB + "849 m", conv: "8" + NB + "849 m = 8" + NB + "849" + NB + "000 mm", pausas: [14, 19],
+      extras: { 14: "Van 14 dobleces. ¿Cuántos más hasta el Everest?", 19: "Mira la escalera: el marcador sube un peldaño igual en cada doblez, aunque cada vez el grosor crece más." },
+      final: "<strong>27 dobleces</strong>: unos 13.4 km de papel, más alto que el Everest. De tu altura al Everest, solo 13 dobleces más. La línea que dobla corrió 27 veces en el mapa de calor." } },
+    { nombre: "La Luna", datos: { meta: 384400000000, texto: "la Luna, a 384" + NB + "400 km", conv: "384" + NB + "400 km = 384" + NB + "400" + NB + "000" + NB + "000 mm", pausas: [14, 27],
+      extras: { 14: "Van 14 dobleces, y la Luna sigue muy lejos.", 27: "Con 27 dobleces ya pasó el Everest. La Luna está unas 43" + NB + "000 veces más arriba que la cima del Everest, pero faltan solo <strong>15 dobleces</strong>." },
+      final: "<strong>42 dobleces</strong>: unos 439" + NB + "805 km. ¡Pasa la Luna! Con 41 se quedaba en unos 219" + NB + "902 km: no llegaba. Tomás tendrá que creerlo: la línea que dobla corrió solo <strong>42 veces</strong>." } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [1],
+    variables: ["grosor", "meta", "dobleces"],
+    formato: function (nombre, v) { return nombre === "grosor" ? py(v) : Reproductor.python(v); },
+    generar: generar,
+    escena: escena,
+    intervalo: 800
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // ¿Cuánto trabajo hace? La meta se duplica
+  function pintarTrabajo() {
+    var k = Number($("t-k").value), meta = 1000 * Math.pow(2, k);
+    $("t-meta").textContent = miles(Math.pow(2, k)) + " m (" + meta + " mm)";
+    var r = doblar(meta);
+    $("t-dob").textContent = r.n;
+    $("t-dob-txt").textContent = veces(r.n, "doblez", "dobleces");
+    $("t-hojas").textContent = miles(meta * 10);
+    $("t-dob-dif").textContent = k ? "+1" : "";
+    $("t-hojas-dif").textContent = k ? "×2" : "";
+  }
+  $("t-k").addEventListener("input", pintarTrabajo);
+  pintarTrabajo();
+
+  // ¿Por qué funciona? El último doblez
+  function pintarRecta() {
+    var meta = Number($("v-meta").value), r = doblar(meta), antes = r.g / 2;
+    $("v-num").textContent = meta;
+    var max = 2 * meta;
+    function x(v) { return (v / max * 100) + "%"; }
+    function m(clase, v, txt) { return '<span class="recta__marca ' + clase + '" style="left:' + x(v) + '"><span>' + txt + "</span></span>"; }
+    var pf = r.g / max;
+    $("v-recta").innerHTML =
+      '<span class="recta__eje"></span>' +
+      '<span class="recta__antes" style="width:' + x(antes) + '"></span>' +
+      '<span class="recta__salto" style="left:' + x(antes) + ";width:" + x(r.g - antes) + '"></span>' +
+      m("recta__marca--meta recta__marca--arriba", meta, "meta<br>" + meta) +
+      m("recta__marca--fin recta__marca--abajo" + (pf > 0.82 ? " recta__marca--izq" : ""), r.g, "final<br>" + py(r.g)) +
+      m("recta__marca--doble recta__marca--arriba recta__marca--izq", max, "doble de<br>la meta");
+    $("v-desig").innerHTML = "antes " + py(antes) + " &lt; <span class=\"m\">" + meta + "</span> ≤ <span class=\"f\">" + py(r.g) + "</span> &lt; <span class=\"d\">" + max + "</span>";
+  }
+  $("v-meta").addEventListener("input", pintarRecta);
+  pintarRecta();
+
+  // Casos borde
+  var corre = null, cuenta0 = 0;
+  var TRAZA = 'Traceback (most recent call last):\n  File "papel.py", line 5, in &lt;module&gt;\n    while grosor &lt; meta:\n          ^^^^^^^^^^^^^\n<span class="err">KeyboardInterrupt</span>';
+  var BORDES = [
+    { datos: "grosor = 0 · meta = 8849000",
+      texto: "<code>0 * 2</code> da 0: el grosor nunca crece y <code>0 &lt; 8849000</code> es True siempre. El bucle <strong>no termina</strong>. En Python, se detiene con Ctrl+C." },
+    { datos: "grosor = 0.1 · meta = 0.05", salida: "Dobleces: 0\nGrosor: 0.1 mm",
+      texto: "La hoja ya es más gruesa que la meta: <code>0.1 &lt; 0.05</code> es False desde el principio y el bucle no da ni una vuelta." },
+    { datos: "grosor = 0.1 · meta = 0.1", salida: "Dobleces: 0\nGrosor: 0.1 mm",
+      texto: "<code>0.1 &lt; 0.1</code> es False: llegar justo a la meta también cuenta. Con <code>&lt;</code>, el bucle no dobla cuando ya llegó." }
+  ];
+  function parar() { if (corre) clearInterval(corre); corre = null; }
+  function pintarBorde(k) {
+    parar();
+    var b = BORDES[k];
+    $("b-datos").textContent = b.datos;
+    $("b-texto").innerHTML = b.texto;
+    $("b-botones").hidden = k !== 0;
+    if (k !== 0) { $("b-consola").textContent = b.salida; return; }
+    cuenta0 = 0;
+    $("b-parar").disabled = false;
+    $("b-parar").textContent = "Ctrl+C: detener";
+    ticBorde();
+    corre = setInterval(ticBorde, reducir ? 400 : 60);
+  }
+  function ticBorde() {
+    cuenta0 += 48271;
+    $("b-consola").innerHTML = '<span class="suave">(el programa sigue corriendo…)\ngrosor = 0\ndobleces = ' + miles(cuenta0) + "</span>";
+  }
+  $("b-parar").addEventListener("click", function () {
+    if (!corre) { pintarBorde(0); return; }
+    parar();
+    $("b-consola").innerHTML = TRAZA;
+    $("b-parar").textContent = "↺ Correrlo otra vez";
+  });
+  $("b-chips").querySelectorAll("button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      $("b-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === btn)); });
+      pintarBorde(Number(btn.getAttribute("data-b")));
+    });
+  });
+  // El contador del bucle sin fin corre solo mientras se ve
+  var bordeElegido = 0, empezado = false, pausado = false;
+  $("b-chips").addEventListener("click", function (ev) { var b = ev.target.closest("button"); if (b) { bordeElegido = Number(b.getAttribute("data-b")); empezado = true; } });
+  if (window.IntersectionObserver) {
+    new IntersectionObserver(function (es) {
+      var visible = es[0].isIntersecting;
+      if (!visible) { if (corre) { parar(); pausado = true; } return; }
+      if (!empezado) { empezado = true; pintarBorde(0); }
+      else if (pausado && bordeElegido === 0) { pausado = false; corre = setInterval(ticBorde, reducir ? 400 : 60); }
+    }, { threshold: 0.35 }).observe($("b-consola"));
+  } else pintarBorde(0);
+
+  $("b-consola").textContent = "";
+  $("b-datos").textContent = BORDES[0].datos;
+  $("b-texto").innerHTML = BORDES[0].texto;
+
+  /* ---------- 6. ¿Sumar o duplicar? ---------- */
+  var CARRIL_HITOS = [0, 3, 6, 9];   // hoja, persona, Everest, Luna
+  ["s-pista-suma", "s-pista-dobla"].forEach(function (id) {
+    var html = '<span class="carril__linea"></span><span class="carril__lleno"></span>';
+    CARRIL_HITOS.forEach(function (k) {
+      var h = HITOS[k];
+      html += '<span class="carril__hito" style="left:' + pos(nivel(h.mm)) + '">' + h.nombre.replace("Una ", "").replace("El ", "").replace("La ", "") + "</span>";
+    });
+    html += '<span class="carril__punto"></span>';
+    $(id).innerHTML = html;
+  });
+  var vueltas = 0;
+  var MAXV = 42;
+  function pintarSumar(animar) {
+    var cont = document.querySelector("#sumar .mas__dibujo");
+    if (!animar) cont.classList.add("mas--quieto");
+    var hojas = vueltas + 1, suma = hojas / 10;
+    var dobla = 0.1;
+    for (var k = 0; k < vueltas; k++) dobla = dobla * 2;
+    $("s-suma").textContent = unidad(suma);
+    $("s-dobla").textContent = unidad(dobla);
+    [["s-pista-suma", nivel(suma)], ["s-pista-dobla", nivel(dobla)]].forEach(function (c) {
+      var pista = $(c[0]);
+      pista.querySelector(".carril__lleno").style.width = pos(c[1]);
+      pista.querySelector(".carril__punto").style.left = pos(c[1]);
+    });
+    var txt;
+    if (!vueltas) txt = "Las dos empiezan con una hoja de 0.1 mm. Toca <strong>Una vuelta</strong>.";
+    else if (vueltas < MAXV) txt = vueltas + " " + veces(vueltas, "vuelta", "vueltas") + ": apilando, " + hojas + " hojas; doblando, " + miles(Math.pow(2, vueltas)) + " capas.";
+    else txt = "42 vueltas: apilando, apenas 4.3 mm. Doblando, ¡ya pasó la Luna!";
+    $("s-lectura").innerHTML = txt;
+    $("s-una").disabled = $("s-diez").disabled = vueltas >= MAXV;
+    if (!animar) { void cont.offsetWidth; cont.classList.remove("mas--quieto"); }
+  }
+  $("s-una").addEventListener("click", function () { vueltas = Math.min(MAXV, vueltas + 1); pintarSumar(true); });
+  $("s-diez").addEventListener("click", function () { vueltas = Math.min(MAXV, vueltas + 10); pintarSumar(true); });
+  $("s-otra").addEventListener("click", function () { vueltas = 0; pintarSumar(false); });
+  $("s-ver").addEventListener("click", function () {
+    rep.entrada(3);
+    $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
+  });
+  pintarSumar(false);
+
+  Problemas.iniciar({ id: "problema-papel" });
+})();
+</script>
+</body>
+</html>

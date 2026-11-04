@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Es primo? · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: saber si un número es primo probando divisores uno por uno con un for y saliendo con break en el primero que divide exacto, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- La escena: las sillas que buscan filas iguales ---------- */
+    .sala { flex: 1; display: flex; flex-direction: column; gap: var(--esp-2); min-height: 0; }
+    .sala__arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+    .sala__pruebas { font: 700 var(--texto-xs) var(--fuente); color: var(--tinta-suave); white-space: nowrap; }
+    .sala__pruebas strong { margin: 0 0.15em; font: 700 var(--texto-lg) var(--fuente-codigo); color: var(--azul-tinta); }
+    .sala__cuenta { min-height: 1.7rem; max-width: 100%; padding: 0.1em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 200ms; }
+    .sala__cuenta:empty { opacity: 0; }
+    .sala__cuenta--ok { border-color: var(--color-ok); color: var(--color-ok); }
+    .sala__zona { position: relative; flex: 1 1 auto; min-height: 8rem; }
+    .sala__escenario { position: absolute; display: grid; place-items: center; border-radius: 5px; background: #6b5240; color: #f3e6d3; font: 700 0.56rem var(--fuente); letter-spacing: 0.18em; text-transform: uppercase; overflow: hidden; transition: all var(--t-sala, 450ms) ease; }
+    .sala--izq .sala__escenario span { writing-mode: vertical-rl; transform: rotate(180deg); }
+    .silla { position: absolute; left: 0; top: 0; box-sizing: border-box; border-radius: 26%; background: #9fb0d6; box-shadow: inset 0 calc(-1 * var(--banda, 0px)) 0 rgba(0, 0, 0, 0.22); transition: transform var(--t-sala, 450ms) ease, width var(--t-sala, 450ms) ease, height var(--t-sala, 450ms) ease, background-color 250ms; }
+    .sala--izq .silla { box-shadow: inset calc(-1 * var(--banda, 0px)) 0 0 rgba(0, 0, 0, 0.22); }
+    .silla--gris { background: #b5bccb; }
+    .silla--fila { background: var(--azul-tinta); }
+    .silla--sobra { background: #f2a75e; outline: 1.5px solid var(--lapiz); outline-offset: -1.5px; }
+    .silla--ok { background: var(--color-ok); }
+    .sala--quieta .silla, .sala--quieta .sala__escenario, .sala--quieta .sala__marco { transition: none !important; }
+    .sala__marco { position: absolute; border: 2px dashed var(--color-ok); border-radius: 6px; pointer-events: none; transition: all var(--t-sala, 450ms) ease, opacity 200ms; }
+    .sala__marco[hidden] { display: block; opacity: 0; }
+    .sala__sello { position: absolute; right: 4%; bottom: 6%; padding: 0.1em 0.5em; border: 3px double var(--lapiz); border-radius: 8px; background: rgba(255, 255, 255, 0.92); font: 700 var(--texto-lg) var(--serif); letter-spacing: 0.1em; color: var(--lapiz); transform: rotate(-8deg); pointer-events: none; }
+    .sala__sello[hidden] { display: none; }
+    .sala__leyenda { margin: 0; min-height: 1.35em; font: 700 0.85rem var(--fuente); text-align: center; color: var(--tinta); }
+    .sala__leyenda--ok { color: var(--color-ok); }
+    .sala__leyenda--mal { color: var(--lapiz); }
+    .tira-d { display: flex; height: 0.95rem; border: 1.5px solid var(--tinta); border-radius: 4px; overflow: hidden; background: #fff; }
+    .tira-d span { flex: 1 1 0; min-width: 0; transition: background-color 200ms; }
+    .tira-d--rayas span + span { border-left: 1px solid #fff; }
+    .tira-d .t-falla { background: #e9a98c; }
+    .tira-d .t-divide { background: var(--color-ok); }
+    .tira-d .t-ahora { background: var(--azul-tinta); }
+    .tira-d .t-saltada { background: repeating-linear-gradient(45deg, #d9dde5 0 3px, #fff 3px 6px); }
+    .tira-d--vacia { display: grid; place-items: center; font: 700 0.62rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .tira-d__marcas { display: flex; justify-content: space-between; gap: var(--esp-2); margin-top: 0.15rem; font: 700 0.62rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .tira-d__marcas .medio { color: var(--tinta); }
+
+    /* ---------- Demos (bloque 2) ---------- */
+    .fichas { display: grid; gap: 3px; align-content: start; min-height: 7rem; margin: var(--esp-2) 0; }
+    .fichas__fila { display: flex; gap: 3px; }
+    .ficha { width: 0.95rem; height: 0.95rem; border-radius: 3px; background: var(--azul-tinta); }
+    .ficha--sobra { background: #f2a75e; outline: 1.5px solid var(--lapiz); outline-offset: -1.5px; }
+    .fichas--ok .ficha { background: var(--color-ok); }
+    .cuenta-grande .c-ok { color: var(--color-ok); }
+    .dedo-lista { display: flex; flex-wrap: wrap; gap: 0.3rem; min-height: 2.2rem; margin: var(--esp-2) 0 0; padding: 0; list-style: none; }
+    .dedo-lista li { min-width: 2.1rem; padding: 0.25em 0.4em; border: 2px solid var(--papel-borde); border-radius: 8px; background: #fff; text-align: center; font: 700 var(--texto-xs) var(--fuente-codigo); transition: border-color 200ms, background-color 200ms, transform 200ms; }
+    .dedo-lista li.aqui { border-color: var(--azul-tinta); background: var(--azul-tinta-suave); transform: translateY(-3px); }
+    .dedo-lista .vacio { border-style: dashed; color: var(--tinta-suave); font-family: var(--fuente); font-weight: 400; }
+    .dedo-salida { margin: var(--esp-2) 0 0; min-height: 1.4em; font: 700 var(--texto-xs) var(--fuente-codigo); color: var(--tinta-suave); }
+    .pruebas-d { display: flex; flex-wrap: wrap; gap: 0.25rem; min-height: 3.3rem; margin: var(--esp-2) 0; padding: 0; list-style: none; align-content: start; }
+    .pruebas-d li { display: grid; place-items: center; min-width: 1.75rem; height: 1.55rem; padding: 0 0.15em; border: 1.5px solid var(--papel-borde); border-radius: 6px; background: #fff; font: 700 0.7rem var(--fuente-codigo); color: var(--tinta-suave); transition: background-color 200ms, border-color 200ms, opacity 200ms; }
+    .pruebas-d li.no { border-color: #e9a98c; background: #fdeee6; color: var(--lapiz); }
+    .pruebas-d li.si { border-color: var(--color-ok); background: var(--color-ok); color: #fff; }
+    .pruebas-d li.salta { opacity: 0.35; border-style: dashed; }
+    .menor-caja { display: inline-flex; align-items: center; gap: 0.4em; margin: 0; font: 700 var(--texto-xs) var(--fuente-codigo); }
+    .menor-caja strong { min-width: 1.8rem; padding: 0.1em 0.4em; border: 2px solid var(--azul-tinta); border-radius: 6px; background: var(--azul-tinta-suave); color: var(--azul-tinta); text-align: center; font-size: var(--texto-md); }
+
+    /* ---------- Detalles ---------- */
+    .barras { display: block; width: 100%; height: auto; margin: var(--esp-1) 0; overflow: visible; }
+    .barras__eje { stroke: var(--tinta); stroke-width: 1.2; }
+    .barras__txt { font: 700 8.5px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .barras__primo { fill: var(--lapiz); }
+    .barras__otro { fill: var(--azul-tinta); }
+    .barras__guia { stroke: var(--tinta); stroke-width: 1; stroke-dasharray: 2 2; }
+    .barras__punto { fill: #ffd479; stroke: var(--tinta); stroke-width: 1.5; }
+    .leyenda-barras { display: flex; flex-wrap: wrap; gap: var(--esp-1) var(--esp-3); margin: 0; font-size: 0.72rem; color: var(--tinta-suave); }
+    .leyenda-barras i { display: inline-block; width: 0.7em; height: 0.7em; margin-right: 0.3em; border-radius: 2px; vertical-align: -0.05em; }
+    .detalle-codigo.codigo { margin: var(--esp-2) 0; font-size: 0.78rem !important; }
+    .codigo .linea.linea--cambia { background: rgba(255, 179, 92, 0.2); box-shadow: inset 3px 0 0 #ffb35c; }
+    .codigo .linea.linea--quitada { opacity: 0.55; text-decoration: line-through; text-decoration-color: #ff8a65; text-decoration-thickness: 2px; }
+    .consola-mini { margin: var(--esp-2) 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 var(--texto-xs) var(--fuente-codigo); white-space: pre; overflow-x: auto; }
+    .consola-mini .gris { color: #8b96a3; font-weight: 400; }
+    .chips-elegir + .chips-elegir { margin-top: var(--esp-2); }
+    .veredicto { font-weight: 700; }
+    .veredicto--mal { color: var(--lapiz); }
+    .veredicto--ok { color: var(--color-ok); }
+    #detalles .concepto p { font-size: var(--texto-sm); }
+    .concepto .codigo + .chips-elegir { margin-top: var(--esp-2); }
+
+    /* ---------- 6. ¿Hace falta probar todos? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas p { margin: 0 0 var(--esp-3); }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .mas .codigo { margin: 0 0 var(--esp-3); font-size: 0.8rem; }
+    #raiz .caso-fin { margin-top: var(--esp-3); }
+    #raiz .visto { margin-top: var(--esp-2); }
+    .parejas { display: block; width: 100%; height: 7.2rem; overflow: visible; }
+    .solo-ancho { display: inline; }
+    @media (max-width: 640px) { .solo-ancho { display: none; } }
+    .parejas__eje { stroke: var(--tinta); stroke-width: 2; }
+    .parejas__arco { fill: none; stroke: var(--azul-tinta); stroke-width: 2; }
+    .parejas__punto { fill: var(--azul-tinta); }
+    .parejas__punto--borde { fill: #9aa4b2; }
+    .parejas__raiz { stroke: var(--lapiz); stroke-width: 2; stroke-dasharray: 4 3; }
+    .parejas__zona { fill: rgba(11, 122, 62, 0.1); }
+    .parejas__txt { font: 700 9px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .parejas__txt--raiz { fill: var(--lapiz); }
+    .parejas__txt--d { fill: var(--azul-tinta); }
+    .parejas-lista { display: flex; flex-wrap: wrap; gap: 0.3rem; min-height: 1.7rem; margin: 0; padding: 0; list-style: none; }
+    .parejas-lista li { padding: 0.1em 0.5em; border-radius: 999px; background: var(--azul-tinta-suave); color: var(--azul-tinta); font: 700 0.72rem/1.5 var(--fuente-codigo); }
+    .parejas-lista li.nada { background: #fde6d8; color: var(--lapiz); font-family: var(--fuente); }
+    .contadores { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-2); }
+    .contador { margin: 0 !important; padding: 0.2rem var(--esp-2); border-radius: var(--radio-sm); background: var(--papel); text-align: center; }
+    .contador small { display: block; font: 700 0.68rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .contador strong { font: 700 var(--texto-lg) var(--serif); color: var(--lapiz); }
+    .contador--raiz strong { color: var(--color-ok); }
+    .mas .mini-tabla td:first-child { text-align: left; }
+    .mas .mini-tabla th, .mas .mini-tabla td { padding: 0.1em 0.4em; }
+    .mas__dibujo .control-fila { margin: 0; }
+
+    @media (min-width: 1180px) {
+      .rep__cuerpo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(10.5rem, 0.5fr); }
+    }
+    @media (max-width: 640px) {
+      /* La línea más larga (36 caracteres) no debe llegar al mapa de calor */
+      .rep { padding-left: var(--esp-2); padding-right: var(--esp-2); }
+      .rep__codigo .codigo { font-size: 0.76rem; }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #raiz .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #raiz .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Bucles</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#raiz"><span>6 · ¿Hace falta probar todos?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Bucles</p>
+          <h1>¿Es primo?</h1>
+          <p class="caso-bajada">Un programa que prueba divisores uno por uno y se detiene en el primero que divide exacto.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 5"><span class="estrellas__llenas">★★★</span>☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/variables/formulas/index.html">%</a></li>
+              <li><a href="../../lecciones/bucles/index.html">for y range</a></li>
+              <li><a href="../../lecciones/bucles/condiciones/index.html">if en cada vuelta</a></li>
+              <li><a href="../../lecciones/bucles/break/index.html">break</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Un escenario y 91 sillas acomodadas en 7 filas de 13; al costado, una ficha que pregunta por 97">
+          <rect x="14" y="14" width="168" height="16" rx="4" fill="#6b5240"/>
+          <text x="98" y="26" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" letter-spacing="3" fill="#f3e6d3">ESCENARIO</text>
+          <g id="portada-sillas" fill="#0b7a3e"></g>
+          <rect x="18" y="40" width="160" height="87" rx="5" fill="none" stroke="#0b7a3e" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="98" y="148" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#0b7a3e">91 = 7 * 13</text>
+          <g transform="rotate(6 200 150)">
+            <rect x="168" y="124" width="62" height="56" rx="4" fill="#fff" stroke="#e3d9c3" stroke-width="1.5"/>
+            <text x="199" y="144" text-anchor="middle" font-family="monospace" font-size="9" font-weight="700" fill="#556074">sillas</text>
+            <text x="199" y="168" text-anchor="middle" font-family="monospace" font-size="18" font-weight="700" fill="#b4400e">97 ¿?</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Lucía acomoda las sillas para la ceremonia del colegio. Son <strong>91</strong> y la directora quiere <strong>filas iguales</strong>: más de una fila y más de una silla en cada fila.</p>
+            <p>Prueba con 2 filas y sobra una. Con 3, 4, 5 y 6 filas, siempre sobra algo… ¿será imposible? No: <strong>7 filas de 13</strong>. Con 97 sillas, en cambio, no hay forma: 97 es <span class="resalta">primo</span>, un número mayor que 1 que solo se divide exacto entre 1 y entre sí mismo. <span class="nota-margen">¿Cómo lo averigua una computadora?</span></p>
+            <div class="ticket" aria-label="La ficha de las sillas">
+              <h3>CEREMONIA · SILLAS</h3>
+              <div class="ticket__fila"><span>Sillas</span><span>91</span></div>
+              <div class="ticket__fila"><span>Filas</span><span>iguales, más de 1</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Sillas por fila</span><span>más de 1</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dado un número entero <code>n</code>, diga si <strong>es primo</strong>. Si no lo es, que lo muestre como una multiplicación que empieza por su divisor más chico (mayor que 1).</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>n</code>: un número entero mayor o igual que 2.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Si <code>n</code> es primo, <code>n es primo</code>. Si no, <code>n = a * b</code>, donde <code>a</code> es el divisor más chico de <code>n</code> (sin contar el 1) y <code>b</code> es <code>n // a</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>n = 91</td><td>91 = 7 * 13</td></tr>
+                <tr><td>n = 97</td><td>97 es primo</td></tr>
+                <tr><td>n = 15</td><td>15 = 3 * 5</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Divide exacto?</h3>
+            <p>Reparte <code>n</code> fichas en <code>d</code> filas. <code>n % d</code> dice cuántas sobran: si da 0, las filas quedan iguales y <code>d</code> <strong>divide exacto</strong> a <code>n</code>.</p>
+            <div class="control-fila">
+              <label for="d1-n">n = <span id="d1-num">15</span></label>
+              <input type="range" id="d1-n" min="4" max="30" value="15">
+            </div>
+            <div class="control-fila">
+              <div class="chips-elegir" id="d1-filas" role="group" aria-label="Cuántas filas">
+                <button type="button" data-v="2" aria-pressed="false">2</button>
+                <button type="button" data-v="3" aria-pressed="false">3</button>
+                <button type="button" data-v="4" aria-pressed="true">4</button>
+                <button type="button" data-v="5" aria-pressed="false">5</button>
+                <button type="button" data-v="6" aria-pressed="false">6</button>
+              </div>
+            </div>
+            <div class="fichas" id="d1-fichas" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Probar uno por uno</h3>
+            <p>Los divisores posibles van de 2 a <code>n − 1</code>. <code>range(2, n)</code> los da todos, en orden: el final no se incluye. <a href="../../lecciones/bucles/index.html">Bucles</a></p>
+            <pre class="codigo" id="d2-codigo"></pre>
+            <div class="control-fila">
+              <label for="d2-n">n = <span id="d2-num">9</span></label>
+              <input type="range" id="d2-n" min="2" max="12" value="9">
+            </div>
+            <ul class="dedo-lista" id="d2-lista" aria-label="Los valores que da range(2, n)"></ul>
+            <p class="dedo-salida" id="d2-salida" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Salir con <code>break</code></h3>
+            <p>Apenas uno divide, se guarda cuál fue y <code>break</code> corta el <code>for</code>: los que faltan ya no se prueban. <a href="../../lecciones/bucles/break/index.html">break y continue</a></p>
+            <pre class="codigo" id="d3-codigo"></pre>
+            <div class="chips-elegir" id="d3-n" role="group" aria-label="Elige n">
+              <button type="button" data-v="15" aria-pressed="true">n = 15</button>
+              <button type="button" data-v="25" aria-pressed="false">n = 25</button>
+              <button type="button" data-v="13" aria-pressed="false">n = 13</button>
+            </div>
+            <ul class="pruebas-d" id="d3-lista" aria-hidden="true"></ul>
+            <p class="menor-caja" aria-live="polite"><code>menor</code> <strong id="d3-menor">0</strong> <span id="d3-txt"></span></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 91</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Lucía prueba 2 filas, 3 filas, 4… El programa hace lo mismo: <strong>prueba los divisores uno por uno y se detiene en el primero que divide exacto</strong>.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Empieza sin divisor</strong> <code>menor = 0</code> quiere decir «todavía no encontré ninguno».</li>
+              <li data-idea="2"><strong>Prueba cada d, de 2 a n − 1</strong> ¿<code>n % d</code> da 0?</li>
+              <li data-idea="3"><strong>Guarda el primero que divide y sale</strong> <code>menor = d</code> y <code>break</code>: no hace falta seguir.</li>
+              <li data-idea="4"><strong>¿Encontró alguno?</strong> Si <code>menor</code> sigue en 0, es primo. Si no, muestra la multiplicación.</li>
+            </ol>
+            <p class="nota-margen">Con un primo, el <code>for</code> da todas las vueltas; con los demás, el <code>break</code> lo corta antes. El mapa de calor lo muestra.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuánto trabajo hace?</h3>
+            <p>Si <code>n</code> es primo, prueba todos: <code>n − 2</code> pruebas. Si no, para en su divisor más chico. Cada barra es un <code>n</code>:</p>
+            <svg class="barras" id="t-barras" viewBox="0 0 300 132" aria-hidden="true"></svg>
+            <p class="leyenda-barras" aria-hidden="true"><span><i style="background:var(--lapiz)"></i>primos</span><span><i style="background:var(--azul-tinta)"></i>no primos</span></p>
+            <div class="control-fila">
+              <label for="t-n">n = <span id="t-num">91</span></label>
+              <input type="range" id="t-n" min="2" max="200" value="91">
+            </div>
+            <p class="cuenta-grande" id="t-cuenta" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Versiones que parecen iguales</h3>
+            <div class="chips-elegir" id="v-version" role="group" aria-label="Elige la versión">
+              <button type="button" data-v="0" aria-pressed="true">La del programa</button>
+              <button type="button" data-v="1" aria-pressed="false">else dentro del for</button>
+              <button type="button" data-v="2" aria-pressed="false">Sin break</button>
+            </div>
+            <div class="chips-elegir" id="v-n" role="group" aria-label="Elige n">
+              <button type="button" data-v="91" aria-pressed="true">91</button>
+              <button type="button" data-v="15" aria-pressed="false">15</button>
+              <button type="button" data-v="97" aria-pressed="false">97</button>
+            </div>
+            <pre class="codigo detalle-codigo" id="v-codigo"></pre>
+            <div class="consola-mini" id="v-consola" aria-live="polite"></div>
+            <p id="v-nota"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <p>La Entrada pide <code>n</code> mayor o igual que 2. ¿Qué pasa si no se cumple?</p>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">n = 1</button>
+              <button type="button" data-b="1" aria-pressed="false">n = 0</button>
+              <button type="button" data-b="2" aria-pressed="false">n = 2</button>
+            </div>
+            <div class="consola-mini" id="b-consola"></div>
+            <p id="b-texto" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Hace falta probar todos? -->
+    <section class="panel" id="raiz">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Hace falta probar todos?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Con 97, el programa hizo 95 pruebas. Pero los divisores vienen <strong>en parejas</strong>: <span class="solo-ancho">91 = 7 × 13, y </span>36 = 2 × 18 = 3 × 12 = 4 × 9 = 6 × 6. En cada pareja, uno es menor o igual que la raíz (√36 = 6) y el otro, mayor o igual.</p>
+            <p>Si <code>n</code> tiene un divisor, tiene uno que no pasa de la raíz: <span class="resalta">basta probar mientras <code>d * d &lt;= n</code></span>. Con 97, 8 pruebas en vez de 95.</p>
+            <pre class="codigo" id="r-codigo" aria-label="La versión que prueba hasta la raíz"></pre>
+            <p><button type="button" class="btn btn-secundario" id="ver-97">Ver 97 en la ejecución ↑</button></p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="control-fila">
+              <label for="r-n">n = <span id="r-num">36</span></label>
+              <input type="range" id="r-n" min="2" max="200" value="36">
+            </div>
+            <svg class="parejas" id="r-svg" viewBox="0 -4 320 108" aria-hidden="true"></svg>
+            <ul class="parejas-lista" id="r-parejas" aria-live="polite"></ul>
+            <div class="contadores">
+              <p class="contador"><small>hasta n − 1</small><strong id="r-todos">1</strong></p>
+              <p class="contador contador--raiz"><small>mientras d * d &lt;= n</small><strong id="r-raiz">1</strong></p>
+            </div>
+            <table class="mini-tabla" aria-label="Pruebas con números primos grandes">
+              <thead><tr><th>primo</th><th>hasta n − 1</th><th>hasta la raíz</th></tr></thead>
+              <tbody>
+                <tr><td>97</td><td>95</td><td>8</td></tr>
+                <tr><td>7 919</td><td>7 917</td><td>87</td></tr>
+                <tr><td>1 000 003</td><td>1 000 001</td><td>999</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../papel/index.html">← <span class="largo">Caso anterior: </span>El papel hasta la Luna</a>
+          <a class="btn btn-primario" href="../collatz/index.html"><span class="largo">Siguiente caso: </span>La conjetura de Collatz →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function sillas(k) { return k === 1 ? "1 silla" : k + " sillas"; }
+  function sobran(r) { return r === 1 ? "sobra 1" : "sobran " + r; }
+  function filas(k) { return k === 1 ? "1 fila" : k + " filas"; }
+  function pruebasTxt(k) { return k === 1 ? "1 prueba" : k + " pruebas"; }
+  // El divisor más chico entre 2 y n − 1 (0 si no hay)
+  function menorDivisor(n) { for (var d = 2; d < n; d++) if (n % d === 0) return d; return 0; }
+  function pruebasDe(n) { var m = menorDivisor(n); return m ? m - 1 : Math.max(0, n - 2); }
+
+  /* ---------- Portada: 7 filas de 13 ---------- */
+  (function () {
+    var g = $("portada-sillas"), s = "";
+    for (var f = 0; f < 7; f++) for (var c = 0; c < 13; c++) s += '<rect x="' + (22 + c * 12) + '" y="' + (44 + f * 12) + '" width="9" height="9" rx="2.5"/>';
+    g.innerHTML = s;
+  })();
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "n = " + d.n,
+      "menor = 0",
+      "for d in range(2, n):",
+      "    if n % d == 0:",
+      "        menor = d",
+      "        break",
+      "if menor == 0:",
+      '    print(n, "es primo")',
+      "else:",
+      "    mayor = n // menor",
+      '    print(n, "=", menor, "*", mayor)'
+    ];
+  }
+  var IDEAS = [1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 4];
+
+  /* ---------- 2. Demos ---------- */
+  var d1Filas = 4;
+  function pintarD1() {
+    var n = Number($("d1-n").value), d = d1Filas, q = Math.floor(n / d), r = n % d;
+    $("d1-num").textContent = n;
+    var el = $("d1-fichas");
+    el.textContent = "";
+    el.classList.toggle("fichas--ok", r === 0);
+    for (var i = 0; i < d; i++) {
+      var fila = document.createElement("div");
+      fila.className = "fichas__fila";
+      var largo = q + (i < r ? 1 : 0);
+      for (var j = 0; j < largo; j++) {
+        var f = document.createElement("span");
+        f.className = "ficha" + (j >= q ? " ficha--sobra" : "");
+        fila.appendChild(f);
+      }
+      el.appendChild(fila);
+    }
+    $("d1-cuenta").innerHTML = n + " % " + d + " = " + (r === 0
+      ? '<span class="c-ok">0</span> → ✓ ' + d + " filas de " + q
+      : '<span class="c-resto">' + r + "</span> → " + sobran(r));
+  }
+  $("d1-n").addEventListener("input", pintarD1);
+  $("d1-filas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      d1Filas = Number(b.getAttribute("data-v"));
+      $("d1-filas").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD1();
+    });
+  });
+  pintarD1();
+
+  Python.escribir($("d2-codigo"), ["for d in range(2, n):", "    print(d)"]);
+  var d2k = 0, d2Timer = null;
+  function pintarD2(reiniciar) {
+    var n = Number($("d2-n").value);
+    $("d2-num").textContent = n;
+    var lista = $("d2-lista");
+    if (reiniciar) {
+      lista.textContent = "";
+      if (n <= 2) {
+        var v = document.createElement("li");
+        v.className = "vacio";
+        v.textContent = "vacío";
+        lista.appendChild(v);
+      }
+      for (var d = 2; d < n; d++) {
+        var li = document.createElement("li");
+        li.textContent = d;
+        lista.appendChild(li);
+      }
+      d2k = 0;
+    }
+    var lis = lista.querySelectorAll("li:not(.vacio)");
+    var total = lis.length;
+    lis.forEach(function (li, m) { li.classList.toggle("aqui", !reducir && m === d2k); });
+    var cuantos = total === 1 ? "1 valor" : total + " valores";
+    $("d2-salida").textContent = n <= 2
+      ? "range(2, " + n + ") está vacío: ninguna vuelta"
+      : "range(2, " + n + ") → " + cuantos + ", de 2 a " + (n - 1) + (reducir ? "" : (d2k < total ? " · d = " + lis[d2k].textContent : " · fin del for"));
+  }
+  $("d2-n").addEventListener("input", function () { pintarD2(true); });
+  pintarD2(true);
+  Problemas.alVer($("d2-lista"), function () {
+    if (reducir) return;
+    d2Timer = setInterval(function () {
+      var total = $("d2-lista").querySelectorAll("li:not(.vacio)").length;
+      d2k = (d2k + 1) % (total + 1);
+      pintarD2(false);
+    }, 750);
+  });
+
+  Python.escribir($("d3-codigo"), ["for d in range(2, n):", "    if n % d == 0:", "        menor = d", "        break"]);
+  var d3Timer = null;
+  function pintarD3(n) {
+    clearTimeout(d3Timer);
+    var lista = $("d3-lista");
+    lista.textContent = "";
+    var lis = [];
+    for (var d = 2; d < n; d++) {
+      var li = document.createElement("li");
+      li.textContent = d;
+      lista.appendChild(li);
+      lis.push(li);
+    }
+    var hallado = menorDivisor(n);
+    $("d3-menor").textContent = "0";
+    $("d3-txt").textContent = "";
+    function final() {
+      $("d3-menor").textContent = hallado;
+      $("d3-txt").textContent = hallado
+        ? "· " + pruebasTxt(hallado - 1) + " y " + (n - 1 - hallado) + " sin probar"
+        : "· ninguno dividió: " + n + " es primo";
+    }
+    var k = 0;
+    function uno() {
+      if (k >= lis.length) { final(); return; }
+      var d = k + 2;
+      var si = n % d === 0;
+      lis[k].classList.add(si ? "si" : "no");
+      if (si) {
+        $("d3-menor").textContent = d;
+        for (var m = k + 1; m < lis.length; m++) lis[m].classList.add("salta");
+        final();
+        return;
+      }
+      k++;
+      d3Timer = setTimeout(uno, reducir ? 0 : 380);
+    }
+    if (reducir) { while (k < lis.length && !lis[k].classList.contains("si")) uno(); return; }
+    d3Timer = setTimeout(uno, 300);
+  }
+  var d3n = 15;
+  $("d3-n").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      d3n = Number(b.getAttribute("data-v"));
+      $("d3-n").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarD3(d3n);
+    });
+  });
+  Problemas.alVer($("d3-lista"), function () { pintarD3(d3n); });
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 640px)").matches;
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 50,
+    anchoNodo: 230,
+    columnas: movil ? [0.2, 1.3, 1.1, 0.95] : [0.3, 1.35, 1.05, 0.95],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "prep", tipo: "proceso", texto: "<code>menor = 0</code>", col: 1, fila: 1, idea: 1 },
+      { id: "quedan", tipo: "decision", texto: movil ? "¿quedan d?" : "¿quedan d de 2 a n − 1?", col: 1, fila: 2, idea: 2 },
+      { id: "acabo", tipo: "proceso", texto: movil ? "fin del <code>for</code>" : "se acabó el <code>for</code>", col: 2, fila: 2 },
+      { id: "divide", tipo: "decision", texto: "¿<code>n % d == 0</code>?", col: 1, fila: 3, idea: 2 },
+      { id: "guarda", tipo: "proceso", texto: "<code>menor = d</code>", col: 1, fila: 4, idea: 3 },
+      { id: "sale", tipo: "proceso", texto: movil ? "<code>break</code>" : "<code>break</code>: sale del <code>for</code>", col: 1, fila: 5, idea: 3 },
+      { id: "cero", tipo: "decision", texto: "¿<code>menor == 0</code>?", col: 2, fila: 5, idea: 4 },
+      { id: "primo", tipo: "datos", texto: movil ? "«es primo»" : "«n es primo»", col: 3, fila: 5, idea: 4 },
+      { id: "factores", tipo: "datos", texto: movil ? "<code>menor * mayor</code>" : "<code>n = menor * mayor</code>", col: 2, fila: 6, idea: 4 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 3, fila: 6 }
+    ],
+    flechas: [
+      { de: "ini", a: "prep" },
+      { de: "prep", a: "quedan" },
+      { de: "quedan", a: "divide", texto: "sí" },
+      { de: "quedan", a: "acabo", texto: "no" },
+      { de: "divide", a: "quedan", texto: "no", por: "izquierda", carril: 0 },
+      { de: "divide", a: "guarda", texto: "sí" },
+      { de: "guarda", a: "sale" },
+      { de: "acabo", a: "cero" },
+      { de: "sale", a: "cero" },
+      { de: "cero", a: "primo", texto: "sí" },
+      { de: "cero", a: "factores", texto: "no" },
+      { de: "primo", a: "fin" },
+      { de: "factores", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  function pasosRecorrido(n) {
+    var p = [{ nodo: "ini", nota: "Empieza: n = " + n }, { nodo: "prep", nota: "menor = 0: todavía ninguno" }];
+    var hallado = menorDivisor(n);
+    for (var d = 2; d < n; d++) {
+      p.push({ nodo: "quedan", nota: "¿quedan? sí: d = " + d });
+      var r = n % d;
+      p.push({ nodo: "divide", nota: n + " % " + d + " = " + r + (r === 0 ? " → sí, divide" : " → no, siguiente d") });
+      if (r === 0) break;
+    }
+    if (hallado) {
+      p.push({ nodo: "guarda", nota: "menor = " + hallado });
+      p.push({ nodo: "sale", nota: "break: no prueba más" });
+      p.push({ nodo: "cero", nota: "¿" + hallado + " == 0? no" });
+      p.push({ nodo: "factores", nota: n + " = " + hallado + " * " + (n / hallado) });
+      p.push({ nodo: "fin", nota: "Fin: " + filas(hallado) + " de " + (n / hallado) });
+    } else {
+      p.push({ nodo: "quedan", nota: "¿quedan? no" });
+      p.push({ nodo: "acabo", nota: "terminó sin break" });
+      p.push({ nodo: "cero", nota: "¿0 == 0? sí" });
+      p.push({ nodo: "primo", nota: n + " es primo" });
+      p.push({ nodo: "fin", nota: "Fin" });
+    }
+    return p;
+  }
+  var recorrido = null;
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 91";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(pasosRecorrido(91), {
+      intervalo: reducir ? 1300 : 750,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(dat) {
+    var n = dat.n;
+    var pasos = [];
+    var vars = {};
+    var est = { n: n, fase: "inicio", pruebas: 0, hasta: 1, d: null, menor: 0, saltadas: false };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var hallado = menorDivisor(n);
+    var vueltas = hallado ? hallado - 1 : Math.max(0, n - 2);
+    function esCapitulo(d) {
+      if (vueltas <= 12) return true;
+      return d === 2 || d % 10 === 0 || d === vueltas + 1;
+    }
+
+    vars.n = n;
+    paso({ linea: 0, escribe: "n", capitulo: "Los datos",
+      nota: "Lucía tiene <strong>" + sillas(n) + "</strong>: <code>n = " + n + "</code>." });
+    vars.menor = 0;
+    paso({ linea: 1, escribe: "menor",
+      nota: "<code>menor = 0</code> quiere decir «todavía no encontré ningún divisor». Si al final sigue en 0, " + n + " es primo." });
+
+    if (n <= 2) {
+      est.fase = "vacio";
+      paso({ linea: 2, capitulo: "El for", pausa: true, cuenta: "range(2, " + n + ") → vacío",
+        nota: "<code>range(2, " + n + ")</code> va desde 2 hasta antes de " + n + ": <strong>está vacío</strong>. El <code>for</code> no da ninguna vuelta y <code>d</code> ni siquiera llega a existir." });
+    }
+    for (var d = 2; d < n; d++) {
+      vars.d = d;
+      est.fase = "arma";
+      est.d = d;
+      paso({ linea: 2, escribe: "d", capitulo: esCapitulo(d) ? "d = " + d : undefined, cuenta: "d = " + d,
+        nota: d === 2
+          ? "Empieza el <code>for</code> con <code>d = 2</code>. ¿Se pueden poner las " + n + " sillas en 2 filas iguales?"
+          : "Siguiente vuelta: <code>d = " + d + "</code>. ¿En " + d + " filas?" });
+      var r = n % d, q = Math.floor(n / d);
+      est.pruebas++;
+      est.hasta = d;
+      est.fase = "probada";
+      var primera = d === 2;
+      var ultima = !hallado && d === n - 1;
+      paso({ linea: 3, lee: ["n", "d"], cuenta: n + " % " + d + " = " + r, pausa: primera || r === 0, ok: r === 0,
+        nota: r === 0
+          ? "<code>" + n + " % " + d + "</code> da <strong>0</strong>: " + filas(d) + " de " + q + " y no sobra ninguna silla. ¡" + d + " divide exacto a " + n + "! El <code>if</code> es True."
+          : primera
+            ? "<code>" + n + " % 2</code> da <strong>" + r + "</strong>: con 2 filas, " + sobran(r) + ". No divide exacto, así que el <code>if</code> no corre y el <code>for</code> sigue con el siguiente."
+            : "<code>" + n + " % " + d + "</code> da " + r + ": " + sobran(r) + ". No divide." + (ultima ? " Era la última prueba." : "") });
+      if (r === 0) {
+        vars.menor = d;
+        est.fase = "hallado";
+        est.menor = d;
+        paso({ linea: 4, escribe: "menor", lee: ["d"], cuenta: "menor = " + d, ok: true,
+          nota: "<code>menor = " + d + "</code>: guarda cuál fue. Ya no vale 0: así el programa recordará que <strong>sí encontró</strong> un divisor." });
+        est.saltadas = true;
+        var faltan = n - 1 - d;
+        paso({ linea: 5, cuenta: "break", pausa: true, ok: true,
+          nota: "<code>break</code>: sale del <code>for</code> ahora mismo. " + (faltan === 1
+            ? "El único valor que faltaba (" + (d + 1) + ") no se prueba"
+            : "Los " + faltan + " valores que faltaban (de " + (d + 1) + " a " + (n - 1) + ") no se prueban") +
+            ": ya se sabe que " + n + " no es primo." });
+        break;
+      }
+    }
+    if (!hallado && n > 2) {
+      est.fase = "agotado";
+      est.d = null;
+      paso({ linea: 2, flecha: true, cuenta: "no quedan valores",
+        nota: "Ya no quedan valores en <code>range(2, " + n + ")</code>: el <code>for</code> termina solo, sin <code>break</code>. Probó los " + (n - 2) + ", del 2 al " + (n - 1) + ", y ninguno dividió exacto." });
+    }
+
+    var esPrimo = vars.menor === 0;
+    paso({ linea: 6, lee: ["menor"], capitulo: "La respuesta", cuenta: vars.menor + " == 0 → " + (esPrimo ? "True" : "False"), ok: !esPrimo,
+      nota: esPrimo
+        ? "<code>menor == 0</code> es <strong>True</strong>: menor sigue en 0, " + (n <= 2 ? "porque no hubo ninguna prueba." : "nadie lo cambió. Ningún <code>d</code> dividió exacto.")
+        : "<code>menor == 0</code> es <strong>False</strong>: menor vale " + vars.menor + ". Se salta el <code>print</code> de «es primo» y corre el <code>else</code>." });
+    if (esPrimo) {
+      est.fase = "primo";
+      paso({ linea: 7, salida: n + " es primo", lee: ["n"], pausa: true, fin: true, capitulo: "Fin",
+        nota: n <= 2
+          ? "<strong>" + n + " es primo</strong>, y el programa no hizo ni una prueba: el cuerpo del <code>for</code> quedó en ×0 en el mapa de calor. Está bien: 2 solo se divide exacto entre 1 y entre 2."
+          : "<strong>" + n + " es primo</strong>: no hay forma de hacer filas iguales. Mira el mapa de calor: el <code>if</code> corrió ×" + (n - 2) + ", una vez por cada <code>d</code> del 2 al " + (n - 1) + ", y <code>menor = d</code> y <code>break</code> quedaron en ×0." });
+    } else {
+      var m = vars.menor, mayor = n / m;
+      vars.mayor = mayor;
+      paso({ linea: 9, ejecuta: [8, 9], escribe: "mayor", lee: ["n", "menor"], cuenta: n + " // " + m + " = " + mayor, ok: true,
+        nota: "<code>mayor = " + n + " // " + m + "</code> da <strong>" + mayor + "</strong>: las sillas de cada fila." });
+      est.fin = true;
+      var sinProbar = n - 1 - m;
+      paso({ linea: 10, salida: n + " = " + m + " * " + mayor, lee: ["n", "menor", "mayor"], pausa: true, fin: true, capitulo: "Fin", ok: true,
+        nota: "Imprime <strong>" + n + " = " + m + " * " + mayor + "</strong>: " + filas(m) + " de " + mayor + ". Mira el mapa de calor: el <code>if</code> corrió ×" + (m - 1) + " y el <code>break</code>, ×1. " +
+          (sinProbar === 1 ? "La prueba que faltaba no hizo falta." : "Las otras " + sinProbar + " pruebas no hicieron falta.") });
+    }
+    return pasos;
+  }
+
+  /* La escena: las sillas que intentan formar filas iguales frente al escenario */
+  var escena = (function () {
+    var raiz, zona, escen, marco, sello, pruebasEl, cuentaEl, leyenda, tira, marcas;
+    var sillasEl = [], celdas = [], n = 0, ultimo = null;
+    var MAX = 26, E = 16, G = 8;
+    function crear(c) {
+      c.innerHTML =
+        '<div class="sala">' +
+        '  <div class="sala__arriba"><span class="sala__pruebas">Pruebas <strong>0</strong><span></span></span><span class="sala__cuenta"></span></div>' +
+        '  <div class="sala__zona" aria-hidden="true"><div class="sala__escenario"><span>Escenario</span></div><div class="sala__marco" hidden></div><div class="sala__sello" hidden>PRIMO</div></div>' +
+        '  <p class="sala__leyenda" aria-live="polite"></p>' +
+        '  <div aria-hidden="true"><div class="tira-d"></div><div class="tira-d__marcas"></div></div>' +
+        "</div>";
+      raiz = c.querySelector(".sala");
+      zona = c.querySelector(".sala__zona");
+      escen = c.querySelector(".sala__escenario");
+      marco = c.querySelector(".sala__marco");
+      sello = c.querySelector(".sala__sello");
+      pruebasEl = c.querySelector(".sala__pruebas");
+      cuentaEl = c.querySelector(".sala__cuenta");
+      leyenda = c.querySelector(".sala__leyenda");
+      tira = c.querySelector(".tira-d");
+      marcas = c.querySelector(".tira-d__marcas");
+      if (window.ResizeObserver) {
+        var espera;
+        new ResizeObserver(function () {
+          clearTimeout(espera);
+          espera = setTimeout(function () { if (ultimo) pintar(ultimo.p, { animar: false }); }, 60);
+        }).observe(zona);
+      }
+    }
+    function reiniciar(d) {
+      n = d.n;
+      sillasEl.forEach(function (s) { s.remove(); });
+      sillasEl = [];
+      for (var k = 0; k < n; k++) {
+        var s = document.createElement("span");
+        s.className = "silla silla--gris";
+        zona.insertBefore(s, marco);
+        sillasEl.push(s);
+      }
+      tira.textContent = "";
+      celdas = [];
+      var total = Math.max(0, n - 2);
+      tira.classList.toggle("tira-d--vacia", total === 0);
+      tira.classList.toggle("tira-d--rayas", total > 0 && total <= 40);
+      if (!total) tira.textContent = "range(2, " + n + "): ningún d que probar";
+      for (var t = 0; t < total; t++) {
+        var c = document.createElement("span");
+        tira.appendChild(c);
+        celdas.push(c);
+      }
+      marcas.innerHTML = total ? "<span>d = 2</span><span class=\"medio\"></span><span>d = " + (n - 1) + "</span>" : "";
+      ultimo = null;
+    }
+    // Dónde va cada silla: sin acomodar (d nulo) o en d filas, con las que sobran en otro color
+    function disponer(d) {
+      var W = zona.clientWidth, H = zona.clientHeight;
+      if (!W || !H) return null;
+      var res = { pos: [], tipo: [], lado: "arriba", celda: 0, caja: null };
+      var c, ox, oy;
+      if (!d) {
+        var Ha = H - E - G;
+        var cols = Math.min(n, Math.max(1, Math.round(Math.sqrt(n * W / Ha))));
+        var rows = Math.ceil(n / cols);
+        c = Math.min(W / cols, Ha / rows, MAX);
+        ox = (W - cols * c) / 2;
+        oy = E + G + (Ha - rows * c) / 2;
+        for (var k = 0; k < n; k++) { res.pos.push([ox + (k % cols) * c, oy + Math.floor(k / cols) * c]); res.tipo.push("gris"); }
+        res.celda = c;
+        return res;
+      }
+      var q = Math.floor(n / d), r = n % d, L = q + (r ? 1 : 0);
+      var cA = Math.min(W / L, (H - E - G) / d), cB = Math.min((W - E - G) / d, H / L);
+      res.lado = cA >= 10 || cA >= cB ? "arriba" : "izq";
+      c = Math.min(res.lado === "arriba" ? cA : cB, MAX);
+      if (res.lado === "arriba") { ox = (W - L * c) / 2; oy = E + G + (H - E - G - d * c) / 2; }
+      else { ox = E + G + (W - E - G - d * c) / 2; oy = (H - L * c) / 2; }
+      for (var i = 0; i < d; i++) {
+        var largo = q + (i < r ? 1 : 0);
+        for (var j = 0; j < largo; j++) {
+          res.pos.push(res.lado === "arriba" ? [ox + j * c, oy + i * c] : [ox + i * c, oy + j * c]);
+          res.tipo.push(j < q ? "fila" : "sobra");
+        }
+      }
+      res.celda = c;
+      res.caja = res.lado === "arriba" ? { x: ox, y: oy, w: q * c, h: d * c } : { x: ox, y: oy, w: d * c, h: q * c };
+      return res;
+    }
+    function pintar(p, op) {
+      ultimo = { p: p };
+      var e = p ? p.est : { n: n, fase: "inicio", pruebas: 0, hasta: 1, d: null, menor: 0 };
+      var animar = !!op.animar;
+      var t = Math.round(Math.min(480, (op.intervalo || 1000) * 0.7));
+      raiz.style.setProperty("--t-sala", t + "ms");
+      if (!animar) raiz.classList.add("sala--quieta");
+
+      // Contador y cuenta
+      var posibles = Math.max(0, n - 2);
+      pruebasEl.firstElementChild.textContent = e.pruebas;
+      pruebasEl.lastElementChild.textContent = "de " + posibles + (posibles === 1 ? " posible" : " posibles");
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      cuentaEl.classList.toggle("sala__cuenta--ok", !!(p && p.ok));
+
+      // Las sillas
+      var conD = e.d && (e.fase === "arma" || e.fase === "probada" || e.fase === "hallado");
+      var lay = disponer(conD ? e.d : null);
+      if (lay) {
+        raiz.classList.toggle("sala--izq", lay.lado === "izq");
+        var W = zona.clientWidth, H = zona.clientHeight;
+        if (lay.lado === "arriba") { escen.style.left = "0px"; escen.style.top = "0px"; escen.style.width = W + "px"; escen.style.height = E + "px"; }
+        else { escen.style.left = "0px"; escen.style.top = "0px"; escen.style.width = E + "px"; escen.style.height = H + "px"; }
+        var c = lay.celda, s = Math.max(1.5, c * 0.8), m0 = (c - s) / 2;
+        raiz.style.setProperty("--banda", (s >= 7 ? Math.round(s * 0.24) : 0) + "px");
+        var ok = conD && e.fase !== "arma" && e.n % e.d === 0;
+        sillasEl.forEach(function (el, k) {
+          var pos = lay.pos[k];
+          el.style.width = s + "px";
+          el.style.height = s + "px";
+          el.style.transform = "translate(" + (pos[0] + m0) + "px, " + (pos[1] + m0) + "px)";
+          var tipo = lay.tipo[k];
+          if (conD && e.fase === "arma") tipo = "fila";
+          if (ok) tipo = "ok";
+          el.className = "silla silla--" + tipo;
+        });
+        marco.hidden = !ok;
+        if (ok && lay.caja) {
+          marco.style.left = (lay.caja.x - 4) + "px";
+          marco.style.top = (lay.caja.y - 4) + "px";
+          marco.style.width = (lay.caja.w + 8) + "px";
+          marco.style.height = (lay.caja.h + 8) + "px";
+        }
+      }
+      sello.hidden = !(e.fase === "primo" && p && p.fin);
+
+      // La leyenda
+      var txt = "", clase = "";
+      if (e.fase === "inicio") txt = sillas(n) + ", sin acomodar";
+      else if (e.fase === "vacio") txt = "No hay ningún número de filas que probar";
+      else if (e.fase === "arma") txt = "¿En " + filas(e.d) + "?";
+      else if (e.fase === "probada" || e.fase === "hallado") {
+        var q = Math.floor(n / e.d), r = n % e.d;
+        if (r === 0) { txt = "✓ " + filas(e.d) + " de " + q + ", no sobra ninguna"; clase = "ok"; }
+        else { txt = filas(e.d) + " de " + q + " · " + sobran(r) + " ✗"; clase = "mal"; }
+      }
+      else if (e.fase === "agotado") { txt = "Ningún número de filas dio filas iguales"; clase = "mal"; }
+      else if (e.fase === "primo") { txt = n + " es primo: no hay filas iguales"; clase = "mal"; }
+      leyenda.textContent = txt;
+      leyenda.className = "sala__leyenda" + (clase ? " sala__leyenda--" + clase : "");
+
+      // La tira de pruebas: un casillero por cada d de 2 a n − 1
+      var hallado = e.menor;
+      celdas.forEach(function (cel, k) {
+        var d = k + 2, cls = "";
+        if (d <= e.hasta && e.pruebas > 0) cls = d === hallado ? "t-divide" : "t-falla";
+        else if (e.fase === "arma" && d === e.d) cls = "t-ahora";
+        else if (e.saltadas) cls = "t-saltada";
+        cel.className = cls;
+      });
+      var medio = marcas.querySelector(".medio");
+      if (medio) {
+        var sinProbar = e.saltadas ? posibles - e.pruebas : 0;
+        medio.textContent = sinProbar ? sinProbar + " sin probar" : "";
+      }
+
+      if (!animar) { void raiz.offsetWidth; raiz.classList.remove("sala--quieta"); }
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "91 sillas", datos: { n: 91 } },
+    { nombre: "97: primo", datos: { n: 97 } },
+    { nombre: "15: enseguida", datos: { n: 15 } },
+    { nombre: "2: ninguna vuelta", datos: { n: 2 } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0],
+    variables: ["n", "menor", "d", "mayor"],
+    generar: generar,
+    escena: escena,
+    intervalo: 950
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // Cuánto trabajo: una barra por cada n de 2 a 200
+  var B = { x0: 24, x1: 296, y0: 112, y1: 8, max: 200 };
+  function bx(n) { return B.x0 + (B.x1 - B.x0) * (n - 2) / (B.max - 2); }
+  function by(p) { return B.y0 - (B.y0 - B.y1) * p / 198; }
+  (function () {
+    var s = "", ancho = (B.x1 - B.x0) / (B.max - 1);
+    for (var n = 2; n <= B.max; n++) {
+      var p = pruebasDe(n), h = Math.max(0.8, B.y0 - by(p));
+      s += '<rect class="' + (menorDivisor(n) ? "barras__otro" : "barras__primo") + '" x="' + (bx(n) - ancho / 2).toFixed(2) + '" y="' + (B.y0 - h).toFixed(2) + '" width="' + (ancho * 0.85).toFixed(2) + '" height="' + h.toFixed(2) + '"/>';
+    }
+    s += '<line class="barras__eje" x1="' + B.x0 + '" x2="' + B.x1 + '" y1="' + B.y0 + '" y2="' + B.y0 + '"/>';
+    s += '<line class="barras__eje" x1="' + B.x0 + '" x2="' + B.x0 + '" y1="' + B.y0 + '" y2="' + B.y1 + '"/>';
+    [2, 50, 100, 150, 200].forEach(function (n) { s += '<text class="barras__txt" x="' + bx(n) + '" y="' + (B.y0 + 11) + '" text-anchor="middle">' + n + "</text>"; });
+    [0, 100, 198].forEach(function (p) { s += '<text class="barras__txt" x="' + (B.x0 - 4) + '" y="' + (by(p) + 3) + '" text-anchor="end">' + p + "</text>"; });
+    s += '<line class="barras__guia" id="t-guia"/><circle class="barras__punto" id="t-punto" r="4"/>';
+    $("t-barras").innerHTML = s;
+  })();
+  function pintarTrabajo() {
+    var n = Number($("t-n").value), p = pruebasDe(n), m = menorDivisor(n);
+    $("t-num").textContent = n;
+    var x = bx(n), y = by(p);
+    $("t-punto").setAttribute("cx", x); $("t-punto").setAttribute("cy", y);
+    var g = $("t-guia");
+    g.setAttribute("x1", x); g.setAttribute("x2", x); g.setAttribute("y1", y); g.setAttribute("y2", B.y0);
+    $("t-cuenta").innerHTML = "n = " + n + " → " + '<span class="' + (m ? "c-cociente" : "c-resto") + '">' + pruebasTxt(p) + "</span>" +
+      '<br><small>' + (m ? "no es primo: para en d = " + m : n === 2 ? "es primo: ninguna prueba" : "es primo: prueba del 2 al " + (n - 1)) + "</small>";
+  }
+  $("t-n").addEventListener("input", pintarTrabajo);
+  pintarTrabajo();
+
+  // Versiones que parecen iguales
+  var VERSIONES = [
+    { lineas: ["for d in range(2, n):", "    if n % d == 0:", "        menor = d", "        break", "if menor == 0:", '    print(n, "es primo")'], cambia: [] },
+    { lineas: ["for d in range(2, n):", "    if n % d == 0:", '        print(n, "=", d, "*", n // d)', "        break", "    else:", '        print(n, "es primo")'], cambia: [2, 4, 5] },
+    { lineas: ["for d in range(2, n):", "    if n % d == 0:", "        menor = d", "        break", "if menor == 0:", '    print(n, "es primo")'], cambia: [], quitada: 3 }
+  ];
+  var vVersion = 0, vN = 91;
+  function simular(v, n) {
+    var salida = [], menor = 0, pruebas = 0;
+    for (var d = 2; d < n; d++) {
+      pruebas++;
+      if (n % d === 0) {
+        if (v === 1) { salida.push(n + " = " + d + " * " + (n / d)); break; }
+        menor = d;
+        if (v !== 2) break;
+      } else if (v === 1) salida.push(n + " es primo");
+    }
+    if (v !== 1) salida.push(menor === 0 ? n + " es primo" : n + " = " + menor + " * " + (n / menor));
+    return { salida: salida, pruebas: pruebas, menor: menor };
+  }
+  function pintarVersion() {
+    var v = VERSIONES[vVersion];
+    var pre = $("v-codigo");
+    Python.escribir(pre, v.lineas);
+    pre.querySelectorAll(".linea").forEach(function (l, k) {
+      l.classList.toggle("linea--cambia", v.cambia.indexOf(k) !== -1);
+      l.classList.toggle("linea--quitada", v.quitada === k);
+    });
+    var r = simular(vVersion, vN), bien = simular(0, vN);
+    // Las líneas repetidas se juntan: «91 es primo  ×5»
+    var grupos = [];
+    r.salida.forEach(function (s) {
+      var u = grupos[grupos.length - 1];
+      if (u && u.t === s) u.k++;
+      else grupos.push({ t: s, k: 1 });
+    });
+    $("v-consola").innerHTML = grupos.map(function (g) {
+      return Python.escapar(g.t) + (g.k > 1 ? '  <span class="gris">← ' + g.k + " veces</span>" : "");
+    }).join("\n");
+    var nota;
+    if (vVersion === 0) nota = '<span class="veredicto veredicto--ok">✓ Bien.</span> Para en el primer divisor y responde una sola vez: ' + pruebasTxt(r.pruebas) + ".";
+    else if (vVersion === 1) {
+      var primos = r.salida.filter(function (s) { return s === vN + " es primo"; }).length;
+      nota = !bien.menor
+        ? '<span class="veredicto veredicto--mal">✗ Repite.</span> La respuesta es correcta, pero la imprime ' + primos + " veces: una por cada vuelta."
+        : '<span class="veredicto veredicto--mal">✗ Decide antes de tiempo.</span> Como <code>' + vN + " % 2</code> no da 0, ya dice «es primo»" + (primos > 1 ? ", y lo repite en cada vuelta que no divide" : "") + ". Que un <code>d</code> no divida no prueba nada: hay que esperar al final del <code>for</code>.";
+    } else {
+      nota = !bien.menor
+        ? '<span class="veredicto veredicto--ok">= Igual.</span> Con un primo no se nota: de todas formas había que probar los ' + r.pruebas + "."
+        : '<span class="veredicto veredicto--mal">✗ Sigue de largo.</span> Cada divisor nuevo pisa al anterior y <code>menor</code> termina en ' + r.menor + ", el más grande: ya no es el menor. Y hizo " + r.pruebas + " pruebas en vez de " + bien.pruebas + ".";
+    }
+    $("v-nota").innerHTML = nota;
+  }
+  function chipsGrupo(id, alElegir) {
+    $(id).querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $(id).querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        alElegir(Number(b.getAttribute("data-v")));
+      });
+    });
+  }
+  chipsGrupo("v-version", function (v) { vVersion = v; pintarVersion(); });
+  chipsGrupo("v-n", function (v) { vN = v; pintarVersion(); });
+  pintarVersion();
+
+  // Casos borde
+  var BORDES = [
+    { n: 1, ok: false, texto: "<code>range(2, 1)</code> está vacío: el <code>for</code> no da vueltas, <code>menor</code> sigue en 0 y el programa dice «1 es primo». Pero 1 <strong>no es primo</strong>: un primo tiene que ser mayor que 1." },
+    { n: 0, ok: false, texto: "Lo mismo: <code>range(2, 0)</code> está vacío y dice «0 es primo». Tampoco lo es. Por eso la Entrada pide <code>n</code> ≥ 2; para aceptar cualquier número, haría falta un <code>if n &lt; 2:</code> antes del <code>for</code>." },
+    { n: 2, ok: true, texto: "<code>range(2, 2)</code> también está vacío, pero aquí la respuesta es correcta: 2 es el primo más chico, y el único par." }
+  ];
+  function pintarBorde(k) {
+    var b = BORDES[k];
+    $("b-consola").innerHTML = "n = " + b.n + '  <span class="gris">→</span>  ' + b.n + " es primo";
+    $("b-texto").innerHTML = '<span class="veredicto veredicto--' + (b.ok ? "ok" : "mal") + '">' + (b.ok ? "✓ Bien." : "✗ Mal.") + "</span> " + b.texto;
+  }
+  $("b-chips").querySelectorAll("button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      $("b-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === btn)); });
+      pintarBorde(Number(btn.getAttribute("data-b")));
+    });
+  });
+  pintarBorde(0);
+
+  /* ---------- 6. ¿Hace falta probar todos? ---------- */
+  Python.escribir($("r-codigo"), ["d = 2", "while d * d <= n:", "    if n % d == 0:", "        menor = d", "        break", "    d = d + 1"]);
+  function pruebasRaiz(n) {
+    var p = 0;
+    for (var d = 2; d * d <= n; d++) { p++; if (n % d === 0) break; }
+    return p;
+  }
+  var R = { x0: 14, x1: 306, y0: 86 };
+  function pintarParejas() {
+    var n = Number($("r-n").value);
+    $("r-num").textContent = n;
+    var ln = Math.log(n);
+    function x(k) { return R.x0 + (R.x1 - R.x0) * Math.log(k) / ln; }
+    var raiz = Math.sqrt(n), xr = x(raiz);
+    var s = '<rect class="parejas__zona" x="' + R.x0 + '" y="' + (R.y0 - 70) + '" width="' + (xr - R.x0) + '" height="70"/>';
+    s += '<line class="parejas__eje" x1="' + R.x0 + '" x2="' + R.x1 + '" y1="' + R.y0 + '" y2="' + R.y0 + '"/>';
+    var parejas = [];
+    for (var a = 2; a * a <= n; a++) if (n % a === 0) parejas.push([a, n / a]);
+    parejas.forEach(function (p) {
+      var xa = x(p[0]), xb = x(p[1]);
+      if (p[0] === p[1]) s += '<circle class="parejas__arco" cx="' + xa + '" cy="' + (R.y0 - 7) + '" r="7"/>';
+      else {
+        var h = Math.min(66, (xb - xa) * 0.55 + 6);
+        s += '<path class="parejas__arco" d="M' + xa + " " + R.y0 + " Q" + ((xa + xb) / 2) + " " + (R.y0 - h * 2) + " " + xb + " " + R.y0 + '"/>';
+      }
+    });
+    s += '<line class="parejas__raiz" x1="' + xr + '" x2="' + xr + '" y1="' + (R.y0 - 72) + '" y2="' + (R.y0 + 6) + '"/>';
+    var raizTxt = Number.isInteger(raiz) ? "√" + n + " = " + raiz : "√" + n + " ≈ " + raiz.toFixed(2);
+    s += '<text class="parejas__txt parejas__txt--raiz" x="' + xr + '" y="' + (R.y0 - 76) + '" text-anchor="middle">' + raizTxt + "</text>";
+    s += '<text class="parejas__txt" x="' + (R.x0 + 3) + '" y="' + (R.y0 - 60) + '">hasta la raíz</text>';
+    // Los puntos: 1, n y los divisores (con su número si hay lugar)
+    var divisores = [];
+    for (var d = 2; d < n; d++) if (n % d === 0) divisores.push(d);
+    s += '<circle class="parejas__punto parejas__punto--borde" cx="' + x(1) + '" cy="' + R.y0 + '" r="3.5"/><text class="parejas__txt" x="' + x(1) + '" y="' + (R.y0 + 16) + '" text-anchor="middle">1</text>';
+    s += '<circle class="parejas__punto parejas__punto--borde" cx="' + x(n) + '" cy="' + R.y0 + '" r="3.5"/><text class="parejas__txt" x="' + x(n) + '" y="' + (R.y0 + 16) + '" text-anchor="middle">' + n + "</text>";
+    var ultimaX = x(1);
+    divisores.forEach(function (d) {
+      var xd = x(d);
+      s += '<circle class="parejas__punto" cx="' + xd + '" cy="' + R.y0 + '" r="3.5"/>';
+      if (xd - ultimaX >= 13 && x(n) - xd >= 13) { s += '<text class="parejas__txt parejas__txt--d" x="' + xd + '" y="' + (R.y0 + 16) + '" text-anchor="middle">' + d + "</text>"; ultimaX = xd; }
+    });
+    $("r-svg").innerHTML = s;
+    $("r-parejas").innerHTML = parejas.length
+      ? parejas.map(function (p) { return "<li>" + p[0] + " × " + p[1] + "</li>"; }).join("")
+      : '<li class="nada">Ninguna pareja: ' + n + " es primo</li>";
+    $("r-todos").textContent = pruebasDe(n);
+    $("r-raiz").textContent = pruebasRaiz(n);
+  }
+  $("r-n").addEventListener("input", pintarParejas);
+  pintarParejas();
+
+  $("ver-97").addEventListener("click", function () {
+    rep.entrada(1);
+    $("ejecucion").scrollIntoView({ behavior: reducir ? "auto" : "smooth" });
+  });
+
+  Problemas.iniciar({ id: "problema-primo" });
+})();
+</script>
+</body>
+</html>
