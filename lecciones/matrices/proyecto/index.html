@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyecto: la sala de cine · Aprende a programar</title>
+  <meta name="description" content="Proyecto de Matrices: la taquilla de un cine en Python. La sala de 5 filas por 8 asientos es una matriz de &quot;L&quot; y &quot;X&quot;; dibujarla con la letra de cada fila, reservar(sala, f, c), pedir el asiento con try/except y revisar las orillas, contar los libres con dos for y buscar dos asientos juntos.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .fila-botones:has(> [hidden]:only-child) { display: none; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-fin { margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.9rem; }
+    .lab .codigo { margin-top: 0; }
+    .nota-visual { margin: 0; padding: var(--esp-3) var(--esp-4); border: 2px dashed var(--color-borde); border-radius: var(--radio-sm); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .nota-visual strong, .nota-visual code { color: var(--color-texto); }
+    .etiqueta-visual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .etiqueta-visual code { text-transform: none; letter-spacing: 0; }
+
+    /* ---------- La sala ---------- */
+    .cine { display: grid; justify-items: center; min-width: 0; }
+    .cine > .matriz { width: 100%; }
+    .pantalla { width: min(70%, 20rem); margin: 0 0 var(--esp-1); padding-top: 0.2rem; border-top: 4px solid #6f95e0; border-radius: 50% 50% 0 0 / 0.7rem 0.7rem 0 0; text-align: center; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.35em; line-height: 1.2; color: var(--color-texto-suave); }
+    .sala-tocable .matriz__celda[data-f] { cursor: pointer; }
+    .sala-tocable .matriz__celda--ok[data-f]:hover > .matriz__valor { transform: translateY(-2px); box-shadow: 0 4px 0 var(--color-ok); }
+    .matriz__celda--dorada > .matriz__valor { border-color: #b7791f; background: #fff4d6; color: #7a4b00; box-shadow: 0 0 0 3px rgba(242, 183, 5, 0.35); }
+    .celda--sacude > .matriz__valor { animation: sacudir 420ms ease; box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.35); }
+    .sala-sacude { animation: sacudir 420ms ease; }
+    .lectura { min-height: 1.6em; margin: var(--esp-2) 0 0; text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+    .lectura .si { color: var(--color-ok); }
+    .lectura .no { color: var(--color-error); }
+    .lectura .ojo { color: var(--color-pista); }
+
+    /* ---------- La traducción del asiento (paso 1) ---------- */
+    .traduce { display: grid; gap: var(--esp-2); padding: var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); border: 2px solid var(--color-borde); }
+    .traduce__fila { display: flex; align-items: center; gap: var(--esp-3); font-size: var(--texto-md); }
+    .traduce__rotulo { flex: none; width: 5.2rem; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .traduce__asiento { font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 800; color: var(--color-azul); }
+    .traduce__flecha { color: var(--color-texto-suave); }
+    .traduce code { font-size: var(--texto-md); }
+    .traduce__expr { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: var(--color-codigo-texto); font-family: var(--fuente-codigo); font-weight: 700; }
+    .traduce__vacio { margin: 0; color: var(--color-texto-suave); }
+    .traduce__salta { animation: valor-pulso 300ms ease-out; }
+    .entrada-asiento { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .entrada-asiento label { font-weight: 700; }
+    .entrada-asiento input { width: 5.5rem; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); text-transform: uppercase; }
+    .entrada-asiento .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+
+    /* ---------- Misiones ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+    .mision__cuenta { margin-left: auto; font-family: var(--fuente-codigo); font-size: var(--texto-xs); }
+
+    /* ---------- Consola ---------- */
+    .consola .consola__linea { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .consola .consola__linea--error { color: var(--color-error); }
+    .consola .consola__linea--sala { white-space: pre; font-weight: 600; line-height: 1.35; color: #1f3d73; }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: #1f5fd6; white-space: pre; }
+    .registro { margin-top: var(--esp-1); max-height: 11rem; overflow-y: auto; overscroll-behavior: contain; }
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 6rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .atajos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); width: 100%; font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .atajos .btn { min-height: 2.25rem; padding: 0 var(--esp-3); font-size: var(--texto-sm); }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+    .lab .consola { margin-top: var(--esp-3); }
+
+    /* ---------- Caja del total ---------- */
+    .cajas--fila { gap: var(--esp-3) 1.6rem; padding: var(--esp-3) 0 0; }
+    .cajas--fila .caja { gap: var(--esp-1); }
+    .cajas--fila .caja__cuerpo { width: 4.6rem; height: 3.2rem; padding-bottom: var(--esp-2); }
+    .cajas--fila .caja__valor { max-width: 4.3rem; min-width: 2.2rem; padding: 0 var(--esp-2); font-size: var(--texto-md); }
+    .cajas--fila .caja__nombre { padding: 0 var(--esp-2); font-size: var(--texto-sm); }
+    .junto-a { display: flex; flex-wrap: wrap; align-items: end; justify-content: center; gap: var(--esp-3) var(--esp-4); }
+    .junto-a > .consola { flex: 1 1 10rem; min-width: 0; margin-top: var(--esp-3); }
+
+    /* ---------- Probar asientos (parte 3) ---------- */
+    .probar { list-style: none; margin: var(--esp-2) 0 0; padding: 0; display: grid; gap: 0.3rem; }
+    .probar__btn { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) 1.2rem; align-items: center; gap: var(--esp-2); width: 100%; min-height: 2.25rem; padding: 0.15rem var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); font: inherit; font-size: var(--texto-sm); text-align: left; cursor: pointer; }
+    .probar__btn:hover:not(:disabled) { border-color: var(--color-azul); }
+    .probar__btn:focus-visible { box-shadow: var(--foco); outline: none; }
+    .probar__btn:disabled { cursor: default; opacity: 0.6; }
+    .probar__btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .probar__dato { font-family: var(--fuente-codigo); font-weight: 800; color: var(--color-azul); }
+    .probar__salida { font-family: var(--fuente-codigo); font-weight: 700; overflow-wrap: anywhere; }
+    .probar__salida--error { color: var(--color-error); }
+    .probar__marca { font-weight: 800; text-align: center; }
+    .probar__btn--ok .probar__marca { color: var(--color-ok); }
+    .probar__btn--mal { background: var(--color-pista-suave); }
+    .probar__btn--mal .probar__marca { color: var(--color-pista); }
+
+    /* ---------- Pruebas (parte 5) ---------- */
+    .pruebas { list-style: none; margin: var(--esp-3) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 150ms; }
+    .prueba__etiqueta { font-weight: 600; }
+    .prueba__salida { grid-column: 1; grid-row: 2; font-family: var(--fuente-codigo); font-weight: 700; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .prueba__marca { grid-column: 2; grid-row: 1 / span 2; font-weight: 700; font-size: var(--texto-md); }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+    .prueba__nota { font-family: var(--fuente); font-weight: 400; font-style: italic; color: var(--color-texto-suave); }
+    .salas-pestanas { display: flex; justify-content: center; gap: var(--esp-2); margin: 0 0 var(--esp-2); }
+    .salas-pestanas .btn { min-height: 2.25rem; padding: 0 var(--esp-3); font-size: var(--texto-sm); }
+    .salas-pestanas .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- Opciones ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo.codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.78rem; }
+      .registro { max-height: 9rem; }
+      .entrada input { width: 5rem; }
+      .traduce { padding: var(--esp-3); }
+      .traduce__rotulo { width: 4.4rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .probar__btn { grid-template-columns: 2.6rem minmax(0, 1fr) 1.2rem; font-size: var(--texto-xs); }
+      .consola .consola__linea--sala { font-size: 0.85rem; }
+    }
+    @media (max-width: 1023.98px) {
+      .lab__visual, .lab__resultado { margin-top: var(--esp-4); }
+      /* En el móvil, el reto: primero la sala y la consola; el programa, al final */
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { order: 3; margin-top: var(--esp-4); }
+      #paso-jugar .lab__visual { order: 1; margin-top: 0; }
+      #paso-jugar .lab__resultado { order: 2; }
+    }
+    @media (min-width: 1024px) {
+      .lab .codigo.codigo--compacto { line-height: 1.5; }
+      .lab .codigo.codigo--compacto .linea { min-height: 1.5em; }
+      .paso .opciones--codigo { margin: var(--esp-3) 0 0; gap: var(--esp-2); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .paso .opciones--codigo .opcion span { padding: var(--esp-2) var(--esp-3); font-size: 0.8rem; }
+      .lab__visual { padding: var(--esp-3) var(--esp-4); }
+      .pantalla { margin-bottom: var(--esp-1); }
+      #paso-taquilla .misiones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .entrada-asiento { justify-content: flex-start; margin-top: var(--esp-4); }
+      /* Programa completo: más junto para que quepa */
+      #t-codigo { padding-block: var(--esp-2); font-size: 0.74rem; line-height: 1.36; }
+      #t-codigo .linea { min-height: 1.36em; }
+      #paso-jugar .registro { max-height: 7.4rem; }
+      #paso-jugar .misiones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #paso-jugar .misiones li { padding-block: 0.25rem; }
+      #paso-jugar .explicacion { min-height: 0; margin-top: var(--esp-2); }
+      #paso-jugar .vuelta-actual { margin-bottom: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .celda--sacude > .matriz__valor, .sala-sacude { animation: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="matrices-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. La taquilla (sin código) -->
+    <section class="paso" id="paso-taquilla" data-requiere aria-labelledby="h-taquilla">
+      <span class="paso__etiqueta">Matrices 6/6 · Proyecto: la sala de cine</span>
+      <h1 class="paso__titulo" id="h-taquilla">Proyecto: la sala de cine</h1>
+      <p>Vas a programar la taquilla de un cine. La sala tiene 5 filas (A a E) de 8 asientos: una <strong>matriz</strong> de <code>"L"</code> (libre) y <code>"X"</code> (ocupado). Toca asientos para venderlos.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="traduce" id="i-traduce" aria-live="polite">
+            <p class="traduce__vacio" id="i-vacio">Toca un asiento verde (o escríbelo, como <code>C5</code>) y verás dónde está en la matriz.</p>
+            <div id="i-lleno" hidden>
+              <div class="traduce__fila"><span class="traduce__rotulo">Asiento</span><span class="traduce__asiento" id="i-asiento">C5</span></div>
+              <div class="traduce__fila"><span class="traduce__rotulo">Fila</span><span>letra <strong id="i-letra">C</strong> <span class="traduce__flecha">→</span> <code id="i-f">f = 2</code></span></div>
+              <div class="traduce__fila"><span class="traduce__rotulo">Número</span><span><strong id="i-numero">5</strong> <span class="traduce__flecha">→</span> <code id="i-c">c = 4</code> <span class="traduce__flecha">(uno menos)</span></span></div>
+              <div class="traduce__fila"><span class="traduce__rotulo">Casilla</span><span class="traduce__expr" id="i-expr">sala[2][4]</span></div>
+              <p class="traduce__vacio" id="i-dice"></p>
+            </div>
+          </div>
+          <div class="entrada-asiento">
+            <label for="i-campo">Asiento:</label>
+            <input type="text" id="i-campo" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="C5">
+            <button type="button" class="btn btn-secundario" id="i-vender">Vender</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div class="sala-tocable" id="i-sala"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="i-misiones" aria-label="Misiones">
+            <li data-mision="vender">Vende 3 entradas <span class="mision__cuenta" id="i-cuenta">0/3</span></li>
+            <li data-mision="ocupado">Intenta vender un asiento ocupado</li>
+          </ul>
+          <div class="feedback" id="i-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Parte 1: dibujar la sala -->
+    <section class="paso" id="paso-dibujar" data-comprobar aria-labelledby="h-dibujar">
+      <span class="paso__etiqueta">Parte 1 de 5</span>
+      <h2 class="paso__titulo" id="h-dibujar">Dibujar la sala</h2>
+      <p><code>dibujar</code> imprime la sala, una fila por línea. ¿Qué va en el espacio en blanco para que cada fila empiece con su letra?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p1-codigo" aria-label="Tu programa"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="p1" value="num"><span>f</span></label>
+            <label class="opcion"><input type="radio" name="p1" value="mas"><span>"ABCDE"[f + 1]</span></label>
+            <label class="opcion"><input type="radio" name="p1" value="bien"><span>"ABCDE"[f]</span></label>
+            <label class="opcion"><input type="radio" name="p1" value="todo"><span>"ABCDE"</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div id="p1-sala"></div>
+          </div>
+          <div class="consola" id="p1-consola"><span class="consola__titulo">Consola</span><span class="consola__vacia">Elige una opción y toca «Comprobar».</span></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parte 2: reservar -->
+    <section class="paso" id="paso-reservar" data-comprobar aria-labelledby="h-reservar">
+      <span class="paso__etiqueta">Parte 2 de 5</span>
+      <h2 class="paso__titulo" id="h-reservar">Reservar un asiento</h2>
+      <p><code>reservar</code> pone una <code>"X"</code> y devuelve <code>True</code>. Si el asiento ya estaba ocupado, no lo toca y devuelve <code>False</code>. ¿Qué condición va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p2-codigo" aria-label="Tu programa"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">¿Qué condición va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="p2" value="cruzado"><span>sala[c][f] == "X"</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="bien"><span>sala[f][c] == "X"</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="libre"><span>sala[f][c] == "L"</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="asigna"><span>sala[f][c] = "X"</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div id="p2-sala"></div>
+          </div>
+          <p class="lectura" id="p2-lectura" aria-live="polite"></p>
+          <div class="consola" id="p2-consola"><span class="consola__titulo">Consola</span><span class="consola__vacia">Elige una opción y toca «Comprobar».</span></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Parte 3: pedir y revisar el asiento -->
+    <section class="paso" id="paso-validar" data-comprobar aria-labelledby="h-validar">
+      <span class="paso__etiqueta">Parte 3 de 5</span>
+      <h2 class="paso__titulo" id="h-validar">¿Ese asiento existe?</h2>
+      <p>El <code>except</code> atrapa lo que no es un número, como <code>Cx</code>. ¿Y <code>Z4</code> o <code>A9</code>? Elige la condición y toca los asientos de la derecha para probarla.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p3-codigo" aria-label="Tu programa"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">¿Qué condición va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="p3" value="sinfila"><span>c &lt; 0 or c &gt;= 8</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="and"><span>f == -1 and c &lt; 0 and c &gt;= 8</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="uno"><span>f == -1 or c &lt; 1 or c &gt; 8</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="bien"><span>f == -1 or c &lt; 0 or c &gt;= 8</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div id="p3-sala"></div>
+          </div>
+          <p class="lectura" id="p3-lectura" aria-live="polite"></p>
+          <ul class="probar" id="p3-probar" aria-label="Probar con">
+            <li><button type="button" class="probar__btn" data-dato="C5" disabled><span class="probar__dato">C5</span><span class="probar__salida">?</span><span class="probar__marca"></span></button></li>
+            <li><button type="button" class="probar__btn" data-dato="Z4" disabled><span class="probar__dato">Z4</span><span class="probar__salida">?</span><span class="probar__marca"></span></button></li>
+            <li><button type="button" class="probar__btn" data-dato="A9" disabled><span class="probar__dato">A9</span><span class="probar__salida">?</span><span class="probar__marca"></span></button></li>
+            <li><button type="button" class="probar__btn" data-dato="A1" disabled><span class="probar__dato">A1</span><span class="probar__salida">?</span><span class="probar__marca"></span></button></li>
+            <li><button type="button" class="probar__btn" data-dato="Cx" disabled><span class="probar__dato">Cx</span><span class="probar__salida">?</span><span class="probar__marca"></span></button></li>
+          </ul>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Parte 4: contar los libres -->
+    <section class="paso" id="paso-libres" data-comprobar aria-labelledby="h-libres">
+      <span class="paso__etiqueta">Parte 4 de 5</span>
+      <h2 class="paso__titulo" id="h-libres">¿Cuántos quedan libres?</h2>
+      <p><code>libres</code> cuenta las <code>"L"</code> de toda la sala. No hace falta la posición: se recorre sin índices. ¿Qué va en el espacio en blanco?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p4-codigo" aria-label="Tu programa"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="p4" value="sala"><span>for asiento in sala:</span></label>
+            <label class="opcion"><input type="radio" name="p4" value="bien"><span>for asiento in fila:</span></label>
+            <label class="opcion"><input type="radio" name="p4" value="cero"><span>for asiento in sala[0]:</span></label>
+            <label class="opcion"><input type="radio" name="p4" value="range"><span>for asiento in range(len(fila)):</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div id="p4-sala"></div>
+          </div>
+          <p class="lectura" id="p4-lectura" aria-live="polite"></p>
+          <div class="junto-a">
+            <div class="cajas cajas--fila">
+              <div class="caja caja--acento" id="p4-total"><div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div><code class="caja__nombre">total</code></div>
+            </div>
+            <div class="consola" id="p4-consola"><span class="consola__titulo">Consola</span><span class="consola__vacia">Elige una opción y toca «Comprobar».</span></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Parte 5: dos juntos -->
+    <section class="paso" id="paso-juntos" data-comprobar aria-labelledby="h-juntos">
+      <span class="paso__etiqueta">Parte 5 de 5</span>
+      <h2 class="paso__titulo" id="h-juntos">Dos asientos juntos</h2>
+      <p>Llega una pareja. <code>dos_juntos</code> busca el primer asiento libre con otro libre a su derecha (<code>c + 1</code>). ¿Hasta dónde puede llegar <code>c</code>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p5-codigo" aria-label="Tu programa"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">¿Qué va en el espacio en blanco?</legend>
+            <label class="opcion"><input type="radio" name="p5" value="len"><span>len(sala[f])</span></label>
+            <label class="opcion"><input type="radio" name="p5" value="filas"><span>len(sala) - 1</span></label>
+            <label class="opcion"><input type="radio" name="p5" value="bien"><span>len(sala[f]) - 1</span></label>
+            <label class="opcion"><input type="radio" name="p5" value="dos"><span>len(sala[f]) - 2</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="salas-pestanas" role="group" aria-label="¿Qué sala?">
+            <button type="button" class="btn btn-secundario" data-sala="0" aria-pressed="true">Sala 1</button>
+            <button type="button" class="btn btn-secundario" data-sala="1" aria-pressed="false">Sala 2</button>
+          </div>
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div id="p5-sala"></div>
+          </div>
+          <p class="lectura" id="p5-lectura" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <p class="nota-visual" data-espera>Elige una opción y toca «Comprobar»: la probamos en las dos salas.</p>
+          <ul class="pruebas" hidden aria-label="Pruebas"></ul>
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Probar otra opción</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Reto: el programa completo -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="h-jugar">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="h-jugar">¡Abre la taquilla!</h2>
+      <p>Tu programa completo, con las funciones de las cinco partes. Vende entradas en la consola (o toca un asiento) y cumple las <strong>cinco misiones</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="t-codigo" aria-label="Tu programa completo"><code></code></pre>
+        </div>
+        <div class="lab__visual">
+          <div class="cine">
+            <p class="pantalla" aria-hidden="true">PANTALLA</p>
+            <div class="sala-tocable" id="t-sala"></div>
+          </div>
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div class="registro" id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo">Asiento:</label>
+              <input type="text" id="t-campo" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Enviar ⏎</button>
+              <div class="atajos" role="group" aria-label="Escribir por ti">
+                <span>o toca:</span>
+                <button type="button" class="btn btn-secundario" id="t-azar">🎟 Un asiento libre</button>
+                <button type="button" class="btn btn-secundario" id="t-fin">fin</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Ejecutar otra vez</button>
+          </div>
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Misiones">
+            <li data-mision="vender">Vende 3 entradas <span class="mision__cuenta" id="t-cuenta">0/3</span></li>
+            <li data-mision="ocupado">Pide un asiento ocupado</li>
+            <li data-mision="existe">Un asiento que no existe: <code>Z4</code></li>
+            <li data-mision="texto">Algo que no es un asiento</li>
+            <li data-mision="fin">Cierra la taquilla con <code>fin</code></li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎬</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">¡Proyecto terminado!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Una matriz guarda la sala: <code>sala[f][c]</code> es un asiento, dos <code>for</code> la recorren, y el <code>try</code> y las orillas cuidan lo que escribe el cliente.</p>
+        <ul class="usado" aria-label="Lo que usaste">
+          <li>sala[f][c]</li><li>"ABCDE"[f]</li><li>" ".join(fila)</li><li>return True / False</li><li>try / except ValueError</li><li>f == -1 or c &gt;= 8</li><li>for fila in sala</li><li>return f, c</li><li>while True / break</li>
+        </ul>
+        <p class="resumen-fin">Es la última lección del curso: ya sabes guardar datos, decidir, repetir, armar funciones, ordenar, buscar y no romperte con los errores. ¡Felicitaciones!</p>
+        <pre class="codigo codigo--compacto resumen-codigo" id="r-codigo" aria-label="Tu programa completo"><code></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir el proyecto</button>
+        <a class="btn btn-primario" href="../../../index.html">Volver a la portada →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/python.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/matriz.js"></script>
+<script src="../../../assets/js/mensaje-error.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script src="../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function c(t) { return "<code>" + esc(t) + "</code>"; }
+  function avisar(el, tipo, html) { Pasos.feedback(el, tipo, { html: html }); }
+  function linea(pre, k) { return Python.linea(pre, k); }
+  function rango(a, b) { var x = []; for (var k = a; k <= b; k++) x.push(k); return x; }
+
+  var LETRAS = "ABCDE";
+  var NUMEROS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+  function sala(filas) { return filas.map(function (t) { return t.split(""); }); }
+  function copiar(m) { return m.map(function (f) { return f.slice(); }); }
+  function vacia() { return sala(["LLLLLLLL", "LLLLLLLL", "LLLLLLLL", "LLLLLLLL", "LLLLLLLL"]); }
+  // La sala de las partes: algunos asientos ya vendidos (C5 y A7 libres, para reservar)
+  var SALA_BASE = sala(["LLXXLLLL", "LLLLLXXL", "XLLLLLLX", "LLLXXLLL", "LLLLLLLL"]);
+  function cuentaLibres(m) {
+    var n = 0;
+    m.forEach(function (f) { f.forEach(function (v) { if (v === "L") n++; }); });
+    return n;
+  }
+
+  /* ---------- La sala dibujada con matriz.js ---------- */
+  function crearSala(el, valores, opciones) {
+    opciones = opciones || {};
+    var m = Matriz.crear(el, valores, {
+      comillas: false,
+      rotulosFilas: LETRAS.split(""),
+      rotulosColumnas: NUMEROS,
+      dedos: opciones.dedos,
+      reservarDedos: !!opciones.dedos,
+      maximo: opciones.maximo || 2.2
+    });
+    pintar(m);
+    return m;
+  }
+  // Ocupados en rojo y libres en verde; extra(p, v) puede poner otra clase en una casilla
+  function pintar(m, extra) {
+    m.clases(function (p, v) {
+      var e = extra ? extra(p, v) : "";
+      if (e) return e;
+      return v === "X" ? "matriz__celda--mal" : "matriz__celda--ok";
+    });
+  }
+  // «Ese asiento ya está ocupado»: la casilla se sacude (matriz.js no tiene rechazar)
+  function sacudir(m, p) {
+    var d = m.celda(p);
+    if (!d) return;
+    d.classList.remove("celda--sacude");
+    void d.offsetWidth;
+    d.classList.add("celda--sacude");
+    setTimeout(function () { d.classList.remove("celda--sacude"); }, 700);
+  }
+  function sacudirSala(m) {
+    var t = m.el.querySelector(".matriz__tabla");
+    if (!t) return;
+    t.classList.remove("sala-sacude");
+    void t.offsetWidth;
+    t.classList.add("sala-sacude");
+  }
+  function nombreAsiento(f, col) { return LETRAS[f] + (col + 1); }
+
+  /* Tocar una casilla de la sala: fn(f, c). La matriz es aria-hidden: con el teclado se
+     escribe el asiento en el campo de al lado. */
+  function alTocarSala(m, fn) {
+    m.el.addEventListener("click", function (e) {
+      var d = e.target.closest(".matriz__celda[data-f]");
+      if (!d || !m.el.contains(d)) return;
+      fn(Number(d.getAttribute("data-f")), Number(d.getAttribute("data-c")));
+    });
+  }
+
+  /* Secuencias de animación que se pueden cancelar (al cambiar de opción o de paso) */
+  function secuencia() {
+    var token = 0;
+    return {
+      nueva: function () {
+        token++;
+        var t = token;
+        return function (fn, ms) { setTimeout(function () { if (t === token) fn(); }, espera(ms)); };
+      },
+      cancelar: function () { token++; }
+    };
+  }
+  function enOrden(luego, pasos, ms, alFinal) {
+    var i = 0;
+    function sig() {
+      if (i >= pasos.length) { if (alFinal) alFinal(); return; }
+      pasos[i++]();
+      luego(sig, typeof ms === "function" ? ms(i) : ms);
+    }
+    sig();
+  }
+
+  /* ---------- Python simulado ---------- */
+  // El valor de un dígito de cualquier alfabeto (int() de Python acepta ٥ o ５)
+  function valorDigito(ch) {
+    var cp = ch.codePointAt(0), s = cp;
+    while (s > 0 && /\p{Nd}/u.test(String.fromCodePoint(s - 1))) s--;
+    return (cp - s) % 10;
+  }
+  // int(texto): espacios a los lados, signo opcional, dígitos (y _ entre dígitos). Devuelve BigInt o null
+  function pyInt(t) {
+    t = t.replace(/^\s+|\s+$/g, "");
+    var s = Array.from(t).map(function (ch) {
+      return /[0-9]/.test(ch) || !/\p{Nd}/u.test(ch) ? ch : String(valorDigito(ch));
+    }).join("");
+    if (!/^[+-]?\d+(_\d+)*$/.test(s)) return null;
+    return BigInt(s.replace(/_/g, ""));
+  }
+  // repr() de un texto: comillas simples, o dobles si tiene una simple
+  function repr(t) {
+    t = String(t).replace(/\\/g, "\\\\");
+    if (t.indexOf("'") !== -1 && t.indexOf('"') === -1) return '"' + t + '"';
+    return "'" + t.replace(/'/g, "\\'") + "'";
+  }
+  // Un índice como lo usa Python (negativos desde el final); null si se sale
+  function indice(i, n) {
+    if (i < 0) i += n;
+    return i >= 0 && i < n ? i : null;
+  }
+  // Las líneas que imprime dibujar(sala)
+  function dibujo(m) {
+    return ["  1 2 3 4 5 6 7 8"].concat(m.map(function (fila, f) { return LETRAS[f] + " " + fila.join(" "); }));
+  }
+  function consolaVacia(el, texto) {
+    el.querySelectorAll(".consola__linea, .consola__vacia").forEach(function (x) { x.remove(); });
+    if (texto) {
+      var v = document.createElement("span");
+      v.className = "consola__vacia";
+      v.textContent = texto;
+      el.appendChild(v);
+    }
+  }
+  function imprimir(el, texto, clase) {
+    Codigo.agregar(el, texto);
+    var l = el.lastElementChild;
+    if (clase) l.classList.add("consola__linea--" + clase);
+    return l;
+  }
+
+  /* ---------- Pasos de elegir una opción ----------
+     cfg: { id, nombre, correcta, huecos: [ids], mostrar(valor), limpiar(), alEntrar(), alElegir(valor), ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var fb = paso.querySelector(".lab__resultado .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiar() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback(fb);
+      if (cfg.limpiar) cfg.limpiar();
+    }
+    function llenar(texto) {
+      var ls = texto === null ? [] : texto.split("\n");
+      cfg.huecos.forEach(function (id, k) {
+        $(id).textContent = texto === null ? "?" : (ls[k] || "").replace(/^\s+/, "");
+      });
+    }
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      llenar(null);
+      limpiar();
+      if (cfg.alEntrar) cfg.alEntrar();
+    }
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      limpiar();
+      if (cfg.mostrar) cfg.mostrar(marcada.value);
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        avisar(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      avisar(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        llenar(r.nextElementSibling.textContent);
+        if (cfg.alElegir) cfg.alElegir(r.value);
+        leccion.listoParaComprobar(true);
+      });
+    });
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+    function elegida() {
+      var m = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      return m ? m.value : null;
+    }
+    return { entrar: entrar, comprobar: comprobar, elegida: elegida };
+  }
+
+  /* =====================================================================
+     1. La taquilla: vender asientos tocando la sala
+     ===================================================================== */
+  var intro = { valores: copiar(SALA_BASE), vendidas: 0, ocupado: false, hecho: false, token: 0 };
+  var iSala = crearSala($("i-sala"), intro.valores, { maximo: 2.6 });
+
+  function misionIntro(nombre) {
+    document.querySelector('#i-misiones [data-mision="' + nombre + '"]').classList.add("mision--hecha");
+  }
+
+  function venderIntro(f, col) {
+    var token = ++intro.token;
+    var letra = LETRAS[f], num = col + 1;
+    $("i-vacio").hidden = true;
+    $("i-lleno").hidden = false;
+    $("i-asiento").textContent = letra + num;
+    $("i-letra").textContent = letra;
+    $("i-numero").textContent = String(num);
+    $("i-f").textContent = "f = " + f;
+    $("i-c").textContent = "c = " + col;
+    var expr = $("i-expr");
+    var v = intro.valores[f][col];
+    expr.textContent = "sala[" + f + "][" + col + "]";
+    [expr, $("i-asiento")].forEach(function (x) {
+      x.classList.remove("traduce__salta");
+      void x.offsetWidth;
+      x.classList.add("traduce__salta");
+    });
+    iSala.marcar([f, col]);
+    var fb = $("i-fb");
+    if (v === "X") {
+      $("i-dice").innerHTML = "vale " + c('"X"') + ": <strong>ya está ocupado</strong>. No se vende dos veces.";
+      setTimeout(function () { if (token === intro.token) { iSala.marcar(null); sacudir(iSala, [f, col]); } }, espera(350));
+      if (!intro.ocupado) { intro.ocupado = true; misionIntro("ocupado"); }
+    } else {
+      intro.valores[f][col] = "X";
+      intro.vendidas++;
+      $("i-dice").innerHTML = "valía " + c('"L"') + " y ahora " + c('"X"') + ": vendido.";
+      setTimeout(function () {
+        if (token !== intro.token) return;
+        iSala.cambiar([f, col], "X", expr);
+        pintar(iSala);
+      }, espera(350));
+      $("i-cuenta").textContent = Math.min(intro.vendidas, 3) + "/3";
+      if (intro.vendidas >= 3) misionIntro("vender");
+    }
+    if (intro.hecho) return;
+    if (intro.vendidas >= 3 && intro.ocupado) {
+      intro.hecho = true;
+      avisar(fb, "ok", "¡Taquilla abierta! Cada asiento es una casilla de la matriz: la letra da la fila " + c("f") + " y el número, la columna " +
+        c("c") + " (uno menos, porque se cuenta desde 0). Vas a programarla en cinco partes.");
+      leccion.desbloquear();
+    } else if (v === "X") {
+      avisar(fb, "pista", "Ese asiento ya tiene " + c('"X"') + ". El programa tendrá que revisar la casilla antes de vender." +
+        (intro.vendidas < 3 ? " Vende " + (3 - intro.vendidas) + " más." : ""));
+    } else if (intro.vendidas >= 3) {
+      avisar(fb, "pista", "¡Tres vendidas! Ahora intenta vender uno rojo, que ya está ocupado.");
+    } else {
+      Pasos.limpiarFeedback(fb);
+    }
+  }
+
+  alTocarSala(iSala, venderIntro);
+  function venderEscrito() {
+    var campo = $("i-campo");
+    var t = campo.value.trim().toUpperCase();
+    var fb = $("i-fb");
+    var f = t.length >= 2 ? LETRAS.indexOf(t[0]) : -1;
+    var n = /^[1-8]$/.test(t.slice(1)) ? Number(t.slice(1)) : 0;
+    if (f === -1 || !n) {
+      avisar(fb, "pista", "Escribe la fila (de A a E) y el número del asiento (de 1 a 8), como " + c("C5") + ".");
+      return;
+    }
+    campo.value = "";
+    venderIntro(f, n - 1);
+  }
+  $("i-vender").addEventListener("click", venderEscrito);
+  $("i-campo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    venderEscrito();
+  });
+
+  /* =====================================================================
+     2. Parte 1: dibujar la sala
+     ===================================================================== */
+  var P1_LINEAS = [
+    "def dibujar(sala):",
+    '    print("  1 2 3 4 5 6 7 8")',
+    "    for f in range(len(sala)):",
+    '        print(▢, " ".join(sala[f]))',
+    "",
+    "sala = []",
+    "for f in range(5):",
+    '    sala.append(["L"] * 8)',
+    'sala[2][4] = "X"',
+    "dibujar(sala)"
+  ];
+  var p1Codigo = $("p1-codigo");
+  Python.escribir(p1Codigo, P1_LINEAS, { huecos: ["p1-h"] });
+  var P1_SALA = vacia();
+  P1_SALA[2][4] = "X";
+  var p1Sala = crearSala($("p1-sala"), P1_SALA, { dedos: true });
+  var p1Sec = secuencia();
+
+  // Lo que imprime cada opción: [{ texto, error }]
+  function salidaP1(v) {
+    var filas = [{ texto: "  1 2 3 4 5 6 7 8" }];
+    for (var f = 0; f < 5; f++) {
+      var asientos = " " + P1_SALA[f].join(" ");
+      if (v === "bien") filas.push({ texto: LETRAS[f] + asientos });
+      else if (v === "num") filas.push({ texto: f + asientos });
+      else if (v === "todo") filas.push({ texto: LETRAS + asientos });
+      else if (f + 1 < 5) filas.push({ texto: LETRAS[f + 1] + asientos });
+      else { filas.push({ texto: "IndexError: string index out of range", error: true }); break; }
+    }
+    return filas;
+  }
+
+  function reiniciarP1() {
+    p1Sec.cancelar();
+    Codigo.limpiar(p1Codigo);
+    p1Sala.dedos(null);
+    p1Sala.marcarFila(null);
+    consolaVacia($("p1-consola"), "Elige una opción y toca «Comprobar».");
+  }
+
+  function mostrarP1(v) {
+    reiniciarP1();
+    var luego = p1Sec.nueva();
+    var cons = $("p1-consola");
+    consolaVacia(cons, null);
+    var filas = salidaP1(v);
+    var pasos = [];
+    pasos.push(function () { Codigo.marcar(p1Codigo, { activas: [9] }); });
+    pasos.push(function () {
+      Codigo.marcar(p1Codigo, { activas: [1] });
+      imprimir(cons, filas[0].texto, "sala");
+    });
+    filas.slice(1).forEach(function (fila, k) {
+      pasos.push(function () {
+        Codigo.marcar(p1Codigo, { activas: [2, 3] });
+        p1Sala.dedos({ fila: k });
+        p1Sala.marcarFila(k);
+        if (fila.error) {
+          MensajeError.romper(p1Codigo, 3, { marca: '"ABCDE"[f + 1]', cortadas: [] });
+          imprimir(cons, fila.texto, "error");
+          return;
+        }
+        var l = imprimir(cons, fila.texto, "sala");
+        Codigo.volar(p1Sala.filaEl(k), l, fila.texto, "consola__linea consola__linea--sala", null);
+      });
+    });
+    pasos.push(function () { p1Sala.marcarFila(null); });
+    enOrden(luego, pasos, 520);
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-dibujar",
+    nombre: "p1",
+    correcta: "bien",
+    huecos: ["p1-h"],
+    limpiar: reiniciarP1,
+    alEntrar: reiniciarP1,
+    mostrar: mostrarP1,
+    ok: "¡Eso es! " + c('"ABCDE"[f]') + " toma la letra de la posición " + c("f") + " del texto: 0 da " + c("A") + " y 4 da " + c("E") +
+      ". Y " + c('" ".join(sala[f])') + " une los asientos de la fila con un espacio. La " + c("X") + " de C5 es " + c("sala[2][4]") + ".",
+    pistas: {
+      num: "Así sale el número de la fila, de " + c("0") + " a " + c("4") + ", y en el cine las filas tienen letra. ¿Cómo sacas la letra de la posición " +
+        c("f") + " del texto " + c('"ABCDE"') + "?",
+      todo: c('"ABCDE"') + " es el texto entero: sale igual en todas las filas. Hace falta una sola letra, la de la posición " + c("f") + ".",
+      mas: "Con " + c("f + 1") + " la fila 0 dice " + c("B") + " y la última se pasa: " + c('"ABCDE"[5]') + " no existe (" + c("IndexError") +
+        "). Las posiciones del texto empiezan en 0, igual que las filas."
+    }
+  });
+
+  /* =====================================================================
+     3. Parte 2: reservar
+     ===================================================================== */
+  var P2_LINEAS = [
+    "def reservar(sala, f, c):",
+    "    if ▢:",
+    "        return False",
+    '    sala[f][c] = "X"',
+    "    return True",
+    "",
+    "print(reservar(sala, 2, 4))",
+    "print(reservar(sala, 2, 4))",
+    "print(reservar(sala, 0, 6))"
+  ];
+  var p2Codigo = $("p2-codigo");
+  Python.escribir(p2Codigo, P2_LINEAS, { huecos: ["p2-h"] });
+  var p2Sala = crearSala($("p2-sala"), SALA_BASE);
+  var p2Sec = secuencia();
+  var P2_LLAMADAS = [[2, 4], [2, 4], [0, 6]];
+
+  function reiniciarP2() {
+    p2Sec.cancelar();
+    Codigo.limpiar(p2Codigo);
+    p2Sala.valores(SALA_BASE);
+    p2Sala.marcar(null);
+    pintar(p2Sala);
+    $("p2-lectura").innerHTML = "";
+    consolaVacia($("p2-consola"), "Elige una opción y toca «Comprobar».");
+  }
+
+  function mostrarP2(v) {
+    reiniciarP2();
+    var luego = p2Sec.nueva();
+    var cons = $("p2-consola");
+    var lect = $("p2-lectura");
+    consolaVacia(cons, null);
+    if (v === "asigna") {
+      var otras = rango(0, 8).filter(function (k) { return k !== 1; });
+      MensajeError.romper(p2Codigo, 1, { marca: 'sala[f][c] = "X"', cortadas: otras });
+      lect.innerHTML = '<span class="no">Python no ejecuta ni la primera línea</span>';
+      imprimir(cons, "SyntaxError: cannot assign to subscript here. Maybe you meant '==' instead of '='?", "error");
+      return;
+    }
+    var valores = copiar(SALA_BASE);
+    var pasos = [];
+    for (var k = 0; k < P2_LLAMADAS.length; k++) {
+      if (!pasoP2(v, k, valores, pasos, cons, lect)) break;   // se cortó con un error
+    }
+    enOrden(luego, pasos, 800);
+  }
+
+  // Agrega los pasos de la llamada k; devuelve false si la llamada se corta con un error
+  function pasoP2(v, k, valores, pasos, cons, lect) {
+    var f = P2_LLAMADAS[k][0], col = P2_LLAMADAS[k][1];
+    // La casilla que mira el if
+    var mf = v === "cruzado" ? col : f, mc = v === "cruzado" ? f : col;
+    var fi = indice(mf, valores.length);
+    var mira = fi === null ? null : valores[fi][indice(mc, 8)];
+    var etiqueta = "sala[" + mf + "][" + mc + "]";
+    pasos.push(function () {
+      Codigo.marcar(p2Codigo, { activas: [6 + k, 0, 1] });
+      p2Sala.marcar([mf, mc]);
+      lect.innerHTML = fi === null
+        ? c(etiqueta) + ': <span class="no">la fila ' + mf + " no existe</span>"
+        : c(etiqueta) + " es " + nombreAsiento(fi, indice(mc, 8)) + " y vale " + c('"' + mira + '"');
+    });
+    if (fi === null) {
+      pasos.push(function () {
+        MensajeError.romper(p2Codigo, 1, { marca: "sala[c][f]", cortadas: [] });
+        imprimir(cons, "IndexError: list index out of range", "error");
+      });
+      return false;
+    }
+    var devuelveFalse = v === "libre" ? mira === "L" : mira === "X";
+    if (devuelveFalse) {
+      pasos.push(function () {
+        Codigo.marcar(p2Codigo, { activas: [6 + k, 1, 2] });
+        p2Sala.marcar(null);
+        if (v === "bien") sacudir(p2Sala, [f, col]);
+        lect.innerHTML = 'la condición es <span class="si">True</span>: ' + c("return False") + " sin tocar la sala";
+        imprimir(cons, "False");
+      });
+      return true;
+    }
+    var antes = valores[f][col];
+    valores[f][col] = "X";
+    pasos.push(function () {
+      Codigo.marcar(p2Codigo, { activas: [6 + k, 1, 3, 4] });
+      p2Sala.marcar(null);
+      p2Sala.cambiar([f, col], "X", linea(p2Codigo, 3));
+      pintar(p2Sala);
+      if (antes === "X") sacudir(p2Sala, [f, col]);
+      lect.innerHTML = c("sala[" + f + "][" + col + "]") + " = " + c('"X"') + ": " + nombreAsiento(f, col) +
+        (antes === "X" ? ' <span class="no">¡vendido dos veces!</span>' : " vendido");
+      imprimir(cons, "True");
+    });
+    return true;
+  }
+
+  var parte2 = crearEleccion({
+    id: "paso-reservar",
+    nombre: "p2",
+    correcta: "bien",
+    huecos: ["p2-h"],
+    limpiar: reiniciarP2,
+    alEntrar: reiniciarP2,
+    mostrar: mostrarP2,
+    ok: "¡Bien! Primero se mira la casilla: si ya tiene " + c('"X"') + ", " + c("return False") + " termina la función antes de tocarla. Por eso la segunda vez C5 no se vende: " +
+      c("True") + ", " + c("False") + ", " + c("True") + ".",
+    pistas: {
+      cruzado: c("sala[c][f]") + " mira otra casilla: primero va la fila. Con " + c("(2, 4)") + " mira E3, que está libre, y vende C5 dos veces; con " + c("(0, 6)") +
+        " busca la fila 6, que no existe: " + c("IndexError") + ".",
+      asigna: "Con un solo " + c("=") + " se guarda, no se compara, y un " + c("if") + " necesita una pregunta: Python ni siquiera empieza (" + c("SyntaxError") +
+        "). Para preguntar, " + c("==") + ".",
+      libre: "¡Al revés! Devuelve " + c("False") + " justo cuando el asiento está libre, y así nunca vende nada. La pregunta es si ya está ocupado, si tiene " + c('"X"') + "."
+    }
+  });
+
+  /* =====================================================================
+     4. Parte 3: ¿ese asiento existe?
+     ===================================================================== */
+  var P3_LINEAS = [
+    "while True:",
+    '    dato = input("Asiento: ").strip().upper()',
+    "    try:",
+    "        c = int(dato[1:]) - 1",
+    "    except ValueError:",
+    '        print("Escribe así: C5")',
+    "        continue",
+    '    f = "ABCDE".find(dato[0])',
+    "    if ▢:",
+    '        print("Ese asiento no existe")',
+    "    elif reservar(sala, f, c):",
+    '        print("Reservado:", dato)',
+    "    else:",
+    '        print("Ese asiento ya está ocupado")'
+  ];
+  var p3Codigo = $("p3-codigo");
+  Python.escribir(p3Codigo, P3_LINEAS, { huecos: ["p3-h"] });
+  MensajeError.zona(p3Codigo, { proteger: [2, 3], atrapar: [4, 6] });
+  var p3Sala = crearSala($("p3-sala"), SALA_BASE);
+  var p3Sec = secuencia();
+  var P3_DATOS = ["C5", "Z4", "A9", "A1", "Cx"];
+  var botonesP3 = document.querySelectorAll("#p3-probar .probar__btn");
+
+  var CONDICION = {
+    bien: function (f, col) { return f === -1 || col < 0 || col >= 8; },
+    sinfila: function (f, col) { return col < 0 || col >= 8; },
+    and: function (f, col) { return f === -1 && col < 0 && col >= 8; },
+    uno: function (f, col) { return f === -1 || col < 1 || col > 8; }
+  };
+
+  /* Lo que pasa con un dato en una sala nueva:
+     { salida, error, tipo: "texto" | "noexiste" | "reserva" | "ocupado" | "error", f, c, real: [fila, col] } */
+  function correrP3(v, dato) {
+    var letras = Array.from(dato);
+    var n = pyInt(letras.slice(1).join(""));
+    if (n === null) return { tipo: "texto", salida: "Escribe así: C5" };
+    var col = Number(n) - 1;
+    var f = LETRAS.indexOf(letras[0]);
+    var r = { f: f, c: col };
+    if (CONDICION[v](f, col)) { r.tipo = "noexiste"; r.salida = "Ese asiento no existe"; return r; }
+    var fi = indice(f, 5), ci = indice(col, 8);
+    if (fi === null || ci === null) { r.tipo = "error"; r.error = true; r.salida = "IndexError: list index out of range"; return r; }
+    r.real = [fi, ci];
+    if (SALA_BASE[fi][ci] === "X") { r.tipo = "ocupado"; r.salida = "Ese asiento ya está ocupado"; return r; }
+    r.tipo = "reserva";
+    r.salida = "Reservado: " + dato;
+    return r;
+  }
+
+  function reiniciarP3() {
+    p3Sec.cancelar();
+    Codigo.limpiar(p3Codigo);
+    p3Sala.valores(SALA_BASE);
+    p3Sala.marcar(null);
+    pintar(p3Sala);
+    $("p3-lectura").innerHTML = "";
+    botonesP3.forEach(function (b) {
+      b.setAttribute("aria-pressed", "false");
+      b.classList.remove("probar__btn--ok", "probar__btn--mal");
+      b.querySelector(".probar__salida").textContent = "?";
+      b.querySelector(".probar__salida").classList.remove("probar__salida--error");
+      b.querySelector(".probar__marca").textContent = "";
+    });
+  }
+
+  function escribirProbe(b, r, marca) {
+    var s = b.querySelector(".probar__salida");
+    s.textContent = r.salida;
+    s.classList.toggle("probar__salida--error", !!r.error);
+    if (marca !== undefined) {
+      b.classList.toggle("probar__btn--ok", marca);
+      b.classList.toggle("probar__btn--mal", !marca);
+      b.querySelector(".probar__marca").textContent = marca ? "✓" : "✗";
+      b.setAttribute("aria-label", b.getAttribute("data-dato") + ": " + r.salida + (marca ? ", correcto" : ", incorrecto"));
+    } else {
+      b.setAttribute("aria-label", b.getAttribute("data-dato") + ": " + r.salida);
+    }
+  }
+
+  // Anima un dato: las líneas que corren, c y f, y lo que pasa en la sala
+  function animarP3(v, dato) {
+    var luego = p3Sec.nueva();
+    Codigo.limpiar(p3Codigo);
+    p3Sala.valores(SALA_BASE);
+    p3Sala.marcar(null);
+    pintar(p3Sala);
+    botonesP3.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-dato") === dato)); });
+    var r = correrP3(v, dato);
+    var lect = $("p3-lectura");
+    var pasos = [];
+    pasos.push(function () {
+      Codigo.marcar(p3Codigo, { activas: [1, 2, 3] });
+      lect.innerHTML = "dato = " + c('"' + dato + '"');
+    });
+    if (r.tipo === "texto") {
+      pasos.push(function () {
+        Codigo.marcar(p3Codigo, { activas: [3, 4, 5, 6], saltadas: rango(7, 13) });
+        MensajeError.lanzar(p3Codigo, 3, "ValueError", 4, { atrapa: true });
+        lect.innerHTML = c("int(" + repr(Array.from(dato).slice(1).join("")) + ")") + ' no es un número: <span class="ojo">el except pide otro</span>';
+      });
+    } else {
+      pasos.push(function () {
+        Codigo.marcar(p3Codigo, { activas: [3, 7, 8], saltadas: [4, 5, 6] });
+        lect.innerHTML = "c = " + r.c + ", f = " + r.f + (r.f === -1 ? ' <span class="ojo">(no hay fila ' + esc(Array.from(dato)[0]) + ")</span>" : "");
+        if (r.f >= 0 && r.c >= 8) p3Sala.marcar([r.f, r.c]);
+      });
+      if (r.tipo === "noexiste") {
+        pasos.push(function () {
+          Codigo.marcar(p3Codigo, { activas: [8, 9], saltadas: rango(10, 13) });
+          p3Sala.marcar(null);
+          sacudirSala(p3Sala);
+          lect.innerHTML = 'condición <span class="si">True</span>: ' + (r.f === 0 && r.c === 0 ? '<span class="no">¡pero A1 sí existe!</span>' : "no se vende nada");
+        });
+      } else if (r.tipo === "error") {
+        pasos.push(function () {
+          Codigo.marcar(p3Codigo, { activas: [8, 10] });
+          p3Sala.marcar([r.f, r.c]);
+          MensajeError.romper(p3Codigo, 10, { marca: "reservar(sala, f, c)", cortadas: [11, 12, 13] });
+          lect.innerHTML = 'condición <span class="no">False</span>: ' + c("sala[" + r.f + "][" + r.c + "]") + ' se sale: <span class="no">IndexError</span>';
+        });
+      } else {
+        pasos.push(function () {
+          Codigo.marcar(p3Codigo, { activas: [8, 10, 11], saltadas: [9, 12, 13] });
+          p3Sala.cambiar(r.real, "X", linea(p3Codigo, 10));
+          pintar(p3Sala, function (p) { return p[0] === r.real[0] && p[1] === r.real[1] && r.f < 0 ? "matriz__celda--pista" : ""; });
+          lect.innerHTML = r.f < 0
+            ? c("sala[-1]") + ' es la última fila: <span class="no">¡vendió ' + nombreAsiento(r.real[0], r.real[1]) + " sin avisar!</span>"
+            : 'condición <span class="no">False</span>: se vende ' + nombreAsiento(r.real[0], r.real[1]);
+        });
+      }
+    }
+    enOrden(luego, pasos, 750);
+    return r;
+  }
+
+  botonesP3.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var v = parte3.elegida();
+      if (!v) return;
+      var dato = b.getAttribute("data-dato");
+      var r = animarP3(v, dato);
+      escribirProbe(b, r, b.classList.contains("probar__btn--ok") || b.classList.contains("probar__btn--mal") ? r.salida === correrP3("bien", dato).salida : undefined);
+    });
+  });
+  function activarP3(si) { botonesP3.forEach(function (b) { b.disabled = !si; }); }
+
+  var parte3 = crearEleccion({
+    id: "paso-validar",
+    nombre: "p3",
+    correcta: "bien",
+    huecos: ["p3-h"],
+    limpiar: reiniciarP3,
+    alEntrar: function () { reiniciarP3(); activarP3(false); },
+    alElegir: function () { activarP3(true); },
+    mostrar: function (v) {
+      var primeraMala = null;
+      botonesP3.forEach(function (b) {
+        var dato = b.getAttribute("data-dato");
+        var r = correrP3(v, dato);
+        var ok = r.salida === correrP3("bien", dato).salida;
+        escribirProbe(b, r, ok);
+        if (!ok && primeraMala === null) primeraMala = dato;
+      });
+      animarP3(v, primeraMala || "Z4");
+    },
+    ok: "¡Exacto! " + c(".find()") + " da " + c("-1") + " si la letra no es una fila, y " + c("c") + " va de 0 a 7. Basta que falle una para que el asiento no exista: " +
+      c("or") + ". Y " + c("Cx") + " ni llega al " + c("if") + ": " + c("int()") + " falla y el " + c("except") + " vuelve a pedir.",
+    pistas: {
+      sinfila: "Con " + c("Z4") + ", " + c("f") + " vale " + c("-1") + " y nadie lo revisa: " + c("sala[-1]") + " es la última fila, y se vende E4 sin avisar. Revisa también la orilla de las filas.",
+      and: "Con " + c("and") + " tienen que cumplirse las tres a la vez, y eso nunca pasa: " + c("Z4") + " vende E4 y " + c("A9") + " se sale de la fila (" + c("IndexError") +
+        "). Basta que falle una: " + c("or") + ".",
+      uno: c("c") + " ya tiene el " + c("- 1") + ": va de 0 a 7, no de 1 a 8. Así " + c("A1") + " (" + c("c = 0") + ") no existiría y " + c("A9") + " (" + c("c = 8") + ") se sale: " + c("IndexError") + "."
+    }
+  });
+
+  /* =====================================================================
+     5. Parte 4: contar los libres
+     ===================================================================== */
+  var P4_LINEAS = [
+    "def libres(sala):",
+    "    total = 0",
+    "    for fila in sala:",
+    "        ▢",
+    '            if asiento == "L":',
+    "                total += 1",
+    "    return total",
+    "",
+    "print(libres(sala))"
+  ];
+  var p4Codigo = $("p4-codigo");
+  Python.escribir(p4Codigo, P4_LINEAS, { huecos: ["p4-h"] });
+  var p4Sala = crearSala($("p4-sala"), SALA_BASE, { dedos: { fila: "fila", columna: "asiento" } });
+  var p4Sec = secuencia();
+  var p4Total = $("p4-total");
+
+  // Los pasos del for de adentro: [{ fila, mira: [f, c] | { filaEntera } | { numero }, cuenta }]
+  function recorridoP4(v) {
+    var pasos = [];
+    for (var f = 0; f < 5; f++) {
+      if (v === "sala") {
+        for (var k = 0; k < 5; k++) pasos.push({ fila: f, filaEntera: k, cuenta: false });
+      } else {
+        for (var col = 0; col < 8; col++) {
+          if (v === "bien") pasos.push({ fila: f, celda: [f, col], cuenta: SALA_BASE[f][col] === "L" });
+          else if (v === "cero") pasos.push({ fila: f, celda: [0, col], cuenta: SALA_BASE[0][col] === "L" });
+          else pasos.push({ fila: f, numero: col, cuenta: false });
+        }
+      }
+    }
+    return pasos;
+  }
+
+  function reiniciarP4() {
+    p4Sec.cancelar();
+    Codigo.limpiar(p4Codigo);
+    p4Sala.dedos(null);
+    p4Sala.marcar(null);
+    p4Sala.marcarFila(null);
+    pintar(p4Sala);
+    Caja.vaciar(p4Total);
+    $("p4-lectura").innerHTML = "";
+    consolaVacia($("p4-consola"), "Elige una opción y toca «Comprobar».");
+  }
+
+  function mostrarP4(v) {
+    reiniciarP4();
+    var luego = p4Sec.nueva();
+    var lect = $("p4-lectura");
+    var cons = $("p4-consola");
+    consolaVacia(cons, null);
+    var vistos = {};      // "f,c" -> "contado" | "visto"
+    var total = 0;
+    function claseVista(p) {
+      var k = vistos[p[0] + "," + p[1]];
+      return k === "contado" ? "matriz__celda--azul" : k === "visto" ? "matriz__celda--apagada" : "";
+    }
+    var pasos = [function () {
+      Codigo.marcar(p4Codigo, { activas: [8, 0, 1] });
+      Caja.poner(p4Total, "0", linea(p4Codigo, 1));
+    }];
+    recorridoP4(v).forEach(function (p) {
+      pasos.push(function () {
+        Codigo.marcar(p4Codigo, { activas: p.cuenta ? [2, 3, 4, 5] : [2, 3, 4] });
+        if (p.filaEntera !== undefined) {
+          p4Sala.dedos({ fila: p.fila, columna: null });
+          p4Sala.marcarFila(p.filaEntera);
+          lect.innerHTML = "asiento = " + c(Matriz.python(SALA_BASE[p.filaEntera]).slice(0, 15) + "…]") + ' <span class="no">≠ "L"</span>';
+          return;
+        }
+        if (p.numero !== undefined) {
+          p4Sala.dedos({ fila: p.fila, columna: p.numero });
+          lect.innerHTML = "asiento = " + c(String(p.numero)) + ' <span class="no">≠ "L"</span>';
+          return;
+        }
+        p4Sala.dedos({ fila: p.fila, columna: p.celda[1] });
+        p4Sala.marcar(p.celda);
+        var v2 = SALA_BASE[p.celda[0]][p.celda[1]];
+        vistos[p.celda[0] + "," + p.celda[1]] = p.cuenta ? "contado" : "visto";
+        if (p.cuenta) {
+          total++;
+          Caja.actualizar(p4Total, String(total));
+        }
+        lect.innerHTML = "asiento = " + c('"' + v2 + '"') + (p.cuenta ? ' <span class="si">total += 1</span>' : "") +
+          (v === "cero" && p.fila !== 0 ? ' <span class="ojo">(¡de la fila A otra vez!)</span>' : "");
+      });
+    });
+    pasos.push(function () {
+      Codigo.marcar(p4Codigo, { activas: [6, 8] });
+      p4Sala.dedos(null);
+      p4Sala.marcar(null);
+      p4Sala.marcarFila(null);
+      if (v === "bien") pintar(p4Sala, claseVista);
+      var l = imprimir(cons, String(total));
+      Codigo.volar(p4Total.querySelector(".caja__valor:not(.caja__valor--saliendo)"), l, String(total), "consola__linea", null);
+      lect.innerHTML = v === "bien" ? "Quedan " + total + " libres de 40" : "Hay 32 libres, y el programa dice " + total;
+    });
+    enOrden(luego, pasos, function (i) { return i === 1 ? 600 : v === "sala" ? 160 : 95; });
+  }
+
+  var parte4 = crearEleccion({
+    id: "paso-libres",
+    nombre: "p4",
+    correcta: "bien",
+    huecos: ["p4-h"],
+    limpiar: reiniciarP4,
+    alEntrar: reiniciarP4,
+    mostrar: mostrarP4,
+    ok: "¡Bien! El " + c("for") + " de afuera da cada fila y el de adentro, cada asiento de esa fila: pasa por las 40 casillas. Quedan 32 libres. Cuando " +
+      c("libres(sala)") + " dé 0, la sala estará llena.",
+    pistas: {
+      sala: "Así " + c("asiento") + " es una fila entera, una lista como " + c("['L', 'L', 'X', …]") + ", y una lista nunca es igual a " + c('"L"') +
+        ": da 0. Los asientos están dentro de " + c("fila") + ".",
+      range: c("range") + " da las posiciones, de 0 a 7, no los asientos: " + c("asiento") + " es un número y nunca es " + c('"L"') + ". Da 0. Para la posición, harían falta " + c("fila[c]") + ".",
+      cero: "Así se cuenta la fila A una vez por cada fila: 6 × 5 = 30. El de adentro tiene que recorrer la fila de esta vuelta: " + c("fila") + "."
+    }
+  });
+
+  /* =====================================================================
+     6. Parte 5: dos juntos
+     ===================================================================== */
+  var P5_LINEAS = [
+    "def dos_juntos(sala):",
+    "    for f in range(len(sala)):",
+    "        for c in range(▢):",
+    '            if sala[f][c] == "L" and sala[f][c + 1] == "L":',
+    "                return f, c",
+    "    return -1, -1",
+    "",
+    "print(dos_juntos(sala))"
+  ];
+  var p5Codigo = $("p5-codigo");
+  Python.escribir(p5Codigo, P5_LINEAS, { huecos: ["p5-h"] });
+  var P5_SALAS = [
+    sala(["XLXLXLXL", "XXXXXXLL", "XXXXXXXX", "XLXXXXXX", "XXXXXXXX"]),
+    sala(["XXXXLLXX", "XLXXXXLX", "LXXXXXXX", "XXXXXXXX", "XXXXXXXX"])
+  ];
+  var P5_NOMBRES = ["Sala 1 (casi llena)", "Sala 2"];
+  var p5Sala = crearSala($("p5-sala"), P5_SALAS[0], { dedos: true });
+  var p5Sec = secuencia();
+  var p5 = { sala: 0 };
+  var P5_TOPE = { bien: function (n) { return n - 1; }, len: function (n) { return n; }, filas: function () { return 4; }, dos: function (n) { return n - 2; } };
+
+  // { pasos: [{ f, c, mira: [..celdas], encontro, error }], salida }
+  function correrP5(v, m) {
+    var pasos = [];
+    for (var f = 0; f < m.length; f++) {
+      var tope = P5_TOPE[v](m[f].length);
+      for (var col = 0; col < tope; col++) {
+        var p = { f: f, c: col, mira: [[f, col]] };
+        pasos.push(p);
+        if (m[f][col] !== "L") continue;
+        p.mira.push([f, col + 1]);
+        if (col + 1 >= m[f].length) { p.error = true; return { pasos: pasos, salida: "IndexError: list index out of range", error: true }; }
+        if (m[f][col + 1] === "L") { p.encontro = true; return { pasos: pasos, salida: "(" + f + ", " + col + ")" }; }
+      }
+    }
+    return { pasos: pasos, salida: "(-1, -1)" };
+  }
+  function explicarSalida(s) {
+    var m = /^\((\d), (\d)\)$/.exec(s);
+    if (!m) return s === "(-1, -1)" ? "no encontró" : "";
+    var f = Number(m[1]), col = Number(m[2]);
+    return nombreAsiento(f, col) + " y " + nombreAsiento(f, col + 1);
+  }
+
+  function elegirSalaP5(k) {
+    p5.sala = k;
+    document.querySelectorAll("#paso-juntos [data-sala]").forEach(function (b) { b.setAttribute("aria-pressed", String(Number(b.getAttribute("data-sala")) === k)); });
+    p5Sala.valores(P5_SALAS[k]);
+    pintar(p5Sala);
+  }
+
+  function reiniciarP5() {
+    p5Sec.cancelar();
+    Codigo.limpiar(p5Codigo);
+    p5Sala.dedos(null);
+    p5Sala.marcar(null);
+    pintar(p5Sala);
+    $("p5-lectura").innerHTML = "";
+    var paso = $("paso-juntos");
+    paso.querySelector("[data-espera]").hidden = false;
+    paso.querySelector(".pruebas").hidden = true;
+  }
+
+  function animarP5(v, k) {
+    p5Sec.cancelar();
+    Codigo.limpiar(p5Codigo);
+    p5Sala.dedos(null);
+    p5Sala.marcar(null);
+    elegirSalaP5(k);
+    var luego = p5Sec.nueva();
+    var m = P5_SALAS[k];
+    var r = correrP5(v, m);
+    var lect = $("p5-lectura");
+    var pasos = [function () {
+      Codigo.marcar(p5Codigo, { activas: [7, 0] });
+      lect.innerHTML = c("range(" + $("p5-h").textContent + ")") + " llega hasta " + c("c = " + (P5_TOPE[v](8) - 1));
+    }];
+    r.pasos.forEach(function (p) {
+      pasos.push(function () {
+        Codigo.marcar(p5Codigo, { activas: p.encontro ? [1, 2, 3, 4] : [1, 2, 3] });
+        p5Sala.dedos({ fila: p.f, columna: p.c });
+        if (p.error) {
+          pintar(p5Sala, function (q) { return q[0] === p.f && q[1] === p.c ? "matriz__celda--azul" : ""; });
+          p5Sala.marcar([p.f, p.c + 1]);
+          MensajeError.romper(p5Codigo, 3, { marca: "sala[f][c + 1]", cortadas: [4, 5] });
+          lect.innerHTML = c("sala[" + p.f + "][" + (p.c + 1) + "]") + ': <span class="no">el asiento ' + (p.c + 2) + " no existe</span>";
+          return;
+        }
+        pintar(p5Sala, function (q) {
+          var esta = p.mira.some(function (x) { return x[0] === q[0] && x[1] === q[1]; });
+          if (!esta) return "";
+          return p.encontro ? "matriz__celda--dorada" : "matriz__celda--azul";
+        });
+        var a = m[p.f][p.c];
+        lect.innerHTML = nombreAsiento(p.f, p.c) + " es " + c('"' + a + '"') +
+          (p.mira.length > 1 ? ", " + nombreAsiento(p.f, p.c + 1) + " es " + c('"' + m[p.f][p.c + 1] + '"') : "") +
+          (p.encontro ? ' <span class="si">¡juntos!</span>' : "");
+      });
+    });
+    pasos.push(function () {
+      if (r.error) return;
+      var fin = r.salida === "(-1, -1)";
+      Codigo.marcar(p5Codigo, { activas: fin ? [5, 7] : [4, 7] });
+      p5Sala.dedos(null);
+      if (fin) {
+        pintar(p5Sala);
+        lect.innerHTML = c("return -1, -1") + ": " + (k === 0 || v === "filas" ? '<span class="no">¡pero había dos juntos!</span>' : "no hay dos juntos");
+      } else {
+        lect.innerHTML = c("return " + r.salida.slice(1, -1)) + ": " + explicarSalida(r.salida);
+      }
+    });
+    enOrden(luego, pasos, function (i) { return i === 1 ? 700 : 300; });
+  }
+
+  document.querySelectorAll("#paso-juntos [data-sala]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = Number(b.getAttribute("data-sala"));
+      var v = $("paso-juntos").querySelector('input[name="p5"]:checked');
+      if (v && !$("paso-juntos").querySelector(".pruebas").hidden) { animarP5(v.value, k); return; }
+      reiniciarP5();
+      elegirSalaP5(k);
+    });
+  });
+
+  function pruebasP5(v) {
+    var lista = $("paso-juntos").querySelector(".pruebas");
+    lista.innerHTML = "";
+    P5_SALAS.forEach(function (m, k) {
+      var r = correrP5(v, m);
+      var bien = correrP5("bien", m);
+      var ok = r.salida === bien.salida;
+      var li = document.createElement("li");
+      li.className = ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = P5_NOMBRES[k];
+      li.children[1].textContent = r.salida;
+      var nota = r.error ? "" : explicarSalida(r.salida);
+      if (nota) {
+        var n = document.createElement("span");
+        n.className = "prueba__nota";
+        n.textContent = " " + nota;
+        li.children[1].appendChild(n);
+      }
+      li.setAttribute("aria-label", P5_NOMBRES[k] + ": " + r.salida + (ok ? ", correcto" : ", incorrecto"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    $("paso-juntos").querySelector("[data-espera]").hidden = true;
+  }
+
+  var parte5 = crearEleccion({
+    id: "paso-juntos",
+    nombre: "p5",
+    correcta: "bien",
+    huecos: ["p5-h"],
+    limpiar: reiniciarP5,
+    alEntrar: function () { reiniciarP5(); elegirSalaP5(0); },
+    mostrar: function (v) {
+      pruebasP5(v);
+      var mala = P5_SALAS.findIndex(function (m) { return correrP5(v, m).salida !== correrP5("bien", m).salida; });
+      animarP5(v, mala === -1 ? 0 : mala);
+    },
+    ok: "¡Eso es! " + c("c + 1") + " tiene que caber en la fila: " + c("c") + " llega hasta 6 y su vecino es el 7, el último. En la sala 1, la primera pareja libre es " +
+      c("(1, 6)") + ": B7 y B8. Toca «Sala 2» para verla buscar en otra.",
+    pistas: {
+      len: "Con " + c("c = 7") + ", el último asiento, su vecino " + c("c + 1") + " no existe: " + c("IndexError") + ". En la sala 2 funcionó porque encontró la pareja antes de llegar a la orilla: no te fíes.",
+      filas: c("len(sala)") + " cuenta las filas (5), no los asientos: " + c("c") + " solo llega a 3 y no ve las parejas de la derecha. Los asientos de la fila " + c("f") + " son " + c("len(sala[f])") + ".",
+      dos: "Te quedaste corto: " + c("c") + " llega solo a 5 y nunca mira la última pareja, la de los asientos 7 y 8. Basta con dejar fuera uno."
+    }
+  });
+
+  /* =====================================================================
+     7. El programa completo
+     ===================================================================== */
+  var FUNCIONES = [
+    "def dibujar(sala):",
+    '    print("  1 2 3 4 5 6 7 8")',
+    "    for f in range(len(sala)):",
+    '        print("ABCDE"[f], " ".join(sala[f]))',
+    "",
+    "def reservar(sala, f, c):",
+    '    if sala[f][c] == "X":',
+    "        return False",
+    '    sala[f][c] = "X"',
+    "    return True",
+    "",
+    "def libres(sala):",
+    "    total = 0",
+    "    for fila in sala:",
+    "        for asiento in fila:",
+    '            if asiento == "L":',
+    "                total += 1",
+    "    return total",
+    "",
+    "def dos_juntos(sala):",
+    "    for f in range(len(sala)):",
+    "        for c in range(len(sala[f]) - 1):",
+    '            if sala[f][c] == "L" and sala[f][c + 1] == "L":',
+    "                return f, c",
+    "    return -1, -1",
+    ""
+  ];
+  var PRINCIPAL = [
+    "sala = []",                                      // 1
+    "for f in range(5):",
+    '    sala.append(["L"] * 8)',
+    "dibujar(sala)",                                  // 4
+    "while True:",
+    '    dato = input("Asiento: ").strip().upper()',  // 6
+    '    if dato == "FIN":',
+    "        break",
+    "    try:",                                       // 9
+    "        c = int(dato[1:]) - 1",
+    "    except ValueError:",
+    '        print("Escribe así: C5")',               // 12
+    "        continue",
+    '    f = "ABCDE".find(dato[0])',                  // 14
+    "    if f == -1 or c < 0 or c >= 8:",
+    '        print("Ese asiento no existe")',
+    "    elif reservar(sala, f, c):",                 // 17
+    '        print("Reservado:", dato)',
+    "    else:",
+    '        print("Ese asiento ya está ocupado")',   // 20
+    "    if libres(sala) == 0:",
+    '        print("¡Sala llena!")',
+    "        break",                                  // 23
+    "dibujar(sala)",
+    "f, c = dos_juntos(sala)",
+    "if f == -1:",                                    // 26
+    '    print("No quedan dos asientos juntos")',
+    "else:",
+    '    letra = "ABCDE"[f]',                         // 29
+    '    print(f"Para dos: {letra}{c + 1} y {letra}{c + 2}")'
+  ];
+  var tCodigo = $("t-codigo");
+  Python.escribir(tCodigo, ["# dibujar, reservar, libres y dos_juntos: partes 1 a 5 ✓"].concat(PRINCIPAL));
+  linea(tCodigo, 0).classList.add("linea--hecha");
+  MensajeError.zona(tCodigo, { proteger: [9, 10], atrapar: [11, 13] });
+  Python.escribir($("r-codigo"), FUNCIONES.concat(PRINCIPAL));
+
+  var registro = $("t-registro");
+  var tSala = crearSala($("t-sala"), vacia());
+  var reto = { valores: vacia(), vendidas: 0 };
+  var misiones = {};
+  var MISIONES = ["vender", "ocupado", "existe", "texto", "fin"];
+
+  function bajarConsola() { setTimeout(function () { registro.scrollTop = registro.scrollHeight; }, 0); }
+  function cumplir(m) {
+    if (misiones[m]) return;
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+    if (MISIONES.every(function (x) { return misiones[x]; })) {
+      avisar($("t-fb"), "ok", "¡Misiones cumplidas! Tu taquilla guarda la sala en una matriz, no vende dos veces el mismo asiento, no se rompe con lo que le escriban y, al cerrar, busca dos asientos juntos.");
+      leccion.desbloquear();
+    }
+  }
+  function cuentaVendidas() {
+    var n = Math.min(reto.vendidas, 3);
+    $("t-cuenta").textContent = (misiones.vender ? 3 : n) + "/3";
+    if (reto.vendidas >= 3) cumplir("vender");
+  }
+  // Lo que imprime el final: el dibujo y la pareja
+  function salidaFinal() {
+    var r = correrP5("bien", reto.valores);
+    var lineas = dibujo(reto.valores);
+    if (r.salida === "(-1, -1)") lineas.push("No quedan dos asientos juntos");
+    else {
+      var m = /^\((\d), (\d)\)$/.exec(r.salida);
+      var letra = LETRAS[Number(m[1])], col = Number(m[2]);
+      lineas.push("Para dos: " + letra + (col + 1) + " y " + letra + (col + 2));
+    }
+    return { lineas: lineas, r: r };
+  }
+  function cerrar(previo, activasAntes) {
+    var fin = salidaFinal();
+    var par = fin.r.salida !== "(-1, -1)";
+    if (par) {
+      var mm = /^\((\d), (\d)\)$/.exec(fin.r.salida);
+      var f = Number(mm[1]), col = Number(mm[2]);
+      pintar(tSala, function (p) { return p[0] === f && (p[1] === col || p[1] === col + 1) ? "matriz__celda--dorada" : ""; });
+    }
+    cumplir("fin");
+    return {
+      texto: previo + " Al salir, " + c("dibujar") + " imprime la sala y " + c("dos_juntos") + (par ? " encuentra la primera pareja libre (en dorado)." : " no encuentra dos libres juntos."),
+      camino: { activas: activasAntes.concat([24, 25, 26]).concat(par ? [28, 29, 30] : [27]), saltadas: par ? [27] : [28, 29, 30] },
+      salida: fin.lineas,
+      fin: true
+    };
+  }
+
+  var config = {
+    prefijo: "t",
+    vueltas: null,
+    rotulo: "Vuelta",
+    pregunta: "Asiento:",
+    lineaInput: 6,
+    siguiente: "Escribe otro asiento, o <code>fin</code>.",
+    validar: function () { return null; },
+    alEmpezar: function () {
+      reto.valores = vacia();
+      reto.vendidas = 0;
+      tSala.valores(reto.valores);
+      pintar(tSala);
+      Codigo.limpiar(tCodigo);
+      dibujo(reto.valores).forEach(function (t) { imprimir(registro, t, "sala"); });
+      cuentaVendidas();
+      return "La sala empieza vacía y " + c("dibujar") + " la imprime. Escribe un asiento, como " + c("C5") + ", o toca uno.";
+    },
+    alDato: function (texto) {
+      bajarConsola();
+      tSala.marcar(null);
+      pintar(tSala);
+      var dato = texto.toUpperCase();
+      var letras = Array.from(dato);
+      if (dato === "FIN") {
+        return cerrar(c('dato == "FIN"') + ": " + c("break") + " sale del bucle.", [6, 7, 8]);
+      }
+      var n = pyInt(letras.slice(1).join(""));
+      if (n === null) {
+        cumplir("texto");
+        MensajeError.lanzar(tCodigo, 10, "ValueError", 11, { atrapa: true });
+        return {
+          texto: c("int(" + repr(letras.slice(1).join("")) + ")") + " no es un número: " + c("ValueError") + ". El " + c("except") +
+            " lo atrapa y " + c("continue") + " vuelve a pedir.",
+          camino: { activas: [6, 7, 9, 10, 11, 12, 13], saltadas: [8].concat(rango(14, 23)) },
+          salida: ["Escribe así: C5"]
+        };
+      }
+      var col = n - BigInt(1);
+      var f = LETRAS.indexOf(letras[0]);
+      var base = [6, 7, 9, 10, 14, 15];
+      var r;
+      if (f === -1 || col < BigInt(0) || col >= BigInt(8)) {
+        cumplir("existe");
+        var ci = Number(col);
+        if (f !== -1 && ci >= 8 && ci < 12) tSala.marcar([f, ci]);
+        else sacudirSala(tSala);
+        r = {
+          texto: (f === -1 ? "No hay fila " + c(letras[0] || "") + ": " + c("f") + " vale " + c("-1") : c("c") + " vale " + c(col.toString()) + " y la fila va de 0 a 7") +
+            ". El asiento no existe y no se toca la sala.",
+          camino: { activas: base.concat([16, 21]), saltadas: [8, 11, 12, 13, 17, 18, 19, 20, 22, 23] },
+          salida: ["Ese asiento no existe"]
+        };
+      } else {
+        col = Number(col);
+        if (reto.valores[f][col] === "X") {
+          cumplir("ocupado");
+          tSala.marcar([f, col]);
+          setTimeout(function () { tSala.marcar(null); sacudir(tSala, [f, col]); }, espera(300));
+          r = {
+            texto: c("reservar(sala, " + f + ", " + col + ")") + " ve una " + c('"X"') + " en " + nombreAsiento(f, col) + " y devuelve " + c("False") + ": no se vende dos veces.",
+            camino: { activas: base.concat([17, 19, 20, 21]), saltadas: [8, 11, 12, 13, 16, 18, 22, 23] },
+            salida: ["Ese asiento ya está ocupado"]
+          };
+        } else {
+          reto.valores[f][col] = "X";
+          reto.vendidas++;
+          tSala.cambiar([f, col], "X", linea(tCodigo, 17));
+          pintar(tSala);
+          cuentaVendidas();
+          r = {
+            texto: c("reservar(sala, " + f + ", " + col + ")") + " pone una " + c('"X"') + " en " + c("sala[" + f + "][" + col + "]") + " y devuelve " + c("True") + ". Quedan " +
+              cuentaLibres(reto.valores) + " libres.",
+            camino: { activas: base.concat([17, 18, 21]), saltadas: [8, 11, 12, 13, 16, 19, 20, 22, 23] },
+            salida: ["Reservado: " + dato]
+          };
+        }
+      }
+      if (cuentaLibres(reto.valores) === 0) {
+        var cierre = cerrar("¡No queda ninguno! " + c("libres(sala)") + " da 0 y " + c("break") + " sale del bucle.", r.camino.activas.concat([22, 23]));
+        cierre.salida = r.salida.concat(["¡Sala llena!"]).concat(cierre.salida);
+        return cierre;
+      }
+      return r;
+    },
+    alTerminar: function () {
+      bajarConsola();
+      $("t-vuelta").textContent = "Fin del programa";
+      var faltan = MISIONES.filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) return;
+      var pistas = {
+        vender: "Vende al menos 3 entradas: escribe asientos libres, como " + c("B4") + ".",
+        ocupado: "Pide un asiento que ya vendiste: el programa no lo vende dos veces.",
+        existe: "Pide un asiento que no existe, como " + c("Z4") + " o " + c("A9") + ".",
+        texto: "Escribe algo que no es un asiento, como " + c("hola") + ": " + c("int()") + " fallará y el " + c("except") + " lo atrapará."
+      };
+      avisar($("t-fb"), "pista", pistas[faltan[0]] + " Toca «Ejecutar otra vez».");
+    }
+  };
+  BucleInput.crear(config);
+
+  function escribirPorTi(t, boton) {
+    if ($("t-fila").hidden) return;
+    $("t-campo").value = t;
+    $("t-enviar").click();
+    if (boton && !$("t-fila").hidden) boton.focus();
+  }
+  alTocarSala(tSala, function (f, col) { escribirPorTi(nombreAsiento(f, col)); });
+  $("t-azar").addEventListener("click", function () {
+    var libres = [];
+    reto.valores.forEach(function (fila, f) { fila.forEach(function (v, col) { if (v === "L") libres.push([f, col]); }); });
+    if (!libres.length) return;
+    var p = libres[Math.floor(Math.random() * libres.length)];
+    escribirPorTi(nombreAsiento(p[0], p[1]), $("t-azar"));
+  });
+  $("t-fin").addEventListener("click", function () { escribirPorTi("fin", $("t-fin")); });
+  $("t-otra").addEventListener("click", function () { Pasos.limpiarFeedback($("t-fb")); });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-dibujar": parte1.entrar,
+      "paso-reservar": parte2.entrar,
+      "paso-validar": parte3.entrar,
+      "paso-libres": parte4.entrar,
+      "paso-juntos": parte5.entrar
+    },
+    comprobar: {
+      "paso-dibujar": parte1.comprobar,
+      "paso-reservar": parte2.comprobar,
+      "paso-validar": parte3.comprobar,
+      "paso-libres": parte4.comprobar,
+      "paso-juntos": parte5.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>

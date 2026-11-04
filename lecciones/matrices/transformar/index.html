@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transformar una matriz · Aprende a programar</title>
+  <meta name="description" content="Lección interactiva: transformar una matriz en Python. Armar una matriz nueva a partir de otra, fila por fila: subir puntos sin pasar de 20 con min, sumar dos matrices casilla con casilla, el espejo, la transpuesta (t[c][f] = m[f][c]) y girar 90°.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-top: var(--esp-3); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) 0.8rem; font-size: 0.95rem; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-3) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-4); }
+    .consola .consola__linea { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .consola__linea--error { color: var(--color-error); }
+    .lab__resultado .consola + .feedback { margin-top: var(--esp-3); }
+
+    /* El código largo, un poco más chico para que quepa con sus botones */
+    .codigo--largo { font-size: 0.95rem; line-height: 1.55; padding: var(--esp-3) 0; }
+    .codigo--largo .linea { min-height: 1.55em; }
+    .codigo .hueco { min-width: 2.6em; }
+    .codigo .linea--hecha { color: #9aa4b2; }
+    .codigo .linea--hecha span { color: inherit; }
+
+    /* ---------- Matrices lado a lado ---------- */
+    .mz { min-width: 0; width: 100%; }
+    .par { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: var(--esp-2); }
+    .par--ancho-izq { grid-template-columns: minmax(0, 1.25fr) auto minmax(0, 1fr); }
+    .signo { align-self: center; font-family: var(--fuente-codigo); font-size: 1.7rem; font-weight: 700; line-height: 1; color: var(--color-texto-suave); }
+    .suma3 { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: var(--esp-1); }
+    .suma3 > .signo { margin-top: 3.4rem; }
+    .lab__visual .lista { padding-bottom: 0; }
+    .bajo { margin-top: var(--esp-3); }
+    .cadena { display: grid; grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 0.9fr) auto minmax(0, 1fr); align-items: center; gap: var(--esp-1); }
+    .cadena__fila { min-width: 0; }
+    .cadena__fila .lista { --lista-max: 2.4rem; }
+    .elegir--chico { gap: var(--esp-1); }
+    .elegir--chico .btn { padding-inline: var(--esp-2); font-size: var(--texto-xs); }
+    .rotulo-forma { margin: var(--esp-1) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .rotulo-forma strong { font-family: var(--fuente-codigo); color: var(--color-texto); }
+
+    /* Casillas que se tocan */
+    .matriz__celda.celda-tocable { cursor: pointer; border-radius: calc(var(--c) * 0.2); outline: none; }
+    .matriz__celda.celda-tocable:hover > .matriz__valor { box-shadow: 0 0 0 3px var(--color-azul-suave); }
+    .matriz__celda.celda-tocable:focus-visible > .matriz__valor { box-shadow: var(--foco); }
+    .matriz__celda--hecha.celda-tocable { cursor: default; }
+
+    /* Un dibujo: 1 es tinta, 0 es papel */
+    .matriz__celda--tinta > .matriz__valor { border-color: #164aa8; background: var(--color-azul); color: #fff; }
+    .matriz__celda--papel > .matriz__valor { color: #9aa4b2; }
+    .lista__casilla--tinta > .lista__valor { border-color: #164aa8; background: var(--color-azul); color: #fff; }
+    .lista__casilla--mal > .lista__valor, .matriz__celda--mal > .matriz__valor { border-color: var(--color-error); background: #fdecea; color: var(--color-error); }
+
+    /* ---------- Expresión de lo que pasó ---------- */
+    .expresion { flex-wrap: wrap; overflow-wrap: anywhere; font-size: var(--texto-md); }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); white-space: pre; }
+    .expresion__final--mal { background: #fdecea; color: var(--color-error); }
+    .indicacion { margin: 0; text-align: center; color: var(--color-texto-suave); }
+    .contador { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { font-family: var(--fuente-codigo); color: var(--color-texto); }
+
+    /* ---------- Elegir ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .lab__visual > .elegir:first-child { margin: 0 0 var(--esp-3); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .elegir--texto .btn { font-family: var(--fuente); }
+    .elegir__titulo { width: 100%; margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .btn--bien::after { content: " ✓"; color: var(--color-ok); }
+    .btn--mal::after { content: " ✗"; color: var(--color-error); }
+
+    /* ---------- Reto ---------- */
+    .huecos { display: grid; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .huecos .opciones { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .huecos legend { margin: 0 0 var(--esp-1); padding: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .huecos .opcion span { padding: var(--esp-2); font-size: var(--texto-xs); text-align: center; white-space: pre; }
+    .pruebas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas[hidden] { display: none; }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-xs); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 150ms; }
+    .pruebas li:nth-child(3) { animation-delay: 300ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .pruebas + .feedback { margin-top: var(--esp-3); }
+
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.92rem; line-height: 1.45; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .lab__resultado .consola { margin-top: 0; min-height: 3.4rem; padding: var(--esp-2) var(--esp-4); }
+      #paso-resumen .celebracion { font-size: 3rem; line-height: 1.1; }
+      #paso-resumen .paso__titulo { margin-block: var(--esp-2) var(--esp-3); }
+      #paso-resumen .tarjeta { padding-block: var(--esp-4); }
+      #paso-resumen .resumen-codigo { font-size: 0.88rem; }
+    }
+    /* Escritorio bajo (p. ej. 1366×657): todo un poco más compacto para que el paso quepa */
+    @media (min-width: 1024px) and (max-height: 720px) {
+      .paso:has(> .lab) { padding: var(--esp-4) var(--esp-5); }
+      .paso:has(> .lab) > .paso__intro { margin-bottom: var(--esp-3); }
+      .paso__intro p { line-height: 1.45; }
+      .lab .codigo--largo { font-size: 0.84rem; line-height: 1.34; padding: var(--esp-2) 0; }
+      .lab .codigo--largo .linea { min-height: 1.34em; }
+      .lab__visual { padding: var(--esp-3) var(--esp-4); }
+      .explicacion { margin-top: var(--esp-2); }
+      .fila-botones { margin-top: var(--esp-2); }
+      .fila-botones .btn, .elegir .btn { min-height: 2.3rem; padding-block: var(--esp-1); }
+      .lab__visual ~ .lab__resultado { margin-top: var(--esp-3); }
+      .feedback { padding: var(--esp-2) var(--esp-4); }
+      .matriz__nombre { margin-bottom: var(--esp-2); }
+      .lab__visual .lista { --lista-max: 2.5rem; padding-top: 0; }
+      .bajo { margin-top: var(--esp-2); }
+      .suma3 > .signo { margin-top: 2.6rem; }
+      .huecos { gap: var(--esp-1); margin-top: var(--esp-2); }
+      .huecos .opcion span { padding: var(--esp-1) var(--esp-2); }
+      .pruebas { gap: var(--esp-1); }
+      .pruebas li { padding: var(--esp-1) var(--esp-3); }
+      #paso-resumen .celebracion { font-size: 2.4rem; }
+      #paso-resumen .resumen-codigo { font-size: 0.8rem; line-height: 1.5; }
+    }
+    @media (max-width: 600px) {
+      .par, .par--ancho-izq { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--esp-1); }
+      .par > .signo { transform: rotate(90deg); }
+      .suma3 { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+      .suma3 > .signo { margin-top: 2.6rem; }
+      .suma3 > .signo--igual { grid-column: 1 / -1; margin: 0; justify-self: center; transform: rotate(90deg); }
+      .suma3 > .suma3__total { grid-column: 1 / -1; width: min(100%, 14rem); justify-self: center; }
+      .cadena { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+      .cadena > .signo { transform: rotate(90deg); }
+      .cadena__fila { width: min(100%, 14rem); }
+    }
+    @media (max-width: 480px) {
+      /* Que la línea más larga quepa sin desplazarse */
+      .codigo--largo { font-size: 0.68rem; }
+      .codigo--largo .linea { padding-left: 2.1rem; padding-right: var(--esp-2); }
+      .codigo--largo .linea::before { width: 1.5rem; }
+      .fila-botones .btn { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .elegir { gap: var(--esp-1) var(--esp-2); }
+      .elegir .btn { padding: var(--esp-1) var(--esp-2); font-size: var(--texto-xs); }
+      .huecos .opcion span { font-size: 0.68rem; padding: var(--esp-2) var(--esp-1); }
+      .expresion { font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="matrices-transformar">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso de la lección" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuición: otra matriz, del mismo tamaño -->
+    <section class="paso" id="paso-nueva" data-requiere aria-labelledby="t-nueva">
+      <span class="paso__etiqueta">Matrices 5/6 · Transformar una matriz</span>
+      <h1 class="paso__titulo" id="t-nueva">Dos puntos para todos</h1>
+      <p>La profe regala <strong>2 puntos</strong> en cada curso, pero quiere guardar la libreta original. Así que arma <strong>otra</strong>: <code>nuevas</code>. Toca cada nota de <code>notas</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="expresion expresion--columna" id="p1-expr" aria-live="polite"></div>
+          <p class="contador" id="p1-contador"><strong>0</strong> de 9 notas</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-limpiar" hidden>↺ Empezar de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par par--ancho-izq">
+            <div class="mz" id="p1-notas"></div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div class="mz" id="p1-nuevas"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. En código: fila por fila -->
+    <section class="paso" id="paso-subir" data-requiere aria-labelledby="t-subir">
+      <h2 class="paso__titulo" id="t-subir">Fila por fila, en código</h2>
+      <p>Como en Armar una matriz: una <code>fila</code> nueva en cada vuelta de afuera, un <code>.append()</code> por casilla, y la fila completa va a <code>nuevas</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p2-saltar">Siguiente fila ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par">
+            <div class="mz" id="p2-notas"></div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div class="mz" id="p2-nuevas"></div>
+          </div>
+          <div class="bajo" id="p2-fila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Sin pasar de 20 -->
+    <section class="paso" id="paso-tope" data-requiere aria-labelledby="t-tope">
+      <h2 class="paso__titulo" id="t-tope">Sin pasar de 20</h2>
+      <p>El 21 y el 22 no existen: la nota más alta es 20. ¿Qué va en el espacio en blanco? Elige una opción y mira qué sale.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p3-codigo" aria-label="Código"></pre>
+          <div class="elegir" id="p3-elegir" role="group" aria-label="¿Qué va en el espacio en blanco?">
+            <button type="button" class="btn btn-secundario" data-valor="max" aria-pressed="false">max(notas[f][c] + 2, 20)</button>
+            <button type="button" class="btn btn-secundario" data-valor="antes" aria-pressed="false">min(notas[f][c], 20) + 2</button>
+            <button type="button" class="btn btn-secundario" data-valor="min" aria-pressed="false">min(notas[f][c] + 2, 20)</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par par--ancho-izq">
+            <div class="mz" id="p3-notas"></div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div class="mz" id="p3-nuevas"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Sumar dos matrices casilla con casilla -->
+    <section class="paso" id="paso-sumar" data-requiere aria-labelledby="t-sumar">
+      <h2 class="paso__titulo" id="t-sumar">Parcial + final</h2>
+      <p>Cada examen vale hasta 10. La nota de cada curso es la suma de los dos, <strong>casilla con casilla</strong>: la de <code>[f][c]</code> en una más la de <code>[f][c]</code> en la otra.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="suma3">
+            <div class="mz" id="p4-parcial"></div>
+            <span class="signo" aria-hidden="true">+</span>
+            <div class="mz" id="p4-final"></div>
+            <span class="signo signo--igual" aria-hidden="true">=</span>
+            <div class="mz suma3__total" id="p4-total"></div>
+          </div>
+          <div class="bajo" id="p4-fila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. ¿Y si no son del mismo tamaño? -->
+    <section class="paso" id="paso-tamano" data-requiere aria-labelledby="t-tamano">
+      <h2 class="paso__titulo" id="t-tamano">¿Y si no son del mismo tamaño?</h2>
+      <p>El mismo programa, pero a <code>final</code> le falta o le sobra algo. Elige un caso y predice qué pasa.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--texto" id="p5-caso" role="group" aria-label="¿Qué final?">
+            <button type="button" class="btn btn-secundario" data-valor="chica" aria-pressed="true">final de 2 × 2</button>
+            <button type="button" class="btn btn-secundario" data-valor="grande" aria-pressed="false">final de 3 × 3</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Código"></pre>
+          <div class="elegir elegir--texto" id="p5-prediccion" role="group" aria-label="¿Qué pasa?">
+            <button type="button" class="btn btn-secundario" data-valor="bien" aria-pressed="false">Funciona bien</button>
+            <button type="button" class="btn btn-secundario" data-valor="salta" aria-pressed="false">Funciona, pero se salta algo</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Da error</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="suma3">
+            <div class="mz" id="p5-parcial"></div>
+            <span class="signo" aria-hidden="true">+</span>
+            <div class="mz" id="p5-final"></div>
+            <span class="signo signo--igual" aria-hidden="true">=</span>
+            <div class="mz suma3__total" id="p5-total"></div>
+          </div>
+          <div class="bajo" id="p5-fila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. El espejo -->
+    <section class="paso" id="paso-espejo" data-requiere aria-labelledby="t-espejo">
+      <h2 class="paso__titulo" id="t-espejo">El espejo</h2>
+      <p>Este dibujo es una matriz: 1 es tinta y 0 es papel. Para verlo en un espejo, cada fila va <strong>al revés</strong>: <code>c</code> recorre de la última columna a la primera. ¿Qué <code>range</code> lo hace?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p6-reiniciar" hidden>↺ Reiniciar</button>
+            <button type="button" class="btn btn-secundario" id="p6-reproducir" aria-pressed="false">▶ Ejecutar todo</button>
+            <button type="button" class="btn btn-secundario" id="p6-saltar">Siguiente fila ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p6-ejecutar">Ejecutar línea ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir elegir--chico" id="p6-elegir" role="group" aria-label="¿Qué va en el range?">
+            <button type="button" class="btn btn-secundario" data-valor="pasa" aria-pressed="false">len(m[f]), 0, -1</button>
+            <button type="button" class="btn btn-secundario" data-valor="bien" aria-pressed="false">len(m[f]) - 1, -1, -1</button>
+            <button type="button" class="btn btn-secundario" data-valor="corto" aria-pressed="false">len(m[f]) - 1, 0, -1</button>
+          </div>
+          <div class="cadena">
+            <div class="mz" id="p6-m"></div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div class="cadena__fila" id="p6-fila"></div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div class="mz" id="p6-espejo"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. La transpuesta -->
+    <section class="paso" id="paso-transpuesta" data-requiere aria-labelledby="t-transpuesta">
+      <h2 class="paso__titulo" id="t-transpuesta">Las filas se vuelven columnas</h2>
+      <p>La <strong>transpuesta</strong> da vuelta la tabla: las filas pasan a ser columnas. <code>t</code> ya tiene ceros: toca la casilla donde cae cada nota.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p7-codigo" aria-label="Código"></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-limpiar" hidden>↺ Empezar de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par">
+            <div>
+              <div class="mz" id="p7-m"></div>
+              <p class="rotulo-forma"><strong>2 × 3</strong>: 2 filas, 3 columnas</p>
+            </div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div>
+              <div class="mz" id="p7-t"></div>
+              <p class="rotulo-forma"><strong>3 × 2</strong>: 3 filas, 2 columnas</p>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Girar 90° -->
+    <section class="paso" id="paso-girar" data-requiere aria-labelledby="t-girar">
+      <h2 class="paso__titulo" id="t-girar">Girar el dibujo</h2>
+      <p>Con <code>transpuesta</code> y <code>espejo</code> (lo que hiciste recién, como funciones que devuelven una matriz nueva) se puede <strong>girar</strong>. Deja la F como el objetivo.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p8-codigo" aria-label="Código"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p8-transpuesta"><code>d = transpuesta(d)</code></button>
+            <button type="button" class="btn btn-secundario" id="p8-espejo"><code>d = espejo(d)</code></button>
+            <button type="button" class="btn btn-secundario" id="p8-limpiar">↺ La F de nuevo</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par">
+            <div>
+              <div class="mz" id="p8-d"></div>
+              <p class="rotulo-forma" id="p8-forma"><strong>4 × 3</strong></p>
+            </div>
+            <span class="signo" aria-hidden="true">⇢</span>
+            <div>
+              <div class="mz" id="p8-objetivo"></div>
+              <p class="rotulo-forma"><strong>3 × 4</strong>: girada a la derecha</p>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Reto: completar la transpuesta -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Reto</span>
+      <h2 class="paso__titulo" id="t-reto">Completa la transpuesta</h2>
+      <p>Llena los dos espacios en blanco. Al comprobar, la función se prueba con tres matrices.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="reto-codigo" aria-label="Código"></pre>
+          <div class="huecos">
+            <fieldset class="opciones opciones--codigo" id="reto-a">
+              <legend>Espacio 1: cuántas filas tiene t</legend>
+              <label class="opcion"><input type="radio" name="reto-a" value="filas"><span>len(m)</span></label>
+              <label class="opcion"><input type="radio" name="reto-a" value="columnas"><span>len(m[0])</span></label>
+              <label class="opcion"><input type="radio" name="reto-a" value="t"><span>len(t)</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo" id="reto-b">
+              <legend>Espacio 2: a qué casilla de t va</legend>
+              <label class="opcion"><input type="radio" name="reto-b" value="fc"><span>t[f][c]</span></label>
+              <label class="opcion"><input type="radio" name="reto-b" value="mcf"><span>m[c][f]</span></label>
+              <label class="opcion"><input type="radio" name="reto-b" value="cf"><span>t[c][f]</span></label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par">
+            <div class="mz" id="reto-m"></div>
+            <span class="signo" aria-hidden="true">→</span>
+            <div class="mz" id="reto-t"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="pruebas" id="reto-pruebas" hidden></ol>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Resumen -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">¡Lección completada!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Para transformar una matriz se arma otra, fila por fila: cada casilla nueva sale de una casilla de la vieja.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Resumen en código"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repetir la lección</button>
+        <a class="btn btn-secundario" href="../proyecto/index.html">Siguiente: Proyecto: la sala de cine →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Atrás</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continuar</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/python.js"></script>
+<script src="../../../assets/js/mensaje-error.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/matriz.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function copia(m) { return m.map(function (f) { return f.slice(); }); }
+  function llena(filas, columnas, v) {
+    var m = [];
+    for (var f = 0; f < filas; f++) {
+      var fila = [];
+      for (var c = 0; c < columnas; c++) fila.push(v);
+      m.push(fila);
+    }
+    return m;
+  }
+  function iguales(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+  function forma(m) { return m.length + " × " + (m.length ? m[0].length : 0); }
+  function esc(t) { return Python.escapar(t); }
+
+  // En un escritorio bajo (1366×657), las casillas más chicas para que el paso quepa
+  var BAJO = window.matchMedia && window.matchMedia("(min-width: 1024px) and (max-height: 720px)").matches;
+  var GRANDE = BAJO ? 2.25 : 2.8;
+  var CHICA = BAJO ? 1.9 : 2.3;
+
+  /* Las casillas de una matriz que se pueden tocar (mouse, dedo o teclado) */
+  function tocables(mz, etiqueta, alTocar) {
+    mz.el.removeAttribute("aria-hidden");
+    mz.el.querySelectorAll(".matriz__fila:not(.matriz__fila--fuera) .matriz__celda").forEach(function (d) {
+      var f = Number(d.getAttribute("data-f"));
+      var c = Number(d.getAttribute("data-c"));
+      d.classList.add("celda-tocable");
+      d.setAttribute("role", "button");
+      d.setAttribute("tabindex", "0");
+      d.setAttribute("aria-label", etiqueta(f, c));
+    });
+    if (mz.el._tocable) return;
+    mz.el._tocable = true;
+    function tocar(e) {
+      var d = e.target.closest(".celda-tocable");
+      if (!d) return;
+      e.preventDefault();
+      alTocar([Number(d.getAttribute("data-f")), Number(d.getAttribute("data-c"))], d);
+    }
+    mz.el.addEventListener("click", tocar);
+    mz.el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") tocar(e);
+    });
+  }
+
+  /* Un dibujo de 1 y 0: la tinta en azul */
+  function tinta(mz) {
+    mz.clases(function (p, v) { return v === 1 ? "matriz__celda--tinta" : v === 0 ? "matriz__celda--papel" : ""; });
+  }
+  function tintaLista(l) {
+    l.clases(function (i, v) { return v === 1 ? "lista__casilla--tinta" : ""; });
+  }
+
+  var NOTAS = [[14, 9, 18], [11, 19, 8], [20, 12, 15]];
+  var ALUMNOS = ["Ana", "Luis", "Eva"];
+  var CURSOS = ["Mate", "Leng", "Arte"];
+
+  /* ---------- 1. Dos puntos para todos ---------- */
+  var notas1 = Matriz.crear($("p1-notas"), copia(NOTAS), { nombre: "notas", rotulosFilas: ALUMNOS, rotulosColumnas: CURSOS, maximo: GRANDE });
+  var nuevas1 = Matriz.crear($("p1-nuevas"), llena(3, 3, ""), { nombre: "nuevas", rotulosColumnas: CURSOS, comillas: false, maximo: GRANDE });
+  var hechas1 = {};
+
+  function mostrar1(f, c) {
+    var v = NOTAS[f][c] + 2;
+    $("p1-expr").innerHTML =
+      "<span>notas[" + f + "][" + c + "] + 2</span><span class=\"expresion__flecha\" aria-hidden=\"true\">↓</span>" +
+      "<span>" + NOTAS[f][c] + " + 2</span><span class=\"expresion__flecha\" aria-hidden=\"true\">↓</span>" +
+      "<span class=\"expresion__final" + (v > 20 ? " expresion__final--mal" : "") + "\">nuevas[" + f + "][" + c + "] = " + v + "</span>";
+  }
+
+  function limpiar1() {
+    hechas1 = {};
+    notas1.clases(null);
+    notas1.marcar(null);
+    nuevas1.valores(llena(3, 3, ""));
+    $("p1-expr").innerHTML = "<span class=\"indicacion\">Toca una nota de <code>notas</code>: va a la <strong>misma casilla</strong> de <code>nuevas</code>, con 2 puntos más.</span>";
+    $("p1-contador").innerHTML = "<strong>0</strong> de 9 notas";
+    $("p1-limpiar").hidden = true;
+    Pasos.limpiarFeedback($("p1-fb"));
+    tocables(notas1, function (f, c) { return "notas[" + f + "][" + c + "], " + NOTAS[f][c] + ", de " + ALUMNOS[f] + " en " + CURSOS[c]; }, tocar1);
+  }
+
+  function tocar1(p) {
+    var clave = p[0] + "," + p[1];
+    var fb = $("p1-fb");
+    var v = NOTAS[p[0]][p[1]] + 2;
+    mostrar1(p[0], p[1]);
+    if (hechas1[clave]) {
+      Pasos.feedback(fb, "pista", "Esa ya la pasaste. Toca una nota que no esté gris.");
+      return;
+    }
+    hechas1[clave] = true;
+    notas1.marcar(null);
+    nuevas1.cambiar(p, v, notas1.valor(p));
+    notas1.clases(function (q) { return hechas1[q[0] + "," + q[1]] ? "matriz__celda--hecha" : ""; });
+    nuevas1.clases(function (q, x) { return x !== "" && x > 20 ? "matriz__celda--mal" : ""; });
+    var n = Object.keys(hechas1).length;
+    $("p1-contador").innerHTML = "<strong>" + n + "</strong> de 9 notas";
+    $("p1-limpiar").hidden = false;
+    if (n === 9) {
+      Pasos.feedback(fb, "ok", { html: "<code>nuevas</code> es <strong>otra</strong> matriz, del mismo tamaño: cada nota fue a la misma casilla <code>[f][c]</code>, con 2 puntos más, y <code>notas</code> quedó igual. Pero hay dos notas en rojo…" });
+      leccion.desbloquear();
+    } else if (v > 20) {
+      Pasos.feedback(fb, "pista", { html: NOTAS[p[0]][p[1]] + " + 2 es <strong>" + v + "</strong>: ¡se pasa de 20! Por ahora sigue; lo arreglamos en un rato." });
+    } else {
+      Pasos.feedback(fb, "ok", { html: "La nota de " + ALUMNOS[p[0]] + " en " + CURSOS[p[1]] + " fue a <code>nuevas[" + p[0] + "][" + p[1] + "]</code>: el mismo lugar. Faltan " + (9 - n) + "." });
+    }
+  }
+
+  /* ---------- 2. Fila por fila, en código ---------- */
+  var COD2 = Matriz.codigo("notas", NOTAS).concat([
+    "nuevas = []",
+    "for f in range(len(notas)):",
+    "    fila = []",
+    "    for c in range(len(notas[f])):",
+    "        fila.append(notas[f][c] + 2)",
+    "    nuevas.append(fila)",
+    "print(nuevas)"
+  ]);
+  Python.escribir($("p2-codigo"), COD2);
+  var notas2 = Matriz.crear($("p2-notas"), copia(NOTAS), { nombre: "notas", reservarDedos: true, maximo: GRANDE });
+  var nuevas2 = Matriz.crear($("p2-nuevas"), [], { nombre: "nuevas", reservarDedos: true, maximo: GRANDE });
+  var fila2 = Lista.crear($("p2-fila"), [], { nombres: ["fila"], capacidad: 3 });
+
+  function marcarMal(mz) {
+    mz.clases(function (p, v) { return v > 20 ? "matriz__celda--mal" : ""; });
+  }
+
+  function trazaSubir() {
+    var p = [];
+    var todas = [];
+    p.push({ linea: 5, tipo: "nueva", texto: "<code>nuevas</code> empieza vacía: ahí se arma la matriz nueva. <code>notas</code> no se toca." });
+    NOTAS.forEach(function (fila, f) {
+      p.push({
+        linea: 6, tipo: "forF", f: f,
+        texto: (f === 0 ? "El <code>for</code> de afuera: " : "Otra vuelta de afuera: ") + "<code>f</code> es " + f + ", la fila de " + ALUMNOS[f] + "."
+      });
+      p.push({ linea: 7, tipo: "fila", texto: "Una lista nueva y vacía: será la fila " + f + " de <code>nuevas</code>." });
+      var nueva = [];
+      fila.forEach(function (v, c) {
+        p.push({ linea: 8, tipo: "forC", f: f, c: c, texto: "<code>c</code> es " + c + ": <code>notas[" + f + "][" + c + "]</code> es " + v + "." });
+        nueva.push(v + 2);
+        p.push({
+          linea: 9, tipo: "append", f: f, c: c, v: v + 2,
+          texto: v + " + 2 es <strong>" + (v + 2) + "</strong>: va al final de <code>fila</code>." + (v + 2 > 20 ? " ¡Se pasa de 20!" : "")
+        });
+      });
+      todas.push(nueva.slice());
+      p.push({ linea: 10, tipo: "appendFila", fila: nueva.slice(), parada: true, texto: "La fila está completa: <code>nuevas.append(fila)</code> la pega abajo de <code>nuevas</code>." });
+    });
+    p.push({ linea: 6, tipo: "finF", texto: "Ya no quedan filas: <code>nuevas</code> es de 3 × 3, como <code>notas</code>." });
+    p.push({ linea: 11, tipo: "print", salida: Matriz.python(todas), parada: true, texto: "<code>print</code> muestra la matriz nueva. Mira las dos en rojo." });
+    return p;
+  }
+
+  var traza2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    saltar: $("p2-saltar"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaSubir,
+    intervalo: 600,
+    alReiniciar: function () {
+      notas2.marcar(null);
+      notas2.marcarFila(null);
+      notas2.dedos(null);
+      nuevas2.valores([]);
+      fila2.valores([]);
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) {
+      switch (paso.tipo) {
+        case "nueva": nuevas2.valores([]); break;
+        case "forF":
+          notas2.marcar(null);
+          notas2.marcarFila(paso.f);
+          notas2.dedos({ fila: paso.f, columna: null });
+          break;
+        case "fila": fila2.valores([]); break;
+        case "forC":
+          notas2.dedos({ columna: paso.c });
+          notas2.marcar([paso.f, paso.c]);
+          break;
+        case "append":
+          fila2.agregar(paso.v, notas2.valor([paso.f, paso.c]));
+          fila2.clases(function (i, v) { return v > 20 ? "lista__casilla--mal" : ""; });
+          break;
+        case "appendFila":
+          notas2.marcar(null);
+          nuevas2.agregarFila(paso.fila, function (c) { return fila2.valor(c); });
+          marcarMal(nuevas2);
+          break;
+        case "finF":
+          notas2.marcar(null);
+          notas2.marcarFila(null);
+          notas2.dedos(null);
+          break;
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p2-fb"), "ok", { html: "<code>nuevas</code> se armó fila por fila, del mismo tamaño que <code>notas</code>. Pero <strong>21</strong> y <strong>22</strong> no existen en la escala de 0 a 20." });
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 3. Sin pasar de 20 ---------- */
+  var OPCIONES3 = {
+    min: { texto: "min(notas[f][c] + 2, 20)", fn: function (v) { return Math.min(v + 2, 20); } },
+    max: { texto: "max(notas[f][c] + 2, 20)", fn: function (v) { return Math.max(v + 2, 20); } },
+    antes: { texto: "min(notas[f][c], 20) + 2", fn: function (v) { return Math.min(v, 20) + 2; } }
+  };
+  var notas3 = Matriz.crear($("p3-notas"), copia(NOTAS), { nombre: "notas", rotulosFilas: ALUMNOS, maximo: GRANDE });
+  var nuevas3 = Matriz.crear($("p3-nuevas"), llena(3, 3, ""), { nombre: "nuevas", comillas: false, maximo: GRANDE });
+  var timers3 = [];
+
+  function escribir3(texto) {
+    Python.escribir($("p3-codigo"), Matriz.codigo("notas", NOTAS).concat([
+      "nuevas = []",
+      "for f in range(len(notas)):",
+      "    fila = []",
+      "    for c in range(len(notas[f])):",
+      "        fila.append(▢)",
+      "    nuevas.append(fila)",
+      "print(nuevas)"
+    ]), { huecos: ["p3-hueco"] });
+    if (texto) $("p3-hueco").textContent = texto;
+  }
+
+  function cancelar3() {
+    timers3.forEach(clearTimeout);
+    timers3 = [];
+  }
+
+  function elegir3(clave) {
+    cancelar3();
+    var op = OPCIONES3[clave];
+    $("p3-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === clave));
+    });
+    escribir3(op.texto);
+    var pre = $("p3-codigo");
+    Codigo.marcar(pre, { activas: [9] });
+    nuevas3.valores(llena(3, 3, ""));
+    nuevas3.clases(null);
+    Codigo.consola($("p3-consola"), []);
+    Pasos.limpiarFeedback($("p3-fb"));
+    var resultado = NOTAS.map(function (fila) { return fila.map(op.fn); });
+    var k = 0;
+    NOTAS.forEach(function (fila, f) {
+      fila.forEach(function (v, c) {
+        timers3.push(setTimeout(function () {
+          notas3.marcar([f, c]);
+          nuevas3.cambiar([f, c], resultado[f][c], notas3.valor([f, c]));
+        }, espera(k * 160)));
+        k++;
+      });
+    });
+    timers3.push(setTimeout(function () {
+      notas3.marcar(null);
+      nuevas3.clases(function (p, v) {
+        var bien = Math.min(NOTAS[p[0]][p[1]] + 2, 20);
+        if (v !== bien) return "matriz__celda--mal";
+        return v !== NOTAS[p[0]][p[1]] + 2 ? "matriz__celda--ok" : "";
+      });
+      Codigo.marcar(pre, { activas: [11] });
+      Codigo.agregar($("p3-consola"), Matriz.python(resultado));
+      Codigo.volarDesdeLinea(pre, $("p3-consola").lastElementChild, Matriz.python(resultado), "vuelo--salida");
+      var fb = $("p3-fb");
+      if (clave === "min") {
+        Pasos.feedback(fb, "ok", { html: "<code>min</code> se queda con el más chico de los dos: si <code>nota + 2</code> pasa de 20, queda 20 (en verde). Las demás no cambian." });
+        leccion.desbloquear();
+      } else if (clave === "max") {
+        Pasos.feedback(fb, "pista", { html: "<code>max</code> se queda con el más grande: ¡ninguna quedó bajo 20, y el 21 y el 22 siguen! Para poner un <strong>techo</strong> se usa el más chico de los dos." });
+      } else {
+        Pasos.feedback(fb, "pista", { html: "<code>min(notas[f][c], 20)</code> no cambia nada (ninguna nota pasa de 20) y después se suman 2: el 21 y el 22 siguen. El tope va <strong>después</strong> de sumar." });
+      }
+    }, espera(k * 160 + 650)));
+  }
+
+  /* ---------- 4. Parcial + final ---------- */
+  var PARCIAL = [[7, 4, 9], [5, 8, 6]];
+  var FINAL = [[8, 3, 10], [6, 9, 2]];
+  var BUCLE_SUMA = [
+    "total = []",
+    "for f in range(len(parcial)):",
+    "    fila = []",
+    "    for c in range(len(parcial[f])):",
+    "        nota = parcial[f][c] + final[f][c]",
+    "        fila.append(nota)",
+    "    total.append(fila)"
+  ];
+  Python.escribir($("p4-codigo"), [
+    "parcial = " + Matriz.texto(PARCIAL),
+    "final = " + Matriz.texto(FINAL)
+  ].concat(BUCLE_SUMA));
+  var parcial4 = Matriz.crear($("p4-parcial"), copia(PARCIAL), { nombre: "parcial", maximo: GRANDE });
+  var final4 = Matriz.crear($("p4-final"), copia(FINAL), { nombre: "final", maximo: GRANDE });
+  var total4 = Matriz.crear($("p4-total"), [], { nombre: "total", maximo: GRANDE });
+  var fila4 = Lista.crear($("p4-fila"), [], { nombres: ["fila"], capacidad: 3 });
+
+  /* Los dos valores vuelan desde sus casillas y se juntan en el casillero nuevo de fila */
+  function juntar(fila, valores, a, b) {
+    fila.valores(valores);
+    var destino = fila.valor(valores.length - 1);
+    var hechos = 0;
+    function llega() {
+      hechos++;
+      if (hechos < 2) { destino.classList.add("vuelo-destino"); return; }
+      destino.classList.remove("lista__valor--pulso");
+      void destino.offsetWidth;
+      destino.classList.add("lista__valor--pulso");
+    }
+    Codigo.volar(a.el, destino, String(a.texto), "lista__valor lista__vuelo", llega);
+    Codigo.volar(b.el, destino, String(b.texto), "lista__valor lista__vuelo", llega);
+  }
+
+  function trazaSumar() {
+    var p = [];
+    p.push({ linea: 2, tipo: "nueva", texto: "<code>total</code> empieza vacía. Se va a armar del mismo tamaño que <code>parcial</code>." });
+    PARCIAL.forEach(function (fila, f) {
+      p.push({ linea: 3, tipo: "forF", f: f, texto: "<code>f</code> es " + f + ": la fila " + f + " de las dos matrices." });
+      p.push({ linea: 4, tipo: "fila", texto: "Una <code>fila</code> nueva y vacía." });
+      var nueva = [];
+      fila.forEach(function (v, c) {
+        var w = FINAL[f][c];
+        p.push({ linea: 5, tipo: "forC", f: f, c: c, texto: "<code>c</code> es " + c + ": la casilla <code>[" + f + "][" + c + "]</code> en las dos." });
+        nueva.push(v + w);
+        p.push({
+          linea: 6, tipo: "nota", f: f, c: c, a: v, b: w,
+          texto: "<code>parcial[" + f + "][" + c + "] + final[" + f + "][" + c + "]</code> es " + v + " + " + w + " = <strong>" + (v + w) + "</strong>."
+        });
+        p.push({ linea: 7, tipo: "append", f: f, c: c, valores: nueva.slice(), a: v, b: w, texto: "La nota " + (v + w) + " va al final de <code>fila</code>." });
+      });
+      p.push({ linea: 8, tipo: "appendFila", fila: nueva.slice(), texto: "La fila completa se pega abajo de <code>total</code>." });
+    });
+    p.push({ linea: 3, tipo: "finF", texto: "Ya no quedan filas: <code>total</code> es de 2 × 3, como las otras dos." });
+    return p;
+  }
+
+  var traza4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaSumar,
+    intervalo: 650,
+    alReiniciar: function () {
+      [parcial4, final4].forEach(function (m) { m.marcar(null); m.marcarFila(null); });
+      total4.valores([]);
+      fila4.valores([]);
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: function (paso) {
+      switch (paso.tipo) {
+        case "nueva": total4.valores([]); break;
+        case "forF":
+          [parcial4, final4].forEach(function (m) { m.marcar(null); m.marcarFila(paso.f); });
+          break;
+        case "fila": fila4.valores([]); break;
+        case "forC":
+        case "nota":
+          parcial4.marcar([paso.f, paso.c]);
+          final4.marcar([paso.f, paso.c]);
+          break;
+        case "append":
+          juntar(fila4, paso.valores,
+            { el: parcial4.valor([paso.f, paso.c]), texto: paso.a },
+            { el: final4.valor([paso.f, paso.c]), texto: paso.b });
+          break;
+        case "appendFila":
+          [parcial4, final4].forEach(function (m) { m.marcar(null); });
+          total4.agregarFila(paso.fila, function (c) { return fila4.valor(c); });
+          break;
+        case "finF":
+          [parcial4, final4].forEach(function (m) { m.marcar(null); m.marcarFila(null); });
+          break;
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p4-fb"), "ok", { html: "Cada casilla de <code>total</code> es la suma de las dos casillas del <strong>mismo lugar</strong>. Por eso las dos matrices tienen que ser del mismo tamaño… ¿o no?" });
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 5. ¿Y si no son del mismo tamaño? ---------- */
+  var CASOS5 = {
+    chica: { final: [[8, 3], [6, 9]], correcta: "error" },
+    grande: { final: [[8, 3, 10], [6, 9, 2], [5, 7, 4]], correcta: "salta" }
+  };
+  var caso5 = "chica";
+  var bien5 = {};
+  var timers5 = [];
+  var parcial5 = Matriz.crear($("p5-parcial"), copia(PARCIAL), { nombre: "parcial", maximo: GRANDE });
+  var final5 = Matriz.crear($("p5-final"), copia(CASOS5.chica.final), { nombre: "final", maximo: GRANDE });
+  var total5 = Matriz.crear($("p5-total"), [], { nombre: "total", maximo: GRANDE });
+  var fila5 = Lista.crear($("p5-fila"), [], { nombres: ["fila"], capacidad: 3 });
+
+  function cancelar5() {
+    timers5.forEach(clearTimeout);
+    timers5 = [];
+  }
+
+  function preparar5(clave) {
+    cancelar5();
+    caso5 = clave;
+    var fin = CASOS5[clave].final;
+    $("p5-caso").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === clave));
+    });
+    $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", "false");
+      b.classList.remove("btn--bien", "btn--mal");
+      b.disabled = false;
+    });
+    Python.escribir($("p5-codigo"), [
+      "parcial = " + Matriz.texto(PARCIAL),
+      "final = " + Matriz.texto(fin)
+    ].concat(BUCLE_SUMA));
+    Codigo.marcar($("p5-codigo"), { activas: [1] });
+    parcial5.marcar(null);
+    final5.valores(copia(fin));
+    final5.clases(null);
+    total5.valores([]);
+    fila5.valores([]);
+    Codigo.consola($("p5-consola"), []);
+    Pasos.limpiarFeedback($("p5-fb"));
+  }
+
+  function ejecutar5(prediccion, boton) {
+    cancelar5();
+    var caso = CASOS5[caso5];
+    var fin = caso.final;
+    var pre = $("p5-codigo");
+    var acierta = prediccion === caso.correcta;
+    $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b === boton));
+      b.classList.remove("btn--bien", "btn--mal");
+      b.disabled = true;
+    });
+    Codigo.limpiar(pre);
+    total5.valores([]);
+    fila5.valores([]);
+    final5.clases(null);
+    Codigo.consola($("p5-consola"), []);
+    Pasos.limpiarFeedback($("p5-fb"));
+
+    var t = 0;
+    function luego(ms, fn) { t += espera(ms); timers5.push(setTimeout(fn, t)); }
+    var error = null;
+    PARCIAL.forEach(function (fila, f) {
+      if (error) return;
+      var nueva = [];
+      luego(200, function () { fila5.valores([]); parcial5.marcarFila(f); final5.marcarFila(f); });
+      fila.forEach(function (v, c) {
+        if (error) return;
+        if (f >= fin.length || c >= fin[f].length) {
+          error = [f, c];
+          luego(300, function () {
+            Codigo.marcar(pre, { activas: [6] });
+            parcial5.marcar([f, c]);
+            final5.marcar([f, c]);
+            MensajeError.romper(pre, 6, { marca: "final[f][c]" });
+            Codigo.agregar($("p5-consola"), "IndexError: list index out of range");
+            $("p5-consola").lastElementChild.classList.add("consola__linea--error");
+          });
+          return;
+        }
+        var w = fin[f][c];
+        nueva.push(v + w);
+        var valores = nueva.slice();
+        luego(300, function () {
+          Codigo.marcar(pre, { activas: [7] });
+          parcial5.marcar([f, c]);
+          final5.marcar([f, c]);
+          juntar(fila5, valores, { el: parcial5.valor([f, c]), texto: v }, { el: final5.valor([f, c]), texto: w });
+        });
+      });
+      if (error) return;
+      var completa = nueva.slice();
+      luego(420, function () {
+        Codigo.marcar(pre, { activas: [8] });
+        parcial5.marcar(null);
+        final5.marcar(null);
+        total5.agregarFila(completa, function (c) { return fila5.valor(c); });
+      });
+    });
+    luego(600, function () {
+      if (!error) {
+        Codigo.marcar(pre, {});
+        parcial5.marcarFila(null);
+        final5.marcarFila(null);
+        final5.clases(function (p) { return p[0] >= PARCIAL.length || p[1] >= PARCIAL[0].length ? "matriz__celda--apagada" : ""; });
+      }
+      $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+        b.disabled = false;
+        if (b === boton) b.classList.add(acierta ? "btn--bien" : "btn--mal");
+      });
+      var fb = $("p5-fb");
+      var texto;
+      if (caso5 === "chica") {
+        texto = "Los <code>for</code> siguen el tamaño de <code>parcial</code> (3 columnas), pero <code>final</code> tiene 2: <code>final[0][2]</code> no existe y Python se detiene con <code>IndexError</code>.";
+      } else {
+        texto = "¡Sin error! Los <code>for</code> recorren solo lo que tiene <code>parcial</code> (2 × 3): la fila 2 de <code>final</code> (apagada) quedó afuera y Python no avisó. Eso es peor que un error.";
+      }
+      if (acierta) {
+        bien5[caso5] = true;
+        var falta = !bien5.chica || !bien5.grande;
+        Pasos.feedback(fb, "ok", { html: texto + (falta ? " Prueba el otro caso." : " Antes de sumar, revisa que <code>len(parcial) == len(final)</code> y <code>len(parcial[0]) == len(final[0])</code>.") });
+        if (!falta) leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", { html: texto + " Elige la respuesta que viste." });
+      }
+    });
+  }
+
+  /* ---------- 6. El espejo ---------- */
+  var F = [[1, 1, 1], [1, 0, 0], [1, 1, 0], [1, 0, 0]];
+  var RANGOS6 = {
+    bien: { texto: "len(m[f]) - 1, -1, -1", columnas: function (n) { var r = []; for (var c = n - 1; c > -1; c--) r.push(c); return r; } },
+    pasa: { texto: "len(m[f]), 0, -1", columnas: function (n) { var r = []; for (var c = n; c > 0; c--) r.push(c); return r; } },
+    corto: { texto: "len(m[f]) - 1, 0, -1", columnas: function (n) { var r = []; for (var c = n - 1; c > 0; c--) r.push(c); return r; } }
+  };
+  var rango6 = null;
+  var m6 = Matriz.crear($("p6-m"), copia(F), { nombre: "m", reservarDedos: true, maximo: CHICA });
+  var espejo6 = Matriz.crear($("p6-espejo"), [], { nombre: "espejo", reservarDedos: true, maximo: CHICA });
+  var fila6 = Lista.crear($("p6-fila"), [], { nombres: ["fila"], capacidad: 3 });
+  tinta(m6);
+
+  function escribir6() {
+    Python.escribir($("p6-codigo"), Matriz.codigo("m", F).concat([
+      "espejo = []",
+      "for f in range(len(m)):",
+      "    fila = []",
+      "    for c in range(▢):",
+      "        fila.append(m[f][c])",
+      "    espejo.append(fila)"
+    ]), { huecos: ["p6-hueco"] });
+    if (rango6) $("p6-hueco").textContent = RANGOS6[rango6].texto;
+  }
+
+  function trazaEspejo() {
+    if (!rango6) return [];
+    var p = [];
+    p.push({ linea: 6, tipo: "nueva", texto: "<code>espejo</code> empieza vacía." });
+    for (var f = 0; f < F.length; f++) {
+      p.push({ linea: 7, tipo: "forF", f: f, texto: "<code>f</code> es " + f + ": la fila " + f + " del dibujo." });
+      p.push({ linea: 8, tipo: "fila", texto: "Una <code>fila</code> nueva y vacía." });
+      var cols = RANGOS6[rango6].columnas(F[f].length);
+      var nueva = [];
+      for (var k = 0; k < cols.length; k++) {
+        var c = cols[k];
+        p.push({
+          linea: 9, tipo: "forC", f: f, c: c,
+          texto: "<code>c</code> es " + c + (k === 0 ? ": empieza por " + (c === F[f].length - 1 ? "la última columna." : c >= F[f].length ? "¡la columna " + c + "!" : "la columna " + c + ".") : ": un paso a la izquierda.")
+        });
+        if (c >= F[f].length) {
+          p.push({ linea: 10, tipo: "error", f: f, c: c, texto: "<code>m[" + f + "][" + c + "]</code>: la fila " + f + " tiene las columnas 0, 1 y 2. ¡No hay columna " + c + "!" });
+          return p;
+        }
+        nueva.push(F[f][c]);
+        p.push({ linea: 10, tipo: "append", f: f, c: c, v: F[f][c], texto: "<code>m[" + f + "][" + c + "]</code> es " + F[f][c] + ": va al final de <code>fila</code>." });
+      }
+      p.push({
+        linea: 11, tipo: "appendFila", fila: nueva.slice(), parada: true,
+        texto: "<code>fila</code> es la fila " + f + " al revés" + (nueva.length < F[f].length ? ", pero <strong>le falta una</strong>." : ".") + " Se pega abajo de <code>espejo</code>."
+      });
+    }
+    p.push({ linea: 7, tipo: "finF", texto: "Ya no quedan filas." });
+    return p;
+  }
+
+  var traza6 = Traza.crear({
+    codigo: $("p6-codigo"),
+    explicacion: $("p6-explicacion"),
+    ejecutar: $("p6-ejecutar"),
+    reproducir: $("p6-reproducir"),
+    saltar: $("p6-saltar"),
+    reiniciar: $("p6-reiniciar"),
+    generar: trazaEspejo,
+    intervalo: 550,
+    alReiniciar: function () {
+      m6.marcar(null);
+      m6.marcarFila(null);
+      m6.dedos(null);
+      espejo6.valores([]);
+      fila6.valores([]);
+      Pasos.limpiarFeedback($("p6-fb"));
+      var sin = !rango6;
+      ["p6-ejecutar", "p6-reproducir", "p6-saltar"].forEach(function (id) { $(id).disabled = sin; });
+      if (sin) $("p6-explicacion").textContent = "Primero elige qué va en el range.";
+    },
+    alPaso: function (paso) {
+      switch (paso.tipo) {
+        case "nueva": espejo6.valores([]); break;
+        case "forF":
+          m6.marcar(null);
+          m6.marcarFila(paso.f);
+          m6.dedos({ fila: paso.f, columna: null });
+          break;
+        case "fila": fila6.valores([]); break;
+        case "forC":
+          m6.dedos({ columna: paso.c });
+          m6.marcar([paso.f, paso.c]);
+          break;
+        case "append":
+          fila6.agregar(paso.v, m6.valor([paso.f, paso.c]));
+          tintaLista(fila6);
+          break;
+        case "error":
+          m6.marcar([paso.f, paso.c]);
+          MensajeError.romper($("p6-codigo"), 10, { marca: "m[f][c]" });
+          break;
+        case "appendFila":
+          m6.marcar(null);
+          espejo6.agregarFila(paso.fila, function (c) { return fila6.valor(c); });
+          tinta(espejo6);
+          break;
+        case "finF":
+          m6.marcar(null);
+          m6.marcarFila(null);
+          m6.dedos(null);
+          break;
+      }
+    },
+    alTerminar: function () {
+      var fb = $("p6-fb");
+      if (rango6 === "bien") {
+        Pasos.feedback(fb, "ok", { html: "¡La F mira para el otro lado! <code>c</code> fue 2, 1 y 0: el <code>range</code> para en <code>-1</code> porque el final no se incluye. Así, <code>espejo[f][c]</code> es <code>m[f][len(m[f]) - 1 - c]</code>." });
+        leccion.desbloquear();
+      } else if (rango6 === "pasa") {
+        Pasos.feedback(fb, "pista", { html: "💥 <code>IndexError: list index out of range</code>. <code>len(m[f])</code> es 3, pero la última columna es la <strong>2</strong>: hay que empezar en <code>len(m[f]) - 1</code>." });
+      } else {
+        Pasos.feedback(fb, "pista", { html: "Le falta una columna: el <code>range</code> para <strong>antes</strong> del 0, así que la columna 0 nunca entró. Para llegar al 0 hay que parar en <code>-1</code>." });
+      }
+    }
+  });
+
+  function elegir6(clave) {
+    rango6 = clave;
+    $("p6-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === clave));
+    });
+    escribir6();
+    traza6.reiniciar();
+  }
+
+  /* ---------- 7. Las filas se vuelven columnas ---------- */
+  var M7 = [[14, 9, 17], [11, 16, 8]];
+  var orden7 = [];
+  M7.forEach(function (fila, f) { fila.forEach(function (v, c) { orden7.push([f, c]); }); });
+  var paso7 = 0;
+  var fallos7 = 0;
+  var COD7 = Matriz.codigo("m", M7).concat([
+    "t = []",
+    "for c in range(len(m[0])):",
+    "    fila = []",
+    "    for f in range(len(m)):",
+    "        fila.append(0)",
+    "    t.append(fila)",
+    "for f in range(len(m)):",
+    "    for c in range(len(m[0])):",
+    "        t[c][f] = m[f][c]",
+    "print(t)"
+  ]);
+  Python.escribir($("p7-codigo"), COD7);
+  var m7 = Matriz.crear($("p7-m"), copia(M7), { nombre: "m", rotulosFilas: ["Ana", "Luis"], rotulosColumnas: CURSOS, reservarDedos: true, maximo: GRANDE });
+  var t7 = Matriz.crear($("p7-t"), llena(3, 2, 0), { nombre: "t", rotulosFilas: CURSOS, rotulosColumnas: ["Ana", "Luis"], reservarDedos: true, maximo: GRANDE });
+
+  function hechas7() { return orden7.slice(0, paso7); }
+
+  function pintar7() {
+    var pre = $("p7-codigo");
+    var listo = paso7 >= orden7.length;
+    Codigo.marcar(pre, { activas: listo ? [13] : [12] });
+    pre.querySelectorAll(".linea").forEach(function (l, i) { l.classList.toggle("linea--hecha", i >= 4 && i <= 9); });
+    var hechas = hechas7();
+    m7.clases(function (p) { return hechas.some(function (h) { return h[0] === p[0] && h[1] === p[1]; }) ? "matriz__celda--hecha" : ""; });
+    t7.clases(function (p) { return hechas.some(function (h) { return h[1] === p[0] && h[0] === p[1]; }) ? "matriz__celda--ok" : ""; });
+    if (listo) {
+      m7.marcar(null);
+      m7.marcarFila(null);
+      t7.marcarColumna(null);
+      m7.dedos(null);
+      $("p7-explicacion").innerHTML = "Listo: cada <code>m[f][c]</code> quedó en <code>t[c][f]</code>.";
+      return;
+    }
+    var f = orden7[paso7][0];
+    var c = orden7[paso7][1];
+    m7.dedos({ fila: f, columna: c });
+    m7.marcar([f, c]);
+    m7.marcarFila(f);
+    t7.marcarColumna(f);
+    $("p7-explicacion").innerHTML = "<code>f</code> es " + f + " y <code>c</code> es " + c + ": <code>m[" + f + "][" + c + "]</code> es <strong>" + M7[f][c] + "</strong> (" + (f ? "Luis" : "Ana") + " en " + CURSOS[c] + "). ¿En qué casilla de <code>t</code> cae? Tócala.";
+  }
+
+  function limpiar7() {
+    paso7 = 0;
+    fallos7 = 0;
+    t7.valores(llena(3, 2, 0));
+    tocables(t7, function (f, c) { return "t[" + f + "][" + c + "]"; }, tocar7);
+    Codigo.consola($("p7-consola"), []);
+    Pasos.limpiarFeedback($("p7-fb"));
+    $("p7-limpiar").hidden = true;
+    pintar7();
+  }
+
+  function tocar7(p) {
+    if (paso7 >= orden7.length) return;
+    var f = orden7[paso7][0];
+    var c = orden7[paso7][1];
+    var fb = $("p7-fb");
+    if (p[0] !== c || p[1] !== f) {
+      fallos7++;
+      var ayuda = "Tocaste <code>t[" + p[0] + "][" + p[1] + "]</code>. La línea dice <code>t[c][f]</code>: la fila de <code>t</code> es <code>c</code> (" + c + ") y la columna es <code>f</code> (" + f + "). " +
+        "La fila de " + (f ? "Luis" : "Ana") + " (en azul) se vuelve la columna " + f + " de <code>t</code>.";
+      Pasos.feedback(fb, "pista", { html: ayuda });
+      if (fallos7 >= 2) t7.marcar([c, f]);
+      return;
+    }
+    fallos7 = 0;
+    t7.marcar(null);
+    t7.cambiar([c, f], M7[f][c], m7.valor([f, c]));
+    paso7++;
+    $("p7-limpiar").hidden = false;
+    if (paso7 >= orden7.length) {
+      pintar7();
+      var salida = Matriz.python(t7.matriz);
+      setTimeout(function () {
+        Codigo.agregar($("p7-consola"), salida);
+        Codigo.volarDesdeLinea($("p7-codigo"), $("p7-consola").lastElementChild, salida, "vuelo--salida");
+      }, espera(450));
+      Pasos.feedback(fb, "ok", { html: "¡Transpuesta! <code>m</code> es de 2 × 3 y <code>t</code>, de 3 × 2. La fila de cada alumno se volvió una <strong>columna</strong>, y cada curso es ahora una <strong>fila</strong>." });
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, "ok", { html: "<code>t[" + c + "][" + f + "] = m[" + f + "][" + c + "]</code>: fila y columna se intercambian. Faltan " + (orden7.length - paso7) + "." });
+      pintar7();
+    }
+  }
+
+  /* ---------- 8. Girar el dibujo ---------- */
+  function transpuesta(m) {
+    var t = llena(m[0].length, m.length, 0);
+    for (var f = 0; f < m.length; f++) for (var c = 0; c < m[0].length; c++) t[c][f] = m[f][c];
+    return t;
+  }
+  function espejo(m) { return m.map(function (fila) { return fila.slice().reverse(); }); }
+  var OBJETIVO = espejo(transpuesta(F));
+  var IZQUIERDA = transpuesta(espejo(F));
+  var d8 = copia(F);
+  var ops8 = [];
+  var dibujo8 = Matriz.crear($("p8-d"), copia(F), { nombre: "d", maximo: GRANDE });
+  var objetivo8 = Matriz.crear($("p8-objetivo"), copia(OBJETIVO), { nombre: "objetivo", maximo: 1.7 });
+  tinta(dibujo8);
+  tinta(objetivo8);
+
+  function escribir8() {
+    var lineas = ["# d es el dibujo de la F, de 4 × 3"];
+    ops8.slice(-6).forEach(function (op) { lineas.push("d = " + op + "(d)"); });
+    Python.escribir($("p8-codigo"), lineas);
+    Codigo.marcar($("p8-codigo"), { activas: [lineas.length - 1] });
+    $("p8-forma").innerHTML = "<strong>" + forma(d8) + "</strong>";
+  }
+
+  function limpiar8() {
+    d8 = copia(F);
+    ops8 = [];
+    dibujo8.valores(copia(F));
+    tinta(dibujo8);
+    escribir8();
+    Pasos.limpiarFeedback($("p8-fb"));
+  }
+
+  function aplicar8(op) {
+    var viejo = d8;
+    // Dónde estaba cada valor antes del cambio, para que vuele a su lugar nuevo
+    var antes = viejo.map(function (fila, f) {
+      return fila.map(function (v, c) { var el = dibujo8.valor([f, c]); return el ? el.getBoundingClientRect() : null; });
+    });
+    d8 = op === "transpuesta" ? transpuesta(viejo) : espejo(viejo);
+    ops8.push(op);
+    dibujo8.valores(copia(d8));
+    tinta(dibujo8);
+    escribir8();
+    d8.forEach(function (fila, f) {
+      fila.forEach(function (v, c) {
+        var desde = op === "transpuesta" ? antes[c][f] : antes[f][fila.length - 1 - c];
+        var el = dibujo8.valor([f, c]);
+        if (desde && el) Codigo.volar(desde, el, String(v), "matriz__vuelo");
+      });
+    });
+    var fb = $("p8-fb");
+    if (iguales(d8, OBJETIVO)) {
+      Pasos.feedback(fb, "ok", { html: "¡Girada a la derecha! Primero <code>transpuesta</code> y después <code>espejo</code>: girar 90° es el <strong>espejo de la transpuesta</strong>." });
+      leccion.desbloquear();
+    } else if (iguales(d8, IZQUIERDA)) {
+      Pasos.feedback(fb, "pista", "Quedó girada, pero hacia la izquierda. El orden importa: prueba al revés.");
+    } else if (iguales(d8, F)) {
+      Pasos.feedback(fb, "pista", { html: "Volvió a ser la F: dos espejos (o dos transpuestas) seguidos se deshacen." });
+    } else if (op === "transpuesta") {
+      Pasos.feedback(fb, "pista", { html: "Las filas pasaron a ser columnas: ahora <code>d</code> es de " + forma(d8) + ". La F quedó acostada, pero no como el objetivo." });
+    } else {
+      Pasos.feedback(fb, "pista", "Cada fila quedó al revés, como en un espejo. Sigue probando.");
+    }
+  }
+
+  /* ---------- 9. Reto: completar la transpuesta ---------- */
+  var PRUEBAS = [[[1, 2, 3], [4, 5, 6]], [[7, 8, 9, 10]], [[1, 2], [3, 4]]];
+  var COD_RETO = [
+    "def transpuesta(m):",
+    "    t = []",
+    "    for c in range(▢):",
+    "        fila = []",
+    "        for f in range(len(m)):",
+    "            fila.append(0)",
+    "        t.append(fila)",
+    "    for f in range(len(m)):",
+    "        for c in range(len(m[0])):",
+    "            ▢ = m[f][c]",
+    "    return t"
+  ];
+  var TEXTOS_A = { filas: "len(m)", columnas: "len(m[0])", t: "len(t)" };
+  var TEXTOS_B = { fc: "t[f][c]", mcf: "m[c][f]", cf: "t[c][f]" };
+  var mReto = Matriz.crear($("reto-m"), copia(PRUEBAS[0]), { nombre: "m", maximo: CHICA });
+  var tReto = Matriz.crear($("reto-t"), [], { nombre: "t", maximo: CHICA });
+
+  /* Lo que hace Python con la función completada: el resultado o el IndexError (y dónde) */
+  function simular(m0, a, b) {
+    var m = copia(m0);
+    var t = [];
+    var filasT = a === "filas" ? m.length : a === "columnas" ? m[0].length : 0;   // len(t) es 0
+    for (var c = 0; c < filasT; c++) {
+      var fila = [];
+      for (var f = 0; f < m.length; f++) fila.push(0);
+      t.push(fila);
+    }
+    for (f = 0; f < m.length; f++) {
+      for (c = 0; c < m[0].length; c++) {
+        var v = m[f][c];
+        var destino = b === "mcf" ? m : t;
+        var i = b === "fc" ? f : c;
+        var j = b === "fc" ? c : f;
+        if (i >= destino.length) return { t: t, error: "IndexError: list index out of range", donde: b === "mcf" ? null : [i, j] };
+        if (j >= destino[i].length) return { t: t, error: "IndexError: list assignment index out of range", donde: b === "mcf" ? null : [i, j] };
+        destino[i][j] = v;
+      }
+    }
+    return { t: t };
+  }
+
+  function escribirReto() {
+    Python.escribir($("reto-codigo"), COD_RETO, { huecos: ["reto-hueco-a", "reto-hueco-b"] });
+  }
+
+  function marcadas() {
+    var a = document.querySelector('input[name="reto-a"]:checked');
+    var b = document.querySelector('input[name="reto-b"]:checked');
+    return { a: a ? a.value : null, b: b ? b.value : null };
+  }
+
+  function limpiarReto() {
+    Codigo.limpiar($("reto-codigo"));
+    $("reto-pruebas").hidden = true;
+    $("reto-pruebas").textContent = "";
+    tReto.valores([]);
+    tReto.marcar(null);
+    Pasos.limpiarFeedback($("reto-fb"));
+    document.querySelectorAll("#paso-reto .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+  }
+
+  function cambiarReto() {
+    var s = marcadas();
+    $("reto-hueco-a").textContent = s.a ? TEXTOS_A[s.a] : "?";
+    $("reto-hueco-b").textContent = s.b ? TEXTOS_B[s.b] : "?";
+    limpiarReto();
+    leccion.listoParaComprobar(!!(s.a && s.b));
+  }
+
+  function entrarReto() {
+    var s = marcadas();
+    if (!s.a || !s.b) {
+      escribirReto();
+      limpiarReto();
+    }
+  }
+
+  function comprobarReto() {
+    var s = marcadas();
+    if (!s.a || !s.b) return false;
+    limpiarReto();
+    var lista = $("reto-pruebas");
+    lista.hidden = false;
+    var todas = true;
+    PRUEBAS.forEach(function (m, k) {
+      var r = simular(m, s.a, s.b);
+      var esperado = Matriz.python(transpuesta(m));
+      var sale = r.error ? "💥 " + r.error.replace("IndexError: ", "IndexError: ") : Matriz.python(r.t);
+      var ok = !r.error && sale === esperado;
+      if (!ok) todas = false;
+      var li = document.createElement("li");
+      if (!ok) li.className = "prueba--mal";
+      li.innerHTML = "<span>transpuesta(" + esc(Matriz.python(m)) + ")</span><span class=\"prueba__res\">" + (ok ? "✓ " : "") + esc(sale) + "</span>";
+      lista.appendChild(li);
+      if (k === 0) {
+        tReto.valores(r.t);
+        if (r.donde) tReto.marcar(r.donde);
+        else if (ok) tReto.clases(function () { return "matriz__celda--ok"; });
+      }
+    });
+    Codigo.marcar($("reto-codigo"), { activas: [9] });
+    var opA = document.querySelector('input[name="reto-a"]:checked').closest(".opcion");
+    var opB = document.querySelector('input[name="reto-b"]:checked').closest(".opcion");
+    opA.classList.add(s.a === "columnas" ? "opcion--correcta" : "opcion--incorrecta");
+    opB.classList.add(s.b === "cf" ? "opcion--correcta" : "opcion--incorrecta");
+    var fb = $("reto-fb");
+    if (todas) {
+      Pasos.feedback(fb, "ok", { html: "¡Las tres bien! <code>t</code> tiene una fila por cada <strong>columna</strong> de <code>m</code> (<code>len(m[0])</code>), y cada <code>m[f][c]</code> va a <code>t[c][f]</code>." });
+      return true;
+    }
+    var pista;
+    if (s.a === "filas") pista = "<code>len(m)</code> cuenta las filas de <code>m</code>, pero <code>t</code> necesita una fila por cada <strong>columna</strong> de <code>m</code>. En la cuadrada funciona de casualidad.";
+    else if (s.a === "t") pista = "Cuando se arma <code>t</code>, todavía está vacía: <code>len(t)</code> es 0 y el <code>for</code> no da ninguna vuelta.";
+    else if (s.b === "fc") pista = "<code>t[f][c]</code> copia cada nota en el <strong>mismo</strong> lugar: en la cuadrada no transpone nada, y en las otras se sale. En <code>t</code>, fila y columna se intercambian.";
+    else pista = "<code>m[c][f]</code> escribe en <code>m</code>, no en <code>t</code>: <code>t</code> se queda con sus ceros (y <code>m</code> se estropea).";
+    Pasos.feedback(fb, "pista", { html: pista });
+    return false;
+  }
+
+  /* ---------- Resumen ---------- */
+  Python.escribir($("resumen-codigo"), [
+    "nuevas = []",
+    "for f in range(len(notas)):",
+    "    fila = []",
+    "    for c in range(len(notas[f])):",
+    "        fila.append(min(notas[f][c] + 2, 20))",
+    "    nuevas.append(fila)",
+    "# suma:        a[f][c] + b[f][c]  (del mismo tamaño)",
+    "# espejo:      for c in range(len(m[f]) - 1, -1, -1)",
+    "# transpuesta: t[c][f] = m[f][c]  (2 × 3 → 3 × 2)",
+    "# girar 90°:   espejo(transpuesta(m))"
+  ]);
+
+  /* ---------- Conexiones ---------- */
+  $("p1-limpiar").addEventListener("click", function () {
+    limpiar1();
+    var primera = $("p1-notas").querySelector(".celda-tocable");
+    if (primera) primera.focus();
+  });
+  $("p3-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegir3(b.getAttribute("data-valor")); });
+  });
+  $("p5-caso").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar5(b.getAttribute("data-valor")); });
+  });
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { ejecutar5(b.getAttribute("data-valor"), b); });
+  });
+  $("p6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegir6(b.getAttribute("data-valor")); });
+  });
+  $("p7-limpiar").addEventListener("click", function () {
+    limpiar7();
+    var primera = $("p7-t").querySelector(".celda-tocable");
+    if (primera) primera.focus();
+  });
+  $("p8-transpuesta").addEventListener("click", function () { aplicar8("transpuesta"); });
+  $("p8-espejo").addEventListener("click", function () { aplicar8("espejo"); });
+  $("p8-limpiar").addEventListener("click", limpiar8);
+  document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // Estado inicial de cada paso
+  limpiar1();
+  escribir3(null);
+  preparar5("chica");
+  escribir6();
+  traza6.reiniciar();
+  limpiar7();
+  limpiar8();
+  escribirReto();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-subir": function () { traza2.detener(); },
+      "paso-tope": function () { cancelar3(); },
+      "paso-sumar": function () { traza4.detener(); },
+      "paso-tamano": function () { cancelar5(); },
+      "paso-espejo": function () { traza6.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
