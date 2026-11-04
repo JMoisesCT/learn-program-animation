@@ -6,10 +6,19 @@ Notas para retomar el trabajo en la siguiente sesión. Lo más reciente, arriba.
 
 Por orden de prioridad:
 
-1. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
+1. **Matrices, completo (6/6)** (ver el registro del 2026-11-04, «Matrices»). Es el último tema publicado: su proyecto termina en «Volver a la portada».
+   **Probar con alumnos** en un móvil de verdad, sobre todo:
+   - si los dedos `f` y `c` que se deslizan por los bordes ayudan a seguir los dos `for` (y «`c` da toda la vuelta en cada `f`, como el minutero»);
+   - la trampa de `fila = []` afuera (Armar una matriz): si los colores «cada color, una lista» se entienden;
+   - si los totales al margen (en naranja) se leen como «lo que se calcula», no como parte de la matriz;
+   - el proyecto en el móvil: la sala va antes que el código (31 líneas) con `order` de CSS.
+   **Para unificar en `matriz.js`** (cada lección lo resolvió en su página): casillas tocables con teclado (Recorridos, Transformar y el proyecto escribieron su propio `tocable`: quitar el `aria-hidden`, `role="button"`, flechas; propuesta `m.tocable(fn, etiqueta)` que sobreviva a `valores()`), `rechazar([f, c])` (sacudir en rojo; el proyecto usa `celda--sacude`), dos filas que son la misma lista (Armar una matriz: colores por lista y `cambiar` que se reparte; propuesta `m.compartir([[0, 1]])` y `m.crecerFila(f, v, origen)`), una transformación animada con cambio de forma (Transformar, paso 8; propuesta `m.transformar(nueva, origen)`), varias marcas a la vez (vecinos, un par de asientos), un dedo en `len` con lugar debajo (`reservarFuera`), `reservarDedos: "fila" | "columna"`, que las clases de `agregarFila` sobrevivan al repintar, `m.mostrar({ indices })`, `Matriz.codigo` con comentarios por fila, y `maximo` según el alto de la pantalla (tres lecciones eligen 2.35–2.45 rem con `matchMedia` en escritorios de 720 px o menos; mejor una variable de CSS). Fuera de `matriz.js`: la consola por trozos para `print(..., end=" ")` (tres copias), `.codigo--largo` en `base.css` (también en Burbuja y Búsqueda binaria) y `opciones-codigo.js` dentro de `.elegir`.
+   **No cabe a 1366×657**: el resumen de Filas y columnas (77 px), los pasos 4 y 7 y el reto de Sumar (45–60 px) y casi todo el proyecto (partes 60–250 px, el reto 300–450 px). Transformar, Recorridos y Armar caben.
+   **Desvíos de las convenciones**: Filas y columnas y Recorridos ponen la consola o el mensaje de error dentro de `lab__visual` o `lab__principal` para caber; Armar una matriz pone el dibujo antes de los botones en el HTML; Sumar escribe `# notas: la libreta de al lado` en vez de la matriz completa; Recorridos parte la condición de la orilla en `dentro_f` / `dentro_c` (en una línea no cabía en el móvil).
+2. **Revisar con alumnos las mejoras de animación** (ver el registro de abajo) y recoger qué ayuda y qué distrae. Lo que aún no se ha probado:
    - con `prefers-reduced-motion` activado en el sistema: no debe haber vuelos ni confeti, y la flecha y los puntos de corriente quedan quietos;
    - en un móvil de verdad (las pruebas fueron con el navegador a 390 px).
-2. **Errores, completo (7/7)** (ver el registro del 2026-11-01, «Errores»). Es el último tema publicado: su proyecto termina en «Volver a la portada». Lo siguiente: decidir el tema que viene (y la zona **Problemas resueltos**, ver abajo).
+3. **Errores, completo (7/7)** (ver el registro del 2026-11-01, «Errores»). Su proyecto enlaza a Matrices.
    **Probar con alumnos** en un móvil de verdad, sobre todo:
    - si el mensaje en inglés con su línea «En español» se lee, y si los rótulos «dónde / qué línea / qué pasó» ayudan a leerlo de abajo arriba;
    - si la ficha roja del error que vuela al `except` (y rebota si no es su tipo) se entiende como «la red atrapa solo su tipo»;
@@ -18,7 +27,7 @@ Por orden de prioridad:
    **Para unificar** (cada lección lo resolvió en su página): el subrayado con `~` (`subrayado` ya está en `mensaje-error.js`; Tipos, Traza, try y el proyecto aún reescriben ese renglón a mano), «Did you forget to import» (Leer un mensaje lo arma a mano), `romper` con un rango `[desde, hasta]` en vez del texto (cae en la primera aparición), los `^` en su propio span tocable, marcar una segunda línea que nombra el mensaje («on line 2», Errores al escribir usa `.linea--mira`), un estado «explotó aquí» en `pila.js` (Traza usa `marco--explota`), `lanzar` con una lista de `except` en orden y que se pueda cancelar, crear el mensaje reservado (invisible) para que la ficha vuele hasta él, la etiqueta «no se ejecuta» que se encima en líneas largas, el escáner de dos fases (Errores al escribir) y la consola con campo, misiones y la emulación de `int()` (Volver a pedir y el proyecto). En `bucle-input.js`: no recortar los espacios del dato (el mensaje debería decir `' veinte'`), cambiar la pregunta entre vueltas, terminar cuando el programa se corta por un error y esperar a las animaciones antes de pedir otro dato.
    **No cabe a 1366×657**: casi todos los pasos piden bajar entre 30 y 200 px tras mostrar un mensaje; el reto de Volver a pedir y el del proyecto (26 líneas), más.
    **Desvíos de las convenciones**: Leer un mensaje usa un cuarto grupo `lab__arreglo` (opciones bajo el código en escritorio, después del mensaje en el móvil).
-3. **Problemas resueltos: piloto con 2 casos** (ver el registro del 2026-11-01, «Problemas resueltos» y la sección en CLAUDE.md). **Probar con alumnos** antes de escribir más casos:
+4. **Problemas resueltos: piloto con 2 casos** (ver el registro del 2026-11-01, «Problemas resueltos» y la sección en CLAUDE.md). **Probar con alumnos** antes de escribir más casos:
    - si la página larga que se lee bajando (caso → conceptos → idea → código → ejecución → preguntas) se sigue, o si prefieren la ejecución antes;
    - si usan la barra de tiempo para rebobinar, los rombos de capítulos y los datos de entrada preparados, o solo tocan ▶;
    - si el rastro de las variables (valores tachados) y el mapa de calor de las líneas ayudan o distraen;
@@ -26,7 +35,7 @@ Por orden de prioridad:
    - con los casos básicos (03 y 04): si un alumno que recién vio Variables sigue el caso entero, y si «¿Siempre cierra la cuenta?» y «¿Y si sale más de 20?» se entienden como el motivo para aprender `if`.
    Siguientes casos básicos (propuestos al autor, sin condicionales ni bucles): el cronómetro de la maratón y el número al revés. Más grandes («Próximamente» en el catálogo): el torneo del salón y el mensaje secreto; también los asientos del cine, el dígito verificador del DNI y las Torres de Hanói.
    **En el móvil, el código del reproductor no se desplaza de lado**: una línea de más de unos 38 caracteres llega a las barras del mapa de calor. Los casos 03 y 04 acortaron sus líneas (y el 04 achica la letra en su página); conviene una solución en `problemas.css` (desplazar el código de lado o angostar la columna del mapa de calor).
-4. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
+5. **Otras estructuras, completo (7/7)** (ver el registro del 2026-10-31, «Otras estructuras»). Va entre Listas y Búsquedas: el tres en raya enlaza a Tuplas y el proyecto de la votación, a Búsquedas.
    **Probar con alumnos** en un móvil de verdad, sobre todo:
    - si la clave colgada encima del casillero (en vez del número) se entiende como «buscar por nombre»;
    - si la bolsa de fichas sueltas transmite «sin orden» y el rebote de un repetido se ve;
@@ -97,6 +106,21 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Para los casos de Problemas resueltos, la prueba ya está en el repositorio: `node herramientas/probar-caso.js <caso>` (y `catalogo`). Para las lecciones, unos scripts sueltos (no guardados) recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-04 · Matrices: 6 lecciones
+
+Tema nuevo después de Errores (el plan está en CLAUDE.md, «Plan: Matrices»): matrices de números de cualquier tamaño, a partir de la cuadrícula de 3×3 de Listas dentro de listas. Primero la pieza compartida:
+- **`assets/js/matriz.js`** (`Matriz.crear`, CSS en `base.css` bajo `.matriz`): una tabla en CSS grid con `subgrid` (cada fila es un elemento), el número de fila a la izquierda y el de columna encima, rótulos opcionales (alumnos y cursos), casillas que se achican para caber a lo ancho (8 columnas en 390 px; se mide con `offsetWidth` porque una fila que entra está escalada), `marcar` con casilla fantasma roja si se sale, `marcarFila`, `marcarColumna`, `clases`, dedos `f` y `c` que se deslizan (pueden quedar fuera, punteados), `cambiar` con vuelo, `agregarFila` / `quitarFila` y totales al margen (`totales`, `total`, `marcarTotal`). `Matriz.python` y `Matriz.codigo`.
+
+Luego las seis lecciones se escribieron en paralelo, una por agente, con las salidas comprobadas con `python3`:
+- **1/6 · Filas y columnas** (`matrices`, 10 pasos): la libreta de 4 × 3 (tocar un alumno ilumina su fila y su línea del código; un curso, su columna), `notas[f][c]` con tres misiones, `len` de filas y columnas, cambiar `f` y `c` de lugar (otra nota sin aviso o `IndexError`), los dos dedos que recorren (`print` corre 12 veces), imprimir como tabla con `end=" "`, sin índices, ¿hace falta la posición? y un reto de 3 × 5.
+- **2/6 · Armar una matriz** (`matrices-crear`, 10 pasos): armarla a mano con tres botones de código (cada lista con su color), con dos `for`, del tamaño que quieras, la trampa de `fila = []` afuera, `[[0] * 4] * 3`, ¿tres listas o una?, la tabla de multiplicar, leer la libreta con `BucleInput` y el reto de la identidad.
+- **3/6 · Sumar por filas y por columnas** (`matrices-sumas`, 9 pasos): una fila es una lista (`sum`), el promedio de cada alumno, una columna con `c` fijo, el promedio de cada curso, el total, la más alta y dónde está (`return mejor_f, mejor_c`), aprobados por curso (¿qué `for` va afuera?) y el reto del curso más difícil, probado en tres libretas.
+- **4/6 · Diagonales y vecinos** (`matrices-recorridos`, 11 pasos): tocar la diagonal del cuadrado mágico de Durero, un solo `for`, la otra diagonal, por columnas, los cuatro vecinos, más arriba de la fila 0 (`-1` mira la otra orilla sin error), más abajo de la última (`IndexError`), revisar antes de mirar, las cimas de un mapa (con una meseta de dos 5) y el reto de contarlas (las 27 combinaciones comprobadas).
+- **5/6 · Transformar una matriz** (`matrices-transformar`, 10 pasos): dos puntos para todos (tocar cada nota), fila por fila, sin pasar de 20 (`min`), parcial + final, ¿y si no son del mismo tamaño?, el espejo de una F de 0 y 1, las filas se vuelven columnas (el alumno toca dónde cae `t[c][f]`), girar el dibujo con `transpuesta` y `espejo` y el reto de la transpuesta.
+- **6/6 · Proyecto: la sala de cine** (`matrices-proyecto`, 8 pasos): vender entradas tocando la sala, cinco partes (dibujar con `"ABCDE"[f]`, `reservar`, ¿ese asiento existe? con `try`, libres, dos juntos) y la taquilla completa (31 líneas) con `BucleInput` y cinco misiones; su salida coincide con python3.12 en 5 juegos de entradas.
+
+Después, en `matriz.js` y `base.css`: la casilla fantasma de una columna que se sale ya no queda angosta en la columna de los totales, la casilla marcada se ve aunque tenga una clase, los totales largos (`12.5`) achican su letra y un dedo con nombre largo abre más lugar a la izquierda. Portada con la tarjeta del tema y «Siguiente: Matrices →» en el proyecto de Errores. Probado con Playwright a 1366×657, 1280×800 y 390×844 (también con movimiento reducido): sin errores de JavaScript ni desborde horizontal.
 
 ### 2026-11-02 · Problemas resueltos: tres casos más de Condicionales y textos revisados
 
