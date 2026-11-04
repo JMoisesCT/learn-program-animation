@@ -398,6 +398,8 @@
           capaDedos.appendChild(d);
         }
         d.textContent = dato.nombre;
+        // Un nombre largo (fila, asiento) abre más lugar a la izquierda
+        if (eje === "fila") el.style.setProperty("--matriz-dedo-ancho", (d.offsetWidth + 10) + "px");
         var x = posicion(eje, dato.i);
         if (x === null) { d.hidden = true; return; }
         d.hidden = false;
@@ -446,6 +448,10 @@
         t.textContent = v === undefined || v === null ? "" : String(v);
         t.classList.toggle("matriz__total--vacio", t.textContent === "");
       });
+      // Un total largo (12.5 bajo una columna) achica la letra de los totales para caber
+      var largo = 1;
+      el.querySelectorAll(".matriz__total").forEach(function (t) { largo = Math.max(largo, t.textContent.length); });
+      el.style.setProperty("--matriz-letra-total", Math.min(0.36, 0.9 / (largo * 0.62 + 0.4)).toFixed(3));
     }
 
     function totales(o) {
