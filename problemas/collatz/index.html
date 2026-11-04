@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La conjetura de Collatz · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: un while que aplica una regla (par: la mitad; impar: el triple más uno) hasta llegar a 1, cuenta los pasos y recuerda el número más grande, con su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    :root { --baja: #0e7490; --sube: #d9661f; --oro: #e2b33c; --meta: #0b7a3e; }
+    .t-baja { color: var(--baja); } .t-sube { color: #b4510f; }
+
+    /* ---------- La hoja de Beto (bloque 1) ---------- */
+    .ticket__cadena { margin: var(--esp-2) 0 0; padding-top: var(--esp-2); border-top: 1px dashed #c9c2b2; font: 700 0.72rem/1.5 var(--fuente-codigo); color: var(--tinta); text-align: center; }
+    .ticket__cadena .ok { color: var(--meta); }
+    .ticket__cadena--lucia { color: var(--tinta-suave); font-weight: 400; }
+    .reglas-collatz { margin: 0.1rem 0 0.4rem; padding-left: 1.3rem; }
+    .reglas-collatz li { margin: 0.1rem 0; }
+    .reglas-collatz span { display: block; color: var(--tinta-suave); font-size: 0.88em; }
+    @media (min-width: 1180px) { #caso .enunciado__hojas { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
+
+    /* ---------- La escena: la montaña rusa ---------- */
+    .mr { --mr-dur: 450ms; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--esp-2); }
+    .mr__arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2); }
+    .mr__n { display: inline-flex; align-items: baseline; gap: 0.4em; padding: 0.15em 0.75em; border-radius: 999px; background: var(--azul-tinta-suave); color: var(--azul-tinta); font: 700 var(--texto-xs) var(--fuente-codigo); white-space: nowrap; }
+    .mr__n b { font-size: var(--texto-md); }
+    .mr__cuenta { min-height: 1.7rem; max-width: 100%; padding: 0.1em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 200ms; }
+    .mr__cuenta:empty { opacity: 0; }
+    .mr__cuenta--baja { border-color: var(--baja); color: var(--baja); }
+    .mr__cuenta--sube { border-color: var(--sube); color: #a8460c; }
+    .mr__graf { position: relative; flex: 1 1 auto; min-height: 12rem; border-radius: 10px; background: #fff; border: 1.5px solid var(--papel-borde); overflow: hidden; }
+    .mr__svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+    .mr__rejilla { stroke: #ece5d4; stroke-width: 1; }
+    .mr__eje { stroke: var(--tinta); stroke-width: 1.5; }
+    .mr__txt { font: 700 10px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .mr__seg { stroke-width: 2.6; stroke-linecap: round; }
+    .mr__seg--baja { stroke: var(--baja); }
+    .mr__seg--sube { stroke: var(--sube); }
+    .mr__seg--nuevo { stroke-dasharray: 1; stroke-dashoffset: 1; animation: mr-traza var(--mr-dur) ease forwards; }
+    @keyframes mr-traza { to { stroke-dashoffset: 0; } }
+    .mr__pt { fill: #fff; stroke: var(--tinta-suave); stroke-width: 1.2; }
+    .mr__pt--meta { fill: var(--meta); stroke: #fff; stroke-width: 2; }
+    .mr__meta-txt { font: 700 11px var(--fuente-codigo); fill: var(--meta); }
+    .mr__mayor { stroke: var(--oro); stroke-width: 2; stroke-dasharray: 5 4; transition: transform var(--mr-dur) ease; }
+    .mr__mayor-txt { font: 700 10.5px var(--fuente-codigo); fill: #8a6400; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; transition: transform var(--mr-dur) ease; }
+    .mr__cima { fill: none; stroke: var(--oro); stroke-width: 2.5; transition: transform var(--mr-dur) ease; }
+    .mr__carro { transition: transform var(--mr-dur) ease; }
+    .mr__carro-giro { transform-origin: 0 0; transition: transform var(--mr-dur) ease; }
+    .mr__pie { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-1) var(--esp-3); font: 700 0.72rem var(--fuente); color: var(--tinta-suave); }
+    .mr__ley { display: inline-flex; align-items: center; gap: 0.35em; white-space: nowrap; }
+    .mr__ley i { display: inline-block; width: 1.2em; height: 0.3em; border-radius: 2px; }
+    .mr__ley code { padding: 0 !important; background: none !important; color: inherit !important; }
+    .mr__aviso { margin: 0 !important; min-height: 2.6em; font: 700 0.8rem/1.3 var(--fuente) !important; color: var(--tinta); text-align: center; }
+    .mr__aviso--baja { color: var(--baja); }
+    .mr__aviso--sube { color: #a8460c; }
+    .mr__aviso--oro { color: #7a5800; }
+    .mr__aviso--ok { color: var(--meta); }
+    .mr--quieto, .mr--quieto * { transition: none !important; animation: none !important; }
+
+    /* La consola: print(n, end=" ") deja los números en la misma línea */
+    #reproductor .rep__salida { white-space: pre-wrap; word-break: break-word; }
+    #reproductor .rep__salida-linea { display: inline; }
+
+    /* ---------- Demos (bloque 2) ---------- */
+    .concepto .codigo.codigo--chico { font-size: 0.78rem; line-height: 1.55; }
+    .parejas { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.35rem; min-height: 3.4rem; margin: var(--esp-2) 0; }
+    .pareja { display: grid; gap: 3px; padding: 3px; border-radius: 7px; border: 1.5px solid #b9d9e0; background: #eef7f9; }
+    .pareja i, .suelta i { display: block; width: 0.8rem; height: 0.8rem; border-radius: 50%; background: var(--baja); }
+    .suelta { display: grid; padding: 3px; border-radius: 7px; border: 1.5px dashed var(--sube); background: #fdf0e6; }
+    .suelta i { background: var(--sube); }
+    .cuenta-grande .c-par { color: var(--baja); }
+    .cuenta-grande .c-impar { color: #b4510f; }
+    .regla-sale { margin: 0 0 var(--esp-2) !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+
+    .tira { display: flex; flex-wrap: wrap; gap: 0.25rem; min-height: 3.6rem; align-content: flex-start; margin: var(--esp-2) 0; }
+    .tira span { display: grid; place-items: center; min-width: 1.7rem; height: 1.6rem; padding: 0 0.3em; border-radius: 6px; border: 1.5px solid var(--papel-borde); background: var(--papel); font: 700 0.74rem var(--fuente-codigo); color: var(--tinta); }
+    .tira .baja { border-color: #9ccbd5; background: #eef7f9; color: var(--baja); }
+    .tira .sube { border-color: #f1b689; background: #fdf0e6; color: #a8460c; }
+    .tira .ahora { box-shadow: 0 0 0 2.5px var(--azul-tinta); }
+    .tira .uno { border-color: var(--meta); background: #e2f4e9; color: var(--meta); }
+    .tira .gris { color: #b0a894; border-style: dashed; }
+    .tira .es-mayor { border-color: var(--oro); background: #fff7dc; color: #6b4d00; }
+    .vueltas-txt { margin: 0 0 var(--esp-2) !important; min-height: 4.2em; font-size: var(--texto-xs) !important; }
+    .vueltas-txt code { white-space: nowrap; }
+    .cajitas { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: 0 0 var(--esp-2); }
+    .cajita { display: inline-flex; align-items: baseline; gap: 0.4em; padding: 0.2em 0.6em; border: 2px solid var(--papel-borde); border-radius: 8px; background: #fff; font: 700 var(--texto-xs) var(--fuente-codigo); min-width: 5.5rem; transition: border-color 250ms, box-shadow 250ms; }
+    .cajita code { padding: 0 !important; background: none !important; color: var(--azul-tinta) !important; font-weight: 400; }
+    .cajita--cambia { border-color: var(--oro); box-shadow: 0 0 0 3px rgba(226, 179, 60, 0.3); }
+    .fila-botones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: auto; }
+
+    /* ---------- Detalles (bloque 5) ---------- */
+    .horizonte { display: block; width: 100%; height: auto; margin: var(--esp-1) 0; }
+    .horizonte__barra { fill: #c9d6e6; }
+    .horizonte__barra--elegido { fill: var(--azul-tinta); }
+    .horizonte__barra--vecino { fill: #8fa6c7; }
+    .horizonte__txt { font: 700 9px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .horizonte__dato { font: 700 11px var(--fuente-codigo); fill: var(--azul-tinta); }
+    .num-grande { margin: 0 0 0.3rem !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .num-grande strong { font: 700 var(--texto-xl) var(--serif); color: var(--azul-tinta); }
+    .vecinos { margin: 0 0 var(--esp-2) !important; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+    .vecinos b { color: var(--azul-tinta); }
+    .concepto .codigo.codigo--version { font-size: 0.76rem; line-height: 1.5; padding: var(--esp-2) 0; margin: var(--esp-2) 0; }
+    .codigo .linea.linea--cambio { background: rgba(255, 128, 64, 0.22); box-shadow: inset 3px 0 0 #ff9a5c; }
+    .consola-mini { margin: 0 0 var(--esp-2); padding: var(--esp-2); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 0.74rem/1.45 var(--fuente-codigo); white-space: pre-wrap; word-break: break-word; overflow: hidden; }
+    .consola-mini .mal { color: #ffb38a; }
+    .consola-mini .error { color: #ff9a9a; }
+    .consola-mini--corre { min-height: 4.4em; max-height: 4.4em; display: flex; flex-direction: column; justify-content: flex-end; }
+    .b-texto { margin: 0 0 var(--esp-2) !important; font-size: var(--texto-xs) !important; }
+    .ciclo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin: 0 0 var(--esp-2); font: 700 0.88rem var(--fuente-codigo); }
+    .ciclo span { padding: 0.05em 0.4em; border-radius: 6px; border: 1.5px solid var(--papel-borde); background: var(--papel); }
+    .ciclo .sube { border-color: #f1b689; background: #fdf0e6; color: #a8460c; }
+    .ciclo .baja { border-color: #9ccbd5; background: #eef7f9; color: var(--baja); }
+    .ciclo em { font-style: normal; color: var(--tinta-suave); }
+    .consola-mini--parada { max-height: none; }
+    .contador { margin: 0 0 var(--esp-2) !important; font-size: var(--texto-xs) !important; color: var(--tinta-suave); }
+    .contador b { font: 700 var(--texto-md) var(--fuente-codigo); color: var(--lapiz); }
+
+    /* ---------- 6. ¿Siempre llega a 1? ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .probar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); }
+    .probar label { font-weight: 700; font-size: var(--texto-xs); }
+    .probar input { width: 7.5rem; min-height: 2.3rem; padding: 0 0.6rem; border: 2px solid var(--papel-borde); border-radius: 8px; background: var(--papel); font: 700 var(--texto-sm) var(--fuente-codigo); color: var(--tinta); }
+    .probar input:focus-visible { outline: 3px solid var(--azul-tinta); outline-offset: 1px; }
+    .probar .chips-elegir { margin: 0; }
+    .montana { display: block; width: 100%; height: auto; }
+    .montana__eje { stroke: var(--tinta); stroke-width: 1.5; }
+    .montana__rejilla { stroke: #ece5d4; stroke-width: 1; }
+    .montana__txt { font: 700 9px var(--fuente-codigo); fill: var(--tinta-suave); }
+    .montana__cima { font: 700 10px var(--fuente-codigo); fill: #8a6400; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+    .lectura { margin: 0 !important; min-height: 2.6em; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta); }
+    .lectura b { color: var(--azul-tinta); }
+    .lectura .aviso { color: var(--lapiz); }
+
+    /* ---------- El reproductor y el diagrama ---------- */
+    #reproductor .rep__codigo .codigo { font-size: 0.8rem; line-height: 1.34; padding: var(--esp-2) 0; }
+    #reproductor .rep__codigo .codigo .linea { min-height: 1.34em; }
+    #reproductor .rep__vars { flex-shrink: 0; }
+    #reproductor .rep__calor--nunca .rep__calor-num { color: #7d8794; font-weight: 400; }
+    @media (min-width: 1180px) {
+      #reproductor .rep__cuerpo { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr) minmax(11rem, 0.55fr); }
+    }
+    #idea .recorrido { margin-top: var(--esp-2); }
+    #flujo .flujo__etiqueta { transform: translateY(-4px); }
+    #flujo .flujo__nodo { padding-top: 0.28em; padding-bottom: 0.28em; }
+    #flujo .flujo__nodo--decision { padding-top: 0.7em; padding-bottom: 0.7em; }
+    #idea .recorrido .btn { min-height: 2.6rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
+    @media (max-width: 640px) {
+      #reproductor .rep__codigo .codigo { font-size: 0.78rem; }
+      .mr__pie { font-size: 0.66rem; }
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #siempre .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #siempre .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Bucles</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#siempre"><span>6 · ¿Siempre llega a 1?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Bucles</p>
+          <h1>La conjetura de Collatz</h1>
+          <p class="caso-bajada">Un <code>while</code> que repite una regla hasta llegar a 1… y nadie sabe si siempre llega.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 3 de 5"><span class="estrellas__llenas">★★★</span>☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/bucles/index.html">while</a></li>
+              <li><a href="../../lecciones/variables/formulas/index.html">// y %</a></li>
+              <li><a href="../../lecciones/bucles/condiciones/index.html">decidir en cada vuelta</a></li>
+              <li><a href="../../lecciones/bucles/acumular/index.html">contar</a></li>
+              <li><a href="../../lecciones/bucles/anidados/index.html">print con end</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Una montaña rusa de números que sube y baja hasta llegar a 1, con un carrito en la cima">
+          <rect x="8" y="14" width="224" height="178" rx="6" fill="#fff" stroke="#e3d9c3" stroke-width="2"/>
+          <g stroke="#ece5d4" stroke-width="1"><line x1="22" y1="48" x2="222" y2="48"/><line x1="22" y1="108" x2="222" y2="108"/><line x1="22" y1="168" x2="222" y2="168"/></g>
+          <line x1="24" y1="30" x2="24" y2="170" stroke="#1f2a44" stroke-width="1.5"/>
+          <line x1="24" y1="170" x2="224" y2="170" stroke="#1f2a44" stroke-width="1.5"/>
+          <line x1="24" y1="48.4" x2="222" y2="48.4" stroke="#e2b33c" stroke-width="2" stroke-dasharray="5 4"/>
+          <g stroke-width="3" stroke-linecap="round">
+            <line x1="30.0" y1="151.9" x2="41.5" y2="117.4" stroke="#d9661f"/>
+            <line x1="41.5" y1="117.4" x2="53.0" y2="142.7" stroke="#0e7490"/>
+            <line x1="53.0" y1="142.7" x2="64.5" y2="89.8" stroke="#d9661f"/>
+            <line x1="64.5" y1="89.8" x2="76.0" y2="128.9" stroke="#0e7490"/>
+            <line x1="76.0" y1="128.9" x2="87.5" y2="48.4" stroke="#d9661f"/>
+            <line x1="87.5" y1="48.4" x2="99.0" y2="108.2" stroke="#0e7490"/>
+            <line x1="99.0" y1="108.2" x2="110.5" y2="138.1" stroke="#0e7490"/>
+            <line x1="110.5" y1="138.1" x2="122.0" y2="76.0" stroke="#d9661f"/>
+            <line x1="122.0" y1="76.0" x2="133.5" y2="122.0" stroke="#0e7490"/>
+            <line x1="133.5" y1="122.0" x2="145.0" y2="145.0" stroke="#0e7490"/>
+            <line x1="145.0" y1="145.0" x2="156.5" y2="156.5" stroke="#0e7490"/>
+            <line x1="156.5" y1="156.5" x2="168.0" y2="131.2" stroke="#d9661f"/>
+            <line x1="168.0" y1="131.2" x2="179.5" y2="149.6" stroke="#0e7490"/>
+            <line x1="179.5" y1="149.6" x2="191.0" y2="158.8" stroke="#0e7490"/>
+            <line x1="191.0" y1="158.8" x2="202.5" y2="163.4" stroke="#0e7490"/>
+            <line x1="202.5" y1="163.4" x2="214.0" y2="165.7" stroke="#0e7490"/>
+          </g>
+          <circle cx="214" cy="165.7" r="4.5" fill="#0b7a3e" stroke="#fff" stroke-width="1.5"/>
+          <text x="214" y="157" text-anchor="middle" font-family="monospace" font-size="11" font-weight="700" fill="#0b7a3e">1</text>
+          <text x="30" y="166" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#556074">7</text>
+          <g transform="translate(87.5 48.4)">
+            <rect x="-10" y="-15" width="20" height="10" rx="3" fill="#d6453d"/>
+            <rect x="-6" y="-19" width="12" height="5" rx="2" fill="#f2a29b"/>
+            <circle cx="-5.5" cy="-3.5" r="3" fill="#1f2a44"/><circle cx="5.5" cy="-3.5" r="3" fill="#1f2a44"/>
+          </g>
+          <text x="102" y="42" font-family="monospace" font-size="11" font-weight="700" fill="#8a6400">52</text>
+          <text x="214" y="34" text-anchor="end" font-family="Georgia, serif" font-size="13" font-style="italic" fill="#b4400e">¿siempre?</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>En clase, el profesor de Beto propone un juego: elige un número y aplica una regla. Con el resultado, aplícala otra vez, y otra, <span class="resalta">hasta que salga 1</span>.</p>
+            <p>Beto prueba con 6 y llega a 1 en un rato. Lucía elige <strong>27</strong>… y llena la hoja de cuentas sin llegar. <span class="nota-margen">¿Cuántos pasos da cada número? ¿Hasta dónde sube?</span></p>
+            <div class="ticket" aria-label="La hoja de Beto">
+              <h3>LA HOJA DE BETO</h3>
+              <div class="ticket__fila"><span>1. Si es par</span><span>÷ 2</span></div>
+              <div class="ticket__fila"><span>2. Si es impar</span><span>× 3 + 1</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>Beto: 6</span><span>8 pasos</span></div>
+              <p class="ticket__cadena">6 → 3 → 10 → 5 → 16 → 8 → 4 → 2 → <span class="ok">1 ✓</span></p>
+              <p class="ticket__cadena ticket__cadena--lucia">Lucía: 27 → 82 → 41 → 124 → 62 → 31 → 94 → … ¿?</p>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dado un número <code>n</code>, aplique esta regla una y otra vez <strong>hasta llegar a 1</strong>:</p>
+            <ol class="reglas-collatz">
+              <li>Si <code>n</code> es <strong>par</strong>, se divide entre 2. <span>Con 10: 10 // 2 = 5.</span></li>
+              <li>Si <code>n</code> es <strong>impar</strong>, se multiplica por 3 y se le suma 1. <span>Con 5: 3 * 5 + 1 = 16.</span></li>
+            </ol>
+            <p>Debe imprimir cada número que sale, <strong>cuántos pasos</strong> dio y el <strong>número más grande</strong> al que llegó.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>n</code>: un número entero mayor o igual que 1.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Tres líneas: los números que salen, separados por un espacio; <code>Pasos: …</code> (cuántas veces se aplicó la regla) y <code>Mayor: …</code> (el más grande, contando el primero).</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>n = 6</td><td>3 10 5 16 8 4 2 1
+Pasos: 8
+Mayor: 16</td></tr>
+                <tr><td>n = 12</td><td>6 3 10 5 16 8 4 2 1
+Pasos: 9
+Mayor: 16</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Par o impar? <code>n % 2</code></h3>
+            <p><code>%</code> da lo que sobra al dividir. Entre 2 solo puede sobrar 0 o 1: <strong>0 es par</strong> y 1 es impar.</p>
+            <div class="control-fila">
+              <label for="d1-n">n = <span id="d1-num">7</span></label>
+              <input type="range" id="d1-n" min="1" max="20" value="7">
+            </div>
+            <div class="parejas" id="d1-parejas" aria-hidden="true"></div>
+            <p class="cuenta-grande" id="d1-cuenta" aria-live="polite"></p>
+            <p class="regla-sale" id="d1-regla" aria-live="polite"></p>
+            <p class="nota-margen" style="margin-top:auto">Se agrupan de a dos. Si queda uno suelto, es impar.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Repetir sin saber cuántas veces</h3>
+            <p>Un <code>for</code> con <code>range</code> necesita saber cuántas vueltas dar. Aquí nadie lo sabe: el <code>while</code> repite <strong>mientras</strong> la condición sea True.</p>
+            <pre class="codigo codigo--chico" id="d2-codigo"></pre>
+            <div class="chips-elegir" id="d2-chips" role="group" aria-label="Elige el número inicial">
+              <button type="button" data-n="6" aria-pressed="true">6</button>
+              <button type="button" data-n="7" aria-pressed="false">7</button>
+              <button type="button" data-n="3" aria-pressed="false">3</button>
+            </div>
+            <div class="tira" id="d2-tira" aria-hidden="true"></div>
+            <p class="vueltas-txt" id="d2-txt" aria-live="polite"></p>
+            <div class="fila-botones"><div class="chips-elegir"><button type="button" id="d2-paso">Otra vuelta ▸</button></div></div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>El mayor hasta ahora</h3>
+            <p>Para saber hasta dónde subió, guarda el más grande que viste. Empieza con el primero y <strong>cada número más grande ocupa su lugar</strong>.</p>
+            <div class="tira" id="d3-tira" aria-hidden="true"></div>
+            <div class="cajitas" aria-live="polite">
+              <span class="cajita" id="d3-n"><code>n</code> <span>—</span></span>
+              <span class="cajita" id="d3-mayor"><code>mayor</code> <span>—</span></span>
+            </div>
+            <p class="vueltas-txt" id="d3-txt" aria-live="polite"></p>
+            <div class="fila-botones"><div class="chips-elegir"><button type="button" id="d3-paso">Siguiente ▸</button></div></div>
+            <p class="nota-margen">Es la idea de <a href="../celular/index.html">¿Qué plan de celular me conviene?</a>, ahora dentro de un bucle.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con 6</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>No hace falta saber cuántas vueltas habrá: <strong>se aplica la regla mientras <code>n</code> no sea 1</strong>, y en cada vuelta se cuenta un paso y se mira si hay un mayor nuevo.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Empieza</strong> <code>pasos = 0</code> y <code>mayor = n</code>: todavía no hay pasos y el más grande es el primero.</li>
+              <li data-idea="2"><strong>Repite hasta llegar a 1</strong> <code>while n != 1</code>: no se sabe cuántas vueltas dará.</li>
+              <li data-idea="3"><strong>Aplica la regla</strong> Si es par, la mitad. Si es impar, el triple más uno.</li>
+              <li data-idea="4"><strong>Cuenta y recuerda</strong> Suma un paso, guarda el mayor si hay uno nuevo e imprime <code>n</code>.</li>
+            </ol>
+            <p class="nota-margen">La flecha que vuelve a «¿n ≠ 1?» es el bucle: después de cada vuelta, la pregunta se hace otra vez.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuánto trabajo hace?</h3>
+            <p>No se puede saber sin hacerlo. Aquí están los pasos de cada número del 1 al 100:</p>
+            <svg class="horizonte" id="t-svg" viewBox="0 0 300 118" aria-hidden="true"></svg>
+            <div class="control-fila">
+              <label for="t-n">n = <span id="t-num">27</span></label>
+              <input type="range" id="t-n" min="1" max="100" value="27">
+            </div>
+            <p class="num-grande" aria-live="polite"><strong id="t-pasos">111</strong> <span id="t-pasos-txt">pasos: el while da 111 vueltas</span></p>
+            <p class="vecinos" id="t-vecinos"></p>
+            <p class="nota-margen" style="margin-top:auto">Números vecinos, trabajos muy distintos: para saber cuántas vueltas da, hay que darlas.</p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Dos versiones que fallan</h3>
+            <p>Se parecen mucho al programa, pero cambian una sola cosa. Mira qué imprimen con <code>n = 6</code>:</p>
+            <div class="chips-elegir" id="v-chips" role="group" aria-label="Elige una versión">
+              <button type="button" data-v="0" aria-pressed="true">El programa</button>
+              <button type="button" data-v="1" aria-pressed="false">Con /</button>
+              <button type="button" data-v="2" aria-pressed="false">pasos en el else</button>
+            </div>
+            <pre class="codigo codigo--version" id="v-codigo"></pre>
+            <pre class="consola-mini" id="v-salida" aria-live="polite"></pre>
+            <p class="b-texto" id="v-texto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde</h3>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">n = 0</button>
+              <button type="button" data-b="1" aria-pressed="false">n = -5</button>
+            </div>
+            <div class="ciclo" id="b-ciclo" aria-hidden="true"></div>
+            <p class="b-texto" id="b-texto"></p>
+            <pre class="consola-mini consola-mini--corre" id="b-salida" aria-live="off"></pre>
+            <p class="contador" id="b-contador" aria-live="polite"></p>
+            <div class="fila-botones"><button type="button" class="btn btn-secundario" id="b-correr">▶ Correr el programa</button></div>
+            <p class="nota-margen">Por eso la Entrada pide <code>n</code> mayor o igual que 1.</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Siempre llega a 1? -->
+    <section class="panel" id="siempre">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Siempre llega a 1?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>Con el programa, el 27 de Lucía llegó a 1, aunque tardó 111 pasos. ¿Pasará lo mismo con <em>cualquier</em> número?</p>
+            <p><strong>Nadie lo sabe.</strong> Es la <strong>conjetura de Collatz</strong>: Lothar Collatz la propuso en 1937. En 2020 se comprobó con computadoras que todos los números hasta 2<sup>68</sup> (unos 295 trillones) llegan a 1.</p>
+            <p>Pero nadie ha demostrado que pase con <em>todos</em>: podría haber un número enorme que suba para siempre o que caiga en un ciclo, como el −5 del bloque 5.</p>
+            <p class="nota-margen"><span class="resalta">Este programa es un <code>while</code> que nadie sabe si termina siempre.</span> Hay problemas que se explican en un minuto y siguen sin resolverse.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="probar">
+              <label for="g-n">Prueba un número:</label>
+              <input type="number" id="g-n" min="1" max="100000" step="1" value="27" inputmode="numeric">
+              <div class="chips-elegir" id="g-chips" role="group" aria-label="Números para probar">
+                <button type="button" data-n="27" aria-pressed="true">27</button>
+                <button type="button" data-n="97" aria-pressed="false">97</button>
+                <button type="button" data-n="871" aria-pressed="false">871</button>
+                <button type="button" data-n="77031" aria-pressed="false">77031</button>
+              </div>
+            </div>
+            <svg class="montana" id="g-svg" aria-hidden="true"></svg>
+            <p class="lectura" id="g-lectura" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../primo/index.html">← <span class="largo">Caso anterior: </span>¿Es primo?</a>
+          <a class="btn btn-primario" href="../vuelto/index.html"><span class="largo">Siguiente caso: </span>El vuelto de la cafetería →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  /* La regla, como la hace Python (también con negativos: -5 % 2 da 1) */
+  function esPar(n) { return ((n % 2) + 2) % 2 === 0; }
+  function regla(n) { return esPar(n) ? Math.floor(n / 2) : 3 * n + 1; }
+  // Los números que salen desde n hasta llegar a 1 (n incluido)
+  function recorrido(n) {
+    var s = [n];
+    while (n !== 1) { n = regla(n); s.push(n); }
+    return s;
+  }
+  function pasosDe(n) { return recorrido(n).length - 1; }
+  function mayorDe(s) { var m = s[0]; for (var k = 1; k < s.length; k++) if (s[k] > m) m = s[k]; return m; }
+  function plural(k, uno, varios) { return k + " " + (k === 1 ? uno : varios); }
+
+  // Un tope «redondo» para la escala vertical: 16 → 20, 52 → 60, 9232 → 10000
+  function techo(v) {
+    v = Math.max(4, v * 1.06);
+    var e = Math.pow(10, Math.floor(Math.log10(v)));
+    var pasos = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+    for (var k = 0; k < pasos.length; k++) if (pasos[k] * e >= v) return Math.round(pasos[k] * e);
+    return 10 * e;
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "n = " + d.n,
+      "pasos = 0",
+      "mayor = n",
+      "while n != 1:",
+      "    if n % 2 == 0:",
+      "        n = n // 2",
+      "    else:",
+      "        n = 3 * n + 1",
+      "    pasos = pasos + 1",
+      "    if n > mayor:",
+      "        mayor = n",
+      '    print(n, end=" ")',
+      "print()",
+      'print("Pasos:", pasos)',
+      'print("Mayor:", mayor)'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 2, 3, 3, 3, 3, 4, 4, 4, 4, 0, 0, 0];
+
+  /* ---------- 2. Demos ---------- */
+  // ¿Par o impar?
+  function pintarD1() {
+    var n = Number($("d1-n").value), r = n % 2;
+    $("d1-num").textContent = n;
+    var cont = $("d1-parejas");
+    cont.textContent = "";
+    for (var k = 0; k < Math.floor(n / 2); k++) {
+      var p = document.createElement("span");
+      p.className = "pareja";
+      p.innerHTML = "<i></i><i></i>";
+      cont.appendChild(p);
+    }
+    if (r) { var s = document.createElement("span"); s.className = "suelta"; s.innerHTML = "<i></i>"; cont.appendChild(s); }
+    $("d1-cuenta").innerHTML = n + " % 2 = " + r + " → " + (r ? '<span class="c-impar">impar</span>' : '<span class="c-par">par</span>');
+    $("d1-regla").innerHTML = r
+      ? 'La regla: <span class="t-sube">3 * ' + n + " + 1 = " + (3 * n + 1) + "</span>"
+      : 'La regla: <span class="t-baja">' + n + " // 2 = " + n / 2 + "</span>";
+  }
+  $("d1-n").addEventListener("input", pintarD1);
+  pintarD1();
+
+  // Repetir sin saber cuántas veces
+  Python.escribir($("d2-codigo"), ["while n != 1:", "    # aplica la regla"]);
+  var d2 = { n: 6, k: 0 };
+  function pintarD2() {
+    var s = recorrido(d2.n), k = d2.k, fin = k >= s.length - 1;
+    var tira = $("d2-tira");
+    tira.textContent = "";
+    for (var m = 0; m <= k; m++) {
+      var c = document.createElement("span");
+      c.textContent = s[m];
+      c.className = (m === 0 ? "" : (esPar(s[m - 1]) ? "baja" : "sube")) + (s[m] === 1 ? " uno" : "") + (m === k ? " ahora" : "");
+      tira.appendChild(c);
+    }
+    if (!fin) { var q = document.createElement("span"); q.className = "gris"; q.textContent = "?"; tira.appendChild(q); }
+    var n = s[k];
+    var txt = "<code>" + n + " != 1</code> es <strong>" + (fin ? "False" : "True") + "</strong>: ";
+    if (fin) txt += "el <code>while</code> termina después de <strong>" + plural(k, "vuelta", "vueltas") + "</strong>. Nadie lo sabía antes de empezar.";
+    else if (k === 0) txt += "entra al <code>while</code>. ¿Cuántas vueltas dará?";
+    else txt += "otra vuelta. Van " + plural(k, "vuelta", "vueltas") + ".";
+    $("d2-txt").innerHTML = txt;
+    $("d2-codigo").querySelectorAll(".linea")[0].classList.add("linea--activa");
+    $("d2-paso").textContent = fin ? "↺ Empezar otra vez" : "Otra vuelta ▸";
+  }
+  $("d2-paso").addEventListener("click", function () {
+    if (d2.k >= recorrido(d2.n).length - 1) d2.k = 0; else d2.k++;
+    pintarD2();
+  });
+  $("d2-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("d2-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      d2.n = Number(b.getAttribute("data-n")); d2.k = 0;
+      pintarD2();
+    });
+  });
+  pintarD2();
+
+  // El mayor hasta ahora
+  var D3 = recorrido(3);   // 3 10 5 16 8 4 2 1
+  var d3 = -1;
+  function pintarD3(animar) {
+    var mayor = null, ant = null, cambia = false;
+    for (var m = 0; m <= d3; m++) {
+      if (m === d3) ant = mayor;
+      if (mayor === null || D3[m] > mayor) { mayor = D3[m]; if (m === d3) cambia = true; }
+    }
+    var tira = $("d3-tira");
+    tira.textContent = "";
+    D3.forEach(function (v, m) {
+      var c = document.createElement("span");
+      c.textContent = m <= d3 ? v : "?";
+      c.className = m > d3 ? "gris" : (v === mayor ? "es-mayor" : "") + (m === d3 ? " ahora" : "");
+      tira.appendChild(c);
+    });
+    var txt;
+    if (d3 < 0) txt = "Toca <strong>Siguiente</strong> para recorrer los números que salen desde 3 hasta llegar a 1.";
+    else if (d3 === 0) txt = "<code>mayor = n</code>: todavía no hay con quién comparar, así que el mayor es el primero, <strong>3</strong>.";
+    else {
+      var v = D3[d3];
+      txt = "<code>" + v + " &gt; " + ant + "</code> es <strong>" + (cambia ? "True" : "False") + "</strong>: " +
+        (cambia ? v + " ocupa su lugar y <code>mayor</code> pasa a " + v + "." : "el mayor sigue en " + ant + ".");
+      if (d3 === D3.length - 1) txt += " Llegó a 1: el más grande fue <strong>" + mayor + "</strong>.";
+    }
+    $("d3-n").lastElementChild.textContent = d3 < 0 ? "—" : String(D3[d3]);
+    $("d3-mayor").lastElementChild.textContent = mayor === null ? "—" : String(mayor);
+    $("d3-mayor").classList.toggle("cajita--cambia", !!animar && (cambia || d3 === 0));
+    $("d3-txt").innerHTML = txt;
+    $("d3-paso").textContent = d3 >= D3.length - 1 ? "↺ Otra vez" : "Siguiente ▸";
+  }
+  $("d3-paso").addEventListener("click", function () {
+    d3 = d3 >= D3.length - 1 ? -1 : d3 + 1;
+    pintarD3(true);
+  });
+  pintarD3(false);
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var movil = window.matchMedia("(max-width: 640px)").matches;
+  var flujo = Flujo.crear($("flujo"), {
+    fila: movil ? 40 : 38,
+    anchoNodo: movil ? 160 : 200,
+    columnas: movil ? [0.32, 1.2, 1.05, 0.55] : [0.34, 1.2, 1.05, 0.5],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "elige <code>n</code> · <code>pasos = 0</code> · <code>mayor = n</code>", col: 1, fila: 1, idea: 1 },
+      { id: "cond", tipo: "decision", texto: "¿<code>n</code> ≠ 1?", col: 1, fila: 2, idea: 2 },
+      { id: "salida", tipo: "datos", texto: "imprime <code>pasos</code> y <code>mayor</code>", col: 2, fila: 2 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 3, fila: 2 },
+      { id: "par", tipo: "decision", texto: "¿es par?", col: 1, fila: 3, idea: 3 },
+      { id: "mitad", tipo: "proceso", texto: "<code>n = n // 2</code>", col: 2, fila: 3, idea: 3 },
+      { id: "triple", tipo: "proceso", texto: "<code>n = 3 * n + 1</code>", col: 1, fila: 4, idea: 3 },
+      { id: "suma", tipo: "proceso", texto: "<code>pasos + 1</code>", col: 1, fila: 5, idea: 4 },
+      { id: "mas", tipo: "decision", texto: "¿<code>n</code> &gt; <code>mayor</code>?", col: 1, fila: 6, idea: 4 },
+      { id: "guarda", tipo: "proceso", texto: "<code>mayor = n</code>", col: 2, fila: 6, idea: 4 },
+      { id: "imprime", tipo: "datos", texto: "imprime <code>n</code>", col: 1, fila: 7, idea: 4 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "cond" },
+      { de: "cond", a: "par", texto: "sí" },
+      { de: "cond", a: "salida", texto: "no" },
+      { de: "salida", a: "fin" },
+      { de: "par", a: "mitad", texto: "sí" },
+      { de: "par", a: "triple", texto: "no" },
+      { de: "mitad", a: "suma", por: "derecha" },
+      { de: "triple", a: "suma" },
+      { de: "suma", a: "mas" },
+      { de: "mas", a: "guarda", texto: "sí" },
+      { de: "mas", a: "imprime", texto: "no" },
+      { de: "guarda", a: "imprime" },
+      { de: "imprime", a: "cond", por: "izquierda", carril: movil ? 2 : 1 }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  function pasosRecorrido(n0) {
+    var p = [{ nodo: "ini", nota: "Beto elige su número" }, { nodo: "datos", nota: "n = " + n0 + " · pasos = 0 · mayor = " + n0 }];
+    var n = n0, pasos = 0, mayor = n0;
+    while (n !== 1) {
+      p.push({ nodo: "cond", nota: "¿" + n + " ≠ 1? sí" });
+      var par = esPar(n), antes = n;
+      p.push({ nodo: "par", nota: "¿" + n + " es par? " + (par ? "sí" : "no") });
+      n = regla(n);
+      p.push({ nodo: par ? "mitad" : "triple", nota: par ? antes + " // 2 = " + n : "3 * " + antes + " + 1 = " + n });
+      pasos++;
+      p.push({ nodo: "suma", nota: "pasos = " + pasos });
+      var nuevo = n > mayor;
+      p.push({ nodo: "mas", nota: "¿" + n + " > " + mayor + "? " + (nuevo ? "sí" : "no") });
+      if (nuevo) { mayor = n; p.push({ nodo: "guarda", nota: "mayor = " + n }); }
+      p.push({ nodo: "imprime", nota: "imprime " + n });
+    }
+    p.push({ nodo: "cond", nota: "¿1 ≠ 1? no: sale del bucle" });
+    p.push({ nodo: "salida", nota: "Pasos: " + pasos + " · Mayor: " + mayor });
+    p.push({ nodo: "fin", nota: "Fin: " + plural(pasos, "paso", "pasos") + ", el mayor fue " + mayor });
+    return p;
+  }
+  var recorridoFlujo = null;
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con 6";
+  $("recorrer").addEventListener("click", function () {
+    if (recorridoFlujo) { recorridoFlujo.detener(); recorridoFlujo = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorridoFlujo = flujo.recorrer(pasosRecorrido(6), {
+      intervalo: reducir ? 1300 : 850,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorridoFlujo = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = {};
+    var seq = recorrido(d.n);
+    var total = seq.length - 1;
+    var cima = mayorDe(seq);
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    // Capítulos: cada vuelta si son pocas; si no, cada 5 o cada 25, y la cima
+    var cada = total <= 8 ? 1 : (total <= 20 ? 5 : 25);
+    var vueltaCima = seq.indexOf(cima);
+    function capituloDe(v) {
+      if (v === vueltaCima && total > 8) return "La cima: " + cima;
+      if (v === vueltaCima + 3 && total > 20) return "La caída";
+      if (v === 1) return total > 20 ? "Vuelta 1 · la subida" : "Vuelta 1";
+      if (v % cada === 0 && Math.abs(v - vueltaCima) > (cada === 25 ? 5 : 2)) return "Vuelta " + v;
+      if (total <= 8) return "Vuelta " + v;
+      return undefined;
+    }
+    var INICIO = {
+      normal: "Beto elige <strong>" + d.n + "</strong>. El programa lo guarda en <code>n</code>.",
+      siete: "Ahora el número es <strong>" + d.n + "</strong>, apenas uno más que el de Beto.",
+      lucia: "Lucía eligió <strong>" + d.n + "</strong>. Ella hizo las cuentas a mano; la computadora no se cansa.",
+      uno: "¿Y si el número ya es <strong>1</strong>?"
+    };
+    var n = d.n;
+    vars.n = n; est.k = 0; est.n = n;
+    paso({ linea: 0, escribe: "n", capitulo: "Los datos", aviso: "El carrito sale desde " + n + ".",
+      nota: INICIO[d.clave] || "Empieza con <strong>" + n + "</strong>." });
+    vars.pasos = 0;
+    paso({ linea: 1, escribe: "pasos", cuenta: "pasos = 0",
+      nota: "<code>pasos</code> empieza en <strong>0</strong>: todavía no se aplicó la regla ninguna vez." });
+    vars.mayor = n; est.mayor = n; est.mayorK = 0;
+    paso({ linea: 2, escribe: "mayor", lee: ["n"], cuenta: "mayor = " + n, aviso: "La raya dorada marca el mayor hasta ahora.", avisoClase: "oro",
+      nota: "<code>mayor = n</code>: por ahora, el número más grande que se vio es el primero, <strong>" + n + "</strong>." });
+
+    var primeraPar = true, primeraImpar = true, primerMayor = true, primerPrint = true;
+    var cuentaPar = 0, cuentaImpar = 0, cambiosMayor = 0;
+    for (var v = 1; v <= total; v++) {
+      var antes = n;
+      paso({ linea: 3, lee: ["n"], capitulo: capituloDe(v), cuenta: antes + " != 1 → True",
+        nota: v === 1
+          ? "<code>" + antes + " != 1</code> es <strong>True</strong>: todavía no llega a 1, así que entra al <code>while</code>. Nadie le dijo cuántas vueltas dar: repetirá mientras la condición sea True."
+          : "Vuelta " + v + ": <code>" + antes + " != 1</code> es <strong>True</strong>. Otra vuelta." });
+      var par = esPar(antes);
+      var clavePar = par && primeraPar && d.clave === "normal" && v === 1;
+      paso({ linea: 4, lee: ["n"], cuenta: antes + " % 2 = " + (par ? 0 : 1) + " → " + (par ? "par" : "impar"), pausa: clavePar,
+        aviso: par ? antes + " es par: va a bajar." : antes + " es impar: va a subir.", avisoClase: par ? "baja" : "sube",
+        nota: par
+          ? "<code>" + antes + " % 2</code> da <strong>0</strong>: " + antes + " es <strong>par</strong>." + (clavePar ? " El resto de dividir entre 2 dice qué regla toca: 0 es par y 1 es impar." : "")
+          : "<code>" + antes + " % 2</code> da <strong>1</strong>: " + antes + " es <strong>impar</strong>, así que salta al <code>else</code>." });
+      n = regla(antes);
+      vars.n = n; est.k = v; est.n = n;
+      if (par) {
+        cuentaPar++;
+        paso({ linea: 5, escribe: "n", lee: ["n"], nuevo: true, cuenta: antes + " es par: " + antes + " // 2 = " + n,
+          aviso: "Baja a la mitad: de " + antes + " a " + n + ".", avisoClase: "baja",
+          nota: primeraPar
+            ? "Par: baja a la mitad. <code>" + antes + " // 2</code> da <strong>" + n + "</strong>. En la montaña, el tramo azul baja."
+            : "<code>" + antes + " // 2</code> da <strong>" + n + "</strong>." });
+        primeraPar = false;
+      } else {
+        cuentaImpar++;
+        var claveImpar = primeraImpar && d.clave === "normal";
+        paso({ linea: 7, ejecuta: [6, 7], flecha: true, escribe: "n", lee: ["n"], nuevo: true, pausa: claveImpar,
+          cuenta: antes + " es impar: 3 * " + antes + " + 1 = " + n,
+          aviso: "Sube: de " + antes + " a " + n + ".", avisoClase: "sube",
+          nota: primeraImpar
+            ? "Impar: sube. <code>3 * " + antes + " + 1</code> da <strong>" + n + "</strong>. El tramo naranja sube: un impar siempre da un número más grande." + (claveImpar ? " Y como 3 * impar es impar, al sumarle 1 sale par: en la vuelta siguiente, baja." : "")
+            : "<code>3 * " + antes + " + 1</code> da <strong>" + n + "</strong>." });
+        primeraImpar = false;
+      }
+      vars.pasos = v;
+      paso({ linea: 8, escribe: "pasos", lee: ["pasos"], cuenta: "pasos = " + (v - 1) + " + 1 = " + v,
+        nota: v === 1 ? "<code>pasos</code> sube a <strong>1</strong>: la regla ya se aplicó una vez." : "<code>pasos</code> sube a <strong>" + v + "</strong>." });
+      var nuevo = n > est.mayor;
+      var mayorAntes = est.mayor;
+      paso({ linea: 9, lee: ["n", "mayor"], cuenta: n + " > " + mayorAntes + " → " + (nuevo ? "True" : "False"),
+        aviso: nuevo ? "¡" + n + " pasa la raya dorada!" : (n === mayorAntes ? n + " llega justo a la raya, no la pasa." : n + " queda debajo de la raya dorada."), avisoClase: nuevo ? "oro" : "",
+        nota: nuevo
+          ? "<code>" + n + " &gt; " + mayorAntes + "</code> es <strong>True</strong>: " + n + " es más grande que el mayor hasta ahora."
+          : "<code>" + n + " &gt; " + mayorAntes + "</code> es <strong>False</strong>: el mayor sigue siendo " + mayorAntes + "." });
+      if (nuevo) {
+        cambiosMayor++;
+        vars.mayor = n; est.mayor = n; est.mayorK = v;
+        var esCima = n === cima && d.clave === "lucia";
+        var claveMayor = (primerMayor && d.clave === "siete") || esCima;
+        paso({ linea: 10, escribe: "mayor", lee: ["n"], cuenta: "mayor = " + n, pausa: claveMayor, aviso: "La raya dorada sube a " + n + ".", avisoClase: "oro",
+          nota: esCima
+            ? "¡<strong>" + n + "</strong>! Lucía empezó en 27 y el número subió hasta " + n + ", más de 300 veces lo que valía al principio. Es la cima: en las " + (total - v) + " vueltas que faltan, ningún número pasa de " + n + "."
+            : (primerMayor
+              ? "<code>mayor</code> pasa a <strong>" + n + "</strong>: el " + mayorAntes + " quedó tachado en su rastro. La raya dorada sube."
+              : "<code>mayor</code> pasa a <strong>" + n + "</strong>.") });
+        primerMayor = false;
+      }
+      paso({ linea: 11, salida: n + " ", lee: ["n"],
+        nota: primerPrint
+          ? "Imprime <strong>" + n + "</strong> y un espacio en blanco: con <code>end=\" \"</code>, el siguiente número sale en la misma línea."
+          : "Imprime " + n + "." });
+      primerPrint = false;
+    }
+    est.fin = true;
+    paso({ linea: 3, lee: ["n"], capitulo: total ? "Fin" : "¿Entra al while?", cuenta: "1 != 1 → False", pausa: d.clave === "uno",
+      aviso: "Llegó a 1: el while termina.", avisoClase: "ok",
+      nota: total
+        ? "<code>1 != 1</code> es <strong>False</strong>: llegó a 1 y el <code>while</code> termina después de " + plural(total, "vuelta", "vueltas") + ". Salta a la primera línea de afuera."
+        : "<code>1 != 1</code> es <strong>False</strong> desde el principio: el cuerpo del <code>while</code> no corre ni una vez." });
+    paso({ linea: 12, salida: "\n", flecha: true, capitulo: total ? undefined : "Fin",
+      nota: total
+        ? "<code>print()</code> sin nada adentro termina la línea de números."
+        : "<code>print()</code> sin nada adentro imprime una <strong>línea vacía</strong>: no hubo números que mostrar." });
+    paso({ linea: 13, salida: "Pasos: " + total + "\n", lee: ["pasos"],
+      nota: total ? "En total, la regla se aplicó <strong>" + plural(total, "vez", "veces") + "</strong>." : "Cero pasos: la regla no se aplicó nunca." });
+    var FINALES = {
+      normal: "Llegó a 1 en <strong>8 pasos</strong> y lo más alto fue <strong>16</strong>. Mira el mapa de calor: el <code>while</code> se revisó 9 veces (8 vueltas y la última, que dio False); la mitad corrió " + cuentaPar + " veces y el triple, " + cuentaImpar + ".",
+      siete: "Con 7, uno más que 6, son <strong>" + total + " pasos</strong>: el doble. Y subió hasta <strong>" + cima + "</strong>. En el mapa de calor, <code>mayor = n</code> corrió " + plural(cambiosMayor, "vez", "veces") + ": cada vez que apareció una cima nueva.",
+      lucia: "<strong>" + total + " pasos</strong> y una cima de <strong>" + cima + "</strong>. En el mapa de calor, el triple corrió " + cuentaImpar + " veces y la mitad, " + cuentaPar + ". Nadie podía saberlo antes: por eso es un <code>while</code> y no un <code>for</code>.",
+      uno: "Con 1 no hay nada que hacer: el mapa de calor dice <strong>×0</strong> en todo el cuerpo del <code>while</code>, y <code>print()</code> dejó una línea vacía en la consola. El mayor es el mismo 1."
+    };
+    paso({ linea: 14, salida: "Mayor: " + cima + "\n", lee: ["mayor"], pausa: true, fin: true,
+      aviso: plural(total, "paso", "pasos") + " · el mayor fue " + cima + ".", avisoClase: "ok",
+      nota: FINALES[d.clave] || "Pasos: " + total + " · Mayor: " + cima + "." });
+    return pasos;
+  }
+
+  /* La escena: la montaña rusa de números */
+  var escena = (function () {
+    var raiz, nEl, cuentaEl, graf, svg, avisoEl;
+    var seq = [1], K = 0, tope = 4;
+    var ancho = 0, alto = 0, G = null;
+    var segs = [], pts = [], mayorL, mayorT, cimaC, carro, giro, metaT;
+    var ultimo = null;
+    function crear(cont) {
+      cont.innerHTML = '<div class="mr">' +
+        '<div class="mr__arriba"><span class="mr__n">n = <b>—</b></span><span class="mr__cuenta"></span></div>' +
+        '<div class="mr__graf"><svg class="mr__svg" aria-hidden="true"></svg></div>' +
+        '<div class="mr__pie"><span class="mr__ley"><i style="background:var(--baja)"></i>par: <code>n // 2</code></span>' +
+        '<span class="mr__ley"><i style="background:var(--sube)"></i>impar: <code>3 * n + 1</code></span>' +
+        '<span class="mr__ley"><i style="background:var(--oro)"></i>mayor</span></div>' +
+        '<p class="mr__aviso" aria-live="polite"></p>' +
+        "</div>";
+      raiz = cont.querySelector(".mr");
+      nEl = cont.querySelector(".mr__n b");
+      cuentaEl = cont.querySelector(".mr__cuenta");
+      graf = cont.querySelector(".mr__graf");
+      svg = cont.querySelector(".mr__svg");
+      avisoEl = cont.querySelector(".mr__aviso");
+      if (window.ResizeObserver) new ResizeObserver(function () {
+        if (graf.clientWidth && (graf.clientWidth !== ancho || graf.clientHeight !== alto)) { ancho = 0; pintar(ultimo, { animar: false }); }
+      }).observe(graf);
+    }
+    function reiniciar(d) {
+      seq = recorrido(d.n);
+      K = seq.length - 1;
+      tope = techo(mayorDe(seq));
+      ancho = 0;   // obliga a dibujar de nuevo
+    }
+    function x(k) { return G.L + k * (G.W - G.L - G.R) / Math.max(K, 6); }
+    function y(v) { return G.T + (G.H - G.T - G.B) * (1 - v / tope); }
+    function construir() {
+      var w = graf.clientWidth, h = graf.clientHeight;
+      if (!w || !h) return false;
+      if (w === ancho && h === alto) return true;
+      ancho = w; alto = h;
+      var etq = String(tope).length;
+      G = { W: w, H: h, L: 14 + etq * 6.4, R: 16, T: 22, B: 22 };
+      svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+      var s = "";
+      [0, tope / 2, tope].forEach(function (v) {
+        s += '<line class="mr__rejilla" x1="' + G.L + '" x2="' + (w - G.R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>';
+        s += '<text class="mr__txt" x="' + (G.L - 5) + '" y="' + (y(v) + 3.5) + '" text-anchor="end">' + v + "</text>";
+      });
+      s += '<line class="mr__eje" x1="' + G.L + '" x2="' + (w - G.R) + '" y1="' + y(0) + '" y2="' + y(0) + '"/>';
+      s += '<line class="mr__eje" x1="' + G.L + '" x2="' + G.L + '" y1="' + G.T + '" y2="' + y(0) + '"/>';
+      s += '<text class="mr__txt" x="' + (w - G.R) + '" y="' + (h - 6) + '" text-anchor="end">pasos →</text>';
+      s += '<text class="mr__txt" x="' + G.L + '" y="' + (h - 6) + '" text-anchor="middle">0</text>';
+      s += '<g class="mr__mayor-g"><line class="mr__mayor" x1="' + G.L + '" x2="' + (w - G.R) + '" y1="0" y2="0"/>' +
+        '<text class="mr__mayor-txt" x="' + (w - G.R - 2) + '" y="-5" text-anchor="end"></text></g>';
+      var gs = "", gp = "";
+      for (var k = 1; k <= K; k++) {
+        gs += '<line class="mr__seg mr__seg--' + (esPar(seq[k - 1]) ? "baja" : "sube") + '" pathLength="1" x1="' + x(k - 1) + '" y1="' + y(seq[k - 1]) + '" x2="' + x(k) + '" y2="' + y(seq[k]) + '"/>';
+      }
+      var r = K > 60 ? 0 : (K > 25 ? 1.8 : 2.8);
+      for (var j = 0; j <= K; j++) gp += '<circle class="mr__pt" r="' + r + '" cx="' + x(j) + '" cy="' + y(seq[j]) + '"/>';
+      s += "<g>" + gs + "</g><g>" + gp + "</g>";
+      s += '<circle class="mr__cima" r="6" cx="0" cy="0"/>';
+      s += '<circle class="mr__pt mr__pt--meta" r="5" cx="' + x(K) + '" cy="' + y(1) + '"/>';
+      s += K ? '<text class="mr__meta-txt" x="' + (x(K) - 14) + '" y="' + (y(1) - 7) + '" text-anchor="end">1 ✓</text>'
+             : '<text class="mr__meta-txt" x="' + (x(0) + 16) + '" y="' + (y(1) + 18) + '">1 ✓ ya llegó</text>';
+      s += '<g class="mr__carro"><g class="mr__carro-giro">' +
+        '<rect x="-10" y="-15" width="20" height="10" rx="3" fill="#d6453d"/>' +
+        '<rect x="-6" y="-19" width="12" height="5" rx="2" fill="#f2a29b"/>' +
+        '<circle cx="-5.5" cy="-3.5" r="3" fill="#1f2a44"/><circle cx="5.5" cy="-3.5" r="3" fill="#1f2a44"/></g></g>';
+      svg.innerHTML = s;
+      segs = svg.querySelectorAll(".mr__seg");
+      pts = svg.querySelectorAll(".mr__pt:not(.mr__pt--meta)");
+      mayorL = svg.querySelector(".mr__mayor-g");
+      mayorT = svg.querySelector(".mr__mayor-txt");
+      cimaC = svg.querySelector(".mr__cima");
+      metaT = [svg.querySelector(".mr__pt--meta"), svg.querySelector(".mr__meta-txt")];
+      carro = svg.querySelector(".mr__carro");
+      giro = svg.querySelector(".mr__carro-giro");
+      return true;
+    }
+    function pintar(p, op) {
+      ultimo = p;
+      var e = p ? p.est : null;
+      var animar = !!(op && op.animar);
+      if (op && op.intervalo) raiz.style.setProperty("--mr-dur", Math.max(120, Math.min(450, op.intervalo * 0.7)) + "ms");
+      if (!animar) raiz.classList.add("mr--quieto");
+      nEl.textContent = e ? String(e.n) : "—";
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      cuentaEl.className = "mr__cuenta" + (p && p.avisoClase === "baja" ? " mr__cuenta--baja" : (p && p.avisoClase === "sube" ? " mr__cuenta--sube" : ""));
+      avisoEl.textContent = p && p.aviso ? p.aviso : (p ? "" : "Toca ▶ para que el carrito empiece a recorrer los números.");
+      avisoEl.className = "mr__aviso" + (p && p.avisoClase ? " mr__aviso--" + p.avisoClase : "");
+      if (construir()) {
+        var k = e ? e.k : -1;
+        for (var j = 0; j < segs.length; j++) {
+          var ver = j + 1 <= k;
+          segs[j].style.display = ver ? "" : "none";
+          segs[j].classList.toggle("mr__seg--nuevo", animar && !!p.nuevo && j + 1 === k);
+        }
+        for (var m = 0; m < pts.length; m++) pts[m].style.display = m <= k ? "" : "none";
+        var llego = !!(e && e.fin);
+        metaT[0].style.display = metaT[1].style.display = llego ? "" : "none";
+        var hayMayor = !!(e && e.mayor !== undefined);
+        mayorL.style.display = cimaC.style.display = hayMayor ? "" : "none";
+        if (hayMayor) {
+          var ym = y(e.mayor);
+          mayorL.style.transform = "translateY(" + ym + "px)";
+          mayorT.textContent = "mayor = " + e.mayor;
+          cimaC.style.transform = "translate(" + x(e.mayorK) + "px, " + ym + "px)";
+        }
+        carro.style.display = k >= 0 ? "" : "none";
+        if (k >= 0) {
+          carro.style.transform = "translate(" + x(k) + "px, " + y(seq[k]) + "px)";
+          var ang = 0;
+          if (k > 0 && !llego) {
+            ang = Math.atan2(y(seq[k]) - y(seq[k - 1]), x(k) - x(k - 1)) * 180 / Math.PI;
+            ang = Math.max(-35, Math.min(35, ang));
+          }
+          giro.style.transform = "rotate(" + ang + "deg)";
+        }
+      }
+      if (!animar) { void raiz.offsetWidth; raiz.classList.remove("mr--quieto"); }
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Beto: 6", datos: { n: 6, clave: "normal" } },
+    { nombre: "7", datos: { n: 7, clave: "siete" } },
+    { nombre: "Lucía: 27", datos: { n: 27, clave: "lucia" } },
+    { nombre: "1: ¿entra?", datos: { n: 1, clave: "uno" } }
+  ];
+
+  var rep = Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0],
+    variables: ["n", "pasos", "mayor"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1000
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  // ¿Cuánto trabajo hace? El horizonte de pasos del 1 al 100
+  var PASOS100 = [];
+  for (var q = 1; q <= 100; q++) PASOS100.push(pasosDe(q));
+  (function dibujarHorizonte() {
+    var s = "", H = { x0: 22, x1: 296, y0: 100, y1: 14, max: 120 };
+    var w = (H.x1 - H.x0) / 100;
+    [0, 60, 120].forEach(function (v) {
+      var yy = H.y0 - (H.y0 - H.y1) * v / H.max;
+      s += '<line x1="' + H.x0 + '" x2="' + H.x1 + '" y1="' + yy + '" y2="' + yy + '" stroke="#ece5d4"/>';
+      s += '<text class="horizonte__txt" x="' + (H.x0 - 3) + '" y="' + (yy + 3) + '" text-anchor="end">' + v + "</text>";
+    });
+    PASOS100.forEach(function (p, k) {
+      var h = (H.y0 - H.y1) * p / H.max;
+      s += '<rect class="horizonte__barra" data-k="' + k + '" x="' + (H.x0 + k * w + 0.25) + '" y="' + (H.y0 - h) + '" width="' + (w - 0.5) + '" height="' + Math.max(h, 0.01) + '"/>';
+    });
+    s += '<line x1="' + H.x0 + '" x2="' + H.x1 + '" y1="' + H.y0 + '" y2="' + H.y0 + '" stroke="#1f2a44" stroke-width="1.2"/>';
+    [1, 25, 50, 75, 100].forEach(function (n) {
+      s += '<text class="horizonte__txt" x="' + (H.x0 + (n - 0.5) * w) + '" y="' + (H.y0 + 11) + '" text-anchor="' + (n === 100 ? "end" : "middle") + '">' + n + "</text>";
+    });
+    s += '<text class="horizonte__dato" id="t-dato" text-anchor="middle"></text>';
+    $("t-svg").innerHTML = s;
+    $("t-svg").dataset.x0 = H.x0; $("t-svg").dataset.w = w; $("t-svg").dataset.y0 = H.y0; $("t-svg").dataset.esc = (H.y0 - H.y1) / H.max;
+  })();
+  function pintarTrabajo() {
+    var n = Number($("t-n").value), p = PASOS100[n - 1];
+    $("t-num").textContent = n;
+    $("t-svg").querySelectorAll(".horizonte__barra").forEach(function (b, k) {
+      b.classList.toggle("horizonte__barra--elegido", k === n - 1);
+      b.classList.toggle("horizonte__barra--vecino", Math.abs(k - (n - 1)) === 1);
+    });
+    var ds = $("t-svg").dataset, dato = $("t-dato");
+    var xx = Math.max(30, Math.min(286, Number(ds.x0) + (n - 0.5) * Number(ds.w)));
+    dato.setAttribute("x", xx);
+    dato.setAttribute("y", Number(ds.y0) - p * Number(ds.esc) - 4);
+    dato.textContent = p;
+    $("t-pasos").textContent = p;
+    $("t-pasos-txt").textContent = p === 0 ? "pasos: con 1, el while no da ninguna vuelta" : (p === 1 ? "paso: el while da 1 vuelta" : "pasos: el while da " + p + " vueltas");
+    var vec = [];
+    for (var m = n - 1; m <= n + 1; m++) if (m >= 1 && m <= 100) vec.push(m === n ? "<b>" + m + " → " + PASOS100[m - 1] + "</b>" : m + " → " + PASOS100[m - 1]);
+    $("t-vecinos").innerHTML = vec.join(" · ");
+  }
+  $("t-n").addEventListener("input", pintarTrabajo);
+  pintarTrabajo();
+
+  // Dos versiones que fallan
+  var VERSIONES = [
+    { lineas: ["if n % 2 == 0:", "    n = n // 2", "else:", "    n = 3 * n + 1", "pasos = pasos + 1"], cambio: -1,
+      salida: "3 10 5 16 8 4 2 1 \nPasos: 8\nMayor: 16",
+      texto: "Con <code>//</code>, la mitad de un entero es un entero. Y <code>pasos</code> suma 1 en cada vuelta, sea par o impar." },
+    { lineas: ["if n % 2 == 0:", "    n = n / 2", "else:", "    n = 3 * n + 1", "pasos = pasos + 1"], cambio: 1,
+      salida: '<span class="mal">3.0 10.0 5.0 16.0 8.0 4.0 2.0 1.0 </span>\nPasos: 8\nMayor: <span class="mal">16.0</span>',
+      texto: "<code>/</code> siempre da un decimal: <code>6 / 2</code> es <code>3.0</code>, y desde ahí todo sale con <code>.0</code>, hasta el mayor. Llega a 1, pero la salida no es la que pide el enunciado." },
+    { lineas: ["if n % 2 == 0:", "    n = n // 2", "else:", "    n = 3 * n + 1", "    pasos = pasos + 1"], cambio: 4,
+      salida: '3 10 5 16 8 4 2 1 \nPasos: <span class="mal">2</span>\nMayor: 16',
+      texto: "Con cuatro espacios de más, <code>pasos = pasos + 1</code> queda dentro del <code>else</code>: solo cuenta las vueltas impares. Con 6 dice 2 en vez de 8." }
+  ];
+  function pintarVersion(k) {
+    var v = VERSIONES[k];
+    Python.escribir($("v-codigo"), v.lineas);
+    $("v-codigo").querySelectorAll(".linea").forEach(function (l, m) { l.classList.toggle("linea--cambio", m === v.cambio); });
+    $("v-salida").innerHTML = v.salida;
+    $("v-texto").innerHTML = v.texto;
+  }
+  $("v-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("v-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      pintarVersion(Number(b.getAttribute("data-v")));
+    });
+  });
+  pintarVersion(0);
+
+  // Casos borde: el programa que no termina
+  var BORDES = [
+    { n: 0, ciclo: [0, 0],
+      texto: "0 es par y <code>0 // 2</code> da 0: <code>n</code> nunca cambia y nunca llega a 1. El programa no termina: hay que detenerlo con Ctrl+C." },
+    { n: -5, ciclo: [-5, -14, -7, -20, -10, -5],
+      texto: "−5 es impar (en Python, <code>-5 % 2</code> da 1): <code>3 * -5 + 1</code> da −14. Después −7, −20, −10… y otra vez −5. Es <strong>un ciclo</strong>: tampoco termina." }
+  ];
+  var borde = 0, corre = null;
+  function pintarCiclo() {
+    var b = BORDES[borde], s = "";
+    b.ciclo.forEach(function (v, k) {
+      var cls = k === 0 ? "" : (esPar(b.ciclo[k - 1]) ? "baja" : "sube");
+      s += (k ? "<em>→</em>" : "") + '<span class="' + cls + '">' + v + "</span>";
+    });
+    $("b-ciclo").innerHTML = s + "<em>→ …</em>";
+    $("b-texto").innerHTML = b.texto;
+  }
+  function detenerBorde(conAviso) {
+    if (corre) { clearInterval(corre.timer); }
+    if (corre && conAviso) {
+      $("b-salida").classList.add("consola-mini--parada");
+      $("b-salida").innerHTML = escaparTexto(corre.texto.slice(-30)) + '<span class="error">^CTraceback (most recent call last):\n  …\nKeyboardInterrupt</span>';
+      $("b-contador").innerHTML = "Lo detuviste después de <b>" + separar(corre.vueltas) + "</b> vueltas. Python avisa <code>KeyboardInterrupt</code>: lo interrumpiste desde el teclado.";
+    }
+    corre = null;
+    $("b-correr").textContent = "▶ Correr el programa";
+  }
+  function escaparTexto(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function reiniciarBorde() {
+    detenerBorde(false);
+    $("b-salida").classList.remove("consola-mini--parada");
+    pintarCiclo();
+    $("b-salida").textContent = "n = " + BORDES[borde].n;
+    $("b-contador").textContent = "Todavía no corre.";
+  }
+  $("b-correr").addEventListener("click", function () {
+    if (corre) { detenerBorde(true); return; }
+    var n = BORDES[borde].n;
+    corre = { n: n, vueltas: 0, texto: "" };
+    $("b-salida").classList.remove("consola-mini--parada");
+    $("b-correr").textContent = "■ Detener (Ctrl+C)";
+    var porTic = reducir ? 400 : 23;
+    corre.timer = setInterval(function () {
+      for (var k = 0; k < porTic; k++) {
+        corre.n = regla(corre.n);
+        corre.vueltas++;
+        corre.texto = (corre.texto + corre.n + " ").slice(-120);
+      }
+      $("b-salida").textContent = corre.texto.slice(-60);
+      $("b-contador").innerHTML = "Vueltas: <b>" + separar(corre.vueltas) + "</b> y <code>n</code> no llega a 1…";
+    }, reducir ? 500 : 60);
+  });
+  $("b-chips").querySelectorAll("button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      $("b-chips").querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === btn)); });
+      borde = Number(btn.getAttribute("data-b"));
+      reiniciarBorde();
+    });
+  });
+  reiniciarBorde();
+
+  /* ---------- 6. ¿Siempre llega a 1? ---------- */
+  var chica = window.matchMedia("(max-width: 640px)").matches;
+  var M = chica ? { ancho: 300, alto: 170 } : { ancho: 380, alto: 175 };
+  $("g-svg").setAttribute("viewBox", "0 0 " + M.ancho + " " + M.alto);
+  // Los números grandes, con espacios (21 933 016); los de hasta 5 cifras, como los imprime Python
+  function separar(v) { return v < 100000 ? String(v) : String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function pintarMontana() {
+    var txt = $("g-n").value.trim();
+    var n = Number(txt);
+    $("g-chips").querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-n") === String(n))); });
+    if (!/^\d+$/.test(txt) || n < 1 || n > 100000) {
+      $("g-lectura").innerHTML = '<span class="aviso">Escribe un número entero del 1 al 100 000.</span>';
+      return;
+    }
+    var s = recorrido(n), K = s.length - 1, cima = mayorDe(s), tope = techo(cima);
+    var etq = separar(tope).length;
+    var L = 10 + etq * 5.6, R = 10, T = 16, B = 18;
+    function gx(k) { return L + k * (M.ancho - L - R) / Math.max(K, 6); }
+    function gy(v) { return T + (M.alto - T - B) * (1 - v / tope); }
+    var h = "";
+    [0, tope / 2, tope].forEach(function (v) {
+      h += '<line class="montana__rejilla" x1="' + L + '" x2="' + (M.ancho - R) + '" y1="' + gy(v) + '" y2="' + gy(v) + '"/>';
+      h += '<text class="montana__txt" x="' + (L - 4) + '" y="' + (gy(v) + 3) + '" text-anchor="end">' + separar(v) + "</text>";
+    });
+    h += '<line class="montana__eje" x1="' + L + '" x2="' + (M.ancho - R) + '" y1="' + gy(0) + '" y2="' + gy(0) + '"/>';
+    h += '<line class="montana__eje" x1="' + L + '" x2="' + L + '" y1="' + T + '" y2="' + gy(0) + '"/>';
+    var ancho = K > 150 ? 1.2 : (K > 60 ? 1.7 : 2.4);
+    for (var k = 1; k <= K; k++) {
+      h += '<line stroke-linecap="round" stroke-width="' + ancho + '" stroke="' + (esPar(s[k - 1]) ? "#0e7490" : "#d9661f") + '" x1="' + gx(k - 1) + '" y1="' + gy(s[k - 1]) + '" x2="' + gx(k) + '" y2="' + gy(s[k]) + '"/>';
+    }
+    var kc = s.indexOf(cima);
+    h += '<circle cx="' + gx(kc) + '" cy="' + gy(cima) + '" r="4.5" fill="none" stroke="#e2b33c" stroke-width="2.5"/>';
+    var derecha = gx(kc) > M.ancho * 0.6;
+    h += '<text class="montana__cima" x="' + (gx(kc) + (derecha ? -8 : 8)) + '" y="' + (gy(cima) + 4) + '" text-anchor="' + (derecha ? "end" : "start") + '">cima ' + separar(cima) + "</text>";
+    h += '<circle cx="' + gx(K) + '" cy="' + gy(1) + '" r="4" fill="#0b7a3e" stroke="#fff" stroke-width="1.5"/>';
+    h += '<text class="montana__txt" x="' + (M.ancho - R) + '" y="' + (M.alto - 4) + '" text-anchor="end">' + plural(K, "paso", "pasos") + " →</text>";
+    $("g-svg").innerHTML = h;
+    if (n === 1) { $("g-lectura").innerHTML = "1 ya es 1: <b>0 pasos</b>. El <code>while</code> no da ninguna vuelta."; return; }
+    $("g-lectura").innerHTML = n + " llega a 1 en <b>" + plural(K, "paso", "pasos") + "</b>" + (cima > n ? " y sube hasta <b>" + separar(cima) + "</b>." : ". Nunca pasa de " + separar(n) + ".");
+  }
+  $("g-n").addEventListener("input", pintarMontana);
+  $("g-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { $("g-n").value = b.getAttribute("data-n"); pintarMontana(); });
+  });
+  pintarMontana();
+
+  Problemas.iniciar({ id: "problema-collatz" });
+})();
+</script>
+</body>
+</html>

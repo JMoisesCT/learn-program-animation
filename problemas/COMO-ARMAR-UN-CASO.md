@@ -33,7 +33,7 @@ Lo que se puede usar en cada sección (cada una suma lo de las anteriores; ver �
 | Búsquedas, Ordenar | búsqueda lineal y binaria, burbuja, quicksort, mergesort | `bisect`, `lambda` |
 | Errores | `try`/`except`, tipos de error | `raise`, `finally` |
 
-Las secciones del catálogo hoy son Variables y fórmulas, Condicionales, Texto a fondo, Listas, Otras estructuras y Ordenar. Para un caso de otro tema (Bucles, Funciones, Recursión, Búsquedas, Errores) se agrega su sección en su lugar del curso (ver §8).
+Las secciones del catálogo hoy son Variables y fórmulas, Condicionales, Bucles, Texto a fondo, Listas, Otras estructuras y Ordenar. Para un caso de otro tema (Funciones, Recursión, Búsquedas, Errores) se agrega su sección en su lugar del curso (ver §8).
 
 **Dificultad de 1 a 5 estrellas**, comparando con todo el catálogo (no solo con la sección):
 
@@ -140,10 +140,12 @@ Para proponer al autor. Cada una con su tema, nivel, idea central, escena posibl
 - **El semáforo de la libreta** ★★: la nota final de 0 a 20 a una letra (AD 18–20, A 14–17, B 11–13, C 0–10) con `elif` en orden. Escena: una regla de 0 a 20 con sus zonas. Giro: con los `elif` en otro orden (empezar por `>= 11`) nadie saca AD.
 
 **Bucles**
-- **La alcancía** ★★: ahorrar cada semana hasta llegar a una meta, con un `while`. Giro: ¿y si cada semana ahorra un sol más?
-- **La conjetura de Collatz** ★★★: par → mitad, impar → triple más uno, hasta llegar a 1. Escena: una montaña rusa de números. Giro: nadie ha probado que siempre llegue a 1.
-- **El dígito verificador del DNI** ★★★: pesos por cifra con `//` y `%` en un bucle. Giro: un dígito cambiado se detecta; dos cambiados, no siempre.
-- **Los números primos** ★★★: probar divisores hasta la raíz. Giro: cuántas pruebas se ahorran al parar en la raíz.
+- Ya publicados: La alcancía ★★, El papel hasta la Luna ★★, ¿Es primo? ★★★ y La conjetura de Collatz ★★★.
+- **La racha más larga** ★★★: el clima del mes en un texto (`"SSLLLSLL"`), `for d in dias` con la racha actual que vuelve a 0 y el récord. Escena: una tira de soles y nubes. Por qué funciona: actualizar el récord solo cuando la racha se corta pierde la última. Giro: al azar también hay rachas largas.
+- **La contraseña segura** ★★★: clasificar cada letra con `"a" <= letra <= "z"` y revisar las reglas con `and`. Escena: cada letra cae en su cajón y un medidor sube. Giro: el largo pesa más que la variedad (contar combinaciones).
+- **El dígito del código de barras** ★★★: EAN-13, cifras con `% 10` y `// 10`, pesos 1 y 3 según la posición y `(10 - suma % 10) % 10`. Giro: un dígito mal copiado se detecta siempre; dos vecinos cambiados, no si difieren en 5. (O el dígito verificador del DNI, con módulo 11.)
+- **Las baldosas del patio** ★★★: el MCD de Euclides con `while b != 0`. Escena: el rectángulo que se corta en cuadrados. Giro: con restas es lentísimo; el peor caso, dos números de Fibonacci seguidos.
+- Lo aprendido con estos casos: sin `True`/`False` en variables (no se vieron como bandera: usar un centinela como `menor = 0`); con cientos de pasos de traza, capítulos cada tanto y la escena que dibuja cualquier paso de golpe; un bucle que no termina se muestra con un contador que no para y un botón «Ctrl + C» con su `KeyboardInterrupt`.
 
 **Funciones y Recursión**
 - **El cajero automático** ★★★: funciones `retirar`, `depositar`, `saldo` con un menú. Giro: una función que no devuelve nada (`None`).

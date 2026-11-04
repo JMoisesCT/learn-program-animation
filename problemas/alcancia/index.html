@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La alcancía · Problemas resueltos</title>
+  <meta name="description" content="Problema resuelto: cuántas semanas tarda Ana en juntar lo de unos audífonos ahorrando lo mismo cada semana, con un while que suma y cuenta, su diagrama de flujo y la ejecución animada línea a línea.">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/problemas.css">
+  <style>
+    /* ---------- El frasco (escena del reproductor y demo final) ---------- */
+    .frasco { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-height: 0; height: 100%; }
+    .frasco__tapa { position: relative; flex: 0 0 auto; width: var(--ancho-vidrio, 6.4rem); height: 0.85rem; box-sizing: border-box; border-radius: 5px 5px 2px 2px; background: linear-gradient(#d79b4d, #b97a2c); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2); }
+    .frasco__tapa::after { content: ""; position: absolute; left: 32%; right: 32%; top: 0.3rem; height: 0.22rem; border-radius: 2px; background: #4a3010; }
+    .frasco__zona { position: relative; flex: 1 1 auto; min-height: 6rem; width: 100%; }
+    .frasco__vidrio { position: absolute; left: 0; top: 0; bottom: 0; width: var(--ancho-vidrio, 6.4rem); box-sizing: border-box; overflow: hidden; border: 2.5px solid var(--tinta); border-top-width: 1.5px; border-radius: 6px 6px 20px 20px; background: linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(214, 232, 248, 0.75) 55%, rgba(255, 255, 255, 0.9)); }
+    .frasco__vidrio::after { content: ""; position: absolute; z-index: 4; left: 14%; top: 6%; bottom: 10%; width: 7%; border-radius: 4px; background: rgba(255, 255, 255, 0.55); pointer-events: none; }
+    .pila { position: absolute; left: 5%; right: 5%; box-sizing: border-box; display: grid; place-items: center; overflow: hidden; border-radius: 3px; background: repeating-linear-gradient(to bottom, #f6dc7a 0 3px, #e0b43c 3px 5px); box-shadow: inset 0 0 0 1.5px #b88a1c; font: 700 0.64rem var(--fuente-codigo); color: #3d2a00; }
+    .pila span { padding: 0 0.3em; border-radius: 3px; background: rgba(255, 255, 255, 0.82); line-height: 1.25; white-space: nowrap; }
+    .pila--inicial { background: repeating-linear-gradient(to bottom, #d6deea 0 3px, #aebbd0 3px 5px); box-shadow: inset 0 0 0 1.5px #7d8aa0; color: var(--tinta); }
+    .pila--fina { box-shadow: none; border-radius: 0; background: #e0b43c; }
+    .pila--fina.pila--par { background: #f3d36b; }
+    .frasco__sobra { position: absolute; z-index: 2; left: 0; right: 0; background: repeating-linear-gradient(45deg, rgba(180, 64, 14, 0.38) 0 4px, rgba(255, 255, 255, 0.15) 4px 8px); pointer-events: none; }
+    .frasco__meta { position: absolute; z-index: 3; left: -4px; width: calc(var(--ancho-vidrio, 6.4rem) + 8px); border-top: 3px dashed var(--lapiz); pointer-events: none; transition: border-color 200ms; }
+    .frasco__meta-txt { position: absolute; left: calc(100% + 0.2rem); top: -0.05rem; padding: 0 0.3em; border-radius: 3px; font: 700 0.66rem/1.5 var(--fuente-codigo); color: var(--lapiz); white-space: nowrap; }
+    .frasco__meta--foco { border-top-style: solid; }
+    .frasco__meta--foco .frasco__meta-txt { background: var(--resaltador); }
+    .frasco__sobra-txt { position: absolute; z-index: 3; left: calc(var(--ancho-vidrio, 6.4rem) + 0.45rem); padding: 0 0.3em; border-radius: 3px; background: #fde6d8; font: 700 0.64rem/1.5 var(--fuente-codigo); color: var(--lapiz); white-space: nowrap; margin-bottom: 2px; }
+    .frasco__vacio { position: absolute; left: 0; width: var(--ancho-vidrio, 6.4rem); bottom: 0.4rem; text-align: center; font: italic 0.68rem var(--fuente); color: var(--tinta-suave); }
+
+    .alc { flex: 1; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--esp-2); min-height: 0; }
+    .alc__arriba { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-2); min-height: 1.8rem; }
+    .alc__cuenta { min-height: 1.7rem; padding: 0.05em 0.7em; border-radius: 999px; background: #fff; border: 1.5px solid var(--papel-borde); font: 700 var(--texto-xs)/1.7rem var(--fuente-codigo); color: var(--azul-tinta); white-space: nowrap; transition: opacity 200ms; }
+    .alc__cuenta:empty { opacity: 0; }
+    .alc__falta { margin: 0; font: 700 var(--texto-xs) var(--fuente); color: var(--lapiz); }
+    .alc__falta--ok { color: var(--color-ok); }
+    .alc__cuerpo { --ancho-vidrio: 7.4rem; display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: var(--esp-3); min-height: 0; }
+    .alc__lado { display: flex; flex-direction: column; gap: var(--esp-2); min-width: 0; }
+    .precio { position: relative; align-self: flex-start; display: grid; padding: 0.3rem 0.8rem 0.35rem 1.5rem; border-radius: 4px 10px 10px 4px; background: #fff; border: 1.5px solid var(--papel-borde); box-shadow: var(--sombra); transform: rotate(-2deg); }
+    .precio::before { content: ""; position: absolute; left: 0.5rem; top: 50%; width: 0.45rem; height: 0.45rem; margin-top: -0.22rem; border-radius: 50%; border: 1.5px solid var(--tinta-suave); background: var(--papel); }
+    .precio small { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-suave); }
+    .precio strong { font: 700 var(--texto-lg) var(--fuente-codigo); color: var(--tinta); line-height: 1.15; }
+    .alc__rotulo { margin: 0; font-size: 0.62rem !important; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-suave); }
+    .semanas { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.3rem, 1fr)); gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+    .semanas li { display: grid; place-items: center; min-height: 2.3rem; box-sizing: border-box; border: 1.5px dashed #c2b8a3; border-radius: 6px; background: #fff; font: 700 0.62rem/1.15 var(--fuente-codigo); color: var(--tinta-suave); text-align: center; transition: background-color 250ms, border-color 250ms; }
+    .semanas li b { display: block; font-size: 0.78rem; }
+    .semanas li.en-curso { border-style: solid; border-color: #e0b43c; background: #fff8dc; color: #6b4b00; }
+    .semanas li.hecha { border-style: solid; border-color: var(--color-ok); background: #e3f4e8; color: #0b5a2e; }
+    .semanas li.recien { animation: valor-pulso 360ms ease-out; }
+    .semanas--vacia { display: block; padding: 0.5rem; border: 1.5px dashed #c2b8a3; border-radius: 6px; font: italic 0.72rem var(--fuente) !important; color: var(--tinta-suave); text-align: center; }
+    .alc__estado { margin: 0; min-height: 2.4em; font: 700 0.8rem/1.4 var(--fuente) !important; color: var(--tinta); }
+    .alc__estado .si { color: var(--color-ok); }
+    .alc__estado .no { color: var(--lapiz); }
+
+    /* ---------- Demos (bloque 2) ---------- */
+    .caja-demo { display: inline-grid; grid-template-columns: auto auto; grid-template-areas: "n v" "r r"; align-items: baseline; gap: 0 var(--esp-2); align-self: flex-start; margin: var(--esp-1) 0; padding: 0.35rem 0.9rem; border: 2px solid var(--azul-tinta); border-radius: 12px; background: var(--azul-tinta-suave); }
+    .caja-demo code { grid-area: n; background: none !important; color: var(--azul-tinta); font-weight: 700; }
+    .caja-demo__valor { grid-area: v; font: 700 var(--texto-xl) var(--fuente-codigo); color: var(--tinta); }
+    .caja-demo__rastro { grid-area: r; display: flex; flex-wrap: wrap; gap: 0 0.5em; min-height: 1.1em; font: 0.72rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .caja-demo__rastro s { text-decoration-color: var(--lapiz); }
+    .caja-demo--cambia .caja-demo__valor { animation: valor-pulso 360ms ease-out; }
+    .botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: auto; }
+    .botones .btn { min-height: 2.5rem; padding: 0.3rem 1rem; font-size: var(--texto-sm); }
+    .dos-cajas { display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; font: 700 var(--texto-sm) var(--fuente-codigo); }
+    .dos-cajas .c-cociente { color: var(--azul-tinta); }
+    .chequeos { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: var(--esp-2) 0; padding: 0; list-style: none; }
+    .chequeos li { padding: 0.15em 0.45em; border-radius: 6px; background: #e3f4e8; color: #0b5a2e; font: 700 0.7rem var(--fuente-codigo); }
+    .chequeos li.no { background: #fde6d8; color: var(--lapiz); }
+
+    /* ---------- Detalles ---------- */
+    .cuadritos { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; min-height: 2.2rem; margin: var(--esp-1) 0 var(--esp-2); }
+    .cuadritos i { width: 0.5rem; height: 0.5rem; border-radius: 2px; background: #e0b43c; }
+    .cuadritos span { margin-left: 0.3rem; font: 700 0.68rem var(--fuente-codigo); color: var(--tinta-suave); }
+    .linea-op { margin: var(--esp-2) 0; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #e6e9ee; font: 700 var(--texto-xs) var(--fuente-codigo); white-space: pre; }
+    .linea-op .op { padding: 0 0.15em; border-radius: 3px; background: #ffd479; color: #2b1d00; }
+    .semanas--mini { grid-template-columns: repeat(auto-fill, minmax(2.15rem, 1fr)); }
+    .semanas--mini li { min-height: 2.1rem; }
+    .semanas--mini li.demas { border-color: var(--lapiz); background: #fde6d8; color: var(--lapiz); }
+    .consola-mini { margin: var(--esp-2) 0; min-height: 7em; padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-codigo-fondo); color: #d7f5dd; font: 700 0.72rem/1.4 var(--fuente-codigo); white-space: pre; overflow-x: auto; }
+    .consola-mini .rojo { color: #ff9a8a; }
+    .consola-mini .gris { color: #8b96a3; font-weight: 400; }
+    .borde-datos { margin: var(--esp-2) 0 0; font: 700 var(--texto-xs) var(--fuente-codigo); color: var(--tinta-suave); }
+    kbd { padding: 0.05em 0.35em; border: 1px solid var(--papel-borde); border-bottom-width: 2px; border-radius: 4px; background: #fff; font: 700 0.85em var(--fuente-codigo); }
+
+    /* ---------- 6. Un sol más ---------- */
+    .mas { display: grid; gap: var(--esp-5); align-items: center; }
+    @media (min-width: 1024px) { .mas { grid-template-columns: 1fr 1.05fr; } }
+    .mas .codigo { margin: 0 0 var(--esp-3); font-size: 0.85rem; }
+    .codigo .linea--nueva { background: rgba(80, 200, 130, 0.16); box-shadow: inset 4px 0 0 #50c882; }
+    .mas__dibujo { display: grid; gap: var(--esp-2); padding: var(--esp-4); background: #fff; border: 1px solid var(--papel-borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+    .carrera { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); }
+    .carrera__carril { display: grid; grid-template-rows: auto 11rem auto; gap: 0.3rem; justify-items: center; text-align: center; }
+    .carrera__titulo { margin: 0; font: 700 var(--texto-xs) var(--fuente-codigo) !important; color: var(--tinta-suave); }
+    .carrera .frasco { --ancho-vidrio: 4.6rem; align-items: center; width: 7.6rem; }
+    .carrera .frasco__tapa { align-self: flex-start; }
+    .carrera__semanas { margin: 0; font: 700 var(--texto-lg) var(--serif) !important; color: var(--azul-tinta); }
+    .carrera__semanas--gana { color: var(--color-ok); }
+
+    @media (min-width: 1180px) {
+      .rep__cuerpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(11rem, 0.55fr); }
+    }
+    @media (max-width: 640px) {
+      .mas { gap: var(--esp-3); }
+      .mas__dibujo { padding: var(--esp-3); }
+      #unmas .caso-fin { margin-top: var(--esp-3); gap: var(--esp-2); }
+      #unmas .caso-fin .btn { min-height: 2.6rem; padding: 0.35rem 1rem; font-size: var(--texto-sm); }
+      .alc__cuerpo { --ancho-vidrio: 5.4rem; grid-template-columns: 9.2rem minmax(0, 1fr); gap: var(--esp-2); }
+      .precio strong { font-size: var(--texto-md); }
+      .carrera__carril { grid-template-rows: auto 9.5rem auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .semanas li.recien, .caja-demo--cambia .caja-demo__valor { animation: none; }
+    }
+  </style>
+</head>
+<body class="caso">
+
+  <header class="caso-cabecera">
+    <a href="../index.html">← Problemas resueltos</a>
+    <span class="caso-cabecera__sello">Caso de Bucles</span>
+    <span class="caso-avance" aria-hidden="true"></span>
+  </header>
+
+  <nav class="caso-indice" aria-label="Bloques del caso">
+    <ol>
+      <li><a href="#inicio"><span>Portada</span></a></li>
+      <li><a href="#caso"><span>1 · El caso</span></a></li>
+      <li><a href="#saber"><span>2 · Lo que necesitas saber</span></a></li>
+      <li><a href="#idea"><span>3 · La idea</span></a></li>
+      <li><a href="#ejecucion"><span>4 · El código en acción</span></a></li>
+      <li><a href="#detalles"><span>5 · Detalles del algoritmo</span></a></li>
+      <li><a href="#unmas"><span>6 · ¿Y si pone un sol más?</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="caso-hoja">
+
+    <!-- Portada -->
+    <section class="panel" id="inicio">
+      <div class="panel__interior caso-portada">
+        <div>
+          <p class="caso-num">Caso de Bucles</p>
+          <h1>La alcancía</h1>
+          <p class="caso-bajada">Un programa que suma semana a semana hasta llegar a la meta, sin saber antes cuántas semanas serán.</p>
+          <div class="caso-ficha">
+            <span class="caso-dificultad" aria-label="Dificultad: 2 de 5"><span class="estrellas__llenas">★★</span>☆☆☆</span>
+            <ul class="caso-temas" aria-label="Temas que usa">
+              <li><a href="../../lecciones/bucles/index.html">while</a></li>
+              <li><a href="../../lecciones/bucles/acumular/index.html">contar y acumular</a></li>
+              <li><a href="../../lecciones/condicionales/index.html">comparar con &lt;</a></li>
+            </ul>
+          </div>
+          <a class="caso-bajar" href="#caso">Empezar <span aria-hidden="true">↓</span></a>
+        </div>
+        <svg class="caso-ilustracion" viewBox="0 0 240 200" role="img" aria-label="Un frasco de vidrio con pilas de monedas, una raya que marca la meta y la etiqueta de precio de unos audífonos">
+          <!-- El frasco -->
+          <rect x="44" y="26" width="92" height="14" rx="4" fill="#c98a3b"/>
+          <rect x="78" y="30" width="24" height="4" rx="2" fill="#4a3010"/>
+          <path d="M44 40 H136 V170 Q136 186 120 186 H60 Q44 186 44 170 Z" fill="#eef5fc" stroke="#1f2a44" stroke-width="3"/>
+          <g stroke="#b88a1c" stroke-width="1.5">
+            <rect x="50" y="160" width="80" height="20" rx="3" fill="#e0b43c"/>
+            <rect x="50" y="140" width="80" height="20" rx="3" fill="#f0cd5e"/>
+            <rect x="50" y="120" width="80" height="20" rx="3" fill="#e0b43c"/>
+            <rect x="50" y="100" width="80" height="20" rx="3" fill="#f0cd5e"/>
+            <rect x="50" y="80" width="80" height="20" rx="3" fill="#e0b43c"/>
+          </g>
+          <g font-family="monospace" font-size="10" font-weight="700" fill="#3d2a00" text-anchor="middle">
+            <text x="90" y="174">+15</text><text x="90" y="154">+15</text><text x="90" y="134">+15</text><text x="90" y="114">+15</text><text x="90" y="94">+15</text>
+          </g>
+          <rect x="54" y="48" width="7" height="118" rx="3" fill="#fff" opacity="0.6"/>
+          <!-- La moneda que cae -->
+          <ellipse cx="90" cy="12" rx="12" ry="5" fill="#f0cd5e" stroke="#b88a1c" stroke-width="2"/>
+          <!-- La raya de la meta -->
+          <line x1="36" y1="64" x2="146" y2="64" stroke="#b4400e" stroke-width="3" stroke-dasharray="7 5"/>
+          <text x="150" y="68" font-family="monospace" font-size="11" font-weight="700" fill="#b4400e">meta</text>
+          <!-- La etiqueta con los audífonos -->
+          <g transform="rotate(8 196 128)">
+            <line x1="176" y1="86" x2="186" y2="104" stroke="#556074" stroke-width="1.5"/>
+            <path d="M164 104 H226 V160 H164 Z" fill="#fff" stroke="#e3d9c3" stroke-width="2"/>
+            <circle cx="186" cy="110" r="3" fill="#fbf7ee" stroke="#556074" stroke-width="1.5"/>
+            <path d="M180 136 Q180 118 195 118 Q210 118 210 136" fill="none" stroke="#2445b0" stroke-width="4" stroke-linecap="round"/>
+            <rect x="175" y="132" width="9" height="13" rx="3" fill="#2445b0"/>
+            <rect x="206" y="132" width="9" height="13" rx="3" fill="#2445b0"/>
+            <text x="195" y="156" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#1f2a44">S/ 100</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 1. El caso -->
+    <section class="panel" id="caso">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">1</span> El caso</h2>
+        <div class="enunciado carrusel-movil">
+          <div class="historia aparece">
+            <p>Ana quiere comprarse unos audífonos de <strong>S/ 100</strong>. Cada domingo guarda <strong>S/ 15</strong> de su propina en una alcancía y, antes de guardarlos, mira si ya le alcanza.</p>
+            <p>No sabe cuántas semanas serán: <span class="resalta">solo sabe que va a seguir ahorrando mientras no llegue</span>. <span class="nota-margen">¿Cuántas semanas tarda y cuánto le sobra al final?</span></p>
+            <div class="ticket" aria-label="Los datos de Ana">
+              <h3>LA ALCANCÍA DE ANA</h3>
+              <div class="ticket__fila"><span>Audífonos</span><span>S/ 100</span></div>
+              <div class="ticket__fila"><span>Cada semana</span><span>S/ 15</span></div>
+              <div class="ticket__fila ticket__fila--total"><span>En la alcancía</span><span>S/ 0</span></div>
+            </div>
+          </div>
+          <div class="enunciado__hojas aparece">
+          <article class="hoja-enunciado" aria-label="Enunciado del problema">
+            <h3>Problema</h3>
+            <p>Escribe un programa que, dada una meta, lo que se ahorra cada semana y lo que ya hay en la alcancía, diga <strong>cuántas semanas</strong> hay que ahorrar para llegar a la meta o pasarla, <strong>cuánto</strong> habrá entonces y <strong>cuánto sobra</strong>.</p>
+            <h3>Entrada</h3>
+            <ul>
+              <li><code>meta</code>: el precio, un número entero mayor que 0.</li>
+              <li><code>semanal</code>: lo que se guarda cada semana, un entero mayor que 0.</li>
+              <li><code>ahorro</code>: lo que ya hay en la alcancía, un entero mayor o igual que 0.</li>
+            </ul>
+            <h3>Salida</h3>
+            <p>Tres líneas: <code>Semanas: N</code>, <code>Ahorro: A</code> y <code>Sobran: S</code>.</p>
+          </article>
+          <article class="hoja-enunciado hoja-enunciado--ejemplos" aria-label="Ejemplos">
+            <h3>Ejemplos</h3>
+            <table class="ejemplos">
+              <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+              <tbody>
+                <tr><td>meta = 100
+semanal = 15
+ahorro = 0</td><td>Semanas: 7
+Ahorro: 105
+Sobran: 5</td></tr>
+                <tr><td>meta = 90
+semanal = 15
+ahorro = 0</td><td>Semanas: 6
+Ahorro: 90
+Sobran: 0</td></tr>
+              </tbody>
+            </table>
+          </article>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para leer el enunciado →</p>
+      </div>
+    </section>
+
+    <!-- 2. Lo que necesitas saber -->
+    <section class="panel" id="saber">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">2</span> Lo que necesitas saber</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>Acumular: sumar a lo que ya hay</h3>
+            <p><code>ahorro = ahorro + semanal</code> toma el valor viejo de la caja, le suma lo de la semana y guarda el resultado <strong>en la misma caja</strong>. Lo de <a href="../../lecciones/bucles/acumular/index.html">Contar y acumular</a>.</p>
+            <div class="caja-demo" id="d1-caja" aria-live="polite">
+              <code>ahorro</code><span class="caja-demo__valor" id="d1-valor">0</span>
+              <span class="caja-demo__rastro" id="d1-rastro"></span>
+            </div>
+            <p class="cuenta-grande" id="d1-cuenta">ahorro = 0</p>
+            <div class="botones">
+              <button type="button" class="btn btn-secundario" id="d1-mas">+ Una semana</button>
+              <button type="button" class="btn btn-secundario" id="d1-cero" aria-label="Vaciar la alcancía">↺</button>
+            </div>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Contar las vueltas</h3>
+            <p><code>semanas = semanas + 1</code> es igual, pero siempre suma 1: cuenta cuántas veces se repitió. Empieza en 0 porque al principio no pasó ninguna semana.</p>
+            <div class="control-fila">
+              <label for="d2-v">Vueltas: <span id="d2-num">3</span></label>
+              <input type="range" id="d2-v" min="0" max="8" value="3">
+            </div>
+            <ol class="semanas" id="d2-semanas" aria-hidden="true"></ol>
+            <p class="dos-cajas" id="d2-cajas" aria-live="polite"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>El <code>while</code> pregunta antes</h3>
+            <p>Antes de <strong>cada</strong> vuelta, el <code>while</code> revisa la condición. Si es False ya la primera vez, no da <strong>ninguna</strong> vuelta. Con meta 100 y 15 por semana:</p>
+            <div class="control-fila">
+              <label for="d3-a">Ya tenía: <span id="d3-num">0</span></label>
+              <input type="range" id="d3-a" min="0" max="130" step="5" value="0">
+            </div>
+            <ul class="chequeos" id="d3-chequeos" aria-hidden="true"></ul>
+            <p class="cuenta-grande" id="d3-cuenta" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver las tres ideas →</p>
+      </div>
+    </section>
+
+    <!-- 3. La idea -->
+    <section class="panel" id="idea">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">3</span> La idea</h2>
+        <div class="idea-bloque carrusel-movil">
+          <div>
+            <div id="flujo"></div>
+            <div class="recorrido">
+              <button type="button" class="btn btn-secundario" id="recorrer">▶ Seguir el diagrama con meta 100</button>
+              <p class="recorrido__nota" id="recorrido-nota" aria-live="polite"></p>
+            </div>
+          </div>
+          <div>
+            <p>Ana no hace una cuenta: <strong>mira si ya llegó; si no, guarda 15 y vuelve a mirar</strong>. El <code>while</code> hace eso: repite <em>mientras</em> la condición sea True.</p>
+            <ol class="idea">
+              <li data-idea="1"><strong>Anota los datos</strong> La meta, lo de cada semana y lo que ya hay. Las semanas empiezan en 0.</li>
+              <li data-idea="2"><strong>¿Todavía no llega?</strong> Antes de cada semana, compara el ahorro con la meta.</li>
+              <li data-idea="3"><strong>Una semana más</strong> Suma lo de la semana, cuenta la semana y vuelve a preguntar.</li>
+              <li data-idea="4"><strong>Muestra el resultado</strong> Las semanas, el ahorro y lo que sobra.</li>
+            </ol>
+            <p class="nota-margen">La pregunta del paso 2 se hace una vez más que el paso 3: la última vez, la respuesta es «no».</p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los pasos de la idea →</p>
+      </div>
+    </section>
+
+    <!-- 4. El código en acción -->
+    <section class="panel panel--escenario" id="ejecucion">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">4</span> El código en acción</h2>
+        <div id="reproductor"></div>
+      </div>
+    </section>
+
+    <!-- 5. Detalles del algoritmo -->
+    <section class="panel" id="detalles">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">5</span> Detalles del algoritmo</h2>
+        <div class="carrusel">
+          <div class="concepto aparece">
+            <h3>¿Cuántas vueltas da?</h3>
+            <p>Una vuelta por semana. Mueve la meta y lo de cada semana (la alcancía empieza vacía):</p>
+            <div class="control-fila">
+              <label for="t-meta">meta = <span id="t-meta-num">100</span></label>
+              <input type="range" id="t-meta" min="10" max="1000" step="10" value="100">
+            </div>
+            <div class="control-fila">
+              <label for="t-sem">semanal = <span id="t-sem-num">15</span></label>
+              <input type="range" id="t-sem" min="1" max="50" value="15">
+            </div>
+            <p class="dato-grande" id="t-vueltas" aria-live="polite">7 vueltas</p>
+            <div class="cuadritos" id="t-cuadritos" aria-hidden="true"></div>
+            <p class="nota-margen" id="t-nota" style="margin-top:auto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>¿Por qué <code>&lt;</code> y no <code>&lt;=</code>?</h3>
+            <p>Cambia el signo y la meta, y mira cuántas semanas pone Ana:</p>
+            <div class="control-fila">
+              <div class="chips-elegir" id="o-op" role="group" aria-label="El signo de la condición">
+                <button type="button" data-op="<" aria-pressed="true">&lt;</button>
+                <button type="button" data-op="<=" aria-pressed="false">&lt;=</button>
+              </div>
+              <div class="chips-elegir" id="o-meta" role="group" aria-label="La meta">
+                <button type="button" data-m="90" aria-pressed="true">meta 90</button>
+                <button type="button" data-m="100" aria-pressed="false">meta 100</button>
+              </div>
+            </div>
+            <div class="linea-op" id="o-linea" aria-hidden="true"></div>
+            <p class="alc__rotulo">El ahorro después de cada semana</p>
+            <ol class="semanas semanas--mini" id="o-semanas" aria-hidden="true"></ol>
+            <p class="cuenta-grande" id="o-cuenta" aria-live="polite"></p>
+            <p class="nota-margen" id="o-nota" style="margin-top:auto"></p>
+          </div>
+
+          <div class="concepto aparece">
+            <h3>Casos borde: un bucle sin fin</h3>
+            <div class="chips-elegir" id="b-chips" role="group" aria-label="Elige un caso borde">
+              <button type="button" data-b="0" aria-pressed="true">semanal = 0</button>
+              <button type="button" data-b="1" aria-pressed="false">semanal = -5</button>
+            </div>
+            <p class="borde-datos" id="b-datos"></p>
+            <div class="consola-mini" id="b-consola" aria-live="polite"></div>
+            <div class="botones" style="margin-top:0">
+              <button type="button" class="btn btn-secundario" id="b-correr">▶ Correr</button>
+              <button type="button" class="btn btn-secundario" id="b-parar" disabled>Ctrl + C</button>
+            </div>
+            <p id="b-texto" style="margin-top:var(--esp-2)"></p>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para ver los tres detalles →</p>
+      </div>
+    </section>
+
+    <!-- 6. ¿Y si pone un sol más? -->
+    <section class="panel" id="unmas">
+      <div class="panel__interior">
+        <h2 class="panel__titulo"><span class="caso-n">6</span> ¿Y si cada semana pone un sol más?</h2>
+        <div class="mas carrusel-movil">
+          <div class="aparece">
+            <p>A Ana le suben la propina: la primera semana guarda 15, la segunda 16, luego 17… Basta una línea más dentro del bucle:</p>
+            <pre class="codigo" id="s-codigo"></pre>
+            <p>Con 100 tarda 6 semanas en vez de 7. Parece poco, pero con metas más grandes la diferencia crece: con 500, <strong>21 en vez de 34</strong>; con 1000, <strong>33 en vez de 67</strong>.</p>
+            <p class="nota-margen"><span class="resalta">Lo que cambia dentro del bucle cambia cuántas vueltas da.</span> El <code>while</code> no lo sabe de antemano: solo pregunta.</p>
+          </div>
+          <div class="mas__dibujo aparece">
+            <div class="control-fila">
+              <label for="s-meta">meta = <span id="s-num">500</span></label>
+              <input type="range" id="s-meta" min="50" max="1000" step="10" value="500">
+              <button type="button" class="btn btn-secundario" id="s-llenar">▶ Llenar</button>
+            </div>
+            <div class="carrera">
+              <div class="carrera__carril">
+                <p class="carrera__titulo">15 cada semana</p>
+                <div class="frasco" id="s-fijo"></div>
+                <p class="carrera__semanas" id="s-fijo-txt" aria-live="polite"></p>
+              </div>
+              <div class="carrera__carril">
+                <p class="carrera__titulo">15, 16, 17…</p>
+                <div class="frasco" id="s-sube"></div>
+                <p class="carrera__semanas" id="s-sube-txt" aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="carrusel__ayuda">Desliza para probar →</p>
+        <div class="caso-fin">
+          <a class="btn btn-secundario" href="../index.html">← Todos los casos</a>
+          <a class="btn btn-secundario" href="../manana/index.html">← <span class="largo">Caso anterior: </span>El día de mañana</a>
+          <a class="btn btn-primario" href="../papel/index.html"><span class="largo">Siguiente caso: </span>El papel hasta la Luna →</a>
+        </div>
+        <p class="visto" role="status">Caso visto</p>
+      </div>
+    </section>
+  </main>
+
+<script src="../../assets/js/progreso.js"></script>
+<script src="../../assets/js/codigo.js"></script>
+<script src="../../assets/js/python.js"></script>
+<script src="../../assets/js/flujo.js"></script>
+<script src="../../assets/js/reproductor.js"></script>
+<script src="../../assets/js/problemas.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  var reducir = Problemas.reducir;
+  function plural(n, uno, varios) { return n + " " + (n === 1 ? uno : varios); }
+
+  /* Lo que hace el programa (con < o con <=, y con una propina que sube o no) */
+  function ahorrar(meta, semanal, ahorro, o) {
+    o = o || {};
+    var semanas = 0, max = o.max || 100000;
+    while ((o.op === "<=" ? ahorro <= meta : ahorro < meta) && semanas < max) {
+      ahorro = ahorro + semanal;
+      semanas = semanas + 1;
+      if (o.sube) semanal = semanal + 1;
+    }
+    return { semanas: semanas, ahorro: ahorro, sobran: ahorro - meta };
+  }
+
+  /* ---------- El programa ---------- */
+  function programa(d) {
+    return [
+      "meta = " + d.meta,
+      "semanal = " + d.semanal,
+      "ahorro = " + d.ahorro,
+      "semanas = 0",
+      "while ahorro < meta:",
+      "    ahorro = ahorro + semanal",
+      "    semanas = semanas + 1",
+      'print("Semanas:", semanas)',
+      'print("Ahorro:", ahorro)',
+      'print("Sobran:", ahorro - meta)'
+    ];
+  }
+  var IDEAS = [1, 1, 1, 1, 2, 3, 3, 4, 4, 4];
+
+  /* ---------- El frasco: se usa en la escena y en el bloque 6 ---------- */
+  function crearFrasco(cont) {
+    cont.innerHTML =
+      '<span class="frasco__tapa" aria-hidden="true"></span>' +
+      '<div class="frasco__zona">' +
+      '  <div class="frasco__vidrio"><div class="frasco__pilas"></div><span class="frasco__sobra" hidden></span></div>' +
+      '  <span class="frasco__meta"><span class="frasco__meta-txt"></span></span>' +
+      '  <span class="frasco__sobra-txt" hidden></span>' +
+      "</div>";
+    return {
+      vidrio: cont.querySelector(".frasco__vidrio"),
+      pilas: cont.querySelector(".frasco__pilas"),
+      sobra: cont.querySelector(".frasco__sobra"),
+      sobraTxt: cont.querySelector(".frasco__sobra-txt"),
+      meta: cont.querySelector(".frasco__meta"),
+      metaTxt: cont.querySelector(".frasco__meta-txt"),
+      tope: 100
+    };
+  }
+  /* pilas: [{ desde, hasta, inicial, texto }]; los valores en soles, la altura según f.tope */
+  function pintarFrasco(f, meta, pilas, o) {
+    o = o || {};
+    var pct = function (v) { return Math.max(0, Math.min(100, v / f.tope * 100)); };
+    var fina = pilas.length > 14;
+    f.pilas.textContent = "";
+    var ultima = null;
+    pilas.forEach(function (p) {
+      var el = document.createElement("span");
+      el.className = "pila" + (p.inicial ? " pila--inicial" : "") + (fina ? " pila--fina" : "");
+      el.style.bottom = pct(p.desde) + "%";
+      el.style.height = "calc(" + (pct(p.hasta) - pct(p.desde)) + "% - " + (fina ? 0 : 1.5) + "px)";
+      if (fina && pilas.indexOf(p) % 2) el.classList.add("pila--par");
+      if (p.texto) { var t = document.createElement("span"); t.textContent = p.texto; el.appendChild(t); }
+      f.pilas.appendChild(el);
+      ultima = el;
+    });
+    f.meta.style.bottom = pct(meta) + "%";
+    f.metaTxt.textContent = o.metaTxt || "meta " + meta;
+    f.meta.classList.toggle("frasco__meta--foco", !!o.foco);
+    var arriba = pilas.length ? pilas[pilas.length - 1].hasta : 0;
+    var sobra = arriba > meta;
+    f.sobra.hidden = !sobra;
+    f.sobraTxt.hidden = !(sobra && o.sobraTxt !== false);
+    if (sobra) {
+      f.sobra.style.bottom = pct(meta) + "%";
+      f.sobra.style.height = (pct(arriba) - pct(meta)) + "%";
+      f.sobraTxt.style.bottom = pct(meta) + "%";
+      f.sobraTxt.textContent = "+" + (arriba - meta);
+    }
+    // La pila nueva cae desde la tapa
+    if (o.caer && ultima && ultima.animate && !reducir) {
+      var caida = f.vidrio.clientHeight * (1 - pct(arriba) / 100) + 12;
+      ultima.animate([
+        { transform: "translateY(" + (-caida) + "px)", opacity: 0.4 },
+        { transform: "translateY(0)", opacity: 1, offset: 0.8 },
+        { transform: "translateY(-3px)", offset: 0.9 },
+        { transform: "none", opacity: 1 }
+      ], { duration: 560, easing: "ease-in" });
+    }
+  }
+
+  /* ---------- 2. Demos ---------- */
+  var d1 = { ahorro: 0, rastro: [] };
+  function pintarD1(cuenta) {
+    $("d1-valor").textContent = d1.ahorro;
+    $("d1-rastro").innerHTML = d1.rastro.slice(-5).map(function (v) { return "<s>" + v + "</s>"; }).join("");
+    $("d1-cuenta").innerHTML = cuenta || "ahorro = " + d1.ahorro;
+  }
+  $("d1-mas").addEventListener("click", function () {
+    var viejo = d1.ahorro;
+    if (viejo >= 150) { d1.ahorro = 0; d1.rastro = []; pintarD1(); return; }
+    d1.rastro.push(viejo);
+    d1.ahorro = viejo + 15;
+    var caja = $("d1-caja");
+    caja.classList.remove("caja-demo--cambia"); void caja.offsetWidth; caja.classList.add("caja-demo--cambia");
+    pintarD1("ahorro = <span class=\"c-resto\">" + viejo + "</span> + 15 = <span class=\"c-cociente\">" + d1.ahorro + "</span>");
+  });
+  $("d1-cero").addEventListener("click", function () { d1.ahorro = 0; d1.rastro = []; pintarD1(); });
+  pintarD1();
+
+  function pintarD2() {
+    var v = Number($("d2-v").value);
+    $("d2-num").textContent = v;
+    var html = "";
+    for (var k = 1; k <= 8; k++) html += '<li class="' + (k <= v ? "hecha" : "") + '">sem<b>' + k + "</b></li>";
+    $("d2-semanas").innerHTML = html;
+    $("d2-cajas").innerHTML = "<span>semanas = <span class=\"c-cociente\">" + v + "</span></span><span>ahorro = <span class=\"c-cociente\">" + v * 15 + "</span></span>";
+  }
+  $("d2-v").addEventListener("input", pintarD2);
+  pintarD2();
+
+  function pintarD3() {
+    var a = Number($("d3-a").value);
+    $("d3-num").textContent = a;
+    var html = "", vueltas = 0;
+    while (true) {
+      var si = a < 100;
+      html += '<li class="' + (si ? "" : "no") + '">' + a + " &lt; 100 " + (si ? "✓" : "✗") + "</li>";
+      if (!si) break;
+      a += 15;
+      vueltas++;
+    }
+    $("d3-chequeos").innerHTML = html;
+    $("d3-cuenta").innerHTML = vueltas
+      ? "<span class=\"c-cociente\">" + plural(vueltas, "vuelta", "vueltas") + "</span> · " + plural(vueltas + 1, "pregunta", "preguntas")
+      : "<span class=\"c-resto\">0 vueltas</span>: el cuerpo no corre";
+  }
+  $("d3-a").addEventListener("input", pintarD3);
+  pintarD3();
+
+  /* ---------- 3. La idea: el diagrama de flujo ---------- */
+  var flujo = Flujo.crear($("flujo"), {
+    fila: 54,
+    anchoNodo: 240,
+    columnas: [0.35, 1.6, 1],
+    nodos: [
+      { id: "ini", tipo: "inicio", texto: "Inicio", col: 1, fila: 0 },
+      { id: "datos", tipo: "datos", texto: "anota la meta, lo semanal y el ahorro", col: 1, fila: 1, idea: 1 },
+      { id: "cero", tipo: "proceso", texto: "<code>semanas = 0</code>", col: 1, fila: 2, idea: 1 },
+      { id: "cond", tipo: "decision", texto: "¿ahorro &lt; meta?", col: 1, fila: 3, idea: 2 },
+      { id: "suma", tipo: "proceso", texto: "<code>ahorro = ahorro + semanal</code>", col: 1, fila: 4, idea: 3 },
+      { id: "cuenta", tipo: "proceso", texto: "<code>semanas = semanas + 1</code>", col: 1, fila: 5, idea: 3 },
+      { id: "imprime", tipo: "datos", texto: "imprime semanas, ahorro y lo que sobra", col: 2, fila: 3, idea: 4 },
+      { id: "fin", tipo: "fin", texto: "Fin", col: 2, fila: 4 }
+    ],
+    flechas: [
+      { de: "ini", a: "datos" },
+      { de: "datos", a: "cero" },
+      { de: "cero", a: "cond" },
+      { de: "cond", a: "suma", texto: "sí" },
+      { de: "cond", a: "imprime", texto: "no" },
+      { de: "suma", a: "cuenta" },
+      { de: "cuenta", a: "cond", por: "izquierda", carril: 0 },
+      { de: "imprime", a: "fin" }
+    ]
+  });
+  Problemas.alVer($("flujo"), function () { flujo.dibujar(); });
+
+  function pasosRecorrido() {
+    var p = [
+      { nodo: "ini", nota: "Ana abre su alcancía" },
+      { nodo: "datos", nota: "meta = 100 · semanal = 15 · ahorro = 0" },
+      { nodo: "cero", nota: "semanas = 0" }
+    ];
+    var a = 0, s = 0;
+    while (a < 100) {
+      p.push({ nodo: "cond", nota: "¿" + a + " < 100? sí" });
+      p.push({ nodo: "suma", nota: "ahorro = " + a + " + 15 = " + (a + 15) });
+      a += 15; s++;
+      p.push({ nodo: "cuenta", nota: "semanas = " + s });
+    }
+    p.push({ nodo: "cond", nota: "¿" + a + " < 100? no" });
+    p.push({ nodo: "imprime", nota: "Semanas: " + s + " · Ahorro: " + a + " · Sobran: " + (a - 100) });
+    p.push({ nodo: "fin", nota: "Fin: " + s + " semanas" });
+    return p;
+  }
+  var recorrido = null;
+  var TEXTO_RECORRER = "▶ Seguir el diagrama con meta 100";
+  $("recorrer").addEventListener("click", function () {
+    if (recorrido) { recorrido.detener(); recorrido = null; $("recorrer").textContent = TEXTO_RECORRER; return; }
+    $("recorrer").textContent = "⏸ Detener";
+    recorrido = flujo.recorrer(pasosRecorrido(), {
+      intervalo: reducir ? 1200 : 700,
+      alPaso: function (p) { $("recorrido-nota").textContent = p.nota; },
+      alTerminar: function () { recorrido = null; $("recorrer").textContent = "↺ Seguirlo otra vez"; }
+    });
+  });
+
+  /* ---------- 4. El código en acción ---------- */
+  function generar(d) {
+    var pasos = [];
+    var vars = {};
+    var est = { bandas: 0 };
+    function paso(p) {
+      p.vars = JSON.parse(JSON.stringify(vars));
+      p.est = JSON.parse(JSON.stringify(est));
+      pasos.push(p);
+    }
+    var res = ahorrar(d.meta, d.semanal, d.ahorro);
+
+    vars.meta = d.meta;
+    paso({ linea: 0, escribe: "meta", capitulo: "Los datos",
+      nota: d.clave === "oferta"
+        ? "Los audífonos están en oferta: la meta es <strong>" + d.meta + "</strong>. La raya del frasco la marca."
+        : "Los audífonos cuestan <strong>" + d.meta + "</strong>: es la meta. La raya del frasco la marca." });
+    vars.semanal = d.semanal;
+    paso({ linea: 1, escribe: "semanal", nota: "Cada semana Ana guarda <strong>" + d.semanal + "</strong>." });
+    vars.ahorro = d.ahorro; est.ahorro = d.ahorro;
+    paso({ linea: 2, escribe: "ahorro",
+      nota: d.ahorro
+        ? "En la alcancía ya hay <strong>" + d.ahorro + "</strong> de antes (la pila gris)."
+        : "La alcancía empieza vacía: <code>ahorro</code> vale <strong>0</strong>." });
+    vars.semanas = 0; est.semanas = 0;
+    paso({ linea: 3, escribe: "semanas",
+      nota: "Todavía no pasó ninguna semana: <code>semanas</code> empieza en <strong>0</strong>. Va a contar las vueltas del bucle." });
+
+    var vuelta = 0;
+    while (true) {
+      var a = vars.ahorro;
+      var sigue = a < d.meta;
+      var nota;
+      if (sigue && vuelta === 0) {
+        nota = "<code>" + a + " < " + d.meta + "</code> es <strong>True</strong>: todavía no llega, así que entra al bucle. El <code>while</code> pregunta <strong>antes</strong> de cada vuelta.";
+      } else if (sigue) {
+        nota = "<code>" + a + " < " + d.meta + "</code> es True: faltan " + (d.meta - a) + ". Otra vuelta.";
+      } else if (vuelta === 0) {
+        nota = "<code>" + a + " < " + d.meta + "</code> es <strong>False</strong> desde la primera vez: ya le alcanza. El cuerpo del <code>while</code> no corre <strong>ni una vez</strong> y el programa salta a los <code>print</code>.";
+      } else if (a === d.meta) {
+        nota = "<code>" + a + " < " + d.meta + "</code> es <strong>False</strong>: con " + a + " justos ya le alcanza, así que el bucle termina aquí. Con <code><=</code> daría una vuelta de más.";
+      } else {
+        nota = "<code>" + a + " < " + d.meta + "</code> es <strong>False</strong>: ya pasó la meta. El bucle termina. Nadie le dijo cuántas vueltas dar: paró cuando la condición dejó de cumplirse.";
+      }
+      est.cond = sigue;
+      paso({ linea: 4, lee: ["ahorro", "meta"], cond: true,
+        capitulo: sigue ? "Semana " + (vuelta + 1) : (vuelta === 0 ? "Ninguna vuelta" : "Sale del bucle"),
+        pausa: vuelta === 0 || !sigue,
+        cuenta: a + " < " + d.meta + " → " + (sigue ? "True" : "False"),
+        nota: nota });
+      delete est.cond;
+      if (!sigue) break;
+
+      vars.ahorro = a + d.semanal; est.ahorro = vars.ahorro; est.bandas++;
+      paso({ linea: 5, escribe: "ahorro", lee: ["ahorro", "semanal"], suma: true,
+        cuenta: a + " + " + d.semanal + " = " + vars.ahorro,
+        nota: vuelta === 0
+          ? "<code>" + a + " + " + d.semanal + "</code> da <strong>" + vars.ahorro + "</strong>: la caja <code>ahorro</code> toma su valor viejo y le suma lo de la semana. Cae una pila de monedas."
+          : "<code>" + a + " + " + d.semanal + " = " + vars.ahorro + "</code>: ahora hay " + vars.ahorro + " en la alcancía." });
+
+      vars.semanas = vars.semanas + 1; est.semanas = vars.semanas;
+      paso({ linea: 6, escribe: "semanas", lee: ["semanas"], conteo: true,
+        cuenta: (vars.semanas - 1) + " + 1 = " + vars.semanas,
+        nota: vuelta === 0
+          ? "<code>semanas = 0 + 1</code>: se cuenta la vuelta. Ahí termina el cuerpo del bucle: la flecha vuelve arriba, al <code>while</code>."
+          : "Ya van <strong>" + plural(vars.semanas, "semana", "semanas") + "</strong>. Vuelve a la condición." });
+      vuelta++;
+    }
+
+    paso({ linea: 7, salida: "Semanas: " + res.semanas, lee: ["semanas"], capitulo: "Fin", fin: true,
+      nota: "Imprime cuántas semanas ahorró." });
+    paso({ linea: 8, salida: "Ahorro: " + res.ahorro, lee: ["ahorro"], fin: true,
+      nota: "Imprime cuánto hay en la alcancía." });
+
+    var n = res.semanas, s = res.sobran;
+    var calor = n
+      ? " En el mapa de calor, el <code>while</code> corrió <strong>" + plural(n + 1, "vez", "veces") + "</strong> y las dos líneas de adentro, " + n + ": la condición se revisa una vez más que las vueltas (la última dice False)."
+      : " En el mapa de calor, las dos líneas de adentro dicen <strong>×0</strong>: el cuerpo no corrió nunca. El <code>while</code> preguntó una sola vez.";
+    var finales = {
+      normal: "Ana tarda <strong>" + plural(n, "semana", "semanas") + "</strong> y le sobran " + s + "." + calor,
+      oferta: "<strong>" + plural(n, "semana", "semanas") + "</strong> y no sobra nada: " + n + " × " + d.semanal + " = " + res.ahorro + " justos." + calor,
+      tenia: "Con " + d.ahorro + " de arranque tarda <strong>" + plural(n, "semana", "semanas") + "</strong>, no 7, y le sobran " + s + "." + calor,
+      alcanza: "<strong>0 semanas</strong>: ya le alcanzaba y le sobran " + s + "." + calor
+    };
+    paso({ linea: 9, salida: "Sobran: " + s, lee: ["ahorro", "meta"], pausa: true, fin: true,
+      cuenta: res.ahorro + " - " + d.meta + " = " + s,
+      nota: finales[d.clave] });
+    return pasos;
+  }
+
+  /* La escena: el frasco que se llena, la etiqueta y las semanas */
+  var escena = (function () {
+    var frasco, cuentaEl, faltaEl, precioEl, semanasEl, estadoEl, celdas = [], datos = null;
+    function crear(cont) {
+      cont.innerHTML =
+        '<div class="alc">' +
+        '  <div class="alc__arriba"><span class="alc__cuenta"></span><p class="alc__falta" aria-live="polite"></p></div>' +
+        '  <div class="alc__cuerpo">' +
+        '    <div class="frasco" aria-hidden="true"></div>' +
+        '    <div class="alc__lado">' +
+        '      <div class="precio"><small>Audífonos</small><strong>S/ —</strong></div>' +
+        '      <p class="alc__rotulo">Semanas</p>' +
+        '      <ol class="semanas" aria-label="Semanas ahorradas"></ol>' +
+        '      <p class="alc__estado"></p>' +
+        "    </div>" +
+        "  </div>" +
+        "</div>";
+      frasco = crearFrasco(cont.querySelector(".frasco"));
+      cuentaEl = cont.querySelector(".alc__cuenta");
+      faltaEl = cont.querySelector(".alc__falta");
+      precioEl = cont.querySelector(".precio strong");
+      semanasEl = cont.querySelector(".semanas");
+      estadoEl = cont.querySelector(".alc__estado");
+    }
+    function reiniciar(d) {
+      datos = d;
+      var res = ahorrar(d.meta, d.semanal, d.ahorro);
+      frasco.tope = Math.max(d.meta, res.ahorro) * 1.16;
+      precioEl.textContent = "S/ " + d.meta;
+      semanasEl.textContent = "";
+      celdas = [];
+      semanasEl.classList.toggle("semanas--vacia", res.semanas === 0);
+      if (res.semanas === 0) semanasEl.textContent = "Ninguna: ya le alcanza";
+      for (var k = 1; k <= res.semanas; k++) {
+        var li = document.createElement("li");
+        li.innerHTML = "sem<b>" + k + "</b>";
+        semanasEl.appendChild(li);
+        celdas.push(li);
+      }
+    }
+    function pintar(p, op) {
+      var d = datos;
+      var e = p ? p.est : {};
+      var pilas = [];
+      if (e.ahorro !== undefined) {
+        if (d.ahorro > 0) pilas.push({ desde: 0, hasta: d.ahorro, inicial: true, texto: "tenía " + d.ahorro });
+        for (var k = 0; k < e.bandas; k++) {
+          var desde = d.ahorro + k * d.semanal;
+          pilas.push({ desde: desde, hasta: desde + d.semanal, texto: "+" + d.semanal });
+        }
+      }
+      pintarFrasco(frasco, d.meta, pilas, { foco: !!(p && p.cond), caer: op.animar && p && p.suma });
+
+      cuentaEl.textContent = p && p.cuenta ? p.cuenta : "";
+      var a = e.ahorro;
+      faltaEl.classList.toggle("alc__falta--ok", a !== undefined && a >= d.meta);
+      faltaEl.textContent = a === undefined ? "" : a < d.meta ? "faltan S/ " + (d.meta - a) : a === d.meta ? "¡justo la meta!" : "¡llegó! sobran S/ " + (a - d.meta);
+
+      celdas.forEach(function (li, m) {
+        var k2 = m + 1;
+        var hecha = e.semanas !== undefined && e.semanas >= k2;
+        var curso = !hecha && e.bandas >= k2;
+        var antes = li.classList.contains("hecha");
+        li.classList.toggle("hecha", hecha);
+        li.classList.toggle("en-curso", curso);
+        li.classList.remove("recien");
+        if (op.animar && hecha && !antes) { void li.offsetWidth; li.classList.add("recien"); }
+      });
+
+      var t = "";
+      if (p && p.cond) {
+        t = e.cond
+          ? "¿" + a + " &lt; " + d.meta + "? <span class=\"si\">Sí</span> → otra semana"
+          : "¿" + a + " &lt; " + d.meta + "? <span class=\"no\">No</span> → sale del bucle";
+      } else if (p && p.suma) t = "Cae una pila de " + d.semanal;
+      else if (p && p.conteo) t = "Semana " + e.semanas + " lista";
+      else if (p && p.fin) t = plural(e.semanas, "semana", "semanas") + " en total";
+      estadoEl.innerHTML = t;
+    }
+    return { crear: crear, reiniciar: reiniciar, pintar: pintar };
+  })();
+
+  var ENTRADAS = [
+    { nombre: "Meta 100 · 15 por semana", datos: { meta: 100, semanal: 15, ahorro: 0, clave: "normal" } },
+    { nombre: "En oferta: 90 justos", datos: { meta: 90, semanal: 15, ahorro: 0, clave: "oferta" } },
+    { nombre: "Ya tenía 30", datos: { meta: 100, semanal: 15, ahorro: 30, clave: "tenia" } },
+    { nombre: "Ya le alcanza: tenía 120", datos: { meta: 100, semanal: 15, ahorro: 120, clave: "alcanza" } }
+  ];
+
+  Reproductor.crear($("reproductor"), {
+    entradas: ENTRADAS,
+    codigo: programa,
+    ideas: IDEAS,
+    lineasDatos: [0, 1, 2],
+    variables: ["meta", "semanal", "ahorro", "semanas"],
+    generar: generar,
+    escena: escena,
+    intervalo: 1100
+  });
+
+  /* ---------- 5. Detalles ---------- */
+  function pintarTrabajo() {
+    var meta = Number($("t-meta").value), sem = Number($("t-sem").value);
+    $("t-meta-num").textContent = meta;
+    $("t-sem-num").textContent = sem;
+    var r = ahorrar(meta, sem, 0);
+    $("t-vueltas").textContent = plural(r.semanas, "vuelta", "vueltas");
+    var MAX = 100, html = "";
+    for (var k = 0; k < Math.min(r.semanas, MAX); k++) html += "<i></i>";
+    if (r.semanas > MAX) html += "<span>+" + (r.semanas - MAX) + "</span>";
+    $("t-cuadritos").innerHTML = html;
+    var truco = Math.floor((meta + sem - 1) / sem);
+    $("t-nota").innerHTML = "Da lo mismo que <code>(" + meta + " + " + sem + " - 1) // " + sem + " = " + truco + "</code>, el truco de <a href=\"../buses/index.html\">La excursión en buses</a> para redondear hacia arriba. El <code>while</code> llega ahí sin truco: suma hasta llegar a la meta o pasarla.";
+  }
+  $("t-meta").addEventListener("input", pintarTrabajo);
+  $("t-sem").addEventListener("input", pintarTrabajo);
+  pintarTrabajo();
+
+  var oOp = "<", oMeta = 90;
+  function pintarOp() {
+    $("o-linea").innerHTML = "while ahorro <span class=\"op\">" + Python.escapar(oOp) + "</span> meta:";
+    var r = ahorrar(oMeta, 15, 0, { op: oOp });
+    var bien = ahorrar(oMeta, 15, 0);
+    var html = "";
+    for (var k = 1; k <= r.semanas; k++) html += '<li class="' + (k > bien.semanas ? "demas" : "hecha") + '">' + k * 15 + "</li>";
+    $("o-semanas").innerHTML = html;
+    $("o-cuenta").innerHTML = (r.semanas > bien.semanas ? "<span class=\"c-resto\">" : "<span class=\"c-cociente\">") + plural(r.semanas, "semana", "semanas") + "</span> · sobran " + r.sobran;
+    var nota;
+    if (oOp === "<") nota = oMeta === 90
+      ? "Con 90 justos, <code>90 &lt; 90</code> es False: para a tiempo."
+      : "El ahorro salta de 90 a 105: con 105 ya pasó la meta y para.";
+    else nota = oMeta === 90
+      ? "<code>90 &lt;= 90</code> es True: pone <strong>una semana de más</strong> aunque ya le alcanzaba."
+      : "Aquí no se nota: el ahorro nunca vale 100 justo. El error aparece solo con algunos datos; por eso se prueban los casos exactos.";
+    $("o-nota").innerHTML = nota;
+  }
+  function chips(id, alElegir) {
+    $(id).querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $(id).querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        alElegir(b);
+      });
+    });
+  }
+  chips("o-op", function (b) { oOp = b.getAttribute("data-op"); pintarOp(); });
+  chips("o-meta", function (b) { oMeta = Number(b.getAttribute("data-m")); pintarOp(); });
+  pintarOp();
+
+  // Casos borde: el bucle que no termina
+  var BORDES = [
+    { semanal: 0, texto: "<code>0 + 0</code> sigue siendo 0: <code>0 &lt; 100</code> es True para siempre y el bucle no termina nunca. En Python se corta con <kbd>Ctrl</kbd> + <kbd>C</kbd>." },
+    { semanal: -5, texto: "El ahorro baja: 0, -5, -10… Se aleja de la meta y el bucle tampoco termina. Por eso el enunciado pide <code>semanal</code> mayor que 0." }
+  ];
+  var TRAZA = "Traceback (most recent call last):\n  File \"alcancia.py\", line 5, in &lt;module&gt;\n    while ahorro &lt; meta:\n          ^^^^^^^^^^^^^\n<span class=\"rojo\">KeyboardInterrupt</span>";
+  var borde = 0, reloj = null, vueltasB = 0;
+  function pintarBorde() {
+    var b = BORDES[borde];
+    $("b-datos").textContent = "meta = 100 · semanal = " + b.semanal + " · ahorro = 0";
+    $("b-texto").innerHTML = b.texto;
+  }
+  function consolaCorriendo() {
+    var ahorro = vueltasB * BORDES[borde].semanal;
+    $("b-consola").innerHTML = "<span class=\"gris\">(el programa sigue en el while…)</span>\nsemanas = " + vueltasB.toString() + "\nahorro = " + ahorro.toString();
+  }
+  function pararBorde(conTraza) {
+    if (reloj) clearInterval(reloj);
+    reloj = null;
+    $("b-correr").disabled = false;
+    $("b-parar").disabled = true;
+    if (conTraza) $("b-consola").innerHTML = TRAZA;
+  }
+  $("b-correr").addEventListener("click", function () {
+    pararBorde(false);
+    vueltasB = 0;
+    consolaCorriendo();
+    $("b-correr").disabled = true;
+    $("b-parar").disabled = false;
+    $("b-parar").focus();
+    var inicio = Date.now();
+    reloj = setInterval(function () {
+      vueltasB += 48731 + Math.floor(Math.random() * 900);
+      consolaCorriendo();
+      if (Date.now() - inicio > 20000) pararBorde(true);
+    }, reducir ? 400 : 60);
+  });
+  $("b-parar").addEventListener("click", function () { pararBorde(true); $("b-correr").focus(); });
+  chips("b-chips", function (b) {
+    borde = Number(b.getAttribute("data-b"));
+    pararBorde(false);
+    $("b-consola").innerHTML = "<span class=\"gris\">Toca «Correr» para ejecutarlo.</span>";
+    pintarBorde();
+  });
+  $("b-consola").innerHTML = "<span class=\"gris\">Toca «Correr» para ejecutarlo.</span>";
+  pintarBorde();
+
+  /* ---------- 6. Un sol más cada semana ---------- */
+  Python.escribir($("s-codigo"), [
+    "while ahorro < meta:",
+    "    ahorro = ahorro + semanal",
+    "    semanas = semanas + 1",
+    "    semanal = semanal + 1"
+  ]);
+  $("s-codigo").querySelectorAll(".linea")[3].classList.add("linea--nueva");
+
+  var fFijo = crearFrasco($("s-fijo")), fSube = crearFrasco($("s-sube"));
+  var carrera = null;
+  function pilasHasta(semanas, sube) {
+    var p = [], a = 0, s = 15;
+    for (var k = 0; k < semanas; k++) { p.push({ desde: a, hasta: a + s }); a += s; if (sube) s++; }
+    return p;
+  }
+  function pintarCarrera(semana) {
+    var meta = Number($("s-meta").value);
+    var rF = ahorrar(meta, 15, 0), rS = ahorrar(meta, 15, 0, { sube: true });
+    var tope = Math.max(rF.ahorro, rS.ahorro, meta) * 1.08;
+    fFijo.tope = fSube.tope = tope;
+    var kF = Math.min(semana, rF.semanas), kS = Math.min(semana, rS.semanas);
+    pintarFrasco(fFijo, meta, pilasHasta(kF, false), { metaTxt: String(meta), sobraTxt: false });
+    pintarFrasco(fSube, meta, pilasHasta(kS, true), { metaTxt: String(meta), sobraTxt: false });
+    var listoF = kF === rF.semanas, listoS = kS === rS.semanas;
+    $("s-fijo-txt").textContent = listoF ? plural(rF.semanas, "semana", "semanas") : "semana " + kF + "…";
+    $("s-sube-txt").textContent = listoS ? plural(rS.semanas, "semana", "semanas") : "semana " + kS + "…";
+    $("s-sube-txt").classList.toggle("carrera__semanas--gana", listoS && rS.semanas < rF.semanas);
+    return listoF && listoS;
+  }
+  function detenerCarrera() { if (carrera) clearInterval(carrera); carrera = null; $("s-llenar").textContent = "▶ Llenar"; }
+  $("s-meta").addEventListener("input", function () {
+    detenerCarrera();
+    $("s-num").textContent = $("s-meta").value;
+    pintarCarrera(Infinity);
+  });
+  $("s-llenar").addEventListener("click", function () {
+    if (carrera) { detenerCarrera(); pintarCarrera(Infinity); return; }
+    if (reducir) { pintarCarrera(Infinity); return; }
+    var meta = Number($("s-meta").value), total = ahorrar(meta, 15, 0).semanas, semana = 0;
+    $("s-llenar").textContent = "⏸ Detener";
+    pintarCarrera(0);
+    carrera = setInterval(function () {
+      semana++;
+      if (pintarCarrera(semana)) detenerCarrera();
+    }, Math.max(35, Math.min(300, 2600 / total)));
+  });
+  pintarCarrera(Infinity);
+
+  Problemas.iniciar({ id: "problema-alcancia" });
+})();
+</script>
+</body>
+</html>
