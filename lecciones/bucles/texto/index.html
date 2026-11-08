@@ -19,7 +19,10 @@
     .resumen-codigo { margin-top: var(--esp-5); }
     .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
     .cajas--dos { padding-top: var(--esp-4); }
-    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .lab__visual .expresion { margin-top: var(--esp-3); min-height: 2.625rem; }
+    /* min-height: el alto del chip True/False; así nada salta cuando aparece el resultado.
+       En el móvil, un poco más chica para que «"b" in "aeiou" → False» quepa en una línea */
+    @media (max-width: 480px) { .lab__visual .expresion { font-size: var(--texto-md); } }
     .contador-vueltas { display: block; text-align: center; margin-top: var(--esp-3); font-size: var(--texto-sm); color: var(--color-texto-suave); }
     .contador-vueltas strong { color: var(--color-texto); }
 
@@ -182,18 +185,6 @@
         <div class="lab__principal">
           <pre class="codigo" id="c-codigo" aria-label="Código"><code><span class="linea"><span class="tk-variable">palabra</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Palabra: "</span>)</span><span class="linea"><span class="tk-variable">vocales</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-variable">palabra</span>.<span class="tk-funcion">lower</span>():</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">letra</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">        <span class="tk-variable">vocales</span> += <span class="tk-numero">1</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"<span class="tk-llave">{</span><span class="tk-funcion">len</span>(<span class="tk-variable">palabra</span>)<span class="tk-llave">}</span> letras, <span class="tk-llave">{</span><span class="tk-variable">vocales</span><span class="tk-llave">}</span> vocales"</span>)</span></code></pre>
           <p class="explicacion" id="c-explicacion" aria-live="polite"></p>
-          <div class="consola">
-            <span class="consola__titulo">Consola</span>
-            <div id="c-registro" aria-live="polite"></div>
-            <div class="entrada" id="c-fila">
-              <label for="c-campo">Palabra:</label>
-              <input type="text" id="c-campo" maxlength="12" autocomplete="off" spellcheck="false">
-              <button type="button" class="btn btn-secundario" id="c-enviar">Enviar ⏎</button>
-            </div>
-          </div>
-          <div class="fila-botones">
-            <button type="button" class="btn btn-secundario" id="c-otra" hidden>↺ Otra palabra</button>
-          </div>
         </div>
         <div class="lab__visual">
           <p class="rotulo" id="c-rotulo"></p>
@@ -210,6 +201,18 @@
           </div>
         </div>
         <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Consola</span>
+            <div id="c-registro" aria-live="polite"></div>
+            <div class="entrada" id="c-fila">
+              <label for="c-campo">Palabra:</label>
+              <input type="text" id="c-campo" maxlength="12" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="c-enviar">Enviar ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="c-otra" hidden>↺ Otra palabra</button>
+          </div>
           <div class="feedback" id="c-fb" role="status" aria-live="polite"></div>
         </div>
       </div>
@@ -388,7 +391,8 @@ print(total)</span></label>
 
     l.parar = recorrer(palabra.length, function (k) {
       moverCursor($("l-letras"), k);
-      Caja.poner($("l-caja"), comillas(palabra[k]));
+      // La letra baja desde su baldosa del texto hasta la caja
+      Caja.poner($("l-caja"), comillas(palabra[k]), $("l-letras").children[k]);
       Codigo.marcar($("l-codigo"), { activas: [1, 2] });
       imprimir($("l-consola"), palabra[k]);
       $("l-vueltas").textContent = k + 1;
@@ -508,7 +512,7 @@ print(total)</span></label>
     var vocales = 0;
     $("c-rotulo").textContent = "palabra.lower() → " + comillas(minus);
     pintarLetras($("c-letras"), minus);
-    Caja.poner($("c-caja-vocales"), 0);
+    Caja.poner($("c-caja-vocales"), 0, Codigo.piezaEnLinea($("c-codigo").querySelectorAll(".linea")[1], ["0"]));
     var celdas = $("c-letras").children;
 
     c.parar = recorrer(minus.length, function (k) {
@@ -516,10 +520,10 @@ print(total)</span></label>
       var es = VOCALES.indexOf(letra) !== -1;
       moverCursor($("c-letras"), k);
       celdas[k].classList.add(es ? "letra--true" : "letra--false");
-      Caja.poner($("c-caja-letra"), comillas(letra));
+      Caja.poner($("c-caja-letra"), comillas(letra), celdas[k]);
       if (es) {
         vocales++;
-        Caja.poner($("c-caja-vocales"), vocales);
+        Caja.poner($("c-caja-vocales"), vocales, Codigo.piezaEnLinea($("c-codigo").querySelectorAll(".linea")[4], []));
         Codigo.marcar($("c-codigo"), { activas: [2, 3, 4] });
       } else {
         Codigo.marcar($("c-codigo"), { activas: [2, 3], saltadas: [4] });
@@ -643,7 +647,7 @@ print(total)</span></label>
       var e = paso.estado || {};
       if (e.vocales !== undefined) Caja.poner($("v-caja-vocales"), e.vocales);
       if (e.letra !== undefined && e.es === undefined) {
-        Caja.poner($("v-caja-letra"), comillas(e.letra));
+        Caja.poner($("v-caja-letra"), comillas(e.letra), $("v-letras").children[e.k]);
         moverCursor($("v-letras"), e.k);
         pintarExpresion(comillas(e.letra) + " in \"aeiou\"");
       }
