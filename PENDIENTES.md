@@ -6,6 +6,23 @@ Notas para retomar el trabajo en la siguiente sesión. Lo más reciente, arriba.
 
 Por orden de prioridad:
 
+0. **Revisión visual del 2026-11-08: lo que quedó por resolver en las piezas compartidas** (ver el registro de ese día). Propuestas de los revisores, sin aplicar:
+   - **Pasos con traza que no caben a 1366×657**: el problema más visible en Recursión, Ordenar y Búsquedas (pilas de 640–990 px). Ideas: una pila compacta en escritorio de poca altura (las tarjetas que esperan en una sola línea) o que la columna de lo que se ve quede fija (`sticky`) al bajar.
+   - **`problemas.css`, `.rep__nota`**: se encoge cuando su texto ocupa dos líneas (la segunda se sale del recuadro en podio, laberinto, mañana, celular, estacionamiento y bisiesto) y al pasar de 1 a 2 líneas todo el reproductor baja unos 15 px (en el móvil la escena cambia de alto casi en cada paso). Propuesta: `flex-shrink: 0; min-height` de dos líneas y, en el móvil, un alto fijo con desplazamiento. Revisar que cada bloque siga cabiendo.
+   - **`problemas.css`, letra del código según el ancho de su columna** (`container-type: inline-size` y `font-size: min(0.92rem, 2.55cqi)`): las líneas largas aún llegan a la barra de veces entre 1180 y 1279 px y a 360 px; así sobrarían las reglas que cada caso agrega por su cuenta.
+   - **`base.css`, `.expresion`**: su alto cambia cuando aparece el chip True/False y todo lo de abajo salta. Bucles lo arregló en su página (`min-height: 2.625rem`); falta revisar si conviene en todas (sumaría alto a pasos justos).
+   - **`base.css`, `.vueltas`**: `justify-content: center` corre las filas cuando su contenido crece (Bucles anidados y Dibujar patrones lo arreglan con columnas fijas).
+   - **`codigo.js`, `volar` a una línea de consola**: la copia mide el destino en una sola línea; si el texto final ocupa dos, sale por la derecha de la consola (Texto y números, paso 5, el `TypeError`) y vuela en negro antes de ponerse rojo. Propuesta: la copia con el ancho del destino y `white-space: normal`, y que `Traza` pueda crear la línea ya con `consola__linea--error`.
+   - **`codigo.js`, `salto` en el móvil**: si una línea es más ancha que su caja (se desplaza), la flecha de salto se dibuja sobre el final del texto.
+   - **`traza.js`**: el texto inicial («Toca «Ejecutar línea»…») ocupa dos líneas y `reservarAlto` guarda ese alto en todos los pasos.
+   - **`dicc.js`, `medida`**: el casillero fantasma del `KeyError` no cuenta en `--dicc-n` (en el móvil el diccionario pasa a dos filas; Diccionarios lo arregla con `capacidad`).
+   - **`particion.js`**: una opción `pisos: n` para reservar el alto final (en quicksort y mergesort la pila y la salida bajan cada vez que nace un piso).
+   - **`lista.js`**: una opción para reservar el lugar de los punteros aunque no haya fichas (Burbuja lo resuelve en su página con CSS).
+   - **`matriz.js`**: un total vacío mide 4 px y el lleno 29 (Sumar, paso 3: todo salta al llegar el primer total). Propuesta: `.matriz__total { min-height: calc(var(--c) * 0.8) }`, que cambia cómo se ve el vacío.
+   - **`.predicciones` apiladas** (Listas 3, Listas dentro de listas 3, Dos nombres 4): no caben en escritorio; hace falta un diseño compartido.
+   - **Errores en el móvil**: el código ancho se corta y se desplaza (Quicksort y Mergesort lo parten con `pre-wrap`).
+   - **Contenido** (no visual): en ¿Cuál es más rápida? (Búsquedas), paso 5, el mensaje fijo dice «unos 12 días contra 20 segundos» y las barras, con x = 750 000, «unos 9 días» y «2 segundos».
+
 1. **Matrices, completo (6/6)** (ver el registro del 2026-11-04, «Matrices»). Es el último tema publicado: su proyecto termina en «Volver a la portada».
    **Probar con alumnos** en un móvil de verdad, sobre todo:
    - si los dedos `f` y `c` que se deslizan por los bordes ayudan a seguir los dos `for` (y «`c` da toda la vuelta en cada `f`, como el minutero»);
@@ -106,6 +123,32 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Para los casos de Problemas resueltos, la prueba ya está en el repositorio: `node herramientas/probar-caso.js <caso>` (y `catalogo`). Para las lecciones, unos scripts sueltos (no guardados) recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-08 · Revisión visual de todos los temas y casos
+
+Pedido por el autor: revisar todas las lecciones (12 temas, 80 páginas) y los 16 casos buscando lo que se ve raro, sobre todo en las animaciones. Primero se hizo **`herramientas/recorrer-leccion.js`** (abre cada paso de una lección a 1366×657 y 390×844, avisa si no cabe, si desborda o si algo se sale de su caja, y con `tocar` toca los botones del paso y captura dónde termina cada animación). Luego nueve revisores en paralelo (uno por grupo de temas y uno para los casos) recorrieron cada paso en los dos anchos, miraron las animaciones cuadro a cuadro y arreglaron lo de su página; lo compartido lo propusieron y se aplicó aquí.
+
+**En las piezas compartidas**:
+- **`base.css`, `.vuelo`**: la copia que vuela heredaba la transición de `transform` de su clase (`lista__valor`): todo valor que volaba a un casillero salía del destino, cruzaba la pantalla hasta el origen y volvía a volar. Pasaba en todas las lecciones con listas, diccionarios, tuplas y matrices. Ahora `transition: none`.
+- **`lista.js`**: un valor que cruza varios casilleros (`sort`, `reordenar`) viaja sin su índice y en arco (el que avanza pasa por arriba, el que vuelve por abajo), así no se tapan; los corchetes se deslizan con la lista (antes saltaban y el `]` quedaba sobre el último valor); los punteros se ubican donde termina el casillero, no a mitad de la animación (en Burbuja, `j` y `j + 1` quedaban cruzados).
+- **`reproductor.js`**: al llegar con ▶ a un momento clave o al final, el paso se pintaba dos veces (la segunda sin animar) y se perdían sus vuelos y resaltados.
+- **`pasos.js`**: si un mensaje aparece bajo el pie fijo (al terminar una traza), la página baja lo justo para verlo (no al entrar al paso); la flecha de «Siguiente: … →» ya no queda sola en otro renglón en el móvil.
+- **`bucle-input.js`** y `html { scroll-padding-bottom }`: el campo de la consola vuelve a la vista cuando el registro crece (en el ahorcado quedaba bajo el pie desde la tercera letra) y, si el registro tiene tope, se ve siempre lo último.
+- **Resumen final en escritorio**: el 🎉 va junto al título y la frase del resumen junto a su código; los botones «Repetir» y «Siguiente» ya no quedan bajo el pie (salvo en resúmenes de 15 líneas o más).
+- **Tupla**: el casillero marcado ya no sale blanco sobre blanco. **Caja**: la copia que vuela no se recorta («202…»). **Regla**: al final de un panel guarda el margen de sus números. **Matriz**: el nombre no pisa el índice de columna. **Pila**: la tarjeta que sale ya no tacha el rótulo.
+
+**En las lecciones y los casos** (detalle en los commits de ese día, uno por grupo):
+- **Variables y Condicionales**: pasos que no cabían reacomodados (los controles sobre lo que se ve, el código a la izquierda con el mensaje debajo); los retos de Variables y Fórmulas muestran el código mientras corre; errata «Quedan 1 seis».
+- **Bucles**: consolas con `input()` a la derecha (el pie las tapaba); cada valor vuela desde donde sale; filas de `i` y `j` que no se corren; el reto de Dibujar patrones cabe.
+- **Funciones y Texto a fondo**: la flecha de salto al volver de cada `return`; pasos que caben; las tijeras ya no tachan el número del corte; la consola de los juegos con tope.
+- **Recursión**: tablas de seguimiento con alto reservado sin estirar filas; árboles que caben; emojis dentro de sus hojas.
+- **Listas**: el tablero se arma a la vista; consolas que no empujan el campo bajo el pie.
+- **Otras estructuras y Búsquedas**: textos cortados en cajas («Lui…», «202…»); el Venn sin fichas sobre el borde; la tabla de la binaria sin filas estiradas.
+- **Ordenar y Errores**: un error de JS en el reto de Mezclar al retomar la lección; botones y tablas que se encimaban en el móvil.
+- **Matrices**: cajas que cortaban `[20, 12, 15]`; el `print` que se adelantaba a la fila; la matriz diminuta de Transformar en el móvil.
+- **Casos**: escenas que saltaban (la cuenta, los buses, el podio y la pastilla de la cuenta en nueve casos); portadas de la cuenta, el reloj y el bisiesto; código que llegaba a la barra de veces.
+
+Probado con `recorrer-leccion.js` y `probar-caso.js` después de cada arreglo; lo que quedó, arriba en «Para la siguiente sesión» (punto 0).
 
 ### 2026-11-08 · Problemas resueltos: revisión visual de los casos de Bucles
 
