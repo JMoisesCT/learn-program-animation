@@ -17,7 +17,9 @@
                                  dibuja cuando la ejecución vuelve arriba (otra vuelta, una llamada).
                                  fase: "ida" / "vuelta" (recursión) colorea la flecha del paso:
                                  a la ida (una llamada) o a la vuelta (volver de ella); en una
-                                 consola con la clase consola--fases, también lo que imprime
+                                 consola con la clase consola--fases, también lo que imprime.
+                                 error: true pone la salida del paso en rojo (un mensaje de error),
+                                 también mientras vuela a la consola
      alPaso: function (paso, i) { … },   pinta el estado (cajas, chips…)
      pila: p,                             (opcional) la Pila.crear que pinta paso.estado: su código
                                           y su rótulo reservan el alto que alcanzan en la traza
@@ -30,7 +32,8 @@
    });
 
    La explicación reserva el alto del texto más largo de la traza, para que los botones
-   de debajo no salten de un paso a otro.
+   de debajo no salten de un paso a otro. El texto inicial («Toca «Ejecutar línea»…») se
+   acorta si no cabe en ese alto, en vez de reservar un renglón más en todos los pasos.
 
    t.reiniciar()   vuelve a generar la traza y empieza desde cero
    t.reproducir()  empieza a avanzar solo (como pulsar el botón de reproducir)
@@ -47,18 +50,34 @@
     var timer = null;
     var intervalo = o.intervalo || 800;
     var textoReproducir = o.reproducir ? o.reproducir.textContent : "";
-    var inicio = o.reproducir
-      ? "Toca «Ejecutar línea» para ir paso a paso, o «" + textoReproducir.replace(/^[^\p{L}]+/u, "") +
-        "» para verlo seguido."
-      : "Toca «Ejecutar línea» para empezar.";
+    var nombreReproducir = textoReproducir.replace(/^[^\p{L}]+/u, "");
+    // El texto inicial, de más largo a más corto: se muestra el más largo que quepa en el alto
+    // de los pasos, así no reserva un renglón de más en todos los pasos de la traza
+    var inicios = o.reproducir
+      ? ["Toca «Ejecutar línea» para ir paso a paso, o «" + nombreReproducir + "» para verlo seguido.",
+        "Toca «Ejecutar línea» o «" + nombreReproducir + "».",
+        "Toca «Ejecutar línea»."]
+      : ["Toca «Ejecutar línea» para empezar.", "Toca «Ejecutar línea»."];
+    var inicio = inicios[0];
+    var enInicio = true;    // la explicación muestra el texto inicial
 
     function terminado() { return i >= pasos.length; }
 
     function reservar() {
       if (o.pila) o.pila.reservar(pasos.map(function (p) { return p.estado; }));
       if (!o.explicacion) return;
-      var textos = [inicio].concat(pasos.map(function (p) { return p.texto || ""; }));
-      Codigo.reservarAlto(o.explicacion, textos, function (copia, texto) { copia.innerHTML = texto; });
+      // En una traza repetible los pasos se generan al ejecutar: el texto inicial largo sí
+      // cuenta, para que el alto no cambie al empezar. En las demás cuenta el más corto.
+      var textos = [o.repetible || !pasos.length ? inicios[0] : inicios[inicios.length - 1]]
+        .concat(pasos.map(function (p) { return p.texto || ""; }));
+      Codigo.reservarAlto(o.explicacion, textos, function (copia, texto) { copia.innerHTML = texto; }, function (alto, medir) {
+        inicio = inicios[inicios.length - 1];
+        for (var k = 0; k < inicios.length - 1; k++) {
+          if (medir(inicios[k]) <= alto) { inicio = inicios[k]; break; }
+        }
+        // Solo si muestra uno de los textos iniciales (la lección puede haber puesto el suyo)
+        if (enInicio && inicios.indexOf(o.explicacion.textContent) !== -1) o.explicacion.textContent = inicio;
+      });
     }
 
     function detener() {
@@ -78,6 +97,7 @@
       i = 0;
       previa = null;
       Codigo.limpiar(o.codigo);
+      enInicio = true;
       if (o.explicacion) o.explicacion.textContent = inicio;
       reservar();
     }
@@ -105,12 +125,14 @@
       Codigo.marcar(o.codigo, { activas: [paso.linea] });
       var desde = previa;
       previa = paso.linea;
+      enInicio = false;
       if (o.explicacion) o.explicacion.innerHTML = paso.texto;
       if (o.consola && paso.salida !== undefined) {
         // Lo que imprime print viaja de la línea a la consola
         var texto = String(paso.salida);
         Codigo.agregar(o.consola, texto);
         if (paso.fase && o.consola.classList.contains("consola--fases")) o.consola.lastElementChild.classList.add("consola__linea--" + paso.fase);
+        if (paso.error) o.consola.lastElementChild.classList.add("consola__linea--error");
         Codigo.volarDesdeLinea(o.codigo, o.consola.lastElementChild, texto, "vuelo--salida");
       }
       if (o.alPaso) o.alPaso(paso, i - 1);
