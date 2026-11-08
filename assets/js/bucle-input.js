@@ -84,6 +84,8 @@
       // Queda marcado el camino que acaba de recorrer esta vuelta
       marcar(r.camino);
       (r.salida || []).forEach(function (s) { Codigo.agregar(registro, s); });
+      // Si el registro tiene un alto máximo (se desplaza), se ve siempre lo último
+      registro.scrollTop = registro.scrollHeight;
       vuelta++;
       if (!r.fin && (!o.vueltas || vuelta < o.vueltas)) {
         pedir(r.texto);
@@ -97,6 +99,7 @@
       explicar(r.texto + (f.texto ? " " + f.texto : ""));
       indicador.textContent = "Fin del bucle";
       if (f.salida !== undefined) Codigo.agregar(registro, f.salida);
+      registro.scrollTop = registro.scrollHeight;
       fila.hidden = true;
       otra.hidden = false;
       otra.focus();
