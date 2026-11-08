@@ -59,12 +59,32 @@
      Si esa columna queda mucho más alta que la del código, pasa a la izquierda,
      bajo el código (clase paso--salida-abajo), para que el paso entre en la pantalla.
      Se decide al entrar al paso, al cambiar el tamaño de la ventana y cuando lo que se
-     ve o la salida cambian de alto (ResizeObserver). */
+     ve o la salida cambian de alto (ResizeObserver).
+     Lo que se ve y crece mientras corre el código: con data-visual-fija en la lección, los
+     pasos con una pila de llamadas, una lista que se parte o un árbol de llamadas; con
+     data-visual-fija en un paso, ese paso (data-visual-fija="no" lo evita). Si el paso no cabe en la pantalla, la salida va
+     bajo el código y lo que se ve queda fijo a la derecha al bajar (paso--visual-fija, en
+     base.css): así se ven a la vez los botones, la línea que corre y la pila. Es a pedido
+     porque a veces la salida debe quedar junto a lo que se ve (el mensaje de error junto a
+     la pila, en Errores).
+     Una vez que un paso pasó a ese reparto, no vuelve atrás hasta salir de él: si la pila
+     se achica, la salida no salta de un lado a otro. */
   var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
+  var CRECE = ".pila, .particion, .arbol-llamadas";
 
-  function equilibrar(paso) {
+  // Alto que tiene el paso para verse entero: la pantalla menos la cabecera y el pie
+  function altoLibre(paso) {
+    var cab = document.querySelector(".leccion-cabecera");
+    var pie = document.querySelector(".leccion-pie");
+    var cs = getComputedStyle(paso);
+    return window.innerHeight - (cab ? cab.offsetHeight : 0) - (pie ? pie.offsetHeight : 0) -
+      parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 16;
+  }
+
+  function equilibrar(paso, alEntrar) {
     var lab = paso.querySelector(":scope > .lab");
-    paso.classList.remove("paso--salida-abajo");
+    var fijaAntes = !alEntrar && paso.classList.contains("paso--visual-fija");
+    paso.classList.remove("paso--salida-abajo", "paso--visual-fija");
     if (!lab || !escritorio || !escritorio.matches) return;
     var intro = paso.querySelector(":scope > .paso__intro");
     var principal = lab.querySelector(":scope > .lab__principal");
@@ -75,6 +95,17 @@
     var salida = resultado.offsetHeight + 16;
     var aLaDerecha = Math.max(izquierda, visual.offsetHeight + salida);
     var abajo = Math.max(izquierda + salida, visual.offsetHeight);
+    var pide = paso.getAttribute("data-visual-fija");
+    var crece = pide !== "no" && (pide !== null ||
+      (paso.closest("[data-visual-fija]") && visual.querySelector(CRECE)));
+    if (crece) {
+      // Si lo que se ve es más alto que la pantalla, igual queda fijo: arriba está lo
+      // último que pasó (la tarjeta de arriba de la pila) y lo de abajo se ve al final
+      if (fijaAntes || aLaDerecha > altoLibre(paso)) {
+        paso.classList.add("paso--salida-abajo", "paso--visual-fija");
+        return;
+      }
+    }
     if (abajo + 24 < aLaDerecha) paso.classList.add("paso--salida-abajo");
   }
 
@@ -244,7 +275,7 @@
       visitados[actual] = true;
       var fn = alEntrar[paso.id];
       if (fn) fn(paso, leccion, { primeraVez: primeraVez, desbloqueado: !!desbloqueados[actual] });
-      equilibrar(paso);
+      equilibrar(paso, true);
 
       // Fin de la lección: lluvia de confeti desde la celebración
       if (actual === total - 1 && !primeraCarga) {
@@ -304,7 +335,7 @@
       var esperaEquilibrio;
       window.addEventListener("resize", function () {
         clearTimeout(esperaEquilibrio);
-        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual]); }, 150);
+        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual], true); }, 150);
       });
       // Si después de entrar crece lo que se ve o la salida (un mensaje de error, el
       // feedback de «Comprobar», una consola que se llena), se vuelve a decidir dónde va

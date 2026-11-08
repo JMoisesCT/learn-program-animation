@@ -160,7 +160,7 @@
   </style>
 </head>
 <body>
-<div class="leccion" data-leccion="ordenar-quicksort">
+<div class="leccion" data-visual-fija data-leccion="ordenar-quicksort">
 
   <header class="leccion-cabecera">
     <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Salir de la lección">&times;</a>
@@ -586,6 +586,9 @@
     return r;
   }
 
+  // Cuántos pisos baja el árbol bajo el nodo (el pivote va en el piso de sus hijos)
+  function profundidad(n) { return n.m ? 1 + Math.max(profundidad(n.m), profundidad(n.M)) : 0; }
+
   function padreDe(id) { return id.length > 1 ? id.slice(0, -1) : null; }
 
   function trozoDe(n, valores) {
@@ -595,8 +598,8 @@
   /* ---------- Partición que se pinta desde un estado ----------
      part: { id: { piso, desde, ancho, valores, padre, celdas, estado, rotulo, error } }
      vuelos: [{ de: [id, i], a: [id, j], texto }], después de pintar. */
-  function crearPart(el, n, etiqueta, max) {
-    var p = Particion.crear(el, { n: n, etiqueta: etiqueta, max: max });
+  function crearPart(el, n, etiqueta, max, pisos) {
+    var p = Particion.crear(el, { n: n, etiqueta: etiqueta, max: max, pisos: pisos });
     var vistos = {};
     function porPiso(part) {
       return Object.keys(part).sort(function (a, b) { return part[a].piso - part[b].piso || a.length - b.length; });
@@ -770,7 +773,7 @@
      La partición empieza con el reparto del paso 1. El alumno toca los pedazos que
      faltan partir; después los junta de abajo hacia arriba. */
   var ARBOL2 = arbol(NOTAS, { base: true });
-  var part2 = crearPart($("p2-part"), ARBOL2.w, "La lista se parte en pedazos alrededor de cada pivote");
+  var part2 = crearPart($("p2-part"), ARBOL2.w, "La lista se parte en pedazos alrededor de cada pivote", undefined, profundidad(ARBOL2) + 1);
   part2.el.setAttribute("role", "group");
   var est2 = null;
 
@@ -1197,7 +1200,13 @@
   function crearTrazaQS(prefijo, cfg) {
     var pre = $(prefijo + "-codigo");
     var columnas = arbol(cfg.lista, cfg.ver).w;
-    var part = crearPart($(prefijo + "-part"), columnas, "Cómo se parte " + py(cfg.lista), cfg.max);
+    // Los pisos que alcanza la traza: su alto queda reservado desde el principio
+    var pisos = 0;
+    trazaQS(cfg).forEach(function (paso) {
+      var part = paso.estado.part || {};
+      Object.keys(part).forEach(function (id) { pisos = Math.max(pisos, part[id].piso + 1); });
+    });
+    var part = crearPart($(prefijo + "-part"), columnas, "Cómo se parte " + py(cfg.lista), cfg.max, pisos);
     var pila = $(prefijo + "-pila") ? Pila.crear($(prefijo + "-pila"), { codigo: pre }) : null;
     var contador = $(prefijo + "-contador");
     var traza = Traza.crear({
