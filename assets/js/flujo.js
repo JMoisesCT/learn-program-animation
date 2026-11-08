@@ -116,6 +116,7 @@
         var maxAncho = Math.min(anchoCol - 14, o.anchoNodo || 210);
         if (x.n.tipo === "decision") maxAncho = Math.min(anchoCol - 6, (o.anchoNodo || 210) * 1.15);
         x.el.style.maxWidth = maxAncho + "px";
+        if (x.n.tipo === "decision") rombo(x.el, maxAncho);
         x.cx = inicioCol[x.n.col] + anchoCol / 2;
         // Si un texto se parte en varias líneas (pantalla angosta), su fila crece
         altos[x.n.fila] = Math.max(altos[x.n.fila], x.el.offsetHeight + 20);
@@ -161,6 +162,22 @@
           fl.etiqueta.setAttribute("text-anchor", vertical ? "start" : (p1[0] > p0[0] ? "start" : "end"));
         }
       });
+    }
+
+    // El texto de un rombo cabe entero dentro de él si (ancho del texto / ancho del rombo)
+    // + (alto del texto / alto del rombo) <= 1. Se ensancha el rombo hacia ese ancho, sin
+    // pasar de 1.5 veces el texto ni comerse el lugar de la flecha de al lado.
+    function rombo(nodo, maxAncho) {
+      var t = nodo.firstChild;
+      nodo.style.padding = "";
+      var cs = getComputedStyle(nodo);
+      var py = parseFloat(cs.paddingTop) || 12, pxCss = parseFloat(cs.paddingLeft) || 16;
+      t.style.display = "inline-block";
+      var w = t.offsetWidth, h = t.offsetHeight;
+      var ideal = w / Math.max(0.2, 1 - h / (h + 2 * py)) + 4;
+      var ancho = Math.min(ideal, w * 1.5 + 8, maxAncho - 28);
+      var px = Math.max(pxCss, (ancho - w) / 2);
+      nodo.style.padding = py + "px " + px + "px";
     }
 
     // Camino con esquinas redondeadas

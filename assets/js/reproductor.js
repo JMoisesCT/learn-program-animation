@@ -280,6 +280,7 @@
         var v = caja(nombre);
         var h = historia(nombre);
         v.valor.textContent = h[h.length - 1];
+        if (v.valor.textContent.length > 11) v.caja.classList.add("rep__var--largo");
         h.slice(Math.max(0, h.length - 4), -1).forEach(function (t) {
           v.rastro.appendChild(nuevo("s", null, t));
         });
