@@ -203,7 +203,41 @@
     function formato(nombre, v) { return o.formato ? o.formato(nombre, v) : python(v); }
 
     /* ---------- Mapa de calor ---------- */
+    // La letra del código se achica (hasta 0.66rem) si una línea llegaría a la barra del
+    // mapa de calor: depende del ancho de la columna y de las líneas de los datos elegidos.
+    // Si aun así no cabe, las líneas largas se parten (.rep__partir)
+    function ajustarLetra() {
+      // Sin transiciones: con movimiento reducido, base.css da 1 ms a todas (también a font-size)
+      // y la medida leería la letra vieja (medirCalores pone y quita la clase)
+      pre.style.fontSize = "";
+      pre.classList.remove("rep__partir");
+      if (!pre.offsetWidth) return;
+      var ls = lineas();
+      if (!ls.length) return;
+      calores.textContent = "";
+      var muestra = nuevo("span", "rep__calor");
+      calores.appendChild(muestra);
+      var limite = muestra.getBoundingClientRect().left - 4;
+      calores.removeChild(muestra);
+      var factor = 1;
+      ls.forEach(function (l) {
+        var rango = document.createRange();
+        rango.selectNodeContents(l);
+        var r = rango.getBoundingClientRect();
+        if (r.width > 0 && r.right > limite) factor = Math.min(factor, (limite - r.left) / r.width);
+      });
+      if (factor >= 1) return;
+      var base = parseFloat(getComputedStyle(pre).fontSize);
+      var rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      var letra = Math.floor(base * factor * 10) / 10;
+      pre.style.fontSize = Math.max(0.66 * rem, letra) + "px";
+      // Si ni con la letra más chica cabe (un teléfono angosto), la línea larga se parte en dos
+      if (letra < 0.66 * rem) pre.classList.add("rep__partir");
+    }
+
     function medirCalores() {
+      pre.classList.add("codigo--midiendo");
+      ajustarLetra();
       var ls = lineas();
       calores.textContent = "";
       calores.style.height = pre.offsetHeight + "px";
@@ -215,6 +249,7 @@
         c.appendChild(nuevo("span", "rep__calor-num"));
         calores.appendChild(c);
       });
+      pre.classList.remove("codigo--midiendo");
       pintarCalores();
     }
 
@@ -315,9 +350,79 @@
     }
 
     /* ---------- Un paso ---------- */
-    function capituloDe(n) {
-      for (var m = n; m >= 0; m--) if (pasos[m].capitulo) return pasos[m].capitulo;
+    function capituloDe(n, ps) {
+      ps = ps || pasos;
+      for (var m = n; m >= 0; m--) if (ps[m].capitulo) return ps[m].capitulo;
       return null;
+    }
+
+    /* ---------- La nota: siempre del mismo alto ---------- */
+    var INICIO = "Toca <strong>▶</strong> para ver el programa correr, o arrastra la barra para ir a cualquier momento.";
+    function contenidoNota(ps, n) {
+      var paso = ps[n] || null;
+      return { cap: paso ? capituloDe(n, ps) : null, pausa: !!(paso && paso.pausa), texto: paso ? paso.nota || "" : INICIO };
+    }
+
+    function ponerNota(el, c) {
+      el.classList.toggle("rep__nota--clave", c.pausa);
+      el.innerHTML = "";
+      if (c.cap) el.appendChild(nuevo("span", "rep__nota-cap", c.cap));
+      if (c.pausa) el.appendChild(nuevo("span", "rep__nota-clave", "⏸ Momento clave"));
+      var texto = nuevo("span", "rep__nota-texto");
+      texto.innerHTML = c.texto;
+      el.appendChild(texto);
+    }
+
+    // Todas las notas distintas de todos los datos de entrada (se calculan una vez)
+    var notasTodas = null;
+    function notasDistintas() {
+      if (notasTodas) return notasTodas;
+      var vistas2 = {};
+      notasTodas = [];
+      function agregar(ps, n) {
+        var c = contenidoNota(ps, n);
+        var clave = c.cap + "\u0001" + c.pausa + "\u0001" + c.texto;
+        if (vistas2[clave]) return;
+        vistas2[clave] = true;
+        notasTodas.push(c);
+      }
+      agregar([], -1);
+      (o.entradas || []).forEach(function (e, m) {
+        var ps = pasos;
+        if (m !== k) { try { ps = o.generar(e.datos); } catch (err) { ps = []; } }
+        for (var n = 0; n < ps.length; n++) agregar(ps, n);
+      });
+      return notasTodas;
+    }
+
+    // La nota guarda el alto de la más larga (hasta --nota-lineas renglones; si una se pasa,
+    // se desplaza dentro): así el código y la escena no saltan cuando cambia de una a dos líneas
+    // Una nota que no cabe se desvanece abajo hasta que se baja hasta su final
+    function marcarNotaLarga() {
+      nota.classList.toggle("rep__nota--mas", nota.scrollTop + nota.clientHeight < nota.scrollHeight - 2);
+    }
+    nota.addEventListener("scroll", marcarNotaLarga);
+
+    function reservarNota() {
+      var ancho = nota.getBoundingClientRect().width;
+      if (!ancho) return;
+      var medidas = nuevo("div");
+      medidas.setAttribute("aria-hidden", "true");
+      medidas.style.cssText = "position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;width:" + ancho + "px";
+      notasDistintas().forEach(function (c) {
+        var m = nuevo("div", "rep__nota");
+        ponerNota(m, c);
+        medidas.appendChild(m);
+      });
+      raiz.appendChild(medidas);
+      var max = 0;
+      for (var n = 0; n < medidas.children.length; n++) max = Math.max(max, medidas.children[n].getBoundingClientRect().height);
+      raiz.removeChild(medidas);
+      var st = getComputedStyle(nota);
+      var renglones = parseFloat(st.getPropertyValue("--nota-lineas")) || 3;
+      var tope = renglones * parseFloat(st.lineHeight) + parseFloat(st.paddingTop) + parseFloat(st.paddingBottom);
+      nota.style.height = Math.ceil(Math.min(max, tope)) + "px";
+      marcarNotaLarga();
     }
 
     function pintar(animar) {
@@ -340,15 +445,9 @@
       pintarCalores();
       if (o.escena && o.escena.pintar) o.escena.pintar(paso, { animar: animar && !reducir(), datos: datos, i: i, pasos: pasos, velocidad: vel, intervalo: (o.intervalo || 1000) / vel });
 
-      nota.classList.toggle("rep__nota--clave", !!(paso && paso.pausa));
-      nota.innerHTML = "";
-      var cap = paso ? capituloDe(i) : null;
-      if (cap) nota.appendChild(nuevo("span", "rep__nota-cap", cap));
-      if (paso && paso.pausa) nota.appendChild(nuevo("span", "rep__nota-clave", "⏸ Momento clave"));
-      var texto = nuevo("span", "rep__nota-texto");
-      texto.innerHTML = paso ? paso.nota || "" :
-        "Toca <strong>▶</strong> para ver el programa correr, o arrastra la barra para ir a cualquier momento.";
-      nota.appendChild(texto);
+      ponerNota(nota, contenidoNota(pasos, i));
+      nota.scrollTop = 0;
+      marcarNotaLarga();
 
       barra.value = String(i);
       barra.setAttribute("aria-valuetext", i < 0 ? "Antes de empezar" : "Paso " + (i + 1) + " de " + pasos.length);
@@ -459,7 +558,7 @@
       pintarMarcas();
       if (o.escena && o.escena.reiniciar) o.escena.reiniciar(datos);
       ir(-1);
-      requestAnimationFrame(medirCalores);
+      requestAnimationFrame(function () { medirCalores(); reservarNota(); });
     }
 
     /* ---------- Eventos ---------- */
@@ -485,7 +584,7 @@
     var esperaMedir;
     window.addEventListener("resize", function () {
       clearTimeout(esperaMedir);
-      esperaMedir = setTimeout(medirCalores, 150);
+      esperaMedir = setTimeout(function () { medirCalores(); reservarNota(); }, 150);
     });
 
     raiz.setAttribute("data-vista", botonesVista.escena ? "escena" : "codigo");
