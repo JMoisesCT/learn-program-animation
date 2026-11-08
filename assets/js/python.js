@@ -56,7 +56,10 @@
   function escribir(pre, lineas, opciones) {
     var huecos = opciones && opciones.huecos ? opciones.huecos.slice() : null;
     pre.innerHTML = "<code>" + lineas.map(function (l) {
-      return '<span class="linea">' + (colorear(l, huecos) || " ") + "</span>";
+      // --sangria: los espacios del comienzo, para partir una línea larga con su sangría
+      // (.partir-codigo en base.css)
+      var n = /^ */.exec(l)[0].length;
+      return '<span class="linea"' + (n ? ' style="--sangria: ' + n + 'ch"' : "") + ">" + (colorear(l, huecos) || " ") + "</span>";
     }).join("") + "</code>";
   }
 
