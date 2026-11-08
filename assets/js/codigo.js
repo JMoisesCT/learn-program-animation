@@ -14,7 +14,9 @@
        `hasta` (índices desde 0): la ejecución vuelve arriba (bucle) o salta (llamada).
        tipo "ida" (una llamada) o "vuelta" (volver de ella) le da su color; con tipo, si
        las dos líneas son la misma (una llamada recursiva vuelve a la línea de la de abajo),
-       la flecha da una vuelta pequeña y entra en la misma línea.
+       la flecha da una vuelta pequeña y entra en la misma línea. Si las líneas son más
+       anchas que la caja (se desplazan, en el móvil), la flecha va en el borde visible, el
+       texto se desvanece debajo de ella y, al desplazar el código, la flecha lo acompaña.
    Codigo.quitarSalto(preEl)
        borra la flecha (Codigo.limpiar también la borra).
    Codigo.pausas(preEl, [{ linea: 5, texto: "n=3", clave: "1" }, …])
@@ -36,6 +38,8 @@
        Si la línea tiene una pieza con ese mismo texto (un 12, un "Ana"), sale de ahí.
    Codigo.volar(origen, destinoEl, texto, clase, alLlegar)
        lo mismo, pero sale de `origen` (un elemento o un rectángulo de getBoundingClientRect).
+       Hacia una línea de consola, la copia se parte en renglones como ella y, si la línea
+       tiene consola__linea--error, vuela en rojo.
    Codigo.piezaEnLinea(lineaEl, ["5", "precio"])
        rectángulo de la primera pieza de la línea con uno de esos textos (o de todo su texto):
        un origen para Codigo.volar o Caja.poner, p. ej. el argumento de la llamada.
@@ -44,6 +48,8 @@
        que lo de debajo (los botones) no salte de un paso a otro. pintar(copia, estado) deja
        una copia invisible de el en ese estado; se vuelve a medir cuando el aparece o cambia
        de ancho. Traza lo hace con la explicación; Pila, con el código (fichas) y el rótulo.
+       Con un cuarto argumento alMedir(alto, medir), tras cada medida se puede medir
+       cualquier otro estado con medir(estado), sin que cuente en el alto.
 */
 (function () {
   "use strict";
@@ -98,15 +104,69 @@
 
   function quitarSalto(pre) {
     pre.querySelectorAll(".codigo__salto").forEach(function (el) { el.remove(); });
+    pre._salto = null;
   }
 
-  function salto(pre, desde, hasta, tipo) {
+  /* Si el código es más ancho que su caja (en el móvil), la flecha va en el borde visible y el
+     texto que sigue se desvanece debajo de ella, en vez de quedar tachado por la flecha. Al
+     desplazar el código, la flecha se vuelve a dibujar (sin animar) en el nuevo borde. */
+  function seguirDesplazamiento(pre) {
+    if (pre._escuchaSalto) return;
+    pre._escuchaSalto = true;
+    var pendiente = false;
+    pre.addEventListener("scroll", function () {
+      if (pendiente || !pre._salto) return;
+      pendiente = true;
+      requestAnimationFrame(function () {
+        pendiente = false;
+        var s = pre._salto;
+        if (s) salto(pre, s[0], s[1], s[2], true);
+      });
+    }, { passive: true });
+  }
+
+  // Franja que desvanece el texto bajo la flecha, en el borde visible, sobre las líneas de la
+  // lista: cada una con su propio fondo (la línea activa es más clara)
+  function desvanecer(pre, dibujo, x, ls) {
+    var defs = svg("defs", {});
+    dibujo.appendChild(defs);
+    var ids = {};
+    function relleno(color) {
+      if (!ids[color]) {
+        ids[color] = "salto-desvanece-" + (++contadorDesvanece);
+        var grad = svg("linearGradient", { id: ids[color], x1: 0, x2: 1, y1: 0, y2: 0 });
+        grad.appendChild(svg("stop", { offset: 0, "stop-color": color, "stop-opacity": 0 }));
+        grad.appendChild(svg("stop", { offset: 0.45, "stop-color": color, "stop-opacity": 0.92 }));
+        grad.appendChild(svg("stop", { offset: 1, "stop-color": color, "stop-opacity": 0.92 }));
+        defs.appendChild(grad);
+      }
+      return "url(#" + ids[color] + ")";
+    }
+    var fondo = getComputedStyle(pre).backgroundColor;
+    var ancho = Math.max(0, pre.scrollLeft + pre.clientWidth - x);
+    ls.forEach(function (l) {
+      var y = l.offsetTop;
+      var h = altoFila(l);
+      dibujo.appendChild(svg("rect", { "class": "codigo__salto-velo", x: x, y: y, width: ancho, height: h, fill: relleno(fondo) }));
+      var propio = getComputedStyle(l).backgroundColor;
+      if (!/^(transparent|rgba\(0, 0, 0, 0\))$/.test(propio)) {
+        // Solo hasta donde llega el fondo de la línea (al desplazar, no cubre lo que sobra)
+        var hasta = Math.min(x + ancho, l.offsetLeft + l.offsetWidth);
+        dibujo.appendChild(svg("rect", { "class": "codigo__salto-velo", x: x, y: y, width: Math.max(0, hasta - x), height: h, fill: relleno(propio) }));
+      }
+    });
+  }
+  var contadorDesvanece = 0;
+
+  function salto(pre, desde, hasta, tipo, quieto) {
     quitarSalto(pre);
     var ls = lineas(pre);
     var a = ls[desde];
     var b = ls[hasta];
     if (!a || !b || (desde === hasta && !tipo)) return;
-    if (desde === hasta) { rizo(pre, a, tipo); return; }
+    pre._salto = [desde, hasta, tipo];
+    seguirDesplazamiento(pre);
+    if (desde === hasta) { rizo(pre, a, tipo, quieto); return; }
 
     // La curva rodea por la derecha todas las líneas que quedan entre las dos
     var derecha = 0;
@@ -122,12 +182,16 @@
     var y2 = b.offsetTop + altoFila(b) / 2;
 
     var dibujo = svg("svg", {
-      "class": "codigo__salto" + (tipo ? " codigo__salto--" + tipo : ""),
+      "class": "codigo__salto" + (tipo ? " codigo__salto--" + tipo : "") + (quieto ? " codigo__salto--quieto" : ""),
       width: ancho,
       height: pre.scrollHeight,
       "aria-hidden": "true",
       focusable: "false"
     });
+    // El texto llega hasta el borde visible: se desvanece bajo la flecha
+    if (derecha + 30 > xc) {
+      desvanecer(pre, dibujo, xc - 32, [].slice.call(ls, Math.min(desde, hasta), Math.max(desde, hasta) + 1));
+    }
     dibujo.appendChild(svg("circle", { "class": "codigo__salto-inicio", cx: x1, cy: y1, r: 3.5 }));
     // Sale a la derecha, baja (o sube) por fuera de las líneas de en medio y entra: esquinas redondeadas
     var r = Math.min(14, Math.abs(y2 - y1) / 2, xc - Math.max(x1, x2));
@@ -146,19 +210,21 @@
   }
 
   // Vuelve a la misma línea: sale por arriba, da una vuelta a la derecha y entra por abajo
-  function rizo(pre, linea, tipo) {
+  function rizo(pre, linea, tipo, quieto) {
     var x = finDeTexto(pre, linea) + 8;
     var xc = Math.min(x + 26, pre.scrollLeft + pre.clientWidth - 6);
+    var cortado = x > xc - 12;
     x = Math.min(x, xc - 12);
     var y = linea.offsetTop + altoFila(linea) / 2;
     var h = Math.min(9, altoFila(linea) / 2);
     var dibujo = svg("svg", {
-      "class": "codigo__salto codigo__salto--" + tipo,
+      "class": "codigo__salto codigo__salto--" + tipo + (quieto ? " codigo__salto--quieto" : ""),
       width: pre.scrollWidth,
       height: pre.scrollHeight,
       "aria-hidden": "true",
       focusable: "false"
     });
+    if (cortado) desvanecer(pre, dibujo, xc - 28, [linea]);
     dibujo.appendChild(svg("circle", { "class": "codigo__salto-inicio", cx: x, cy: y - h, r: 3.5 }));
     dibujo.appendChild(svg("path", {
       "class": "codigo__salto-trazo",
@@ -353,6 +419,13 @@
     // Con el tamaño exacto del destino, aunque su clase (p. ej. caja__valor) traiga otros límites
     copia.style.minWidth = "0";
     copia.style.maxWidth = "none";
+    // Una línea de consola larga ocupa dos renglones: la copia se parte igual, con la letra
+    // de la consola, en vez de salirse por la derecha en uno solo
+    var enConsola = destino.matches(".consola__linea");
+    if (enConsola) {
+      copia.style.whiteSpace = "pre-wrap";
+      copia.style.fontSize = getComputedStyle(destino).fontSize;
+    }
     document.body.appendChild(copia);
 
     // Sale pequeño de la línea, sube en arco y aterriza con su tamaño. El destino se vuelve a
@@ -374,8 +447,12 @@
       var dy = (ay - (b.top + b.height / 2)) * (1 - e) - arco * 4 * e * (1 - e);
       copia.style.left = b.left + "px";
       copia.style.top = b.top + "px";
-      copia.style.width = b.width + "px";
+      // (+1 px: con el ancho justo, el redondeo podría partir antes la primera línea)
+      copia.style.width = (enConsola ? b.width + 1 : b.width) + "px";
       copia.style.height = b.height + "px";
+      // Una línea de error (consola__linea--error) vuela ya en rojo, aunque la clase llegue
+      // justo después de empezar el vuelo
+      if (enConsola) copia.classList.toggle("vuelo--salida-error", destino.classList.contains("consola__linea--error"));
       copia.style.opacity = String(Math.min(1, 0.3 + 1.4 * e));
       copia.style.transform = t < 1 ? "translate(" + dx + "px, " + dy + "px) scale(" + (0.55 + 0.45 * e) + ")" : "none";
       if (t < 1) { requestAnimationFrame(cuadro); return; }
@@ -386,7 +463,7 @@
   }
 
   /* ---------- Alto reservado ---------- */
-  function reservarAlto(el, estados, pintar) {
+  function reservarAlto(el, estados, pintar, alMedir) {
     var r = el._reserva;
     if (!r) {
       r = el._reserva = {};
@@ -405,6 +482,9 @@
           r.pintar(copia, e);
           alto = Math.max(alto, copia.offsetHeight);
         });
+        // Con la copia aún puesta: quien reserva puede medir otros estados que no cuentan en
+        // el alto (p. ej. elegir el texto inicial más largo que quepa en lo reservado)
+        if (r.alMedir) r.alMedir(alto, function (e) { r.pintar(copia, e); return copia.offsetHeight; });
         copia.remove();
         el.style.minHeight = alto ? alto + "px" : "";
       };
@@ -414,6 +494,7 @@
     }
     r.estados = estados;
     r.pintar = pintar;
+    r.alMedir = alMedir;
     r.ancho = -1;
     r.medir();
   }

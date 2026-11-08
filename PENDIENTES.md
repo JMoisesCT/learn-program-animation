@@ -6,22 +6,13 @@ Notas para retomar el trabajo en la siguiente sesión. Lo más reciente, arriba.
 
 Por orden de prioridad:
 
-0. **Revisión visual del 2026-11-08: lo que quedó por resolver en las piezas compartidas** (ver el registro de ese día). Propuestas de los revisores, sin aplicar:
-   - **Pasos con traza que no caben a 1366×657**: el problema más visible en Recursión, Ordenar y Búsquedas (pilas de 640–990 px). Ideas: una pila compacta en escritorio de poca altura (las tarjetas que esperan en una sola línea) o que la columna de lo que se ve quede fija (`sticky`) al bajar.
-   - **`problemas.css`, `.rep__nota`**: se encoge cuando su texto ocupa dos líneas (la segunda se sale del recuadro en podio, laberinto, mañana, celular, estacionamiento y bisiesto) y al pasar de 1 a 2 líneas todo el reproductor baja unos 15 px (en el móvil la escena cambia de alto casi en cada paso). Propuesta: `flex-shrink: 0; min-height` de dos líneas y, en el móvil, un alto fijo con desplazamiento. Revisar que cada bloque siga cabiendo.
-   - **`problemas.css`, letra del código según el ancho de su columna** (`container-type: inline-size` y `font-size: min(0.92rem, 2.55cqi)`): las líneas largas aún llegan a la barra de veces entre 1180 y 1279 px y a 360 px; así sobrarían las reglas que cada caso agrega por su cuenta.
-   - **`base.css`, `.expresion`**: su alto cambia cuando aparece el chip True/False y todo lo de abajo salta. Bucles lo arregló en su página (`min-height: 2.625rem`); falta revisar si conviene en todas (sumaría alto a pasos justos).
-   - **`base.css`, `.vueltas`**: `justify-content: center` corre las filas cuando su contenido crece (Bucles anidados y Dibujar patrones lo arreglan con columnas fijas).
-   - **`codigo.js`, `volar` a una línea de consola**: la copia mide el destino en una sola línea; si el texto final ocupa dos, sale por la derecha de la consola (Texto y números, paso 5, el `TypeError`) y vuela en negro antes de ponerse rojo. Propuesta: la copia con el ancho del destino y `white-space: normal`, y que `Traza` pueda crear la línea ya con `consola__linea--error`.
-   - **`codigo.js`, `salto` en el móvil**: si una línea es más ancha que su caja (se desplaza), la flecha de salto se dibuja sobre el final del texto.
-   - **`traza.js`**: el texto inicial («Toca «Ejecutar línea»…») ocupa dos líneas y `reservarAlto` guarda ese alto en todos los pasos.
-   - **`dicc.js`, `medida`**: el casillero fantasma del `KeyError` no cuenta en `--dicc-n` (en el móvil el diccionario pasa a dos filas; Diccionarios lo arregla con `capacidad`).
-   - **`particion.js`**: una opción `pisos: n` para reservar el alto final (en quicksort y mergesort la pila y la salida bajan cada vez que nace un piso).
-   - **`lista.js`**: una opción para reservar el lugar de los punteros aunque no haya fichas (Burbuja lo resuelve en su página con CSS).
-   - **`matriz.js`**: un total vacío mide 4 px y el lleno 29 (Sumar, paso 3: todo salta al llegar el primer total). Propuesta: `.matriz__total { min-height: calc(var(--c) * 0.8) }`, que cambia cómo se ve el vacío.
-   - **`.predicciones` apiladas** (Listas 3, Listas dentro de listas 3, Dos nombres 4): no caben en escritorio; hace falta un diseño compartido.
-   - **Errores en el móvil**: el código ancho se corta y se desplaza (Quicksort y Mergesort lo parten con `pre-wrap`).
-   - **Contenido** (no visual): en ¿Cuál es más rápida? (Búsquedas), paso 5, el mensaje fijo dice «unos 12 días contra 20 segundos» y las barras, con x = 750 000, «unos 9 días» y «2 segundos».
+0. **Lo que quedó de los arreglos compartidos del 2026-11-08** (ver el registro de ese día, «Arreglos en las piezas compartidas»):
+   - **Pasos con traza que aún no caben enteros a 1366×657**: con la pila compacta y `data-visual-fija` se ven juntos el código, los botones y la pila tras bajar unos 200 px una vez, pero el paso entero (enunciado, código de 8 a 14 líneas, explicación y botones) suma unos 600 px. Siguen sin caber del todo: el Candado, «el True baja» (674 px el código y los botones), y la columna fija de Recursión 1 (ida y vuelta), la búsqueda recursiva, Candado 2 y Mergesort 3 (600–700 px: la tarjeta del programa queda bajo el pie hasta bajar del todo). Los pasos de deshacer de Recursión 1 (900 px) no se midieron recorriéndolos. A 1920×1080, en Candado 2 el reparto cambia una vez a mitad de la traza.
+   - **Partición reservada**: queda en blanco hasta el primer paso; en el móvil de Quicksort 3, un espacio vacío de unos 220 px. ¿Cuál ordena más rápido? aún no usa `pisos`.
+   - **Problemas resueltos, en el móvil**: las notas de más de 5 renglones se desplazan dentro de su caja (con un desvanecido abajo); pasa en 2 a 35 pasos por caso. Acortarlas donde se pueda.
+   - **Copias locales que ya sobran**: `.consola__linea--error` en el CSS de una docena de lecciones (ahora está en `base.css`); el `pre-wrap` propio de Quicksort y Mergesort (podría ser `.codigo--partir`); `.lista--sin-dedo` de Mezclar (podría ser `reservarPunteros`); la predicción suelta de Listas 3 con su CSS.
+   - **Las trazas `repetible`** (Funciones, Condiciones anidadas) aún reservan el alto del texto inicial largo.
+   - **No cabían antes y siguen igual**: Bucles anidados, paso 1 (541–597/540 al ejecutar), Funciones, paso 3 (573/540), el reto de Sumar (557/540), Dos nombres 4 tras la tercera respuesta (554/540).
 
 1. **Matrices, completo (6/6)** (ver el registro del 2026-11-04, «Matrices»). Es el último tema publicado: su proyecto termina en «Volver a la portada».
    **Probar con alumnos** en un móvil de verdad, sobre todo:
@@ -123,6 +114,17 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Para los casos de Problemas resueltos, la prueba ya está en el repositorio: `node herramientas/probar-caso.js <caso>` (y `catalogo`). Para las lecciones, unos scripts sueltos (no guardados) recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-08 · Arreglos en las piezas compartidas
+
+Lo que la revisión visual dejó propuesto (el punto 0 de entonces), en cinco grupos que se trabajaron en paralelo y se probaron con `recorrer-leccion.js` y `probar-caso.js`:
+- **Pilas que no caben** (Recursión, Búsquedas, Ordenar, Funciones que usan funciones): en escritorio, las tarjetas que esperan van en dos renglones (la de arriba, completa; una pila de 5 baja de unos 620 a 405 px) y, con `data-visual-fija`, si el paso no cabe, la salida va bajo el código y lo que se ve queda fijo al bajar (`pasos.js`, `paso--visual-fija`). En casi todos los pasos de la lista ya se ven juntos el código, los botones y la pila; lo que falta, arriba.
+- **`particion.js`**: `pisos: n` y `p.pisos(n)` reservan el alto de todos los pisos (Quicksort, Mergesort y Mezclar ya no bajan con cada piso).
+- **`problemas.css` / `reproductor.js`**: la nota guarda el alto de la más larga del caso (el reproductor ya no salta y la escena del móvil no cambia de alto) y la letra del código se ajusta sola a su columna (`ajustarLetra`, hasta 0.66rem, y si no, la línea se parte); los casos dejaron sus reglas propias. Estacionamiento y bisiesto compactaron su escena. 16 casos en 6 tamaños: sin saltos ni líneas en la barra de veces.
+- **`codigo.js`**: el vuelo a una línea de consola toma su ancho y se parte como ella, y un error vuela ya en rojo (`error: true` en el paso de `Traza`; lo usa Texto y números); en una línea más ancha que su caja, el texto se desvanece bajo la flecha de salto y la flecha sigue al desplazamiento. **`traza.js`** reserva el alto del texto inicial corto (unas 60 explicaciones ganan un renglón).
+- **`base.css`**: `.expresion` ya no crece con el chip True/False (0 px de salto en todas); `.vueltas` con ancho fijo (`--vueltas-ancho`); `.predicciones` compartidas (`--lado` y `.tarjeta--predecir`: Listas dentro de listas 3 pasa de 575 a 299 px al entrar, Dos nombres 4 de 784 a 324); `.partir-codigo` para Errores en el móvil (con la sangría que pone `Python.escribir` y los `^^^` bajo su pedazo).
+- **`dicc.js`** cuenta el casillero del `KeyError` en su medida (ya no pasa a dos filas a 360–375 px); **`lista.js`** con `reservarPunteros: n` (Burbuja deja su CSS); **`.matriz__total`** vacío con el alto de uno lleno (el reto de Sumar ya no salta).
+- **Contenido**: en ¿Cuál es más rápida?, el mensaje del millón dice que es el peor caso.
 
 ### 2026-11-08 · Revisión visual de todos los temas y casos
 

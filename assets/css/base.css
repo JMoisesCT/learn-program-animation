@@ -224,6 +224,9 @@ p code, li code, .codigo-en-linea {
 .codigo__salto-inicio { fill: var(--tk-numero); }
 .codigo__salto-trazo { stroke-dasharray: 1; animation: salto-dibuja 420ms ease-out both; }
 .codigo__salto-punta { animation: salto-punta 160ms 340ms ease-out both; }
+/* Redibujada al desplazar el código (codigo.js): ya estaba, no se vuelve a animar */
+.codigo__salto--quieto .codigo__salto-trazo, .codigo__salto--quieto .codigo__salto-punta { animation: none; }
+.codigo__salto .codigo__salto-velo { stroke: none; }
 @keyframes salto-dibuja { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes salto-punta { from { opacity: 0; } }
 /* Recursión (Codigo.salto con tipo): naranja al llamar (ida), azul al volver (vuelta) */
@@ -288,6 +291,10 @@ p code, li code, .codigo-en-linea {
   font-weight: 700;
 }
 .expresion__flecha { color: var(--color-texto-suave); font-family: var(--fuente); }
+/* El chip True/False es más alto que el texto (su relleno y su borde): sin esto, la
+   expresión crecía unos 8 px al aparecer el chip y todo lo de abajo saltaba. Con el
+   margen negativo ocupa lo mismo que una línea de texto y se sale un poco, sin empujar. */
+.expresion .booleano { margin-block: calc(-0.1em - 2px); }
 
 /* Recta de valores con las zonas donde la condición es True.
    Las posiciones van en línea, en % del ancho:
@@ -324,6 +331,8 @@ p code, li code, .codigo-en-linea {
 }
 .consola__linea { display: block; font-weight: 700; animation: aparecer var(--dur) ease; }
 .consola__vacia { display: block; color: var(--color-texto-suave); font-style: italic; font-family: var(--fuente); }
+/* Un mensaje de error en la consola (Traza: error: true en el paso) */
+.consola .consola__linea--error { color: var(--color-error); }
 /* Lo que se imprime a la ida (al llamar) y a la vuelta (al volver), con su raya a la izquierda:
    punteada y naranja a la ida, continua y azul a la vuelta (Traza, con fase en el paso).
    <div class="consola consola--fases"> deja el mismo margen a las líneas sin fase. */
@@ -344,6 +353,7 @@ p code, li code, .codigo-en-linea {
 .vuelo--salida { box-sizing: content-box; padding: 0.1em 0.4em; margin: -0.1em -0.4em; font-family: var(--fuente-codigo); font-weight: 700; white-space: pre; color: var(--color-texto); background: var(--color-superficie); border: 2px solid var(--color-borde); border-radius: 6px; box-shadow: var(--sombra-alta); }
 .vuelo-destino { visibility: hidden; }
 .vuelo--acento { border-color: var(--color-acento); }
+.vuelo--salida.vuelo--salida-error { color: var(--color-error); border-color: var(--color-error); background: #fff6f5; }
 
 /* ---------- Lienzo: la pantalla de print() en casillas (lienzo.js) ----------
    Cada carácter es una casilla; las que aún no se han escrito son guías tenues.
@@ -659,6 +669,8 @@ p code, li code, .codigo-en-linea {
 /* Punteros bajo los casilleros: inicio, medio, fin (punteros) */
 .lista__punteros { --alto-puntero: 1.5rem; position: relative; display: block; height: calc(var(--pisos, 1) * (var(--alto-puntero) + 0.25rem) + 0.6rem); margin-top: 0.2rem; }
 .lista__punteros[hidden] { display: none; }
+/* reservarPunteros: sin fichas, la fila guarda su lugar */
+.lista__punteros--reservada[hidden] { display: block !important; visibility: hidden; }  /* gana a [hidden] { display: none !important } */
 .lista__puntero {
   position: absolute;
   top: calc(0.6rem + var(--piso, 0) * (var(--alto-puntero) + 0.25rem));
@@ -768,7 +780,8 @@ p code, li code, .codigo-en-linea {
 .matriz__celda--fuera > .matriz__valor { border: 2px dashed var(--color-error); background: none; color: var(--color-error); animation: aparecer var(--dur) ease, sacudir 420ms 200ms ease; }
 .matriz__indice--error { background: var(--color-error); color: #fff; }
 /* Totales al margen: lo que se calcula */
-.matriz__total { justify-self: stretch; margin-left: var(--esp-2); min-width: calc(var(--c) * 0.95); padding: 0 0.3em; border-radius: calc(var(--c) * 0.18); border: 2px dashed transparent; font-family: var(--fuente-codigo); font-size: calc(var(--c) * var(--matriz-letra-total, 0.36)); font-weight: 700; line-height: calc(var(--c) * 0.8); text-align: center; white-space: pre; color: var(--color-pista); background: var(--color-pista-suave); }
+.matriz__total { justify-self: stretch; margin-left: var(--esp-2); min-width: calc(var(--c) * 0.95); padding: 0 0.3em; border-radius: calc(var(--c) * 0.18); border: 2px dashed transparent; font-family: var(--fuente-codigo); font-size: calc(var(--c) * var(--matriz-letra-total, 0.36)); font-weight: 700; line-height: calc(var(--c) * 0.8); min-height: calc(var(--c) * 0.8 + 4px); text-align: center; white-space: pre; color: var(--color-pista); background: var(--color-pista-suave); }
+/* min-height: un total vacío mide lo mismo que uno lleno (la fila de totales no salta con el primero) */
 .matriz__total--columna { margin-left: 0; margin-top: var(--esp-2); margin-inline: calc(var(--c) * 0.06); min-width: 0; }
 .matriz__total--vacio { background: none; border-color: #e5c9a6; }
 .matriz:not(.matriz--totales-filas) .matriz__total--fila, .matriz:not(.matriz--totales-filas) .matriz__rotulo--total { display: none; }
@@ -802,8 +815,10 @@ p code, li code, .codigo-en-linea {
      <div class="vueltas">
        <div class="vueltas__fila"><span class="vueltas__nombre">i</span> <span class="vueltas__valor">2</span> <code class="vueltas__rango">…</code></div>
        <div class="vueltas__fila"><span class="vueltas__nombre vueltas__nombre--j">j</span> <span class="vueltas__chips"> <span class="vueltas__chip vueltas__chip--actual">0</span> … </span></div>
-     </div> */
-.vueltas { display: grid; gap: var(--esp-2); justify-content: center; margin: 0 0 var(--esp-3); }
+     </div>
+   La rejilla tiene un ancho fijo (--vueltas-ancho), centrada: si se ajustara a su
+   contenido, las filas se correrían hacia los lados al aparecer el rango o las fichas. */
+.vueltas { display: grid; grid-template-columns: min(100%, var(--vueltas-ancho, 20rem)); gap: var(--esp-2); justify-content: center; margin: 0 0 var(--esp-3); }
 .vueltas__fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); min-height: 2.4rem; }
 .vueltas__nombre { display: grid; place-items: center; min-width: 2.2rem; height: 2.2rem; padding: 0 var(--esp-2); border-radius: 999px; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); background: var(--color-azul-suave); }
 .vueltas__nombre--j { color: var(--color-acento); background: var(--color-acento-suave); }
@@ -830,6 +845,8 @@ p code, li code, .codigo-en-linea {
   row-gap: calc(var(--c) * 0.75 + 0.5rem);
   align-items: start;
 }
+/* Con pisos (Particion.crear): cada piso guarda desde el principio el alto de una fila */
+.particion--pisos .particion__rejilla { grid-template-rows: repeat(var(--pisos), minmax(calc(var(--c) + 0.3rem + 4px), auto)); }
 .particion__rayas { position: absolute; inset: 0; z-index: 0; overflow: visible; pointer-events: none; }
 .particion__raya { fill: none; stroke: #b8c0ca; stroke-width: 2; stroke-linecap: round; transition: opacity var(--dur); }
 .particion__raya--apagada { opacity: 0.35; }
@@ -948,6 +965,9 @@ p code, li code, .codigo-en-linea {
 /* Una clave que no está: KeyError */
 .dicc__par--fuera > .dicc__clave { border: 1.5px dashed var(--color-error); background: #fdecea; color: var(--color-error); animation: aparecer var(--dur) ease, sacudir 420ms 200ms ease; }
 .dicc__par--fuera > .dicc__clave::after { border-left-style: dashed; border-color: var(--color-error); }
+/* En pantallas angostas la letra mínima de la clave decide el ancho: un poco menos, para
+   que tres pares y el KeyError quepan en una fila a 360 px */
+@media (max-width: 380px) { .dicc__clave { font-size: max(0.72rem, calc(var(--c) * 0.32)); } }
 .dicc__par--fuera > .dicc__valor { border: 2px dashed var(--color-error); background: none; color: var(--color-error); animation: aparecer var(--dur) ease, sacudir 420ms 200ms ease; }
 .dicc__par--cambio > .dicc__valor { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
 .dicc__par--igual > .dicc__valor { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
@@ -1246,6 +1266,21 @@ p code, li code, .codigo-en-linea {
   30% { transform: translateY(-0.2rem); opacity: 1; }
   to { transform: translateY(-0.75rem); opacity: 0; }
 }
+/* Escritorio: las tarjetas que esperan, compactas: en un renglón, la llamada y dónde está
+   pausada; en otro, sus variables y lo que le falta. La de arriba sigue completa. Así una
+   pila de 5 o 6 tarjetas cabe junto al código (en el móvil se baja, y caben enteras). */
+@media (min-width: 1024px) {
+  .pila { margin-top: var(--esp-3); }
+  .pila__titulo { margin-bottom: var(--esp-1); }
+  .pila__marcos { gap: 0.375rem; }
+  .marco--esperando { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem var(--esp-2); padding: 0.25rem var(--esp-3); }
+  .marco--esperando .marco__cabecera { flex: 1 0 100%; }
+  .marco--esperando .marco__titulo code, .marco--esperando .var { font-size: var(--texto-xs); }
+  .marco--esperando .marco__vars { margin-top: 0; min-height: 0; gap: var(--esp-1); }
+  .marco--esperando .marco__vars:not(:has(.var)) { display: none; }
+  .marco--esperando .marco__falta { margin-top: 0; }
+  .marco--esperando .marco__toca { flex: 1 0 100%; margin-top: 0; }
+}
 
 /* La explicación de una traza reserva el alto de su texto más largo (Traza): el más
    corto queda centrado en ese espacio, sin mover los botones de debajo */
@@ -1356,6 +1391,50 @@ input[type="range"] { width: 100%; accent-color: var(--color-acento); height: 2r
 .feedback--ok { background: var(--color-ok-suave); color: var(--color-ok); animation: aparecer var(--dur) var(--curva-rebote); }
 .feedback--pista { background: var(--color-pista-suave); color: var(--color-pista); animation: aparecer var(--dur) ease; }
 .feedback__icono { flex: none; font-size: 1.25em; line-height: 1.2; }
+
+/* ---------- Predicciones: «¿qué da cada una?» ----------
+     <ol class="predicciones predicciones--lado">
+       <li class="prediccion">
+         <div class="prediccion__fila"><code class="prediccion__expr">len(tablero)</code> <div class="elegir">…botones…</div></div>
+         <div class="feedback"></div>
+       </li> …
+     </ol>
+   En el móvil, una debajo de otra. Apiladas no cabían en una pantalla de escritorio, así
+   que hay dos formas de ponerlas (desde 1024px):
+   - .predicciones--lado: lado a lado como tarjetas (la expresión arriba y los botones
+     debajo). Para programas o expresiones sin nada más que mirar.
+   - .tarjeta--predecir en la tarjeta: lo que se mira (un tablero, una lista, la salida)
+     a la izquierda y las predicciones, una debajo de otra, a la derecha. Lo de la
+     izquierda son hasta 5 elementos sueltos de la tarjeta, en el orden del HTML (el del
+     móvil). */
+.predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-3); }
+/* Solo dentro de una lista .predicciones (otras lecciones usan .prediccion para otras
+   cosas); :where deja la especificidad de una clase, así manda lo que defina la lección */
+:where(.predicciones) > .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+:where(.predicciones) > .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+:where(.predicciones) .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); }
+:where(.predicciones) .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; }
+:where(.predicciones) .prediccion .elegir { margin-top: 0; }
+:where(.predicciones) .prediccion .btn { min-width: 3.5rem; }
+:where(.predicciones) .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+@media (min-width: 1024px) {
+  .predicciones--lado { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+  .predicciones--lado > .prediccion { padding: var(--esp-3); }
+  .predicciones--lado .prediccion__fila { flex-direction: column; align-items: stretch; }
+  .predicciones--lado .prediccion__fila .elegir { justify-content: flex-start; }
+  .predicciones--lado .elegir { gap: var(--esp-1) var(--esp-2); }
+  .predicciones--lado .elegir .btn { min-width: 2.75rem; min-height: 2.5rem; padding: var(--esp-1) var(--esp-2); }
+  .predicciones--lado .codigo { padding-block: var(--esp-2); font-size: 1rem; line-height: 1.6; }
+  .predicciones--lado .feedback { margin-top: var(--esp-2); padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+  /* La última fila es 1fr: las predicciones la cruzan toda y no estiran las de la izquierda */
+  .tarjeta--predecir { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, auto) 1fr; column-gap: var(--esp-5); align-items: start; }
+  .tarjeta--predecir > * { grid-column: 1; min-width: 0; }
+  .tarjeta--predecir > .predicciones { grid-column: 2; grid-row: 1 / -1; margin-top: 0; }
+  .tarjeta--predecir > .predicciones { gap: var(--esp-2); }
+  .tarjeta--predecir .prediccion { padding: var(--esp-2) var(--esp-3); }
+  .tarjeta--predecir .prediccion .elegir .btn { min-height: 2.5rem; padding-block: var(--esp-1); }
+  .tarjeta--predecir .prediccion .feedback { margin-top: var(--esp-2); padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+}
 
 @keyframes aparecer { from { transform: translateY(8px); opacity: 0; } }
 @keyframes sacudir {
@@ -1702,6 +1781,20 @@ input[type="range"] { width: 100%; accent-color: var(--color-acento); height: 2r
   .traceback__fin { font-size: var(--texto-xs); }
   .codigo .linea--no-corre:not(.linea--protegida):not(.linea--except)::after { content: none; }
   .leccion-pie .btn-secundario { padding-inline: var(--esp-4); }
+  /* Código que se parte (.partir-codigo en la lección, o .codigo--partir en el <pre>):
+     una línea larga sigue en el renglón de abajo, con dos espacios más que su sangría
+     (--sangria, la pone Python.escribir), en vez de desplazarse de lado */
+  .partir-codigo .codigo .linea, .codigo--partir .linea {
+    padding-right: var(--esp-2);
+    padding-left: calc(2.5rem + var(--sangria, 0ch) + 2ch);
+    text-indent: calc(-1 * (var(--sangria, 0ch) + 2ch));
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  /* En el mensaje de error, la línea de código y sus ^^^ se parten en la misma columna
+     (letra a letra y sin espacios colgando), así los ^^^ siguen bajo su pedazo */
+  .partir-codigo .traceback__linea-codigo .traceback__texto,
+  .partir-codigo .traceback__marca .traceback__texto { flex: 1 1 auto; min-width: 0; white-space: break-spaces; word-break: break-all; }
 }
 
 /* ---------- Escritorio: todo el paso en una pantalla ----------
@@ -1793,6 +1886,9 @@ input[type="range"] { width: 100%; accent-color: var(--color-acento); height: 2r
       "principal visual"
       "resultado visual";
   }
+  /* Lo que crece mientras corre el código (una pila, una lista que se parte), si el paso no
+     cabe: queda fijo al bajar hasta los botones (pasos.js) */
+  .paso--visual-fija > .lab > .lab__visual { position: sticky; top: 3.75rem; }
   .lab > * > :first-child { margin-top: 0; }
   .lab > * > :last-child { margin-bottom: 0; }
   /* La regla guarda abajo el lugar de sus números (18, 25…): sin ese margen tocaban el borde */

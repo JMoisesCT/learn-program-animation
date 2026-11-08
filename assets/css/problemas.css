@@ -271,13 +271,16 @@ html:has(body.caso) { scroll-snap-type: y proximity; scroll-padding-top: var(--c
 .rep__chip--activo { border-color: #ffd479; background: rgba(255, 212, 121, 0.14); color: #ffe4a6; }
 .rep__chip:focus-visible, .rep__btn:focus-visible, .rep__marca:focus-visible, .rep__barra:focus-visible, .rep__pestana:focus-visible { outline: 3px solid #8ec7ff; outline-offset: 2px; }
 
-.rep__nota { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--esp-1) var(--esp-3); min-height: 2.9rem; margin-bottom: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: rgba(255, 255, 255, 0.05); font-size: var(--texto-xs); line-height: 1.5; transition: background-color var(--dur); }
+/* reproductor.js le da el alto de la nota más larga (hasta --nota-lineas renglones; las que se pasan, se desplazan) */
+.rep__nota { --nota-lineas: 3; flex: 0 0 auto; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: flex; flex-wrap: wrap; align-items: baseline; align-content: flex-start; gap: var(--esp-1) var(--esp-3); min-height: 2.9rem; margin-bottom: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: rgba(255, 255, 255, 0.05); font-size: var(--texto-xs); line-height: 1.5; transition: background-color var(--dur); }
 .rep__nota code { padding: 0.05em 0.35em; background: rgba(255, 255, 255, 0.1); color: #fff; }
 .rep__nota strong { color: #fff; }
 .rep__nota-cap { padding: 0.05em 0.7em; border-radius: 999px; background: rgba(142, 199, 255, 0.16); color: #b9dcff; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
 .rep__nota-clave { padding: 0.05em 0.7em; border-radius: 999px; background: #ffd479; color: #3d2a00; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
 .rep__nota--clave { background: rgba(255, 212, 121, 0.12); box-shadow: inset 0 0 0 1.5px rgba(255, 212, 121, 0.5); }
 .rep__nota-texto { flex: 1 1 18rem; }
+/* Una nota que no cabe en su alto se desvanece abajo: hay más, bajando dentro de ella */
+.rep__nota--mas { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.8em), rgba(0, 0, 0, 0.2)); mask-image: linear-gradient(to bottom, #000 calc(100% - 1.8em), rgba(0, 0, 0, 0.2)); }
 
 .rep__pestanas { display: none; }
 .rep__cuerpo { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--esp-3); }
@@ -313,13 +316,19 @@ html:has(body.caso) { scroll-snap-type: y proximity; scroll-padding-top: var(--c
   .rep[data-vista="escena"] .rep__escena { display: flex; overflow-y: auto; }
   .rep[data-vista="lado"] .rep__lado { display: flex; overflow-y: auto; }
   .rep__entradas-ayuda, .rep__entradas-titulo { display: none; }
-  .rep__nota { min-height: 4.4rem; }
+  .rep__nota { --nota-lineas: 5; }
 }
 
 .rep__rotulo { margin: 0 0 var(--esp-2); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--escenario-suave); }
 .rep__rotulo-ayuda { margin-left: 0.5em; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .rep__codigo .codigo { background: var(--escenario-2); border: 1px solid var(--escenario-borde); padding: var(--esp-3) 0; font-size: 0.92rem; }
 .rep__codigo .codigo .linea { padding-right: 4.2rem; }
+/* Si ni con la letra más chica cabe, la línea larga sigue en el renglón de abajo, dos espacios
+   más adentro que su sangría (--sangria, de Python.escribir); su margen derecho deja libre la
+   barra de veces */
+.rep__codigo .codigo.rep__partir .linea { padding-left: calc(var(--rep-numeros, 3.25rem) + var(--sangria, 0ch) + 2ch); text-indent: calc(-1 * (var(--sangria, 0ch) + 2ch)); white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Mientras reproductor.js mide el código para ajustar su letra, nada transiciona */
+.rep__codigo .codigo--midiendo, .rep__codigo .codigo--midiendo * { transition: none !important; }
 .codigo .linea--datos { background-image: linear-gradient(to right, rgba(255, 212, 121, 0.10), rgba(255, 212, 121, 0.02)); box-shadow: inset 3px 0 0 rgba(255, 212, 121, 0.7); }
 .codigo .linea--datos-cambia { animation: datos-cambia 1100ms ease; }
 @keyframes datos-cambia { 30% { background-color: rgba(255, 212, 121, 0.35); } }
@@ -375,16 +384,30 @@ html:has(body.caso) { scroll-snap-type: y proximity; scroll-padding-top: var(--c
   .panel--escenario { padding: var(--esp-2) var(--esp-2); }
   .rep { border-radius: 16px; }
   .rep__codigo .codigo { font-size: 0.78rem; }
-  .rep__codigo .codigo .linea { padding-right: 3.2rem; }
+  .rep__codigo .codigo { --rep-numeros: 2.15rem; }
+  .rep__codigo .codigo .linea { padding-right: 3.2rem; padding-left: 2.15rem; }
+  .rep__codigo .codigo .linea::before { width: 1.45rem; }
   .rep__calores { width: 2.8rem; }
   .rep__calor { width: 2.6rem; }
   .rep__controles { flex-wrap: wrap; justify-content: center; gap: 0.35rem; }
-  .rep__tiempo { order: -1; flex-basis: 100%; height: 1.9rem; }
+  /* Arriba, la barra con el contador al lado (con «100 / 123» los botones ya no caben en una fila) */
+  .rep__tiempo { order: -1; flex: 1 1 calc(100% - 6rem); height: 1.9rem; }
+  .rep__contador { order: -1; flex: 0 0 5.5rem; text-align: right; }
   .rep__btn { min-width: 2.2rem; height: 2.2rem; }
   .rep__btn--play { min-width: 2.7rem; height: 2.7rem; }
-  .rep__contador { min-width: 3.2rem; }
   .rep__vel { min-width: 2.5rem; height: 2.1rem; }
   .panel__titulo { font-size: var(--texto-lg); }
+}
+/* Teléfonos chicos: la barra de veces, más angosta, deja más lugar al código */
+@media (max-width: 400px) {
+  .rep__calores { width: 2.3rem; }
+  .rep__calor { width: 2.1rem; }
+}
+/* Entre 1024 y 1179 px el código comparte el ancho con la escena: números de línea más angostos */
+@media (min-width: 1024px) and (max-width: 1179.98px) {
+  .rep__codigo .codigo { --rep-numeros: 2.15rem; }
+  .rep__codigo .codigo .linea { padding-left: 2.15rem; }
+  .rep__codigo .codigo .linea::before { width: 1.45rem; }
 }
 
 /* ==========================================================================

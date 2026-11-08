@@ -8,7 +8,10 @@
      var p = Particion.crear(el, {
        n: 8,                     columnas (lo que mide la lista original)
        etiqueta: "Cómo se parte [38, 27, 43, 3]",   aria-label del dibujo
-       max: 2.6                  (opcional) tamaño máximo de un casillero, en rem
+       max: 2.6,                 (opcional) tamaño máximo de un casillero, en rem
+       pisos: 4                  (opcional) cuántos pisos tendrá al final: reserva su alto
+                                 desde el principio, así lo de abajo (la pila, la salida)
+                                 no baja cada vez que nace un piso
      });
 
      p.trozo({
@@ -35,7 +38,8 @@
                                  verde), "apagado" o null
    p.rotulo(id, texto)           cambia la píldora (null la quita)
    p.quitar(id)                  borra un trozo (y sus rayas)
-   p.vaciar()                    borra todo
+   p.vaciar()                    borra todo (el alto reservado con pisos se mantiene)
+   p.pisos(n)                    cambia los pisos reservados (0 o null: sin reserva)
    p.trozos                      { id: elemento }
    p.el                          el contenedor .particion
 
@@ -68,6 +72,7 @@
     el.textContent = "";
     el.style.setProperty("--n", n);
     if (opciones.max) el.style.setProperty("--particion-max", opciones.max + "rem");
+    pisos(opciones.pisos);
     el.setAttribute("role", "img");
     el.setAttribute("aria-label", opciones.etiqueta || "Una lista que se parte en pedazos");
 
@@ -117,6 +122,13 @@
       datos[d.id] = { valores: valores, padre: d.padre === undefined ? null : d.padre };
       rayas();
       return t;
+    }
+
+    // Cada piso reservado guarda, aunque esté vacío, el alto de una fila de casilleros
+    function pisos(k) {
+      el.classList.toggle("particion--pisos", k > 0);
+      if (k > 0) el.style.setProperty("--pisos", k);
+      else el.style.removeProperty("--pisos");
     }
 
     function valores(id, v) {
@@ -220,6 +232,7 @@
       rotulo: rotulo,
       quitar: quitar,
       vaciar: vaciar,
+      pisos: function (k) { pisos(k); rayas(); },
       rayas: rayas
     };
     return api;
