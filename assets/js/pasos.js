@@ -82,8 +82,16 @@
      pantalla, la página baja lo justo para que se lea. */
   function mostrarRespuesta(paso) {
     var fb = paso.querySelector(".feedback:not(:empty)");
-    if (!fb) return;
+    if (fb) aLaVista(fb);
+  }
+
+  /* Si un mensaje quedó bajo el pie fijo (la salida creció al terminar una traza), la
+     página baja lo justo para verlo */
+  var entradaPaso = 0;   // cuándo se entró al paso actual: al entrar no se baja la página
+  function aLaVista(fb) {
+    if (Date.now() - entradaPaso < 700) return;
     requestAnimationFrame(function () {
+      if (!fb.offsetParent) return;
       var pie = document.querySelector(".leccion-pie");
       var limite = window.innerHeight - (pie ? pie.offsetHeight : 0);
       var caja = fb.getBoundingClientRect();
@@ -103,6 +111,12 @@
     var pasos = Array.prototype.slice.call(raiz.querySelectorAll(".paso"));
     var total = pasos.length;
     pasos.forEach(envolverIntro);
+    // «Siguiente: Quicksort →»: en el móvil la flecha quedaba sola en otro renglón. Un
+    // espacio que no se parte la deja pegada a la última palabra.
+    raiz.querySelectorAll(".btn").forEach(function (b) {
+      var t = b.lastChild;
+      if (t && t.nodeType === 3 && / [→←]\s*$/.test(t.nodeValue)) t.nodeValue = t.nodeValue.replace(/ ([→←])(\s*)$/, "\u00a0$1$2");
+    });
     var barra = raiz.querySelector(".barra-progreso");
     var relleno = raiz.querySelector(".barra-progreso__relleno");
     var contador = raiz.querySelector(".leccion-cabecera__contador");
@@ -225,6 +239,7 @@
       actualizarProgreso();
       guardar();
 
+      entradaPaso = Date.now();
       var primeraVez = !visitados[actual];
       visitados[actual] = true;
       var fn = alEntrar[paso.id];
@@ -365,6 +380,7 @@
     else msg.textContent = texto;
     el.appendChild(icono);
     el.appendChild(msg);
+    aLaVista(el);
   }
 
   function quitarTipo(el) {

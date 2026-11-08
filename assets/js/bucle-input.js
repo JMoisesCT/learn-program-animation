@@ -88,6 +88,8 @@
       if (!r.fin && (!o.vueltas || vuelta < o.vueltas)) {
         pedir(r.texto);
         campo.focus();
+        // El registro creció: que el campo no quede bajo el pie fijo de la lección
+        fila.scrollIntoView({ block: "nearest" });
         return;
       }
       var f = o.alFinal ? o.alFinal() : {};
@@ -98,6 +100,7 @@
       fila.hidden = true;
       otra.hidden = false;
       otra.focus();
+      otra.scrollIntoView({ block: "nearest" });
       o.alTerminar();
     }
 
