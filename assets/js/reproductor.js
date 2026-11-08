@@ -280,6 +280,7 @@
         var v = caja(nombre);
         var h = historia(nombre);
         v.valor.textContent = h[h.length - 1];
+        if (v.valor.textContent.length > 11) v.caja.classList.add("rep__var--largo");
         h.slice(Math.max(0, h.length - 4), -1).forEach(function (t) {
           v.rastro.appendChild(nuevo("s", null, t));
         });
@@ -379,8 +380,13 @@
 
     function tic() {
       if (i >= pasos.length - 1) { detener(); pintar(false); return; }
+      // Si este paso es un momento clave (o el último), se detiene ANTES de pintarlo: así
+      // el paso se anima y el botón ya muestra ▶ (pintar lee timer). Pintarlo otra vez sin
+      // animar, después, borraba sus vuelos y resaltados.
+      var para = pasos[i + 1].pausa || i + 1 >= pasos.length - 1;
+      if (para) detener();
       ir(i + 1, true);
-      if (pasos[i].pausa || i >= pasos.length - 1) { detener(); pintar(false); return; }
+      if (para) return;
       timer = setTimeout(tic, (o.intervalo || 1000) / vel);
     }
 

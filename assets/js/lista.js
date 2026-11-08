@@ -363,7 +363,14 @@
       var cs = casillas();
       if (!cs.length) return null;
       var base = el.getBoundingClientRect().left;
-      function mitad(c) { var r = c.getBoundingClientRect(); return r.left + r.width / 2 - base; }
+      // Sin la traslación de una animación en curso (reordenar, insertar): el puntero va
+      // al lugar donde el casillero termina, no donde está a mitad de camino
+      function mitad(c) {
+        var r = c.getBoundingClientRect();
+        var t = getComputedStyle(c).transform;
+        var dx = t && t !== "none" && window.DOMMatrixReadOnly ? new DOMMatrixReadOnly(t).m41 : 0;
+        return r.left - dx + r.width / 2 - base;
+      }
       if (k >= 0 && k < cs.length) return mitad(cs[k]);
       var paso = cs.length > 1 ? mitad(cs[1]) - mitad(cs[0]) : cs[0].getBoundingClientRect().width * 1.15;
       return k < 0 ? mitad(cs[0]) + k * paso : mitad(cs[cs.length - 1]) + (k - cs.length + 1) * paso;
@@ -446,11 +453,17 @@
     function medir() {
       var m = new Map();
       casillas().forEach(function (c) { m.set(c, c.getBoundingClientRect()); });
+      if (fila) fila.querySelectorAll(":scope > .lista__corchete").forEach(function (c) { m.set(c, c.getBoundingClientRect()); });
       return m;
     }
 
+    // Un casillero que se corre un lugar (insertar, quitar) se desliza entero. Un valor que
+    // cruza varios casilleros (reordenar) viaja solo, sin su índice (el índice es del lugar),
+    // y describe un arco: el que avanza a la derecha pasa por arriba y el que vuelve, por
+    // abajo, para no taparse a mitad de camino. Los corchetes también se deslizan.
     function deslizar(previas) {
       if (reducir() || !document.body.animate) return;
+      var opciones = { duration: 420, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)" };
       casillas().forEach(function (c) {
         var a = previas.get(c);
         if (!a) return;
@@ -458,10 +471,26 @@
         var dx = a.left - b.left;
         var dy = a.top - b.top;
         if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+        var lejos = Math.abs(dx) > b.width * 1.5;
+        var blanco = lejos && !c.classList.contains("lista__casilla--fila") ? c.querySelector(":scope > .lista__valor") || c : c;
+        var cuadros = [{ transform: "translate(" + dx + "px, " + dy + "px)" }];
+        if (lejos) {
+          var arco = Math.min(b.height * 0.45, Math.abs(dx) / 5) * (dx < 0 ? -1 : 1);
+          cuadros.push({ transform: "translate(" + dx / 2 + "px, " + (dy / 2 + arco) + "px)", offset: 0.5 });
+        }
+        cuadros.push({ transform: "none" });
+        blanco.animate(cuadros, opciones);
+      });
+      if (fila) fila.querySelectorAll(":scope > .lista__corchete").forEach(function (c) {
+        var a = previas.get(c);
+        if (!a) return;
+        var b = c.getBoundingClientRect();
+        var dx = a.left - b.left;
+        if (Math.abs(dx) < 1) return;
         c.animate([
-          { transform: "translate(" + dx + "px, " + dy + "px)" },
-          { transform: "none" }
-        ], { duration: 420, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)" });
+          { transform: "translate(" + dx + "px, -50%)" },
+          { transform: "translate(0, -50%)" }
+        ], opciones);
       });
     }
 
