@@ -21,7 +21,9 @@
    d.obtener(clave)          el valor, o undefined
    d.marcar(clave, parte)    resalta el par ("clave" o "valor": solo esa parte) y lo devuelve.
                              Si la clave no está, aparece un casillero vacío con esa clave en
-                             rojo (KeyError) y devuelve null. d.marcar(null) quita la marca
+                             rojo (KeyError) y devuelve null; desde entonces el tamaño cuenta
+                             con su lugar (no pasa a dos filas; para que tampoco se achique
+                             al aparecer, dar capacidad). d.marcar(null) quita la marca
    d.clases(fn)              fn(clave, valor) devuelve una clase extra para cada par
                              ("dicc__par--igual", "--distinta", "--apagada", "--cambio"), o ""
    d.par(clave)              el elemento del par, o null
@@ -78,6 +80,9 @@
     var fila = null;
     var cajaNombres = null;
     var fantasma = null;
+    // Lo que pesa el casillero vacío de un KeyError más ancho que se mostró: se guarda para
+    // que el diccionario no pase a dos filas al aparecer ni crezca otra vez al irse
+    var pesoFuera = 0;
 
     el.classList.add("dicc");
     el.classList.toggle("dicc--vertical", vertical);
@@ -111,14 +116,16 @@
       });
     }
 
+    // Un par largo («Valentina» o [14, 17, 12]) cuenta por más de uno: así se achican a tiempo
+    function pesoPar(clave, v) {
+      // La etiqueta de la clave lleva su agujero y su margen: unos 1.7 caracteres más
+      var k = 0.21 * (texto(clave).length + 1.7) + 0.1;
+      return Math.max(1, k, 0.26 * texto(v).length + 0.3);
+    }
+
     function medida() {
       var cs = lugares();
-      // Un par largo («Valentina» o [14, 17, 12]) cuenta por más de uno: así se achican a tiempo
-      var peso = pares.reduce(function (t, p) {
-        // La etiqueta de la clave lleva su agujero y su margen: unos 1.7 caracteres más
-        var clave = 0.21 * (texto(p[0]).length + 1.7) + 0.1;
-        return t + Math.max(1, clave, 0.26 * texto(p[1]).length + 0.3);
-      }, 0);
+      var peso = pares.reduce(function (t, p) { return t + pesoPar(p[0], p[1]); }, pesoFuera);
       el.style.setProperty("--dicc-n", String(Math.round(Math.max(peso + 1, opciones.capacidad || 4) * 10) / 10));
       var vacia = fila.querySelector(".dicc__vacia");
       if (!cs.length && !vacia) fila.insertBefore(span("dicc__vacia", "vacío"), fila.lastChild);
@@ -184,6 +191,8 @@
       if (vertical) fantasma.appendChild(span("dicc__dos-puntos", ":"));
       fantasma.appendChild(span("dicc__valor", "?"));
       fila.insertBefore(fantasma, fila.lastChild);
+      var peso = pesoPar(clave, "?");
+      if (peso > pesoFuera) { pesoFuera = peso; medida(); }
       var vacia = fila.querySelector(".dicc__vacia");
       if (vacia) vacia.hidden = true;
       return null;

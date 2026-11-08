@@ -9,6 +9,9 @@
        corchetes: true,     [ y ] en los extremos, como se escribe en Python
        capacidad: 4,        (opcional) el tamaño de los casilleros se calcula para al menos
                             tantos elementos: si la lista va a crecer, así no se achican
+       reservarPunteros: 1, (opcional) la fila de punteros guarda desde el principio el alto
+                            de tantos pisos, aunque no haya fichas o se quiten con
+                            l.punteros(null): así lo de abajo no salta cuando van y vienen
        tupla: false         una tupla: paréntesis en vez de corchetes y un candado (no cambia)
      });
 
@@ -138,6 +141,7 @@
     var cuadricula = false;
     var filaPunteros = null;
     var punterosActuales = {};
+    var pisosReservados = opciones.reservarPunteros === true ? 1 : Number(opciones.reservarPunteros) || 0;
 
     el.classList.add("lista");
     el.setAttribute("aria-hidden", "true");
@@ -398,16 +402,22 @@
         p.style.left = x + "px";
         p.style.setProperty("--piso", String(piso));
       });
-      filaPunteros.style.setProperty("--pisos", String(maxPiso));
+      filaPunteros.style.setProperty("--pisos", String(Math.max(maxPiso, pisosReservados)));
     }
 
     function punteros(mapa) {
       if (!filaPunteros) {
-        filaPunteros = span("lista__punteros");
+        filaPunteros = span("lista__punteros" + (pisosReservados ? " lista__punteros--reservada" : ""));
         el.appendChild(filaPunteros);
         if (window.ResizeObserver) new ResizeObserver(ubicarPunteros).observe(el);
       }
-      if (mapa === null) { punterosActuales = {}; filaPunteros.textContent = ""; filaPunteros.hidden = true; return; }
+      if (mapa === null) {
+        punterosActuales = {};
+        filaPunteros.textContent = "";
+        filaPunteros.hidden = true;
+        if (pisosReservados) filaPunteros.style.setProperty("--pisos", String(pisosReservados));
+        return;
+      }
       Object.keys(mapa).forEach(function (nombre) {
         var dato = mapa[nombre];
         if (dato === null || dato === undefined) { delete punterosActuales[nombre]; return; }
@@ -605,6 +615,7 @@
     }
 
     pintar(valoresIniciales || []);
+    if (pisosReservados) punteros(null);
     if (opciones.nombres) {
       nombres = opciones.nombres.slice();
       pintarNombres();
