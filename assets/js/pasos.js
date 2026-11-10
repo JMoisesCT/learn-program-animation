@@ -62,13 +62,19 @@
      ve o la salida cambian de alto (ResizeObserver).
      Lo que se ve y crece mientras corre el código: con data-visual-fija en la lección, los
      pasos con una pila de llamadas, una lista que se parte o un árbol de llamadas; con
-     data-visual-fija en un paso, ese paso (data-visual-fija="no" lo evita). Si el paso no cabe en la pantalla, la salida va
-     bajo el código y lo que se ve queda fijo a la derecha al bajar (paso--visual-fija, en
-     base.css): así se ven a la vez los botones, la línea que corre y la pila. Es a pedido
-     porque a veces la salida debe quedar junto a lo que se ve (el mensaje de error junto a
-     la pila, en Errores).
-     Una vez que un paso pasó a ese reparto, no vuelve atrás hasta salir de él: si la pila
-     se achica, la salida no salta de un lado a otro. */
+     data-visual-fija en un paso, ese paso (data-visual-fija="no" lo evita). En esos pasos
+     la salida se queda a la derecha, bajo lo que se ve, mientras esa columna quepa en la
+     pantalla; si es el código el que no cabe (lo normal en una laptop), toda la columna
+     derecha queda fija al bajar (paso--derecha-fija, en base.css): la pila y la salida
+     siguen a la vista junto a los botones. Solo cuando lo que se ve y la salida ya no caben
+     juntos, la salida va bajo el código y lo que se ve queda fijo a la derecha
+     (paso--visual-fija): así se ven a la vez los botones, la línea que corre y la pila.
+     Es a pedido porque a veces la salida debe quedar junto a lo que se ve (el mensaje de
+     error junto a la pila, en Errores).
+     Una vez que la salida pasó bajo el código, se queda ahí mientras dure la ejecución
+     (si la pila se achica a medias, no salta de un lado a otro) y vuelve a la derecha
+     cuando lo que se ve queda en reposo: la pila, otra vez con una sola tarjeta. En reposo
+     la salida siempre va a la derecha: con la pila vacía no hay nada que dejar fijo. */
   var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
   var CRECE = ".pila, .particion, .arbol-llamadas";
 
@@ -84,7 +90,7 @@
   function equilibrar(paso, alEntrar) {
     var lab = paso.querySelector(":scope > .lab");
     var fijaAntes = !alEntrar && paso.classList.contains("paso--visual-fija");
-    paso.classList.remove("paso--salida-abajo", "paso--visual-fija");
+    paso.classList.remove("paso--salida-abajo", "paso--visual-fija", "paso--derecha-fija");
     if (!lab || !escritorio || !escritorio.matches) return;
     var intro = paso.querySelector(":scope > .paso__intro");
     var principal = lab.querySelector(":scope > .lab__principal");
@@ -99,12 +105,42 @@
     var crece = pide !== "no" && (pide !== null ||
       (paso.closest("[data-visual-fija]") && visual.querySelector(CRECE)));
     if (crece) {
-      // Si lo que se ve es más alto que la pantalla, igual queda fijo: arriba está lo
+      var libre = altoLibre(paso);
+      // La columna derecha cabe si, fija bajo la cabecera, no pasa del final del paso ni
+      // con la página bajada del todo (si pasara, la salida subiría y pisaría lo que se ve)
+      var cs = getComputedStyle(paso);
+      var debajo = document.documentElement.scrollHeight - (paso.getBoundingClientRect().bottom + window.scrollY) +
+        parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
+      var cabe = visual.offsetHeight + salida <= window.innerHeight - 60 - debajo - 4;
+      // ¿Lo que se ve está en reposo? Una pila, con una sola tarjeta (antes de ejecutar o al
+      // terminar); lo demás (una lista que se parte, un árbol), como estaba al entrar al paso
+      if (alEntrar === true || paso._visualBase === undefined) paso._visualBase = visual.offsetHeight;
+      var pilas = visual.querySelectorAll(".pila");
+      var enBase = pilas.length
+        ? visual.querySelectorAll(".pila .marco:not(.marco--sale)").length <= pilas.length
+        : visual.offsetHeight <= paso._visualBase + 8;
+      // Mientras corre, si la columna derecha no cabe: la salida, bajo el código, y lo que
+      // se ve, fijo. Si es más alto que la pantalla, igual queda fijo: arriba está lo
       // último que pasó (la tarjeta de arriba de la pila) y lo de abajo se ve al final
-      if (fijaAntes || aLaDerecha > altoLibre(paso)) {
+      // Casi cabe: la consola entra bajo lo que se ve (solo las notas quedan más abajo) y
+      // para llegar a los botones apenas hay que bajar. Entonces tampoco se mueve
+      var consola = resultado.querySelector(".consola");
+      // El alto propio del código: si la derecha es más alta, su columna se estira hasta igualarla
+      principal.style.alignSelf = "start";
+      var codigo = (intro ? intro.offsetHeight : 0) + principal.offsetHeight;
+      principal.style.alignSelf = "";
+      var baja = Math.max(0, codigo - libre);
+      var casi = !!consola && baja <= 48 && visual.offsetHeight + 16 + consola.offsetHeight <= libre + baja;
+      if (!enBase && (fijaAntes || (!cabe && !casi))) {
         paso.classList.add("paso--salida-abajo", "paso--visual-fija");
         return;
       }
+      // La salida, a la derecha. Si cabe pero el código no, esa columna queda fija al bajar
+      if (cabe && Math.max(codigo, visual.offsetHeight + salida) > libre) {
+        paso.style.setProperty("--alto-visual", visual.offsetHeight + "px");
+        paso.classList.add("paso--derecha-fija");
+      }
+      return;
     }
     if (abajo + 24 < aLaDerecha) paso.classList.add("paso--salida-abajo");
   }
@@ -335,7 +371,7 @@
       var esperaEquilibrio;
       window.addEventListener("resize", function () {
         clearTimeout(esperaEquilibrio);
-        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual], true); }, 150);
+        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual], "ventana"); }, 150);
       });
       // Si después de entrar crece lo que se ve o la salida (un mensaje de error, el
       // feedback de «Comprobar», una consola que se llena), se vuelve a decidir dónde va
@@ -343,6 +379,17 @@
       if (window.ResizeObserver) {
         var esperaCrece;
         var observador = new ResizeObserver(function () {
+          // Con la columna derecha fija, la salida va justo bajo lo que se ve: su lugar
+          // sigue al alto de la pila sin esperar
+          var p = pasos[actual];
+          var v = p && p.classList.contains("paso--derecha-fija") && p.querySelector(":scope > .lab > .lab__visual");
+          if (v) {
+            p.style.setProperty("--alto-visual", v.offsetHeight + "px");
+            // Si al crecer ya no cabe fija, la salida subiría sobre lo que se ve: se suelta
+            // ya, y enseguida se decide el reparto
+            var r = p.querySelector(":scope > .lab > .lab__resultado");
+            if (r && r.getBoundingClientRect().top < v.getBoundingClientRect().bottom) p.classList.remove("paso--derecha-fija");
+          }
           clearTimeout(esperaCrece);
           esperaCrece = setTimeout(function () { if (pasos[actual]) equilibrar(pasos[actual]); }, 250);
         });

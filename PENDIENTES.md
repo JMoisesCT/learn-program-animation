@@ -116,6 +116,16 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-10 · La salida junto a la pila
+
+En las lecciones con pila (Recursión y las demás con `data-visual-fija`), la salida aparecía bajo el código con la columna derecha casi vacía: se veía raro y obligaba a bajar. La regla la mandaba ahí siempre que el paso no cabía en la pantalla, y en una laptop el código solo (enunciado, rótulo, código, explicación y botones: unos 660 px) ya no cabe, así que pasaba desde el principio y, una vez abajo, no volvía. Ahora (`equilibrar`, en `pasos.js`):
+- **En reposo, la salida va siempre a la derecha**: antes de ejecutar y al terminar (la pila, con una sola tarjeta). Al terminar `factorial(4)` a 1440×800 el paso mide 731 px en vez de 1077.
+- **Si el código no cabe pero la columna derecha sí**, esa columna entera queda fija al bajar (`paso--derecha-fija`: lo que se ve y la salida comparten la columna; `--alto-visual` lo pone `pasos.js`): la pila y la salida siguen junto a los botones.
+- **Solo mientras corre el código**, si lo que se ve y la salida ya no caben juntos, la salida pasa bajo el código y lo que se ve queda fijo, como antes; vuelve a la derecha cuando la pila se vacía. Si casi cabe (la consola entra y apenas hay que bajar para ver los botones), tampoco se mueve.
+- En los pasos donde la pila empieza llena («Ahora la vuelta la haces tú») sigue como antes hasta que quepa.
+
+Medido con Playwright a 1366×657, 1440×800, 1536×730 y 1920×950 en las 7 lecciones de Recursión, Búsqueda binaria (con y sin recursión), Quicksort, Mergesort, Mezclar y Funciones que usan funciones: sin errores, y la salida fija nunca pisa la pila mientras crece. **Queda**: en pantallas bajas la salida todavía cambia de lado una vez por ejecución (a 1366×657, en `factorial`, al apilar la segunda tarjeta); para evitarlo del todo haría falta que el código ocupe menos alto (el bloque guarda lugar para las fichas y la fila de valores) o que la consola vaya encima de la pila. En los pasos con una lista que se parte o un árbol (sin pila) no se sabe cuándo están «en reposo»: se quedan como estaban al entrar.
+
 ### 2026-11-10 · Recursión 1/7: quién llama a quién
 
 Los alumnos decían que no se entendía quién llama a quién ni cómo se pasa de `abrir(0)` a `abrir(1)`. En la traza, un solo toque quitaba la tarjeta de `abrir(0)`, iluminaba la de `abrir(1)`, saltaba de la línea 3 a la 6 y cambiaba el rótulo, sin decir por qué. Dos cambios:
