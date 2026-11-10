@@ -26,6 +26,7 @@
        Con columna: 15 (en caracteres, contando la sangría), la ficha va debajo de esa
        columna y no al principio: p. ej. bajo una de las dos llamadas de una misma línea.
        En una línea, o todas sus fichas llevan columna o ninguna.
+       Con destino: true, la ficha se ilumina: ahí vuelve la llamada que está terminando.
    Codigo.valores(preEl, { linea: 4, partes: ["   return ", ["fibonacci(3)", "activa"], …] })
        una fila debajo de la línea con sus valores puestos (cómo la ve la llamada que la
        ejecuta). Las partes se escriben una tras otra, con espacios para alinearlas con el
@@ -249,7 +250,10 @@
     pre.querySelectorAll(".pausa").forEach(function (ficha) {
       var f = quedan[ficha.getAttribute("data-clave")];
       if (f && ficha.textContent === f.texto && ficha.closest(".linea") === ls[f.linea] &&
-        ficha.getAttribute("data-columna") === columnaDe(f)) return;
+        ficha.getAttribute("data-columna") === columnaDe(f)) {
+        ficha.classList.toggle("pausa--destino", !!f.destino);
+        return;
+      }
       var grupo = ficha.parentNode;
       if (!reducir() && pre.isConnected && ficha.offsetParent) {
         var a = ficha.getBoundingClientRect();
@@ -283,7 +287,7 @@
         linea.appendChild(grupo);
       }
       var ficha = document.createElement("span");
-      ficha.className = "pausa";
+      ficha.className = "pausa" + (f.destino ? " pausa--destino" : "");
       ficha.setAttribute("data-clave", f.clave);
       ficha.textContent = f.texto;
       if (f.columna !== undefined) {
