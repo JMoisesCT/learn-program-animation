@@ -32,6 +32,12 @@
                      tarjeta de encima) y, con recibe, el valor cae en su lugar
                      («return fibonacci(2) + fibonacci(1)» con espera: "fibonacci(2)" y
                      recibe: "1" → «return 1 + fibonacci(1)»). Así se lee a quién espera.
+     nombra: true    la tarjeta pausada dice a quién espera, con su nombre: «‖ línea 6 · espera
+                     a abrir(0)» en vez de «‖ pausada en la línea 6». Para títulos cortos.
+     vuelve: true    (en la de arriba, cuando termina) dice a quién vuelve: «↩ vuelve a
+                     abrir(1)» (o «al programa»). La de abajo, la que la llamó, se ilumina, igual
+                     que su ficha en el código; al quitarse, la tarjeta baja hacia ella en vez
+                     de subir. Así se ve que terminar es volver a quien la llamó.
    Con la opción codigo, cada tarjeta pausada pone además una ficha («n=3») al final de su
    línea en el código (Codigo.pausas): se ve cuántas llamadas esperan en esa misma línea,
    y al volver se va la ficha de la que retoma. ficha: "e=2" cambia el texto de la ficha
@@ -219,6 +225,8 @@
       if (reducir()) { marco.raiz.remove(); return; }
       marco.raiz.classList.remove("marco--entra", "marco--sigue");
       marco.raiz.classList.add("marco--sale");
+      // La que vuelve a quien la llamó baja hacia su tarjeta
+      if (marco.vuelve) marco.raiz.classList.add("marco--vuelve");
       saliendo.push(marco.raiz);
       setTimeout(function () {
         marco.raiz.remove();
@@ -243,25 +251,31 @@
         cont.appendChild(m.raiz);
         marcos.push(m);
       }
+      // La de arriba termina y vuelve a quien la llamó: la de debajo
+      var vuelve = !!pila[pila.length - 1].vuelve && pila.length > 1;
       pila.forEach(function (datos, nivel) {
         var m = marcos[nivel];
         var arriba = nivel === pila.length - 1;
         var termina = datos.devuelve !== undefined || datos.termina;
         m.raiz.classList.toggle("marco--activo", arriba);
         m.raiz.classList.toggle("marco--esperando", !arriba);
+        m.raiz.classList.toggle("marco--destino", vuelve && nivel === pila.length - 2);
+        m.vuelve = arriba && vuelve;
         var linea = datos.linea !== undefined ? " en la línea " + (datos.linea + 1) : "";
         var pausada = !arriba && datos.linea !== undefined;
         var sigue = arriba && datos.sigue && !termina;
         var estado = "";
         if (datos.devuelve !== undefined) estado = "↩ devuelve " + datos.devuelve;
+        else if (arriba && vuelve && datos.termina) estado = "↩ vuelve " + (nivel === 1 ? "al programa" : "a " + pila[nivel - 1].titulo);
         else if (datos.termina) estado = "↩ termina";
+        else if (pausada && datos.nombra) estado = "‖ línea " + (datos.linea + 1) + " · espera a " + pila[nivel + 1].titulo;
         else if (pausada) estado = "‖ pausada" + linea;
         else if (!arriba) estado = esperando(datos.titulo, pila[nivel + 1].titulo);
         else if (sigue) estado = "▶ sigue" + linea;
         else if (nivel > 0) estado = "trabajando";
         if (m.estado.textContent !== estado) m.estado.textContent = estado;
         m.estado.className = "marco__estado" + (termina ? " marco__estado--devuelve" : pausada ? " marco__estado--pausada" :
-          sigue ? " marco__estado--sigue" : "");
+          sigue ? " marco__estado--sigue" : "") + (pausada && datos.nombra ? " marco__estado--nombra" : "");
         // Al retomar, la tarjeta se ilumina una vez
         if (sigue && !m.raiz.classList.contains("marco--sigue")) {
           void m.raiz.offsetWidth;
@@ -320,7 +334,8 @@
       pila.forEach(function (datos, nivel) {
         if (nivel === pila.length - 1 || datos.linea === undefined) return;
         var texto = datos.ficha || datos.vars.map(function (par) { return par[0] + "=" + par[1]; }).join(" ");
-        lista.push({ linea: datos.linea, texto: texto, clave: String(nivel), columna: datos.columna });
+        lista.push({ linea: datos.linea, texto: texto, clave: String(nivel), columna: datos.columna,
+          destino: !!pila[pila.length - 1].vuelve && nivel === pila.length - 2 });
       });
       return lista;
     }
