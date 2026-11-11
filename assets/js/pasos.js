@@ -166,7 +166,7 @@
     if (!p || !escritorio || !escritorio.matches) {
       paso.classList.remove("paso--notas-derecha");
       ["--alto-consola", "--alto-visual", "--tope-visual"].forEach(function (v) { paso.style.removeProperty(v); });
-      if (p) p.visual.classList.remove("lab__visual--recortada");
+      if (p) { p.visual.classList.remove("lab__visual--recortada"); p.visual.removeAttribute("tabindex"); }
       return;
     }
     if (decidir) paso.classList.toggle("paso--notas-derecha", altoIzquierda(p) <= topeFijo(paso));
@@ -175,7 +175,11 @@
     paso.style.setProperty("--alto-visual", p.visual.offsetHeight + "px");
     paso.style.setProperty("--tope-visual", Math.max(topeFijo(paso) - alto - 16, 160) + "px");
     // ¿La pila no cabe y se desplaza por dentro? Se nota con un borde difuminado abajo
-    p.visual.classList.toggle("lab__visual--recortada", p.visual.scrollHeight > p.visual.clientHeight + 4);
+    var recortada = p.visual.scrollHeight > p.visual.clientHeight + 4;
+    p.visual.classList.toggle("lab__visual--recortada", recortada);
+    // Con desplazamiento propio, también se llega con el teclado
+    if (recortada) p.visual.setAttribute("tabindex", "0");
+    else p.visual.removeAttribute("tabindex");
   }
 
   function equilibrar(paso) {

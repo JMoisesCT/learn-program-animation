@@ -331,6 +331,28 @@
       if (!hay) cajas.appendChild(nuevo("p", "rep__vacio", "Todavía no hay variables."));
     }
 
+    /* Las cajas guardan el alto que tendrán con todas las variables: la consola, que va
+       debajo, no baja cada vez que nace una (ni cuando un valor largo pasa a otro renglón).
+       Se mide una copia invisible en cada paso del programa. */
+    function reservarVars() {
+      var ancho = cajas.getBoundingClientRect().width;
+      if (!ancho || !pasos.length) return;   // oculta (otra pestaña en el móvil): se mide al mostrarla
+      var real = cajas, vistasReal = vistas, iReal = i;
+      var copia = nuevo("div", "rep__vars");
+      copia.setAttribute("aria-hidden", "true");
+      copia.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;min-height:0;width:" + ancho + "px";
+      real.parentNode.appendChild(copia);
+      cajas = copia;
+      var max = 0;
+      for (i = 0; i < pasos.length; i++) {
+        pintarVars(false);
+        max = Math.max(max, copia.getBoundingClientRect().height);
+      }
+      copia.remove();
+      cajas = real; vistas = vistasReal; i = iReal;
+      real.style.minHeight = Math.ceil(max) + "px";
+    }
+
     /* ---------- Consola ---------- */
     function pintarSalida(animar) {
       salidaEl.textContent = "";
@@ -527,7 +549,7 @@
         botonesVista[k2].classList.toggle("rep__pestana--activa", k2 === v);
       });
       // Lo que estaba oculto se mide y se pinta de nuevo
-      requestAnimationFrame(function () { medirCalores(); pintar(false); });
+      requestAnimationFrame(function () { medirCalores(); reservarVars(); pintar(false); });
     }
 
     /* ---------- Datos de entrada ---------- */
@@ -558,7 +580,7 @@
       pintarMarcas();
       if (o.escena && o.escena.reiniciar) o.escena.reiniciar(datos);
       ir(-1);
-      requestAnimationFrame(function () { medirCalores(); reservarNota(); });
+      requestAnimationFrame(function () { medirCalores(); reservarNota(); reservarVars(); });
     }
 
     /* ---------- Eventos ---------- */
@@ -584,7 +606,7 @@
     var esperaMedir;
     window.addEventListener("resize", function () {
       clearTimeout(esperaMedir);
-      esperaMedir = setTimeout(function () { medirCalores(); reservarNota(); }, 150);
+      esperaMedir = setTimeout(function () { medirCalores(); reservarNota(); reservarVars(); }, 150);
     });
 
     raiz.setAttribute("data-vista", botonesVista.escena ? "escena" : "codigo");
