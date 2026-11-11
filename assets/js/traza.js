@@ -9,7 +9,9 @@
      reproducir: btn,            (opcional) "▶ Ejecutar todo": avanza solo; se convierte en "⏸ Pausa"
      saltar: btn,                (opcional) "Siguiente salto ▸▸": avanza deprisa hasta el siguiente
                                  paso marcado con parada: true (p. ej. una llamada o una vuelta)
-     reiniciar: btn,             (opcional) se oculta hasta que termina la primera ejecución
+     reiniciar: btn,             (opcional) apagado hasta que termina la ejecución (a la vista
+                                 desde el principio: así la fila de botones no cambia de alto
+                                 ni empuja lo de abajo cuando aparece)
      generar: function () {      devuelve la lista de pasos que ejecuta Python
        return [{ linea: 0, texto: "…", salida: "…", estado: { … } }, …];
      },                          (opcional) flecha: true / false en un paso fuerza o evita la
@@ -65,6 +67,13 @@
 
     function reservar() {
       if (o.pila) o.pila.reservar(pasos.map(function (p) { return p.estado; }));
+      // Con una pila, la consola va encima de ella (pasos.js): guarda el lugar de lo que
+      // va a imprimir (hasta 4 líneas), así la pila de debajo no baja con cada print
+      if (o.pila && o.consola) {
+        var salidas = pasos.filter(function (p) { return p.salida !== undefined; })
+          .map(function (p) { return String(p.salida); }).slice(0, 4);
+        Codigo.reservarAlto(o.consola, [salidas], function (copia, lineas) { Codigo.consola(copia, lineas); });
+      }
       if (!o.explicacion) return;
       // En una traza repetible los pasos se generan al ejecutar: el texto inicial largo sí
       // cuenta, para que el alto no cambie al empezar. En las demás cuenta el más corto.
@@ -108,7 +117,7 @@
       o.ejecutar.disabled = false;
       if (o.reproducir) o.reproducir.disabled = false;
       if (o.saltar) o.saltar.disabled = false;
-      if (o.reiniciar) o.reiniciar.hidden = true;
+      if (o.reiniciar) { o.reiniciar.hidden = false; o.reiniciar.disabled = true; }
       if (o.alReiniciar) o.alReiniciar();
     }
 
@@ -143,7 +152,7 @@
       else Codigo.quitarSalto(o.codigo);
       if (terminado()) {
         detener();
-        if (o.reiniciar) o.reiniciar.hidden = false;
+        if (o.reiniciar) o.reiniciar.disabled = false;
         if (!o.repetible) {
           o.ejecutar.disabled = true;
           if (o.reproducir) o.reproducir.disabled = true;
@@ -180,7 +189,7 @@
     o.ejecutar.addEventListener("click", function () { detener(); avanzar(); });
     if (o.reproducir) o.reproducir.addEventListener("click", alternar);
     if (o.saltar) o.saltar.addEventListener("click", saltar);
-    // El botón se oculta al reiniciar: el foco pasa a "Ejecutar línea"
+    // El botón se apaga al reiniciar: el foco pasa a "Ejecutar línea"
     if (o.reiniciar) o.reiniciar.addEventListener("click", function () {
       reiniciar();
       o.ejecutar.focus();

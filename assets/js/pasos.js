@@ -55,94 +55,170 @@
     }
   }
 
-  /* En escritorio, la salida (.lab__resultado) va a la derecha, bajo lo que se ve.
-     Si esa columna queda mucho más alta que la del código, pasa a la izquierda,
-     bajo el código (clase paso--salida-abajo), para que el paso entre en la pantalla.
-     Se decide al entrar al paso, al cambiar el tamaño de la ventana y cuando lo que se
-     ve o la salida cambian de alto (ResizeObserver).
-     Lo que se ve y crece mientras corre el código: con data-visual-fija en la lección, los
-     pasos con una pila de llamadas, una lista que se parte o un árbol de llamadas; con
-     data-visual-fija en un paso, ese paso (data-visual-fija="no" lo evita). En esos pasos
-     la salida se queda a la derecha, bajo lo que se ve, mientras esa columna quepa en la
-     pantalla; si es el código el que no cabe (lo normal en una laptop), toda la columna
-     derecha queda fija al bajar (paso--derecha-fija, en base.css): la pila y la salida
-     siguen a la vista junto a los botones. Solo cuando lo que se ve y la salida ya no caben
-     juntos, la salida va bajo el código y lo que se ve queda fijo a la derecha
-     (paso--visual-fija): así se ven a la vez los botones, la línea que corre y la pila.
-     Es a pedido porque a veces la salida debe quedar junto a lo que se ve (el mensaje de
-     error junto a la pila, en Errores).
-     Una vez que la salida pasó bajo el código, se queda ahí mientras dure la ejecución
-     (si la pila se achica a medias, no salta de un lado a otro) y vuelve a la derecha
-     cuando lo que se ve queda en reposo: la pila, otra vez con una sola tarjeta. En reposo
-     la salida siempre va a la derecha: con la pila vacía no hay nada que dejar fijo. */
-  var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
-  var CRECE = ".pila, .particion, .arbol-llamadas";
+  /* Dónde va la salida (.lab__resultado), para que **no cambie de lugar mientras el
+     alumno está en el paso**. El reparto se decide al entrar (y al cambiar el tamaño de
+     la ventana), nunca mientras corre el código.
 
-  // Alto que tiene el paso para verse entero: la pantalla menos la cabecera y el pie
-  function altoLibre(paso) {
-    var cab = document.querySelector(".leccion-cabecera");
-    var pie = document.querySelector(".leccion-pie");
+     Lo normal, en escritorio: a la derecha, bajo lo que se ve. Para que lo que se ve
+     pueda crecer sin empujarla (aparece un puntero bajo la lista, nace una caja), su
+     panel se estira hasta que la salida queda abajo, a la altura del final de la columna
+     del código (los botones): lo que aparezca dentro del panel ya tiene su lugar. Si
+     llega a llenarlo, la salida baja y ya no vuelve a subir (el panel no se encoge).
+     Si el código es más alto que la pantalla (lo normal en una laptop), la columna
+     derecha mide lo que se ve de la pantalla y queda fija al bajar (paso--derecha-fija,
+     en base.css): lo que se ve, arriba, y la salida, abajo, siguen a la vista junto a los
+     botones. data-visual-fija="no" en un paso lo evita.
+
+     Con una pila de llamadas, la salida va arriba (paso--salida-arriba): la pila crece
+     hacia abajo todo lo que haga falta y la consola, encima, no se entera. Son los pasos
+     con una .pila en lo que se ve, en las lecciones (o pasos) con data-visual-fija; un
+     paso lo pide también con data-salida="arriba". En escritorio, la consola y la pila
+     quedan fijas al bajar hasta los botones (la pila, con su propio desplazamiento si no
+     cabe en la pantalla: arriba está la tarjeta que trabaja) y las notas y el mensaje
+     de «Comprobar» pasan bajo el código; si el código cabe en la pantalla, las notas se
+     quedan a la derecha, bajo la pila. En el móvil, la consola va entre el código y la
+     pila, si el código va primero en el HTML. Para eso, lo que acompaña a la consola en
+     la salida se junta en un .lab__notas. */
+  var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
+  var BAJO_CABECERA = 60;   // 3.75rem: donde queda fija la columna derecha (base.css)
+
+  // Lo más alta que puede ser la columna derecha para quedar fija bajo la cabecera sin
+  // pasar del final del paso, ni con la página bajada del todo (si pasara, la salida
+  // subiría y pisaría lo que se ve)
+  function topeFijo(paso) {
     var cs = getComputedStyle(paso);
-    return window.innerHeight - (cab ? cab.offsetHeight : 0) - (pie ? pie.offsetHeight : 0) -
-      parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 16;
+    var debajo = document.documentElement.scrollHeight - (paso.getBoundingClientRect().bottom + window.scrollY) +
+      parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
+    return window.innerHeight - BAJO_CABECERA - debajo - 4;
   }
 
-  function equilibrar(paso, alEntrar) {
+  function partes(paso) {
     var lab = paso.querySelector(":scope > .lab");
-    var fijaAntes = !alEntrar && paso.classList.contains("paso--visual-fija");
-    paso.classList.remove("paso--salida-abajo", "paso--visual-fija", "paso--derecha-fija");
-    if (!lab || !escritorio || !escritorio.matches) return;
-    var intro = paso.querySelector(":scope > .paso__intro");
-    var principal = lab.querySelector(":scope > .lab__principal");
-    var visual = lab.querySelector(":scope > .lab__visual");
-    var resultado = lab.querySelector(":scope > .lab__resultado");
-    if (!principal || !visual || !resultado) return;
-    var izquierda = (intro ? intro.offsetHeight : 0) + principal.offsetHeight;
-    var salida = resultado.offsetHeight + 16;
-    var aLaDerecha = Math.max(izquierda, visual.offsetHeight + salida);
-    var abajo = Math.max(izquierda + salida, visual.offsetHeight);
-    var pide = paso.getAttribute("data-visual-fija");
-    var crece = pide !== "no" && (pide !== null ||
-      (paso.closest("[data-visual-fija]") && visual.querySelector(CRECE)));
-    if (crece) {
-      var libre = altoLibre(paso);
-      // La columna derecha cabe si, fija bajo la cabecera, no pasa del final del paso ni
-      // con la página bajada del todo (si pasara, la salida subiría y pisaría lo que se ve)
-      var cs = getComputedStyle(paso);
-      var debajo = document.documentElement.scrollHeight - (paso.getBoundingClientRect().bottom + window.scrollY) +
-        parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
-      var cabe = visual.offsetHeight + salida <= window.innerHeight - 60 - debajo - 4;
-      // ¿Lo que se ve está en reposo? Una pila, con una sola tarjeta (antes de ejecutar o al
-      // terminar); lo demás (una lista que se parte, un árbol), como estaba al entrar al paso
-      if (alEntrar === true || paso._visualBase === undefined) paso._visualBase = visual.offsetHeight;
-      var pilas = visual.querySelectorAll(".pila");
-      var enBase = pilas.length
-        ? visual.querySelectorAll(".pila .marco:not(.marco--sale)").length <= pilas.length
-        : visual.offsetHeight <= paso._visualBase + 8;
-      // Mientras corre, si la columna derecha no cabe: la salida, bajo el código, y lo que
-      // se ve, fijo. Si es más alto que la pantalla, igual queda fijo: arriba está lo
-      // último que pasó (la tarjeta de arriba de la pila) y lo de abajo se ve al final
-      // Casi cabe: la consola entra bajo lo que se ve (solo las notas quedan más abajo) y
-      // para llegar a los botones apenas hay que bajar. Entonces tampoco se mueve
-      var consola = resultado.querySelector(".consola");
-      // El alto propio del código: si la derecha es más alta, su columna se estira hasta igualarla
-      principal.style.alignSelf = "start";
-      var codigo = (intro ? intro.offsetHeight : 0) + principal.offsetHeight;
-      principal.style.alignSelf = "";
-      var baja = Math.max(0, codigo - libre);
-      var casi = !!consola && baja <= 48 && visual.offsetHeight + 16 + consola.offsetHeight <= libre + baja;
-      if (!enBase && (fijaAntes || (!cabe && !casi))) {
-        paso.classList.add("paso--salida-abajo", "paso--visual-fija");
-        return;
-      }
-      // La salida, a la derecha. Si cabe pero el código no, esa columna queda fija al bajar
-      if (cabe && Math.max(codigo, visual.offsetHeight + salida) > libre) {
-        paso.style.setProperty("--alto-visual", visual.offsetHeight + "px");
-        paso.classList.add("paso--derecha-fija");
-      }
+    if (!lab) return null;
+    var p = {
+      lab: lab,
+      intro: paso.querySelector(":scope > .paso__intro"),
+      principal: lab.querySelector(":scope > .lab__principal"),
+      visual: lab.querySelector(":scope > .lab__visual"),
+      resultado: lab.querySelector(":scope > .lab__resultado")
+    };
+    return p.principal && p.visual && p.resultado ? p : null;
+  }
+
+  // El espacio entre lo que se ve y la salida (lo ocupa aunque la salida esté vacía)
+  function hueco(p) {
+    return parseFloat(getComputedStyle(p.resultado).marginTop) || 0;
+  }
+
+  // ¿El paso usa el reparto de siempre? Una lección que pone el suyo (otras áreas en la
+  // rejilla) se queda como la dejó
+  var AREAS = '"intro visual" "principal visual" "principal resultado"';
+  function repartoNormal(paso) {
+    return getComputedStyle(paso).gridTemplateAreas.replace(/\s+/g, " ") === AREAS;
+  }
+
+  /* La salida arriba: se prepara una vez, al cargar. Devuelve la consola, o null si el
+     paso no lo pide o su salida no tiene una sola consola suelta. */
+  function prepararArriba(paso) {
+    var p = partes(paso);
+    if (!p) return null;
+    var fija = paso.getAttribute("data-visual-fija");
+    var pide = paso.getAttribute("data-salida") === "arriba" ||
+      (fija !== "no" && (fija !== null || paso.closest("[data-visual-fija]")) && p.visual.querySelector(".pila"));
+    var consolas = p.resultado.querySelectorAll(":scope > .consola");
+    if (!pide || consolas.length !== 1) return null;
+    var consola = consolas[0];
+    // Lo demás de la salida (notas, el mensaje de «Comprobar»), junto: en escritorio va
+    // bajo el código y en el móvil, después de la pila
+    var notas = document.createElement("div");
+    notas.className = "lab__notas";
+    Array.prototype.slice.call(p.resultado.childNodes).forEach(function (n) {
+      if (n !== consola) notas.appendChild(n);
+    });
+    p.resultado.appendChild(notas);
+    paso.classList.add("paso--salida-arriba");
+    // En el móvil solo se reordena si el código va antes que lo que se ve
+    if (p.principal.compareDocumentPosition(p.visual) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      paso.classList.add("paso--codigo-primero");
+    }
+    paso._consolaArriba = consola;
+    return consola;
+  }
+
+  // El alto propio de la columna del código (el enunciado y el código con sus botones):
+  // si la derecha es más alta, la columna se estira hasta igualarla y no sirve medirla así
+  function altoIzquierda(p) {
+    p.principal.style.alignSelf = "start";
+    var alto = p.principal.offsetHeight +
+      (p.intro ? p.intro.offsetHeight + (parseFloat(getComputedStyle(p.intro).marginBottom) || 0) : 0);
+    p.principal.style.alignSelf = "";
+    return alto;
+  }
+
+  /* Con la salida arriba: la pila empieza donde termina la consola (--alto-consola).
+     Al entrar se decide dónde van las notas: si el código cabe en la pantalla, a la
+     derecha, bajo la pila (paso--notas-derecha; nada queda fijo, no hace falta); si no,
+     bajo el código, y la consola y la pila quedan fijas al bajar, sin pasar entre las dos
+     de lo que se ve de la pantalla (--tope-visual). */
+  function sostenerArriba(paso, decidir) {
+    var p = partes(paso);
+    var consola = paso._consolaArriba;
+    if (!p || !escritorio || !escritorio.matches) {
+      paso.classList.remove("paso--notas-derecha");
+      ["--alto-consola", "--alto-visual", "--tope-visual"].forEach(function (v) { paso.style.removeProperty(v); });
+      if (p) p.visual.classList.remove("lab__visual--recortada");
       return;
     }
-    if (abajo + 24 < aLaDerecha) paso.classList.add("paso--salida-abajo");
+    if (decidir) paso.classList.toggle("paso--notas-derecha", altoIzquierda(p) <= topeFijo(paso));
+    var alto = consola.offsetHeight;
+    paso.style.setProperty("--alto-consola", alto + "px");
+    paso.style.setProperty("--alto-visual", p.visual.offsetHeight + "px");
+    paso.style.setProperty("--tope-visual", Math.max(topeFijo(paso) - alto - 16, 160) + "px");
+    // ¿La pila no cabe y se desplaza por dentro? Se nota con un borde difuminado abajo
+    p.visual.classList.toggle("lab__visual--recortada", p.visual.scrollHeight > p.visual.clientHeight + 4);
+  }
+
+  function equilibrar(paso) {
+    if (paso._consolaArriba) { sostenerArriba(paso, true); return; }
+    var p = partes(paso);
+    paso.classList.remove("paso--derecha-fija");
+    paso.style.removeProperty("--alto-visual");
+    if (p) p.visual.style.minHeight = "";
+    if (!p || !escritorio || !escritorio.matches || !repartoNormal(paso)) return;
+    var izquierda = altoIzquierda(p);
+    var alto = p.visual.offsetHeight;
+    if (!alto) return;
+    var derecha = alto + p.resultado.offsetHeight + hueco(p);
+    var tope = topeFijo(paso);
+    // No cabe entera en la pantalla: queda como está, a la derecha y sin fijar
+    if (derecha > tope) return;
+    // El panel de lo que se ve se estira hasta el final de la columna del código, o hasta
+    // lo que se ve de la pantalla si el código es más alto. Y no baja de lo que mide ahora
+    var objetivo = Math.min(izquierda, tope);
+    if (derecha < objetivo) alto += objetivo - derecha;
+    p.visual.style.minHeight = alto + "px";
+    if (paso.getAttribute("data-visual-fija") !== "no" && izquierda > tope) {
+      paso.style.setProperty("--alto-visual", alto + "px");
+      paso.classList.add("paso--derecha-fija");
+    }
+  }
+
+  /* Mientras el alumno está en el paso, el reparto no cambia. Solo se cuida que:
+     - lo que se ve no se encoja (si creció y empujó a la salida, que no la haga volver);
+     - con la columna derecha fija, la salida siga justo bajo lo que se ve; y si entonces
+       ya no cabe fija en la pantalla, se suelta (pisaría lo que se ve al bajar del todo). */
+  function sostener(paso) {
+    if (paso._consolaArriba) { sostenerArriba(paso); return; }
+    var p = partes(paso);
+    if (!p) return;
+    // También en el móvil: lo que se ve va antes que la salida
+    var alto = p.visual.offsetHeight;
+    if (alto > (parseFloat(p.visual.style.minHeight) || 0) + 1) p.visual.style.minHeight = alto + "px";
+    if (!paso.classList.contains("paso--derecha-fija")) return;
+    paso.style.setProperty("--alto-visual", alto + "px");
+    if (alto + p.resultado.offsetHeight + hueco(p) > topeFijo(paso) + 4) {
+      paso.classList.remove("paso--derecha-fija");
+    }
   }
 
   /* Tras «Comprobar», si el mensaje quedó tapado por el pie o fuera de la
@@ -178,6 +254,7 @@
     var pasos = Array.prototype.slice.call(raiz.querySelectorAll(".paso"));
     var total = pasos.length;
     pasos.forEach(envolverIntro);
+    pasos.forEach(prepararArriba);
     // «Siguiente: Quicksort →»: en el móvil la flecha quedaba sola en otro renglón. Un
     // espacio que no se parte la deja pegada a la última palabra.
     raiz.querySelectorAll(".btn").forEach(function (b) {
@@ -311,7 +388,8 @@
       visitados[actual] = true;
       var fn = alEntrar[paso.id];
       if (fn) fn(paso, leccion, { primeraVez: primeraVez, desbloqueado: !!desbloqueados[actual] });
-      equilibrar(paso, true);
+      paso._tocado = false;
+      equilibrar(paso);
 
       // Fin de la lección: lluvia de confeti desde la celebración
       if (actual === total - 1 && !primeraCarga) {
@@ -371,30 +449,29 @@
       var esperaEquilibrio;
       window.addEventListener("resize", function () {
         clearTimeout(esperaEquilibrio);
-        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual], "ventana"); }, 150);
+        esperaEquilibrio = setTimeout(function () { equilibrar(pasos[actual]); }, 150);
       });
-      // Si después de entrar crece lo que se ve o la salida (un mensaje de error, el
-      // feedback de «Comprobar», una consola que se llena), se vuelve a decidir dónde va
-      // la salida. Si el reparto no cambia, el paso queda igual: no hay vaivén.
+      // Al entrar, el paso termina de armarse (la explicación reserva su alto, se dibuja
+      // lo que se ve): hasta que el alumno toca algo, el reparto se vuelve a decidir con
+      // cada cambio de alto. Desde el primer toque ya no cambia: la salida no se mueve
+      // mientras corre el código.
+      ["pointerdown", "keydown", "click", "input"].forEach(function (tipo) {
+        raiz.addEventListener(tipo, function (e) {
+          var p = pasos[actual];
+          if (p && p.contains(e.target)) p._tocado = true;
+        }, true);
+      });
       if (window.ResizeObserver) {
         var esperaCrece;
         var observador = new ResizeObserver(function () {
-          // Con la columna derecha fija, la salida va justo bajo lo que se ve: su lugar
-          // sigue al alto de la pila sin esperar
           var p = pasos[actual];
-          var v = p && p.classList.contains("paso--derecha-fija") && p.querySelector(":scope > .lab > .lab__visual");
-          if (v) {
-            p.style.setProperty("--alto-visual", v.offsetHeight + "px");
-            // Si al crecer ya no cabe fija, la salida subiría sobre lo que se ve: se suelta
-            // ya, y enseguida se decide el reparto
-            var r = p.querySelector(":scope > .lab > .lab__resultado");
-            if (r && r.getBoundingClientRect().top < v.getBoundingClientRect().bottom) p.classList.remove("paso--derecha-fija");
-          }
+          if (!p) return;
+          if (p._tocado) { sostener(p); return; }
           clearTimeout(esperaCrece);
-          esperaCrece = setTimeout(function () { if (pasos[actual]) equilibrar(pasos[actual]); }, 250);
+          esperaCrece = setTimeout(function () { if (pasos[actual] === p && !p._tocado) equilibrar(p); }, 60);
         });
         pasos.forEach(function (p) {
-          p.querySelectorAll(":scope > .lab > .lab__visual, :scope > .lab > .lab__resultado").forEach(function (el) {
+          p.querySelectorAll(":scope > .paso__intro, :scope > .lab > .lab__principal, :scope > .lab > .lab__visual, :scope > .lab > .lab__resultado, :scope > .lab > .lab__resultado > .consola, :scope > .lab > .lab__resultado > .lab__notas").forEach(function (el) {
             observador.observe(el);
           });
         });
