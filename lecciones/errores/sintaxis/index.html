@@ -102,8 +102,36 @@
       .prediccion__expr { font-size: var(--texto-xs); }
     }
 
+    /* El panel del reto. En escritorio va arriba y guarda el alto de sus opciones
+       (Codigo.reservarAlto): las fases y la consola, debajo, no se mueven cuando aparecen.
+       En el móvil va después de la consola, como en el HTML, y crece sin empujarla. */
+    .reto-panel { display: flex; flex-direction: column; justify-content: center; }
+    @media (min-width: 1024px) {
+      #paso-reto .lab__resultado { display: flex; flex-direction: column; }
+      #paso-reto .lab__resultado > * { flex: none; }
+      #paso-reto .reto-panel { order: -1; }
+    }
+    @media (max-width: 1023.98px) {
+      .reto-panel { margin: var(--esp-3) 0 0; }
+    }
+    /* La pregunta y el botón de «Un paréntesis sin cerrar» se turnan en el mismo lugar */
+    .turno { display: grid; }
+    .turno > * { grid-area: 1 / 1; }
+
     @media (max-width: 1023.98px) {
       .lab__principal + .lab__resultado { margin-top: var(--esp-4); }
+      /* Apilado, la consola va debajo del código y sus botones: lo que aparece o se va
+         encima de ella guarda su lugar */
+      .fila-botones--fija { min-height: 3rem; }
+      /* Sangría: dos renglones fijos. Quitar y poner, arriba; ejecutar (o «Siguiente
+         programa»), abajo, y su renglón se queda aunque no haya ninguno */
+      #paso-sangria .fila-botones { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(3rem, auto); justify-items: center; align-items: center; }
+      #paso-sangria .fila-botones > :nth-child(n+3) { grid-column: 1 / -1; }
+    }
+    /* Las dos fases, una por renglón: con su estado («: error de escritura») no caben en
+       uno (hacen falta unos 430 px), y al partirse empujaban la consola */
+    @media (max-width: 520px), (min-width: 1024px) and (max-width: 1099.98px) {
+      .fases { flex-direction: column; align-items: flex-start; }
     }
     @media (max-width: 480px) {
       .codigo .escaner__rotulo { font-size: 0.65rem; }
@@ -111,6 +139,7 @@
       .prediccion .btn { padding: var(--esp-1) var(--esp-2); font-size: var(--texto-xs); }
       .fila-botones { gap: var(--esp-2); }
       .fila-botones .btn { padding: var(--esp-2) var(--esp-3); }
+      #paso-sangria .fila-botones .btn { padding-inline: var(--esp-2); font-size: var(--texto-sm); }
     }
   </style>
 </head>
@@ -182,7 +211,7 @@
         <div class="lab__principal">
           <p class="ronda"><span class="contador" id="s3-ronda">Programa 1 de 3</span></p>
           <pre class="codigo" id="s3-codigo" aria-label="Código"></pre>
-          <div class="fila-botones">
+          <div class="fila-botones fila-botones--fija">
             <button type="button" class="btn btn-secundario" id="s3-ejecutar">▶ Ejecutar</button>
             <button type="button" class="btn btn-secundario" id="s3-siguiente" hidden>Siguiente programa ▸</button>
           </div>
@@ -203,9 +232,11 @@
       <div class="tarjeta lab">
         <div class="lab__principal">
           <pre class="codigo" id="s4-codigo" aria-label="Código"></pre>
-          <p class="pregunta" id="s4-pregunta" aria-live="polite"></p>
-          <div class="fila-botones">
-            <button type="button" class="btn btn-secundario" id="s4-ejecutar">▶ Ejecutar</button>
+          <div class="turno">
+            <p class="pregunta" id="s4-pregunta" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s4-ejecutar">▶ Ejecutar</button>
+            </div>
           </div>
         </div>
         <div class="lab__resultado">
@@ -320,7 +351,10 @@
           </div>
         </div>
         <div class="lab__resultado">
-          <div class="reto-panel">
+          <ol class="fases" id="reto-fases"></ol>
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
+          <!-- En el móvil, el panel va después de la consola (crece sin empujarla); en escritorio, arriba, con el alto de sus opciones guardado -->
+          <div class="reto-panel" id="reto-panel">
             <p class="reto-ayuda" id="reto-ayuda">Ejecuta para ver el primer mensaje.</p>
             <fieldset class="opciones opciones--codigo opciones--lista reto-opciones" id="reto-op-2" hidden>
               <legend>Arreglo de la línea 3</legend>
@@ -344,8 +378,6 @@ print(nota, "aprobada")</span></label>
               <label class="opcion"><input type="radio" name="reto-5" value="ok"><span>print("Promedio:", sum(notas) / len(notas))</span></label>
             </fieldset>
           </div>
-          <ol class="fases" id="reto-fases"></ol>
-          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
           <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
         </div>
       </div>
@@ -815,6 +847,35 @@ print(nota, "aprobada")</span></label>
     if (primero) primero.focus({ preventScroll: true });
   }
 
+  /* La línea 2 con los paréntesis tocables o con los lugares para tocar es más ancha: en
+     el móvil se parte en dos renglones. El código guarda ese alto desde el principio. */
+  Codigo.reservarAlto(p4.pre, ["parens", "toques"], function (copia, estado) {
+    Python.escribir(copia, PY.par.lineas);
+    var l = lineasDe(copia)[1];
+    if (estado === "parens") {
+      PARENS4.slice().sort(function (a, b) { return b.col - a.col; }).forEach(function (p) {
+        var b = document.createElement("button");
+        b.className = "paren";
+        envolverEn(l, p.col, b);
+      });
+      return;
+    }
+    var sola = document.createElement("span");
+    sola.className = "paren paren--sola";
+    HUECOS4.slice().sort(function (a, b) { return b.col - a.col; }).forEach(function (h) {
+      var b = document.createElement("button");
+      b.className = "toque";
+      insertarEn(l, h.col, b);
+    });
+    envolverEn(l, 5, sola);
+  });
+
+  // La pregunta comparte su lugar con el botón «Ejecutar»: guarda el alto de la más larga
+  Codigo.reservarAlto($("s4-pregunta"), [
+    "Toca los paréntesis de la línea 2: ¿cuál no tiene pareja?",
+    "¿Dónde va el <code>)</code> que le falta al <code>print</code>? Toca el lugar."
+  ], function (copia, html) { copia.innerHTML = html; });
+
   function ejecutar4(leccion) {
     $("s4-ejecutar").disabled = true;
     Pasos.limpiarFeedback($("s4-fb"));
@@ -1000,7 +1061,7 @@ print(nota, "aprobada")</span></label>
         listo7 = true;
         elegida7 = -1;
         actualizar7();
-        $("s7-elegida").textContent = "";
+        $("s7-elegida").textContent = "\u00a0";   // guarda su renglón
         if (ronda7 < RONDAS7.length - 1) {
           fb($("s7-fb"), "ok", "¡Corre! La sangría dice qué va dentro del <code>if</code>. Ahora otro programa.");
           $("s7-siguiente").hidden = false;
@@ -1103,6 +1164,15 @@ print(nota, "aprobada")</span></label>
       otro: "Eso abre otro <code>(</code>: ahora faltarían dos <code>)</code>." } }
   };
   var TRAZA_RETO = [0, 1, 2, 3, 4, 2, 3, 2, 3, 4, 5];
+
+  /* En escritorio, el panel mide desde el principio lo que su grupo de opciones más alto:
+     va encima de la consola. En el móvil va debajo de ella: no hace falta. */
+  var panelArriba = window.matchMedia("(min-width: 1024px)");
+  Codigo.reservarAlto($("reto-panel"), ["ayuda", 2, 4, 5], function (copia, estado) {
+    if (!panelArriba.matches) estado = "ayuda";
+    copia.querySelector("#reto-ayuda").hidden = estado !== "ayuda";
+    [2, 4, 5].forEach(function (i) { copia.querySelector("#reto-op-" + i).hidden = i !== estado; });
+  });
 
   function pintarReto() {
     var res = PY["reto_" + estadoReto];

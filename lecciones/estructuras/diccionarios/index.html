@@ -17,6 +17,11 @@
     .visual-pila { display: grid; gap: var(--esp-2); }
     .visual-pila .cajas { padding-top: var(--esp-2); }
     .se-van { opacity: 0.25; transition: opacity 600ms ease 700ms; }
+    /* Lo que nace mientras corre el código guarda su lugar desde el principio (no se ve,
+       pero ocupa su alto): así la salida, que va debajo, no cambia de lugar */
+    .guarda-lugar[hidden] { display: block !important; visibility: hidden; }
+    /* El botón de pegar se va y al final llega el de separar: su renglón no cambia de alto */
+    #paso-juntar .fila-botones { min-height: 3rem; }
     .cajas--chicas { gap: var(--esp-4) var(--esp-6); padding-top: var(--esp-3); }
     .cajas--chicas .caja { gap: var(--esp-1); }
     .cajas--chicas .caja__cuerpo { width: 4.6rem; height: 3.6rem; padding-bottom: var(--esp-2); }
@@ -69,6 +74,8 @@
       /* Dos listas a la izquierda y la caja i a la derecha: el paso cabe en la pantalla */
       #s1-visual { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--esp-4); }
       #s1-visual > .cajas { grid-column: 2; grid-row: 1 / span 2; padding-top: 0; }
+      /* Las dos listas, lado a lado: así caben en la pantalla junto con el diccionario que nace debajo mientras se pegan */
+      #s2-listas { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: var(--esp-3); align-items: end; }
       /* Cada programa: el código a la izquierda; las respuestas y su explicación, a la derecha */
       .predicciones--programas .prediccion { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); column-gap: var(--esp-4); align-items: start; }
       .predicciones--programas .prediccion .codigo { grid-row: 1 / span 2; }
@@ -116,8 +123,8 @@
           </div>
         </div>
         <div class="lab__visual visual-pila" id="s1-visual">
-          <div id="s1-nombres"></div>
-          <div id="s1-notas"></div>
+          <div id="s1-nombres" class="guarda-lugar"></div>
+          <div id="s1-notas" class="guarda-lugar"></div>
           <div class="cajas cajas--chicas">
             <div class="caja" id="s1-caja-i">
               <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
@@ -133,7 +140,8 @@
     </section>
 
     <!-- 2. De dos listas a un diccionario -->
-    <section class="paso" id="paso-juntar" data-requiere aria-labelledby="t-juntar">
+    <!-- Lo que se ve crece (las dos listas y el diccionario a la vez) y luego se encoge: la salida va arriba -->
+    <section class="paso" id="paso-juntar" data-salida="arriba" data-requiere aria-labelledby="t-juntar">
       <h2 class="paso__titulo" id="t-juntar">Cada nota pegada a su nombre</h2>
       <p>¿Y si cada nota llevara colgado el nombre de su dueño? Así no habría que buscar su posición. Toca el botón.</p>
 
@@ -243,7 +251,7 @@
           </div>
         </div>
         <div class="lab__visual">
-          <div id="s6-dicc"></div>
+          <div id="s6-dicc" class="guarda-lugar"></div>
         </div>
         <div class="lab__resultado">
           <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
@@ -399,6 +407,13 @@
     if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
   }
 
+  // Muestra una lista o un diccionario que guardaba su lugar: su nombre entra con el salto de siempre
+  function aparecer(l, nombres) {
+    l.el.hidden = false;
+    l.nombres([]);
+    l.nombres(nombres);
+  }
+
   function vistos() {
     var s = {};
     return {
@@ -432,11 +447,11 @@
 
   function pasoParalelas(paso) {
     if (paso.hacer === "nombres") {
-      $("s1-nombres").hidden = false;
       lista1n.valores(NOMBRES);
+      aparecer(lista1n, ["nombres"]);
     } else if (paso.hacer === "notas") {
-      $("s1-notas").hidden = false;
       lista1v.valores(NOTAS);
+      aparecer(lista1v, ["notas"]);
     } else if (paso.mirar !== undefined) {
       lista1n.marcar(paso.mirar);
       lista1n.clases(function (k) { return k < paso.mirar ? "lista__casilla--apagada" : k === paso.mirar && k === 2 ? "lista__casilla--igual" : ""; });
@@ -649,7 +664,8 @@
 
   /* ---------- 5. Agregar y cambiar ---------- */
   var BASE5 = [LINEA_DICC];
-  var dicc5 = Dicc.crear($("s5-dicc"), PARES, { nombres: ["notas"] });
+  // capacidad: el lugar del par que nace («Rosa») desde el principio, para que los casilleros no se achiquen
+  var dicc5 = Dicc.crear($("s5-dicc"), PARES, { nombres: ["notas"], capacidad: 7.5 });
   var lineas5 = [];
   var s5 = vistos();
 
@@ -726,8 +742,8 @@
   function pasoDel(paso) {
     var consola = $("s6-consola");
     if (paso.hacer === "crear") {
-      $("s6-dicc").hidden = false;
       dicc6.valores(PARES);
+      aparecer(dicc6, ["notas"]);
     } else if (paso.hacer === "buscar") {
       dicc6.marcar("Luis");
     } else if (paso.hacer === "borrar") {
@@ -745,6 +761,11 @@
   /* ---------- 7. .get() ---------- */
   escribir($("s7-codigo"), ['notas = {"Ana": 14, "Eva": 17}', 'print(notas.get("Eva", 0))', 'print(notas.get("Pepe", 0))', "print(len(notas))", 'print(notas["Pepe"])']);
   var dicc7 = Dicc.crear($("s7-dicc"), [], { nombres: ["notas"] });
+  // Vacío es más bajo que con sus pares (sin las claves encima): guarda ya el alto que tendrá
+  Codigo.reservarAlto($("s7-dicc"), [[["Ana", 14], ["Eva", 17]]], function (copia, pares) {
+    copia.textContent = "";
+    Dicc.crear(copia, pares, { nombres: ["notas"] });
+  });
 
   function trazaGet() {
     return [
@@ -824,6 +845,12 @@
     "print(total)"
   ], "reto-hueco");
   var retoPrecios = Dicc.crear($("reto-precios"), PRECIOS, { nombres: ["precios"] });
+  // En una pantalla angosta, la clave que no está («jugo») cae en un segundo renglón: su lugar se guarda
+  Codigo.reservarAlto($("reto-precios"), [null, "jugo"], function (copia, falta) {
+    copia.textContent = "";
+    var d = Dicc.crear(copia, PRECIOS, { nombres: ["precios"] });
+    if (falta) d.marcar(falta);
+  });
   var retoCompra = Lista.crear($("reto-compra"), COMPRA, { nombres: ["compra"] });
   var tiemposReto = [];
   var pistasReto = {
@@ -1021,7 +1048,7 @@
     generar: trazaDel,
     intervalo: 1100,
     alReiniciar: function () {
-      dicc6.valores([]);
+      dicc6.valores(PARES);   // oculto, guarda su lugar con el alto que tendrá
       $("s6-dicc").hidden = true;
       Pasos.limpiarFeedback($("s6-fb"));
     },

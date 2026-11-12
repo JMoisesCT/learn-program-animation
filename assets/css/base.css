@@ -314,6 +314,18 @@ p code, li code, .codigo-en-linea {
 .regla__marca { position: absolute; top: 100%; transform: translateX(-50%); font-size: var(--texto-xs); font-weight: 700; color: var(--color-acento); }
 .regla__punto { position: absolute; top: 50%; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--color-azul); border: 3px solid #fff; box-shadow: var(--sombra); transform: translate(-50%, -50%); transition: left var(--dur-rapida); }
 
+/* Con una pila de llamadas, la salida va arriba (pasos.js, paso--salida-arriba): en el
+   móvil, la consola entre el código y la pila, y las notas al final. Así la pila crece
+   sin mover la consola. Solo si el código va antes que la pila en el HTML. */
+@media (max-width: 1023.98px) {
+  .paso--salida-arriba.paso--codigo-primero > .lab { display: flex; flex-direction: column; }
+  .paso--salida-arriba.paso--codigo-primero > .lab > * { min-width: 0; }
+  .paso--salida-arriba.paso--codigo-primero > .lab > .lab__resultado { display: contents; }
+  .paso--salida-arriba.paso--codigo-primero > .lab > .lab__resultado > .consola { order: 1; }
+  .paso--salida-arriba.paso--codigo-primero > .lab > .lab__visual { order: 2; margin-top: var(--esp-4); }
+  .paso--salida-arriba.paso--codigo-primero > .lab > .lab__resultado > .lab__notas { order: 3; }
+}
+
 /* ---------- Consola (salida de print) ---------- */
 .consola {
   margin-top: var(--esp-4);
@@ -1891,20 +1903,9 @@ input[type="range"] { width: 100%; accent-color: var(--color-acento); height: 2r
   }
   .lab__resultado { grid-area: resultado; align-self: start; min-width: 0; }
   .lab__visual ~ .lab__resultado { margin-top: var(--esp-4); }
-  /* Si lo que se ve es alto, la salida va bajo el código (pasos.js) */
-  .paso.paso--salida-abajo {
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas:
-      "intro     visual"
-      "principal visual"
-      "resultado visual";
-  }
-  /* Lo que crece mientras corre el código (una pila, una lista que se parte), si el paso no
-     cabe: queda fijo al bajar hasta los botones (pasos.js) */
-  .paso--visual-fija > .lab > .lab__visual { position: sticky; top: 3.75rem; }
-  /* La salida sigue a la derecha y cabe, pero el código es más alto que la pantalla: la
-     columna derecha entera (lo que se ve y, justo debajo, la salida) queda fija al bajar.
-     Las dos comparten toda la columna para poder quedar fijas; --alto-visual lo pone pasos.js */
+  /* El código es más alto que la pantalla: la columna derecha entera (lo que se ve y,
+     justo debajo, la salida) queda fija al bajar (pasos.js). Las dos comparten toda la
+     columna para poder quedar fijas; --alto-visual lo pone pasos.js */
   .paso.paso--derecha-fija {
     grid-template-areas:
       "intro     derecha"
@@ -1917,6 +1918,48 @@ input[type="range"] { width: 100%; accent-color: var(--color-acento); height: 2r
   .paso--derecha-fija > .lab > .lab__resultado {
     top: calc(3.75rem + var(--alto-visual, 0px) + var(--esp-4));
     margin-top: calc(var(--alto-visual, 0px) + var(--esp-4));
+  }
+  /* Con una pila de llamadas, la salida va arriba (pasos.js): la consola no se mueve
+     aunque la pila crezca. La consola y la pila comparten la columna derecha y quedan
+     fijas al bajar; la pila empieza donde termina la consola (--alto-consola) y, si no
+     cabe en la pantalla (--tope-visual), se desplaza por dentro. Las notas y el mensaje
+     de «Comprobar» (.lab__notas) van bajo el código. */
+  .paso.paso--salida-arriba {
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas:
+      "intro     derecha"
+      "principal derecha"
+      "notas     derecha"
+      ".         derecha";
+  }
+  .paso--salida-arriba > .lab > .lab__resultado { display: contents; }
+  .paso--salida-arriba > .lab > .lab__resultado > .consola,
+  .paso--salida-arriba > .lab > .lab__visual { grid-area: derecha; align-self: start; position: sticky; min-width: 0; }
+  .paso--salida-arriba > .lab > .lab__resultado > .consola { top: 3.75rem; margin-top: 0; }
+  .paso--salida-arriba > .lab > .lab__visual {
+    top: calc(3.75rem + var(--alto-consola, 4.25rem) + var(--esp-4));
+    margin-top: calc(var(--alto-consola, 4.25rem) + var(--esp-4));
+    max-height: var(--tope-visual, none);
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+  }
+  .paso--salida-arriba > .lab > .lab__visual.lab__visual--recortada {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent);
+  }
+  .paso--salida-arriba > .lab > .lab__resultado > .lab__notas { grid-area: notas; min-width: 0; margin-top: var(--esp-4); }
+  .paso--salida-arriba > .lab > .lab__resultado > .lab__notas:not(:has(> :not(:empty))) { margin-top: 0; }
+  .lab__notas > :first-child { margin-top: 0; }
+  .lab__notas > :last-child { margin-bottom: 0; }
+  /* El código cabe en la pantalla: no hace falta fijar nada y las notas se quedan a la
+     derecha, bajo la pila (--alto-visual) */
+  .paso--notas-derecha > .lab > .lab__resultado > .consola,
+  .paso--notas-derecha > .lab > .lab__visual { position: static; }
+  .paso--notas-derecha > .lab > .lab__visual { max-height: none; overflow: visible; }
+  .paso--notas-derecha > .lab > .lab__resultado > .lab__notas {
+    grid-area: derecha;
+    align-self: start;
+    margin-top: calc(var(--alto-consola, 4.25rem) + var(--alto-visual, 0px) + 2 * var(--esp-4));
   }
   .lab > * > :first-child { margin-top: 0; }
   .lab > * > :last-child { margin-bottom: 0; }

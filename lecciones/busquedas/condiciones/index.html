@@ -28,6 +28,14 @@
     .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
     .version-elegir { margin: 0 0 var(--esp-4); }
     .pregunta { margin: var(--esp-4) 0 0; text-align: center; font-weight: 600; }
+    /* La ejecución llega al predecir (pasos 4 y 5). En el móvil guarda su lugar desde el
+       principio, con los botones apagados: si apareciera después, empujaría las listas y
+       la salida */
+    .ejecucion--espera { display: none; }
+    @media (max-width: 1023.98px) {
+      .ejecucion--espera { display: block; }
+      .ejecucion--espera .explicacion { visibility: hidden; }
+    }
 
     /* ---------- 1. A mano ---------- */
     .decidir { display: grid; gap: var(--esp-2); justify-items: center; margin-top: var(--esp-2); }
@@ -58,6 +66,15 @@
 
     @media (max-width: 1023px) {
       .lab__visual > .version-elegir:first-child { margin-top: var(--esp-5); }
+    }
+    /* 3. Dos listas, cada una con el lugar de su puntero guardado: en escritorio el rótulo
+       de cada lista va a su izquierda (no encima), para que el paso no se alargue */
+    @media (min-width: 1024px) {
+      #paso-paralelas .lab__visual { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--esp-3); align-content: start; align-items: start; }
+      #paso-paralelas .lab__visual > .version-elegir,
+      #paso-paralelas .lab__visual > .comparaciones { grid-column: 1 / -1; }
+      #paso-paralelas .lab__visual > .comparaciones { margin-top: 0; }
+      #paso-paralelas .rotulo-cinta { margin: 0; padding-top: 2.6rem; text-align: right; }
     }
     @media (max-width: 480px) {
       .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-2); }
@@ -186,7 +203,7 @@
             <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
             <button type="button" class="btn btn-secundario" data-valor="6" aria-pressed="false">6</button>
           </div>
-          <div id="s4-ejecucion" hidden>
+          <div id="s4-ejecucion" class="ejecucion--espera">
             <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
             <div class="fila-botones">
               <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reiniciar</button>
@@ -222,7 +239,7 @@
             <button type="button" class="btn btn-secundario" data-valor="5a0" aria-pressed="false">5 4 3 2 1 0</button>
             <button type="button" class="btn btn-secundario" data-valor="5a1" aria-pressed="false">5 4 3 2 1</button>
           </div>
-          <div id="s5-ejecucion" hidden>
+          <div id="s5-ejecucion" class="ejecucion--espera">
             <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
             <div class="fila-botones">
               <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
@@ -525,7 +542,9 @@
   /* ---------- 2. La misma búsqueda en Python ---------- */
   var LISTAS2 = [[14, 17, 9, 12, 6], [14, 17, 12, 15]];
   var v2 = 0;
-  var lista2 = Lista.crear($("s2-lista"), LISTAS2[0], { nombres: ["notas"] });
+  // reservarPunteros: el puntero i tiene su lugar bajo la lista desde el principio, para
+  // que al aparecer no empuje la salida
+  var lista2 = Lista.crear($("s2-lista"), LISTAS2[0], { nombres: ["notas"], reservarPunteros: 1 });
 
   function codigo2() {
     pintarCodigo($("s2-codigo"), [
@@ -587,8 +606,8 @@
   var NOMBRES = ["Ana", "Luis", "Sofía", "Iván"];
   var NOTAS3 = [14, 9, 17, 11];
   var quien3 = "Sofía";
-  var nombres3 = Lista.crear($("s3-nombres"), NOMBRES);
-  var notas3 = Lista.crear($("s3-notas"), NOTAS3);
+  var nombres3 = Lista.crear($("s3-nombres"), NOMBRES, { reservarPunteros: 1 });
+  var notas3 = Lista.crear($("s3-notas"), NOTAS3, { reservarPunteros: 1 });
 
   function codigo3() {
     pintarCodigo($("s3-codigo"), [
@@ -646,7 +665,7 @@
 
   /* ---------- 4. Todas las posiciones ---------- */
   var NOTAS4 = [14, 9, 17, 6, 11, 8];
-  var notas4 = Lista.crear($("s4-notas"), NOTAS4);
+  var notas4 = Lista.crear($("s4-notas"), NOTAS4, { reservarPunteros: 1 });
   var posiciones4 = Lista.crear($("s4-posiciones"), [], { capacidad: 6 });
   var prediccion4 = null;
   pintarCodigo($("s4-codigo"), [
@@ -695,13 +714,13 @@
   function predecir4(valor) {
     prediccion4 = valor;
     presionar($("s4-prediccion"), valor);
-    $("s4-ejecucion").hidden = false;
+    $("s4-ejecucion").classList.remove("ejecucion--espera");
     traza4.reiniciar();
   }
 
   /* ---------- 5. El último: recorrer al revés ---------- */
   var NOTAS5 = [14, 9, 17, 6, 11, 15];
-  var lista5 = Lista.crear($("s5-lista"), NOTAS5, { nombres: ["notas"] });
+  var lista5 = Lista.crear($("s5-lista"), NOTAS5, { nombres: ["notas"], reservarPunteros: 1 });
   var prediccion5 = null;
   pintarCodigo($("s5-codigo"), [
     "def ultimo_desaprobado(notas):",
@@ -756,7 +775,7 @@
       return;
     }
     Pasos.feedback($("s5-fb"), "ok", "¡Sí! Empieza en len(notas) - 1 = 5, baja de 1 en 1 y para antes del -1: el último que toca es 0. Ahora ejecútalo.");
-    $("s5-ejecucion").hidden = false;
+    $("s5-ejecucion").classList.remove("ejecucion--espera");
     traza5.reiniciar();
   }
 
@@ -1139,6 +1158,9 @@
       leccion.desbloquear();
     }
   });
+
+  // Hasta que el alumno predice, los botones de ejecutar esperan apagados
+  ["s4-ejecutar", "s4-reproducir", "s5-ejecutar", "s5-reproducir"].forEach(function (id) { $(id).disabled = true; });
 
   $("s1-elegir").querySelectorAll("button").forEach(function (b) {
     b.addEventListener("click", function () { responder1(b.getAttribute("data-valor"), leccion); });

@@ -20,7 +20,12 @@
     .decidir .btn { min-height: 3rem; padding: var(--esp-2) var(--esp-4); font-size: var(--texto-sm); line-height: 1.3; }
     .decidir .btn code { font-weight: 700; }
     .btn--fallo { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); animation: sacudir 360ms ease; }
-    .marcador-pasos { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    /* Las opciones guardan el alto de las más largas (Codigo.reservarAlto) y «Otra vez» sale
+       en su mismo lugar al terminar: lo de abajo (en el móvil, la salida y la pila) no se mueve */
+    .decidir-lugar { display: grid; margin-top: var(--esp-4); }
+    .decidir-lugar > * { grid-area: 1 / 1; min-width: 0; margin-top: 0; }
+    .decidir-lugar > .fila-botones { align-self: center; }
+    .marcador-pasos { min-height: 1.7em; margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
 
     /* ---------- Paso 3: las letras que recorre el bucle ---------- */
     .campo-palabra { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin: 0 0 var(--esp-4); }
@@ -111,7 +116,7 @@
     </section>
 
     <!-- 2. Tú decides: apilar o quitar -->
-    <section class="paso" id="paso-decidir" data-visual-fija="no" data-requiere aria-labelledby="t-decidir">
+    <section class="paso" id="paso-decidir" data-visual-fija="no" data-salida="arriba" data-requiere aria-labelledby="t-decidir">
       <h2 class="paso__titulo" id="t-decidir">Ahora tú eres Python</h2>
       <p>En cada momento, elige qué pasa: ¿se <strong>apila</strong> una tarjeta nueva o se <strong>quita</strong> la de arriba?</p>
 
@@ -119,11 +124,13 @@
         <div class="lab__principal">
           <pre class="codigo" id="p2-codigo" aria-label="Código"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">doble</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">x</span> * <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">cuadruple</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-variable">y</span> = <span class="tk-funcion">doble</span>(<span class="tk-variable">x</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">doble</span>(<span class="tk-variable">y</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">cuadruple</span>(<span class="tk-numero">3</span>))</span></code></pre>
           <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
-          <div class="decidir" id="p2-opciones" role="group" aria-label="¿Qué hace Python?"></div>
-          <p class="marcador-pasos" id="p2-marcador"></p>
-          <div class="fila-botones">
-            <button type="button" class="btn btn-secundario" id="p2-otra" hidden>↺ Otra vez</button>
+          <div class="decidir-lugar">
+            <div class="decidir" id="p2-opciones" role="group" aria-label="¿Qué hace Python?"></div>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="p2-otra" hidden>↺ Otra vez</button>
+            </div>
           </div>
+          <p class="marcador-pasos" id="p2-marcador"></p>
         </div>
         <div class="lab__visual">
           <div class="pila" id="p2-pila"></div>
@@ -372,6 +379,24 @@
       ] }
   ];
   var momento = 0;
+  var FIN_DECIDIR = "¡Imprime <strong>12</strong>! La pila vuelve a tener solo la tarjeta del programa.";
+
+  function pintarOpciones(cont, opciones, alElegir) {
+    cont.textContent = "";
+    opciones.forEach(function (op) {
+      var b = crear("button", "btn btn-secundario");
+      b.type = "button";
+      b.innerHTML = "<span>" + op.html + "</span>";
+      if (alElegir) b.addEventListener("click", function () { alElegir(op, b); });
+      cont.appendChild(b);
+    });
+  }
+
+  // La pregunta y las opciones guardan el alto de las más largas: de un momento a otro no
+  // cambian de alto ni empujan lo de abajo
+  Codigo.reservarAlto($("p2-explicacion"), MOMENTOS.map(function (m) { return m.texto; }).concat([FIN_DECIDIR]),
+    function (copia, texto) { copia.innerHTML = texto; });
+  Codigo.reservarAlto($("p2-opciones"), MOMENTOS, function (copia, m) { pintarOpciones(copia, m.opciones); });
 
   function mostrarMomento() {
     var m = MOMENTOS[momento];
@@ -379,18 +404,10 @@
     pila2.pintar({ pila: m.pila });
     $("p2-explicacion").innerHTML = m.texto;
     $("p2-marcador").textContent = "Momento " + (momento + 1) + " de " + MOMENTOS.length;
-    var cont = $("p2-opciones");
-    cont.textContent = "";
     // El orden de las opciones cambia, para que no siempre sea la primera
     var orden = m.opciones.slice();
     if (Math.random() < 0.5) orden.reverse();
-    orden.forEach(function (op) {
-      var b = crear("button", "btn btn-secundario");
-      b.type = "button";
-      b.innerHTML = "<span>" + op.html + "</span>";
-      b.addEventListener("click", function () { elegir(op, b); });
-      cont.appendChild(b);
-    });
+    pintarOpciones($("p2-opciones"), orden, elegir);
   }
 
   function elegir(op, boton) {
@@ -420,7 +437,7 @@
     Codigo.agregar($("p2-consola"), "12");
     $("p2-opciones").textContent = "";
     $("p2-marcador").textContent = "";
-    $("p2-explicacion").innerHTML = "¡Imprime <strong>12</strong>! La pila vuelve a tener solo la tarjeta del programa.";
+    $("p2-explicacion").innerHTML = FIN_DECIDIR;
     Pasos.feedback($("p2-fb"), "ok", "¡Así piensa Python! Cada llamada apila una tarjeta y cada return quita la de arriba. doble tuvo dos tarjetas distintas: una por llamada.");
     $("p2-otra").hidden = false;
     $("p2-otra").focus();

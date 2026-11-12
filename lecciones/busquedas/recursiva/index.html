@@ -65,6 +65,11 @@
     .vuelta__opciones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .vuelta__opciones .btn { font-family: var(--fuente-codigo); font-size: var(--texto-md); }
     .vuelta__opciones--espera { visibility: hidden; }
+    /* En el móvil, «Llenar la pila otra vez» guarda su lugar desde el principio: va encima
+       de la pila y de la salida, y al aparecer las empujaba */
+    @media (max-width: 1023.98px) {
+      #pv-otra[hidden] { display: inline-flex !important; visibility: hidden; }
+    }
 
     /* ---------- while frente a recursión ---------- */
     .equivale { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
@@ -994,16 +999,27 @@
   (function () {
     var estados = [];
     var textos = [];
+    var preguntas = [];
     for (var i = LLV.length - 1; i >= -1; i--) {
       (i === -1 ? ["tocar", "fin"] : ["tocar", "elegir", "baja"]).forEach(function (fase) {
         estados.push(estadoV(i, fase));
         textos.push(textosV(i, fase).explica);
+        preguntas.push(textosV(i, fase).pregunta);
       });
       if (i >= 0) opcionesV(i).forEach(function (o) { if (!o.bien) textos.push(pistaV(o.pista)); });
     }
     for (var nivel = 0; nivel < LLV.length; nivel++) textos.push(pistaTocarV(nivel));
     pilaV.reservar(estados);
     Codigo.reservarAlto($("pv-explicacion"), textos, function (copia, texto) { copia.innerHTML = texto; });
+    // La salida va debajo de la pregunta y de la pila: las dos guardan el alto de su estado
+    // más alto (la pregunta se queda vacía mientras baja un valor; la pila empieza llena y
+    // se vacía), para que la salida no suba ni baje mientras el alumno deshace la pila
+    Codigo.reservarAlto($("pv-pregunta"), preguntas, function (copia, texto) { copia.innerHTML = texto || "&nbsp;"; });
+    var llena = LLV.length - 1;
+    Codigo.reservarAlto($("pv-pila"), [estadoV(llena, "tocar"), estadoV(llena, "baja")], function (copia, estado) {
+      copia.textContent = "";
+      Pila.crear(copia).pintar(estado);
+    });
   })();
 
   /* ---------- 4. ¿Y si no está? ---------- */

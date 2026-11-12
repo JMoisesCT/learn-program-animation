@@ -35,7 +35,9 @@
     .receta__pasos .receta__paso--actual::before { background: var(--color-azul); color: #fff; }
     .receta__pasos .receta__paso--hecho::before { content: "✓"; background: var(--color-ok); color: #fff; }
     .receta__estado { font-size: var(--texto-xs); color: var(--color-texto-suave); }
-    .sellos { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); min-height: 2.25rem; margin-top: var(--esp-3); }
+    /* Lugar para dos renglones de sellos desde el principio: la salida de debajo no baja
+       con cada llamada (los que ya no caben los cuenta el último, «+3 ✓») */
+    .sellos { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; align-content: flex-start; gap: var(--esp-2); height: 4.25rem; margin-top: var(--esp-3); }
     .sello { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.15em 0.7em; border: 2px solid var(--color-ok); border-radius: 999px; background: var(--color-ok-suave); color: var(--color-ok); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; animation: sellar 420ms var(--curva-rebote) both; }
     @keyframes sellar { from { transform: scale(1.8) rotate(-12deg); opacity: 0; } }
 
@@ -346,11 +348,26 @@
       : p1Llamadas ? "Terminó. Puedes llamarla otra vez." : "Guardada: no hace nada hasta que la llamen.";
   }
 
+  // Los sellos tienen lugar para dos renglones. Si el de una llamada más ya no cabe, el
+  // último pasa a contar los que no caben («+3 ✓»): así la salida no cambia de lugar
+  var p1Sobran = 0;
   function sellar() {
-    var s = document.createElement("span");
-    s.className = "sello";
-    s.textContent = "saludar() ✓";
-    $("p1-sellos").appendChild(s);
+    var caja = $("p1-sellos");
+    var mas = caja.querySelector(".sello--mas");
+    if (!mas) {
+      var s = document.createElement("span");
+      s.className = "sello";
+      s.textContent = "saludar() ✓";
+      caja.appendChild(s);
+      if (s.offsetTop - caja.offsetTop + s.offsetHeight <= caja.clientHeight + 1) return;
+      s.remove();
+      mas = caja.lastElementChild;
+      if (!mas) return;
+      mas.classList.add("sello--mas");
+      p1Sobran = 1;
+    }
+    p1Sobran++;
+    mas.textContent = "+" + p1Sobran + " ✓";
   }
 
   /* ---------- 2. Llamar y volver ---------- */
@@ -525,6 +542,11 @@
   }
 
   /* ---------- Conexiones ---------- */
+  // El estado de la receta guarda el alto de su texto más largo (en el móvil ocupa dos renglones)
+  Codigo.reservarAlto($("p1-receta-estado"), [
+    "Guardada: no hace nada hasta que la llamen.", "Ejecutándose: llamada 10.", "Terminó. Puedes llamarla otra vez."
+  ], function (copia, texto) { copia.textContent = texto; });
+
   var trazaP1 = Traza.crear({
     codigo: $("p1-codigo"),
     explicacion: $("p1-explicacion"),

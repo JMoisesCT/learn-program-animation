@@ -15,7 +15,10 @@
     .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
     .elegir { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-bottom: var(--esp-4); }
     .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
-    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    /* El ✓ guarda su lugar desde el principio: al aparecer no ensancha el botón ni parte la
+       fila en dos renglones (lo de abajo, y con ello la salida, no baja) */
+    .elegir .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+    .elegir .btn.hecho::after { visibility: visible; }
     .consola__linea--error { color: var(--color-pista); }
 
     /* Zonas de cajas: la del programa y la de dentro de la función */
@@ -59,13 +62,21 @@
       .lab .elegir .btn { min-height: 2.25rem; padding-block: var(--esp-1); }
       .lab .explicacion { margin-top: var(--esp-3); }
       .lab .fila-botones { margin-top: var(--esp-2); }
+      /* Una caja con su nombre mide lo mismo que la zona vacía: al nacer no la hace crecer
+         (ni empuja la salida), y el paso no es más alto por guardarle el lugar */
+      .zona__cajas { padding-top: var(--esp-1); }
+      .zona .caja__cuerpo { height: 3.75rem; }
     }
 
     @media (max-width: 480px) {
-      .zona__cajas { gap: var(--esp-3) var(--esp-5); }
+      /* Más juntas y sin margen a los lados: las tres cajas de total() caben en un renglón */
+      .zona__cajas { gap: var(--esp-3) var(--esp-4); padding-inline: 0; }
       .zona .caja__cuerpo { width: 4.75rem; height: 3.75rem; }
       .zona .caja__valor { max-width: 4.25rem; font-size: var(--texto-md); }
       .zona .caja__nombre { font-size: var(--texto-xs); }
+    }
+    @media (max-width: 374px) {
+      .zona__cajas { column-gap: var(--esp-2); }
     }
   </style>
 </head>
@@ -329,6 +340,25 @@
     });
   }
 
+  /* Cada zona guarda el alto de su estado con más cajas (una caja con su nombre es más alta
+     que la zona vacía; en un móvil angosto, tres cajas ocupan dos renglones): al nacer, las
+     cajas no empujan la salida de debajo */
+  function reservarZonas(z, pasos) {
+    ["prog", "fun"].forEach(function (cual) {
+      var estados = pasos.map(function (p) { return p.estado[cual] || []; });
+      Codigo.reservarAlto(z[cual].cont, estados, function (copia, lista) {
+        copia.textContent = "";
+        lista.forEach(function (par) {
+          var caja = crearCaja(par[0]);
+          var valor = caja.querySelector(".caja__valor");
+          valor.className = "caja__valor";
+          valor.textContent = par[1];
+          copia.appendChild(caja);
+        });
+      });
+    });
+  }
+
   function terminarCierre(z) {
     clearTimeout(z.timer);
     z.timer = null;
@@ -555,6 +585,11 @@
   }
 
   /* ---------- Conexiones ---------- */
+  reservarZonas(z1, trazaNacen());
+  reservarZonas(z2, trazaFuera());
+  reservarZonas(z3, trazaMismo());
+  reservarZonas(z4, trazaSacar());
+
   var trazaP1 = Traza.crear({
     codigo: $("p1-codigo"),
     explicacion: $("p1-explicacion"),

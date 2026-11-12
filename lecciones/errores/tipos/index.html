@@ -111,6 +111,8 @@
     .puerta__marca { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(255, 255, 255, 0.1); font-weight: 700; }
     .puerta__pregunta b { color: #fff; }
     .puerta__detalle { grid-column: 2; min-height: 1.3em; font-weight: 700; }
+    /* Vacío, ya mide un renglón: la máquina no crece cuando llega el detalle */
+    .puerta__detalle:empty::before { content: "\200b"; }
     .puerta--ok { border-color: #50c882; background: rgba(80, 200, 130, 0.14); }
     .puerta--ok .puerta__marca { background: #50c882; color: #0d2a19; }
     .puerta--ok .puerta__detalle { color: #6ee7a0; }
@@ -154,6 +156,14 @@
     .probado__flecha { color: var(--color-texto-suave); }
 
     .probados-zona { margin-top: var(--esp-4); }
+    @media (max-width: 1023.98px) {
+      /* Apilado, la consola va debajo: la lista guarda desde el principio el lugar de sus
+         tres datos, y los botones del reto, el de sus dos renglones */
+      .probados-zona { min-height: 11.75rem; }
+    }
+    @media (max-width: 520px) {
+      #paso-reto .fila-botones { display: grid; grid-template-rows: repeat(2, minmax(3rem, auto)); justify-items: center; align-items: center; }
+    }
     @media (min-width: 1024px) { #s7-codigo { font-size: 1rem; } }
 
     /* ---------- Reto: el detective ---------- */
@@ -1336,10 +1346,11 @@
     return { lineas: lineas, salidas: o.salidas, error: o.error };
   }
 
-  function pintarCaso() {
+  function pintarCaso(el, k) {
+    var caso8 = k === undefined ? casoActual() : k;
     var c = CASOS[caso8];
     var f = FICHAS[c.error.tipo];
-    var el = $("reto-caso");
+    el = el || $("reto-caso");
     el.classList.toggle("caso--resuelto", !!resueltos8[caso8]);
     el.innerHTML = '<p class="rotulo">Caso ' + (caso8 + 1) + " de " + CASOS.length + "</p>" +
       '<div class="ficha caso__ficha ' + f.clase + '"><span class="ficha__emoji" aria-hidden="true">' + f.emoji + "</span>" +
@@ -1348,6 +1359,27 @@
       '<p class="caso__estado">' + (resueltos8[caso8] ? "✓ Resuelto" : "Elige el arreglo y pruébalo.") + "</p>";
     el.querySelector(".caso__ultima").textContent = c.error.tipo + ": " + c.error.mensaje;
   }
+
+  function casoActual() { return caso8; }
+
+  /* En el móvil, la ficha del caso y el código guardan el alto del caso más alto (y de la
+     línea más larga entre los arreglos): al cambiar de caso o probar un arreglo, la consola,
+     que va debajo, no se mueve. En escritorio va en otra columna y no hace falta. */
+  var apilado = window.matchMedia("(max-width: 1023.98px)");
+  Codigo.reservarAlto($("reto-caso"), CASOS.map(function (c, k) { return k; }), function (copia, k) {
+    if (apilado.matches) pintarCaso(copia, k);
+    else copia.textContent = "";
+  });
+  var VERSIONES8 = [];
+  CASOS.forEach(function (c, k) {
+    VERSIONES8.push(c.lineas);
+    document.querySelectorAll('input[name="reto-' + k + '"]').forEach(function (i) {
+      var lineas = c.lineas.slice();
+      lineas[c.error.linea] = i.nextElementSibling.textContent;
+      VERSIONES8.push(lineas);
+    });
+  });
+  Codigo.reservarAlto($("reto-codigo"), VERSIONES8, function (copia, lineas) { Python.escribir(copia, apilado.matches ? lineas : []); });
 
   function elegirCaso(k, r) {
     r8.cortar();

@@ -85,6 +85,15 @@
     /* En el móvil, lo que se ve va debajo de los botones: un poco de aire */
     @media (max-width: 1023px) {
       .lab__visual > .rotulo-cinta:first-child { margin-top: var(--esp-5); }
+      /* Predecir y después ejecutar: la explicación y los botones guardan su lugar antes de
+         aparecer, así lo que se ve y la salida no bajan al responder */
+      .guarda-lugar[hidden] { display: block !important; visibility: hidden; }
+    }
+    /* «Cada letra de una palabra»: con el lugar del diccionario ya guardado, el panel va un
+       poco más ceñido para que el paso siga cabiendo en una laptop al entrar */
+    @media (min-width: 1024px) {
+      #paso-letras .lab__visual { padding-block: var(--esp-2); }
+      #paso-letras .fila-voto { margin-top: var(--esp-2); }
     }
     @media (prefers-reduced-motion: reduce) {
       .palito, .pizarra__fila, .pizarra__fila--pulso .pizarra__nombre { animation: none; }
@@ -182,7 +191,7 @@
             <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
             <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
           </div>
-          <div id="s3-ejecucion" hidden>
+          <div id="s3-ejecucion" class="guarda-lugar" hidden>
             <p class="explicacion" id="s3-explicacion" aria-live="polite"></p>
             <div class="fila-botones">
               <button type="button" class="btn btn-secundario" id="s3-reiniciar" hidden>↺ Reiniciar</button>
@@ -224,7 +233,7 @@
             <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">KeyError: 'Ana'</button>
             <button type="button" class="btn btn-secundario" data-valor="vacio" aria-pressed="false">{}</button>
           </div>
-          <div id="s4-ejecucion" hidden>
+          <div id="s4-ejecucion" class="guarda-lugar" hidden>
             <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
             <div class="fila-botones">
               <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reiniciar</button>
@@ -267,7 +276,7 @@
             <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">1</button>
             <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
           </div>
-          <div id="s5-ejecucion" hidden>
+          <div id="s5-ejecucion" class="guarda-lugar" hidden>
             <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
             <div class="fila-botones">
               <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
@@ -596,6 +605,36 @@
     o.dicc.poner(paso.x, paso.pone, null, paso.nace ? valorDeCaja(o.caja) : undefined);
   }
 
+  // La expresión de un paso de la traza, por partes (lo que pinta pintarConteo junto a la caja)
+  function partesDe(paso) {
+    if (paso.fin || paso.k === undefined || paso.linea === 2) return [];
+    var Q = q(paso.x);
+    if (paso.en !== undefined) return [Q + " in conteo", paso.en];
+    if (paso.get !== undefined) return ["conteo.get(" + Q + ", 0) + 1", paso.get + " + 1", { final: paso.pone }];
+    if (!paso.nace) return ["conteo[" + Q + "] + 1", (paso.pone - 1) + " + 1", { final: paso.pone }];
+    return [];
+  }
+
+  /* El programa ya sabe hasta dónde crece lo que se ve: el diccionario guarda el alto que
+     tendrá con todas sus claves (vacío es más bajo, y en el móvil puede llegar a dos filas)
+     y la expresión, el de su renglón más largo. Así la salida, que va debajo, no se mueve
+     mientras corre el código. Se vuelve a medir al reiniciar (la frase puede haber cambiado). */
+  function reservarDicc(d, estados, opciones, preparar) {
+    Codigo.reservarAlto(d.el, estados, function (copia, pares) {
+      copia.textContent = "";
+      var c = Dicc.crear(copia, pares, opciones);
+      if (preparar) preparar(c);
+    });
+  }
+
+  function reservarConteo(o) {
+    var pasos = pasosConteo(o.items(), o);
+    var pares = pasos[pasos.length - 1].pares;
+    var crece = pares.map(function (p, i) { return pares.slice(0, i + 1); });
+    reservarDicc(o.dicc, crece.length ? crece : [[]], { capacidad: o.capacidad || 4 });
+    Codigo.reservarAlto(o.expr, pasos.map(partesDe), function (copia, partes) { expr(copia, partes); });
+  }
+
   function trazaConteo(p, o) {
     return Traza.crear({
       codigo: $(p + "-codigo"),
@@ -612,6 +651,7 @@
         o.fuente.marcar(null);
         o.fuente.apagar(-1);
         expr(o.expr, []);
+        reservarConteo(o);
         Pasos.limpiarFeedback($(p + "-fb"));
       },
       alPaso: function (paso) { pintarConteo(o, paso); },
@@ -773,6 +813,9 @@
   var votos4 = Lista.crear($("s4-votos"), VOTOS4, { indices: false });
   var conteo4 = Dicc.crear($("s4-conteo"), [], { capacidad: 4 });
   var prediccion4 = null;
+  // El lugar del casillero que falta («Ana», KeyError) y de su expresión, desde el principio
+  reservarDicc(conteo4, [[]], { capacidad: 4 }, function (c) { c.marcar("Ana"); });
+  Codigo.reservarAlto($("s4-expr"), [[], ["conteo[\"Ana\"]", { error: "KeyError" }]], function (copia, partes) { expr(copia, partes); });
 
   function trazaTrampa() {
     return [
@@ -851,7 +894,7 @@
     modo: "get", nombre: "palabra", lineaPrint: 4, intervalo: 750,
     inicio: "<code>frase</code> guarda tu texto. <code>.split()</code> lo cortará en palabras.",
     fin: "No quedan palabras: el bucle termina.",
-    fuente: deLista(palabras6), dicc: conteo6, caja: $("s6-palabra"), expr: $("s6-expr"),
+    fuente: deLista(palabras6), dicc: conteo6, caja: $("s6-palabra"), expr: $("s6-expr"), capacidad: 8,
     alTerminar: function () {
       var fb = $("s6-fb");
       var pares = conteo6.pares;

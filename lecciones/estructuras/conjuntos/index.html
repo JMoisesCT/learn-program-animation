@@ -34,6 +34,11 @@
       .venn .conjunto__ficha { height: 1.95rem; padding: 0 0.35em; font-size: 0.85rem; }
     }
     .vacio-rotulo { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    /* El diccionario o la bolsa, en el mismo lugar: el que no se ve lo guarda desde el
+       principio, así la salida, que va debajo, no se mueve al ejecutar */
+    .uno-u-otro { display: grid; }
+    .uno-u-otro > * { grid-area: 1 / 1; min-width: 0; }
+    .uno-u-otro > [hidden] { display: block !important; visibility: hidden; }
 
     /* ---------- Un diccionario que no tiene .add ---------- */
     .sacude { animation: sacudir 420ms ease; }
@@ -94,7 +99,7 @@
               <button type="button" class="btn btn-secundario btn-agregar" data-valor="negro">"negro"</button>
               <button type="button" class="btn btn-secundario btn-agregar" data-valor="azul">"azul"</button>
             </div>
-            <button type="button" class="btn btn-secundario btn-volver" id="s1-reiniciar" aria-label="Empezar de nuevo" title="Empezar de nuevo" hidden>↺</button>
+            <button type="button" class="btn btn-secundario btn-volver" id="s1-reiniciar" aria-label="Empezar de nuevo" title="Empezar de nuevo" disabled>↺</button>
           </div>
         </div>
         <div class="lab__visual">
@@ -200,9 +205,11 @@
           <p class="explicacion" id="s5-explicacion" aria-live="polite">Toca una de las dos para ejecutarla.</p>
         </div>
         <div class="lab__visual">
-          <div id="s5-dicc" hidden></div>
-          <div id="s5-bolsa" hidden></div>
-          <p class="vacio-rotulo" id="s5-rotulo" aria-live="polite"></p>
+          <div class="uno-u-otro">
+            <div id="s5-dicc" hidden></div>
+            <div id="s5-bolsa" hidden></div>
+          </div>
+          <p class="vacio-rotulo" id="s5-rotulo" aria-live="polite">&nbsp;</p>
         </div>
         <div class="lab__resultado">
           <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
@@ -426,13 +433,23 @@
       .concat(["print(colores)", "print(len(colores))"]);
   }
 
+  // El código guarda el alto de sus 7 líneas (hasta 4 .add) y la bolsa, el de sus 4 fichas:
+  // lo que se ve y la salida no bajan al agregar
+  Codigo.reservarAlto($("s1-codigo"), [['colores = {"rojo", "azul"}', "x", "x", "x", "x", "print(colores)", "print(len(colores))"]], function (copia, lineas) {
+    pintarLineas(copia.querySelector("code") || copia, lineas);
+  });
+  Codigo.reservarAlto($("s1-bolsa"), [BASE1.concat(["verde", "negro"])], function (copia, valores) {
+    copia.textContent = "";
+    Conjunto.crear(copia, valores, { nombres: ["colores"] });
+  });
+
   function reiniciar1() {
     agregados1 = [];
     s1.borrar();
     pintarLineas($("s1-lineas"), lineas1());
     bolsa1.valores(BASE1);
     Codigo.consola($("s1-consola"), [Conjunto.python(BASE1), "2"]);
-    $("s1-reiniciar").hidden = true;
+    $("s1-reiniciar").disabled = true;   // a la vista y apagado desde el principio: su renglón no aparece de golpe
     activar("s1-elegir", true);
   }
 
@@ -445,7 +462,7 @@
     Codigo.marcar(codigo, { activas: [k] });
     var entro = bolsa1.agregar(color, Codigo.piezaEnLinea(lineaEn(codigo, k), '"' + color + '"'));
     Codigo.consola($("s1-consola"), [Conjunto.python(bolsa1.lista), String(bolsa1.largo)]);
-    $("s1-reiniciar").hidden = false;
+    $("s1-reiniciar").disabled = false;
     if (agregados1.length >= MAX1) activar("s1-elegir", false);
 
     var texto;
@@ -483,6 +500,12 @@
   // El código guarda el alto de sus 6 líneas: los botones de debajo no saltan al crecer
   Codigo.reservarAlto($("s2-codigo"), [[DEF2, "x", "x", "x", "x", "print(colores)"]], function (copia, lineas) {
     pintarLineas(copia.querySelector("code") || copia, lineas);
+  });
+
+  // La bolsa guarda el alto de sus 3 fichas: al sacar una, la salida no sube
+  Codigo.reservarAlto($("s2-bolsa"), [BASE2], function (copia, valores) {
+    copia.textContent = "";
+    Conjunto.crear(copia, valores, { nombres: ["colores"] });
   });
 
   function reiniciar2() {
@@ -676,7 +699,10 @@
     bolsa5.valores([]);
 
     Codigo.marcar(codigo, { activas: [0] });
-    $(caso === "set" ? "s5-bolsa" : "s5-dicc").hidden = false;
+    var visto5 = caso === "set" ? bolsa5 : dicc5;
+    visto5.el.hidden = false;
+    visto5.nombres([]);          // guardaba su lugar sin verse: su nombre entra con el salto de siempre
+    visto5.nombres(["vistos"]);
     $("s5-rotulo").textContent = caso === "set" ? "vistos es un conjunto" : "vistos es un diccionario";
     $("s5-explicacion").innerHTML = caso === "set"
       ? "<code>set()</code> crea una bolsa vacía."
