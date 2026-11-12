@@ -7,6 +7,7 @@
      node herramientas/seguir-consola.js bucles 3             solo el paso 3 (desde 0)
      node herramientas/seguir-consola.js bucles 1366x657      solo en ese tamaño
      node herramientas/seguir-consola.js bucles detalle       además, qué cambió de alto en cada toque
+     node herramientas/seguir-consola.js bucles capturar      además, una captura al entrar y otra al terminar
 
    Abre cada paso (como recorrer-leccion.js) en varios tamaños y ejecuta el código: toca
    «Ejecutar línea ▸» hasta el final (o «Siguiente …», o «▶ Ejecutar»; si los botones
@@ -16,6 +17,8 @@
    - subió o bajó sin que la página se haya desplazado.
    Que la consola crezca hacia abajo al llenarse no cuenta: se mide su borde de arriba.
    Con «detalle» dice qué pieza de la tarjeta cambió de alto en ese toque (la causa).
+   Con «capturar» guarda capturas/consola/<lección>/<ancho>-<paso>-1entrar.png y -2fin.png
+   (la página entera): así se ve el lugar que se guardó en blanco y cómo quedó lleno.
    El resumen queda en capturas/consola/resumen.json (ignorada por git).
 */
 const path = require("path");
@@ -25,10 +28,11 @@ const { chromium } = require("playwright");
 const RAIZ = path.resolve(__dirname, "..");
 const args = process.argv.slice(2);
 const detalle = args.includes("detalle");
+const capturar = args.includes("capturar");
 const soloPaso = args.find((a) => /^\d+$/.test(a));
 const tamArg = args.filter((a) => /^\d+x\d+$/.test(a)).map((a) => a.split("x").map(Number));
 const TAMANOS = tamArg.length ? tamArg : [[1366, 657], [1440, 800], [1920, 950], [390, 844]];
-const pedidas = args.filter((a) => !/^\d+$/.test(a) && !/^\d+x\d+$/.test(a) && a !== "detalle");
+const pedidas = args.filter((a) => !/^\d+$/.test(a) && !/^\d+x\d+$/.test(a) && a !== "detalle" && a !== "capturar");
 const UMBRAL = 3;       // px: menos que esto no se nota
 const MAX_TOQUES = 90;
 const DATOS = ["7", "12", "hola", "3", "20", "Ana", "15", "fin"];
@@ -214,7 +218,17 @@ async function revisarLeccion(b, leccion) {
       const hay = await p.evaluate(() => !!document.querySelector(".paso:not([hidden]) .consola"));
       if (!hay) continue;
       let r;
-      try { r = await recorrerPaso(p, w, h); } catch (e) { salida.push(`${leccion} ${w}×${h} paso ${i}: no se pudo recorrer (${e.message.split("\n")[0]})`); continue; }
+      const foto = async (cuando) => {
+        if (!capturar) return;
+        const dir = path.join(RAIZ, "capturas", "consola", leccion.replace(/\//g, "-"));
+        fs.mkdirSync(dir, { recursive: true });
+        // La cabecera y el pie, en su lugar del documento: fijos, taparían el medio de la página entera
+        const estilo = await p.addStyleTag({ content: ".leccion-cabecera, .leccion-pie { position: static !important; }" });
+        await p.screenshot({ path: path.join(dir, `${w}-${String(i).padStart(2, "0")}-${ids[i]}-${cuando}.png`), fullPage: true }).catch(() => {});
+        await estilo.evaluate((e) => e.remove());
+      };
+      await foto("1entrar");
+      try { r = await recorrerPaso(p, w, h); await foto("2fin"); } catch (e) { salida.push(`${leccion} ${w}×${h} paso ${i}: no se pudo recorrer (${e.message.split("\n")[0]})`); continue; }
       const lados = r.avisos.filter((a) => a.lado);
       const saltos = r.avisos.filter((a) => !a.lado);
       resumen.push({ leccion, tam: w + "x" + h, paso: i, id: ids[i], toques: r.toques, lados: lados.length, saltos: saltos.length,
