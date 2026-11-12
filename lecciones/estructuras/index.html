@@ -25,6 +25,11 @@
       .dos-filas--lado { grid-template-columns: 2fr 3fr; align-items: end; }
     }
     .cajas--fila:empty { display: none; }
+    /* Lo que nace mientras corre el código guarda su lugar desde el principio (no se ve,
+       pero ocupa su alto): así la salida, que va debajo, no cambia de lugar */
+    .guarda-lugar[hidden] { display: block !important; visibility: hidden; }
+    .cajas.guarda-lugar[hidden] { display: flex !important; }
+    #reto-cajas:empty { display: flex; }
     .cajas--fila .caja--ancha .caja__cuerpo { width: 7.5rem; }
     .cajas--fila .caja--ancha .caja__valor { max-width: 7rem; }
     /* La copia que vuela a una caja va fuera de ella: con la letra de las cajas de aquí, «2026» no se corta */
@@ -59,9 +64,13 @@
     /* ---------- La tupla de paso (a, b = b, a) ---------- */
     .de-paso { margin-top: var(--esp-4); transition: opacity var(--dur); }
     .de-paso--usada { opacity: 0.35; }
+    /* En la versión con una tupla, la tupla de paso guarda su lugar antes de armarse */
+    .de-paso--lugar[hidden] { display: block !important; visibility: hidden; }
 
     /* ---------- Zonas: el programa y dentro de la función ---------- */
-    .zonas { display: grid; gap: var(--esp-3); }
+    /* Las zonas guardan el alto de su momento más alto (reservarLugar): lo que sobra se lo
+       queda la zona de la función */
+    .zonas { display: grid; grid-template-rows: auto 1fr; gap: var(--esp-3); }
     .zona { padding: var(--esp-2) var(--esp-3) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur), opacity var(--dur); }
     .zona__titulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
     .zona__titulo code { padding: 0; background: none; text-transform: none; letter-spacing: 0; }
@@ -100,6 +109,11 @@
     }
     @media (max-width: 480px) {
       .cajas--fila { gap: var(--esp-3) 2.6rem; }
+      /* Cuatro cajas (dia, mes, anio, hora) caben en un renglón, como las de tres: van un
+         poco más angostas (con 4 nombres hay error y ninguna recibe un valor) */
+      #s6-cajas:has(> .caja:nth-child(4)) { column-gap: 2rem; }
+      #s6-cajas:has(> .caja:nth-child(4)) .caja__cuerpo { width: 3.5rem; }
+      #s6-cajas:has(> .caja:nth-child(4)) .caja__nombre { padding-inline: var(--esp-2); font-size: var(--texto-sm); }
       .cajas--fila .caja__cuerpo { width: 4rem; height: 3.4rem; }
       .cajas--fila .caja__valor { font-size: var(--texto-md); }
       .zona__cajas, .par-cajas { column-gap: var(--esp-4); }
@@ -145,8 +159,8 @@
           </div>
         </div>
         <div class="lab__visual dos-filas dos-filas--lado">
-          <div id="s1-punto"></div>
-          <div id="s1-fecha"></div>
+          <div id="s1-punto" class="guarda-lugar"></div>
+          <div id="s1-fecha" class="guarda-lugar"></div>
         </div>
         <div class="lab__resultado">
           <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
@@ -222,8 +236,8 @@
           </div>
         </div>
         <div class="lab__visual">
-          <div id="s5-fecha"></div>
-          <div class="cajas cajas--fila" id="s5-cajas"></div>
+          <div id="s5-fecha" class="guarda-lugar"></div>
+          <div class="cajas cajas--fila guarda-lugar" id="s5-cajas"></div>
         </div>
         <div class="lab__resultado">
           <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
@@ -326,7 +340,7 @@
             <div class="zona zona--programa">
               <p class="zona__titulo">Programa</p>
               <div class="zona__cajas">
-                <div id="s8-lista"></div>
+                <div id="s8-lista" class="guarda-lugar"></div>
                 <div class="par-cajas">
                 <div class="caja" id="s8-menor" hidden>
                   <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
@@ -516,6 +530,25 @@
     l.valores([]);
     valores.forEach(function (v, k) {
       r.luego(function () { l.agregar(v, origenes ? origenes[k]() : undefined); }, k * (ms || 220));
+    });
+  }
+
+  // Muestra una lista que guardaba su lugar: su nombre entra con el salto de siempre
+  function aparecer(l, nombres) {
+    l.el.hidden = false;
+    l.nombres([]);
+    l.nombres(nombres);
+  }
+
+  /* Guarda el lugar de lo que nace mientras corre el código, para que la salida de debajo
+     no se mueva: mide una copia invisible de el con cada grupo de piezas a la vista (sus
+     ids; las demás de «piezas», ocultas) y fija el alto del mayor. */
+  function reservarLugar(el, piezas, estados) {
+    Codigo.reservarAlto(el, estados, function (copia, visibles) {
+      piezas.forEach(function (id) {
+        var pieza = copia.querySelector('[id="' + id + '"]');
+        if (pieza) pieza.hidden = visibles.indexOf(id) === -1;
+      });
     });
   }
 
@@ -766,6 +799,13 @@
     Codigo.consola($("s6-consola"), []);
   }
 
+  // Con 4 nombres, en una pantalla angosta las cajas ocupan dos renglones: el lugar se
+  // guarda en las tres versiones, así la salida no baja al elegir otra
+  Codigo.reservarAlto($("s6-cajas"), ["2", "3", "4"], function (copia, version) {
+    copia.textContent = "";
+    NOMBRES6[version].forEach(function (n) { copia.appendChild(nuevaCaja(n)); });
+  });
+
   function ejecutar6(leccion) {
     preparar6(version6);
     $("s6-ejecutar").disabled = true;
@@ -853,6 +893,7 @@
     $("s7-caja-aux").hidden = version7 !== "aux";
     $("s7-de-paso").hidden = true;
     $("s7-de-paso").classList.remove("de-paso--usada");
+    $("s7-de-paso").classList.toggle("de-paso--lugar", version7 === "tupla");
     tupla7.valores([]);
   }
 
@@ -896,7 +937,7 @@
     'print(f"De {menor} a {mayor}")'
   ]);
   var NOTAS8 = [14, 9, 17, 11, 6];
-  var lista8 = Lista.crear($("s8-lista"), [], { nombres: ["notas"], indices: false });
+  var lista8 = Lista.crear($("s8-lista"), [], { nombres: ["notas"], indices: false, capacidad: 6 });
   var tupla8 = Lista.crear($("s8-tupla"), [], { tupla: true });
   var r8 = reloj();
 
@@ -913,10 +954,16 @@
     ];
   }
 
+  // Lo más alto que llegan a estar las zonas: con las cajas de la función y la tupla que
+  // devuelve, o con las cajas del programa al volver
+  reservarLugar(document.querySelector("#paso-funcion .zonas"),
+    ["s8-vacia", "s8-fmenor", "s8-fmayor", "s8-devuelve", "s8-menor", "s8-mayor"],
+    [["s8-vacia"], ["s8-fmenor", "s8-fmayor"], ["s8-fmenor", "s8-fmayor", "s8-devuelve"], ["s8-vacia", "s8-menor", "s8-mayor"]]);
+
   function limpiar8() {
     r8.cortar();
     lista8.valores([]);
-    lista8.nombres([]);
+    lista8.nombres(["notas"]);   // oculta, guarda su lugar con el nombre puesto
     lista8.marcar(null);
     $("s8-lista").hidden = true;
     ["s8-menor", "s8-mayor", "s8-fmenor", "s8-fmayor"].forEach(function (id) { Caja.vaciar($(id)); $(id).hidden = true; });
@@ -928,9 +975,8 @@
 
   function paso8(paso) {
     if (paso.hacer === "crear") {
-      $("s8-lista").hidden = false;
       lista8.valores(NOTAS8);
-      lista8.nombres(["notas"]);
+      aparecer(lista8, ["notas"]);
     } else if (paso.hacer === "entrar") {
       var zona = $("s8-zona");
       zona.classList.remove("zona--cerrando");
@@ -996,6 +1042,12 @@
       tres: "Tres nombres para dos valores: tienen que coincidir."
     }
   };
+
+  // Las cajas del reto nacen al comprobar: su renglón guarda el lugar
+  Codigo.reservarAlto($("reto-cajas"), [0], function (copia) {
+    copia.textContent = "";
+    copia.appendChild(nuevaCaja("h"));
+  });
 
   function elegido(nombre) {
     var r = document.querySelector('input[name="' + nombre + '"]:checked');
@@ -1142,8 +1194,8 @@
       Pasos.limpiarFeedback($("s1-fb"));
     },
     alPaso: function (paso) {
-      if (paso.hacer === "punto") { $("s1-punto").hidden = false; llenar(punto1, [3, 5], r1); }
-      else if (paso.hacer === "fecha") { $("s1-fecha").hidden = false; llenar(fecha1, FECHA, r1); }
+      if (paso.hacer === "punto") { aparecer(punto1, ["punto"]); llenar(punto1, [3, 5], r1); }
+      else if (paso.hacer === "fecha") { aparecer(fecha1, ["fecha"]); llenar(fecha1, FECHA, r1); }
       else if (paso.ver === "punto") { punto1.rango(0, 2); }
       else if (paso.ver === "fecha") { punto1.rango(null); fecha1.rango(0, 3); }
     },
@@ -1193,7 +1245,7 @@
     alPaso: function (paso) {
       cajas5.forEach(function (c, k) { c.classList.toggle("caja--resaltada", paso.ver === k); });
       if (paso.hacer === "crear") {
-        $("s5-fecha").hidden = false;
+        aparecer(fecha5, ["fecha"]);
         llenar(fecha5, FECHA, r5);
       } else if (paso.hacer === "repartir") {
         r5.cortar();

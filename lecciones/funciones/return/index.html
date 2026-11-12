@@ -16,7 +16,11 @@
     .rotulo { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: 0.06em; }
     .elegir { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-bottom: var(--esp-4); }
     .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
-    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    /* El ✓ guarda su lugar desde el principio: al aparecer no ensancha el botón ni parte la
+       fila en dos renglones (lo de abajo, y con ello la salida, no baja) */
+    .elegir .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+    .elegir .btn.hecho::after { visibility: visible; }
+    #p2-comparacion { align-content: flex-start; }
     .control-slider { margin-top: var(--esp-4); }
     .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
     .lab .expresion { margin: var(--esp-4) 0 0; }
@@ -486,10 +490,24 @@
     $("p2-lugar").classList.toggle("lugar--funcion", dentro);
   }
 
-  function pintarComparacionP2(etapa) {
-    var partes = ["nota >= 11", p2Nota + " >= 11", "?"].slice(0, etapa + 1);
+  function pintarComparacionP2(etapa, el, nota) {
+    if (nota === undefined) nota = p2Nota;
+    var partes = ["nota >= 11", nota + " >= 11", "?"].slice(0, etapa + 1);
     if (etapa < 2) partes.push("?");
-    pintarCadena($("p2-comparacion"), partes, etapa === 2 ? p2Nota >= 11 : undefined);
+    pintarCadena(el || $("p2-comparacion"), partes, etapa === 2 ? nota >= 11 : undefined);
+  }
+  // La comparación guarda el alto de su estado más largo (en el móvil llega a dos renglones):
+  // al crecer no empuja la salida
+  Codigo.reservarAlto($("p2-comparacion"), [[1, 15], [2, 15], [1, 8], [2, 8]], function (copia, e) {
+    pintarComparacionP2(e[0], copia, e[1]);
+  });
+
+  /* Una traza repetible genera sus pasos al ejecutar, y recién entonces reserva el alto de
+     sus explicaciones. Aquí se reserva antes, con los textos de la nota elegida: así la
+     primera línea no cambia ese alto ni empuja la salida (en el móvil va debajo) */
+  function reservarExplicacion(el, generar) {
+    Codigo.reservarAlto(el, [el.textContent].concat(generar().map(function (p) { return p.texto || ""; })),
+      function (copia, texto) { copia.innerHTML = texto; });
   }
 
   function pintarLlamadaP2() {
@@ -749,6 +767,7 @@
       document.querySelectorAll("[data-p2]").forEach(function (b) { b.classList.remove("hecho"); });
       pintarLlamadaP2();
       Pasos.limpiarFeedback($("p2-fb"));
+      reservarExplicacion($("p2-explicacion"), trazaTermina);
     },
     alPaso: function (paso) {
       var e = paso.estado || {};
@@ -764,11 +783,13 @@
     },
     alTerminar: terminarP2
   });
+  reservarExplicacion($("p2-explicacion"), trazaTermina);
   document.querySelectorAll("[data-p2]").forEach(function (b) {
     b.addEventListener("click", function () {
       p2Nota = Number(b.getAttribute("data-p2"));
       trazaP2.cancelar();
       pintarLlamadaP2();
+      reservarExplicacion($("p2-explicacion"), trazaTermina);
     });
   });
 

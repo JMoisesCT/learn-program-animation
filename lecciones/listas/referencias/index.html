@@ -58,6 +58,13 @@
     .lista__nombre.nombre--local { color: var(--color-acento); background: var(--color-acento-suave); }
     .lista__nombre.nombre--local::after { color: var(--color-acento); }
     .dos-listas { display: grid; gap: var(--esp-2); }
+    /* La salida no se mueve: la lista que todavía no existe ya guarda su lugar (no se ve) */
+    #s2-lista[hidden] { display: block !important; visibility: hidden; }
+    /* En el móvil la explicación va encima de la salida: las dos versiones (una lista, un
+       número) guardan el alto de la más larga, tres renglones */
+    @media (max-width: 480px) {
+      #s6-explicacion { min-height: 4.85em !important; }
+    }
     /* El tamaño de los casilleros, fijo para 7 elementos: la lista no se encoge al crecer y no mueve lo de debajo */
     #s3-lista .lista__fila { --c: min(var(--lista-max), max(2.1rem, calc(100cqi / 8 - var(--lista-hueco) - 0.8rem))); }
 
@@ -208,7 +215,7 @@
     </section>
 
     <!-- 4. .copy(): otra lista -->
-    <section class="paso" id="paso-copia" data-requiere aria-labelledby="t-copia">
+    <section class="paso" id="paso-copia" data-requiere data-salida="arriba" aria-labelledby="t-copia">
       <h2 class="paso__titulo" id="t-copia">Si quieres otra lista, cópiala</h2>
       <p><code>a.copy()</code> hace una lista <strong>nueva</strong> con los mismos valores. Desde ahí, cada una cambia por su lado. Ejecútalo.</p>
 
@@ -434,6 +441,14 @@
   /* ---------- 2. Con listas: predecir y ver ---------- */
   escribir($("s2-codigo"), ["a = [14, 9, 17]", "b = a", "b.append(20)", "print(a)"]);
   var lista2 = Lista.crear($("s2-lista"), []);
+  /* Una lista guarda el alto del estado más alto por el que va a pasar */
+  function reservarLista(lista, estados, opciones) {
+    Codigo.reservarAlto(lista.el, estados, function (copia, valores) {
+      copia.textContent = "";
+      Lista.crear(copia, valores, opciones);
+    });
+  }
+  reservarLista(lista2, [[14, 9, 17], [14, 9, 17, 20]], { nombres: ["a", "b"] });
   var prediccion2 = null;
 
   function trazaListas() {
@@ -668,6 +683,20 @@
       { linea: 5, salida: "5", texto: "<code>x</code> sigue con 5: la función cambió su copia, no la caja de afuera." }
     ];
   }
+
+  /* Cada zona guarda el alto que tiene con todo dentro (la lista con sus dos etiquetas o
+     la caja x; la caja de la función): así la salida no baja cuando se llenan */
+  Codigo.reservarAlto($("s6-lista").parentNode, ["lista", "numero"], function (copia, version) {
+    var l = copia.querySelector("#s6-lista");
+    l.textContent = "";
+    l.hidden = version !== "lista";
+    if (version === "lista") Lista.crear(l, [14, 9, 15], { nombres: ["notas", "lista"] });
+    copia.querySelector("#s6-caja-x").hidden = version !== "numero";
+  });
+  Codigo.reservarAlto($("s6-caja-f").parentNode, ["abierta"], function (copia) {
+    copia.querySelector("#s6-vacia").hidden = true;
+    copia.querySelector("#s6-caja-f").hidden = false;
+  });
 
   function limpiar6() {
     lista6.valores([]);

@@ -14,6 +14,12 @@
     /* La explicación de la traza va sobre la salida (en escritorio, a la derecha) */
     .explicacion--arriba { min-height: 0; margin: 0 0 var(--esp-3); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); text-align: left; }
     .explicacion--arriba + .consola { margin-top: 0; }
+    /* La explicación va encima de la consola: su zona guarda el alto del texto más largo de
+       todos los datos (conDatos; Traza solo guarda el del dato elegido) y la consola no baja
+       al cambiar de dato */
+    .explicacion-zona { display: flex; flex-direction: column; }
+    .explicacion-zona > .explicacion { flex: 1 0 auto; }
+    .explicacion-zona + .consola { margin-top: 0; }
     .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
     .resumen-codigo { margin-top: var(--esp-5); font-size: 0.95rem; }
     .rotulo { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
@@ -47,6 +53,7 @@
     .cajas--fila .caja__valor { max-width: 4.6rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
     .caja--sin-valor .caja__cuerpo { border-style: dashed; }
     .caja__nota { margin: 0; font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); text-align: center; min-height: 1.3em; }
+    .caja__nota:empty::before { content: "\200b"; }   /* vacía, ya mide su renglón */
 
     /* ---------- El trapecista ---------- */
     /* --alto: alto de la escena; --tam: tamaño del trapecista. Las caídas se calculan con ellos */
@@ -146,6 +153,10 @@
       .interruptor[aria-pressed="false"] .interruptor__marca::before { content: ""; }
       .interruptor[aria-pressed="true"] .interruptor__marca::before { content: "🛡"; }
       .elegir--datos { gap: var(--esp-2) var(--esp-1); }
+      /* El ✓ de «ya lo probaste» tiene su lugar desde el principio: al ganarlo, la fila de
+         datos no pasa a dos renglones (empujaba el código y la consola) */
+      .elegir--datos .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+      .elegir--datos .btn.hecho::after { visibility: visible; }
       .elegir--datos .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); }
     }
   </style>
@@ -236,7 +247,7 @@
           <p class="caja__nota" id="s2-caja-nota"></p>
         </div>
         <div class="lab__resultado">
-          <p class="explicacion explicacion--arriba" id="s2-explicacion" aria-live="polite"></p>
+          <div class="explicacion-zona"><p class="explicacion explicacion--arriba" id="s2-explicacion" aria-live="polite"></p></div>
           <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
           <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
         </div>
@@ -282,7 +293,7 @@
           </div>
         </div>
         <div class="lab__resultado">
-          <p class="explicacion explicacion--arriba" id="s4-explicacion" aria-live="polite"></p>
+          <div class="explicacion-zona"><p class="explicacion explicacion--arriba" id="s4-explicacion" aria-live="polite"></p></div>
           <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
           <div class="zona-error" id="s4-error"></div>
           <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
@@ -312,7 +323,7 @@
           </div>
         </div>
         <div class="lab__resultado">
-          <p class="explicacion explicacion--arriba" id="s5-explicacion" aria-live="polite"></p>
+          <div class="explicacion-zona"><p class="explicacion explicacion--arriba" id="s5-explicacion" aria-live="polite"></p></div>
           <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Salida</span></div>
           <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
         </div>
@@ -893,6 +904,20 @@
         o.vistos.marcar(d);
         o.alTerminar(d);
       }
+    });
+    // El alto de la explicación más larga, con cualquiera de los datos
+    var zona = o.explicacion.parentNode;
+    var elegido = o.dato();
+    var textos = [];
+    o.grupo.querySelectorAll("button[data-valor]").forEach(function (b) {
+      o.elegir(b.getAttribute("data-valor"));
+      o.generar().forEach(function (p) { if (p.texto) textos.push(p.texto); });
+    });
+    o.elegir(elegido);
+    Codigo.reservarAlto(zona, textos, function (copia, texto) {
+      var p = copia.querySelector(".explicacion");
+      p.style.minHeight = "";
+      p.innerHTML = texto;
     });
     o.grupo.querySelectorAll("button[data-valor]").forEach(function (b) {
       b.addEventListener("click", function () {

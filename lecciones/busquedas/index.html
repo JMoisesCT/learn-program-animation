@@ -51,6 +51,8 @@
     .elegir .btn--usada::after { content: " ✓"; color: var(--color-ok); }
     .pregunta { margin: var(--esp-4) 0 0; min-height: 1.6em; text-align: center; font-weight: 600; }
     .pregunta code { font-size: var(--texto-md); }
+    /* «Otra vez» ocupa el lugar de las respuestas: mismo margen, para que nada salte */
+    #paso-tu .fila-botones { margin-top: var(--esp-3); }
     .pregunta .chip { padding: 0 0.35em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); font-family: var(--fuente-codigo); }
     .prediccion { margin-top: var(--esp-4); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
     .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
@@ -69,6 +71,15 @@
     .casos .casos__tipo { font-family: var(--fuente); font-weight: 600; font-size: var(--texto-xs); color: var(--color-texto-suave); }
     .casos .casos__tipo--mejor { color: var(--color-ok); }
     .casos .casos__tipo--peor { color: var(--color-pista); }
+
+    /* ---------- 5. La ejecución llega al predecir ----------
+       En el móvil guarda su lugar desde el principio, con los botones apagados: si
+       apareciera después, empujaría la lista y la salida */
+    .ejecucion--espera { display: none; }
+    @media (max-width: 1023.98px) {
+      .ejecucion--espera { display: block; }
+      .ejecucion--espera .explicacion { visibility: hidden; }
+    }
 
     /* ---------- Reto ---------- */
     .huecos { display: grid; gap: var(--esp-3); margin-top: var(--esp-4); }
@@ -91,6 +102,10 @@
 
     @media (max-width: 1023.98px) {
       .lab__principal + .lab__visual { margin-top: var(--esp-4); }
+      /* El ✓ de «ya lo probaste» va en el borde del botón, sin ensancharlo: si lo
+         ensanchara, la fila se partiría y todo lo de abajo bajaría */
+      #s6-elegir .btn { position: relative; }
+      #s6-elegir .btn--usada::after { content: "✓"; position: absolute; right: 0.2rem; top: 50%; transform: translateY(-50%); font-size: 0.8em; }
     }
     @media (max-width: 480px) {
       .huecos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
@@ -273,7 +288,7 @@
             <button type="button" class="btn btn-secundario" data-valor="-1" aria-pressed="false">-1</button>
             <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">Da error</button>
           </div>
-          <div id="s5-ejecucion" hidden>
+          <div id="s5-ejecucion" class="ejecucion--espera">
             <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
             <div class="fila-botones">
               <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reiniciar</button>
@@ -658,7 +673,8 @@
 
   // Une una Traza de buscar con su lista tapada, sus cajas x e i y su contador
   function trazaBuscar(n, malo, generar, alTerminar) {
-    var lista = Lista.crear($(n + "-lista"), NOTAS);
+    // El puntero i aparece bajo la lista al empezar el for: su lugar se guarda desde el principio
+    var lista = Lista.crear($(n + "-lista"), NOTAS, { reservarPunteros: 1 });
     var pre = $(n + "-codigo");
     lista.tapar(true);
     var traza = Traza.crear({
@@ -707,7 +723,7 @@
 
   /* ---------- 3. Ahora la PC eres tú ---------- */
   var NOMBRES = ["Ana", "Luis", "Eva", "Iván", "Rosa"];
-  var lista3 = Lista.crear($("s3-lista"), NOMBRES);
+  var lista3 = Lista.crear($("s3-lista"), NOMBRES, { reservarPunteros: 1 });
   var pre3 = $("s3-codigo");
   var r3 = reloj();
   var k3 = 0;
@@ -830,6 +846,13 @@
   });
   Codigo.consola($("s3-consola"), []);
   lista3.tapar(true);
+  // La pregunta guarda el alto de su texto más largo (en el móvil ocupa dos renglones):
+  // así no empuja la lista ni la salida cuando el for termina
+  Codigo.reservarAlto($("s3-pregunta"), [
+    "¿<span class=\"chip\">\"Rosa\"</span> == <span class=\"chip\">\"Pedro\"</span>?",
+    "No quedan casilleros: el for termina. ¿Qué devuelve buscar?",
+    "return -1: después del for, buscar devuelve -1."
+  ], function (copia, texto) { copia.innerHTML = texto; });
 
   /* ---------- 4. Mejor y peor caso ---------- */
   var lista4 = Lista.crear($("s4-lista"), NOTAS);
@@ -932,11 +955,15 @@
     leccion.desbloquear();
   });
 
+  // Hasta que el alumno predice, los botones de ejecutar esperan apagados
+  $("s5-ejecutar").disabled = true;
+  $("s5-reproducir").disabled = true;
+
   $("s5-elegir").querySelectorAll("button").forEach(function (b) {
     b.addEventListener("click", function () {
       prediccion5 = b.getAttribute("data-valor");
       $("s5-elegir").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
-      $("s5-ejecucion").hidden = false;
+      $("s5-ejecucion").classList.remove("ejecucion--espera");
       traza5.reiniciar();
     });
   });
@@ -1013,6 +1040,13 @@
   });
   lista6.tapar(true);
   Codigo.consola($("s6-consola"), []);
+  // La cuenta guarda el alto de su resultado más largo («💥 ValueError» pasa a otro renglón
+  // en el móvil): así la salida, que va debajo, no baja al aparecer
+  Codigo.reservarAlto($("s6-expr").parentNode, Object.keys(DATOS6), function (copia, clave) {
+    var d = DATOS6[clave];
+    copia.children[0].textContent = d.expr;
+    copia.children[2].textContent = d.error ? "💥 ValueError" : d.res;
+  });
 
   /* ---------- 7. Reto: completar buscar ---------- */
   var listaR = Lista.crear($("reto-lista"), NOTAS);

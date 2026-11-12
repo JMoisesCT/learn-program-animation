@@ -17,7 +17,10 @@
     .rotulo { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: 0.06em; }
     .elegir { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-bottom: var(--esp-4); }
     .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
-    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    /* El ✓ guarda su lugar desde el principio: al aparecer no ensancha el botón ni parte la
+       fila en dos renglones (lo de abajo, y con ello la salida, no baja) */
+    .elegir .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+    .elegir .btn.hecho::after { visibility: visible; }
 
     /* Reparto: cada argumento viaja por una flecha hasta su caja de parámetro */
     .reparto__args, .reparto__params { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: center; align-items: start; }
@@ -31,6 +34,8 @@
     .reparto__params .caja__cuerpo { width: 9rem; height: 5rem; }
     .reparto__params .caja__valor { max-width: 8.5rem; padding: 0 var(--esp-2); font-size: var(--texto-md); }
     .defecto { font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); }
+    /* Donde hay un valor por defecto, el rótulo guarda su lugar: al aparecer no empuja la salida */
+    #p4-reparto .defecto[hidden] { display: block !important; visibility: hidden; }
     .reparto .rotulo:last-child { margin-top: var(--esp-2); }
 
     /* Reto */
@@ -55,6 +60,8 @@
     }
 
     @media (max-width: 480px) {
+      /* Con el lugar del ✓, «Por posición» y «Por nombre» siguen cabiendo en una fila */
+      .elegir .btn { padding-inline: 0.6rem; }
       .arg { font-size: var(--texto-xs); }
       .reparto__params .caja__cuerpo { width: 8rem; height: 4.5rem; }
       .reparto__params .caja__valor { max-width: 7.5rem; font-size: var(--texto-xs); }
@@ -362,6 +369,14 @@
     return t.concat(c.finales);
   }
 
+  /* Una traza repetible genera sus pasos al ejecutar, y recién entonces reserva el alto de
+     sus explicaciones. Aquí se reserva antes, con los textos de la llamada elegida: así la
+     primera línea no cambia ese alto ni empuja la salida (en el móvil va debajo) */
+  function reservarExplicacion(el, generar) {
+    Codigo.reservarAlto(el, [el.textContent].concat(generar().map(function (p) { return p.texto || ""; })),
+      function (copia, texto) { copia.innerHTML = texto; });
+  }
+
   function pintarPasoReparto(r, paso) {
     var e = paso.estado || {};
     if (e.vaciar) vaciarCajas(r);
@@ -611,13 +626,16 @@
       p2Hechos = {};
       vaciarCajas(r2);
       Pasos.limpiarFeedback($("p2-fb"));
+      reservarExplicacion($("p2-explicacion"), trazaOrden);
     },
     alTerminar: terminarP2
   });
+  reservarExplicacion($("p2-explicacion"), trazaOrden);
   $("p2-intercambiar").addEventListener("click", function () {
     p2Cambiado = !p2Cambiado;
     trazaP2.cancelar();
     pintarLlamadaP2();
+    reservarExplicacion($("p2-explicacion"), trazaOrden);
   });
 
   pintarLlamadaP3();
@@ -636,15 +654,18 @@
       document.querySelectorAll("[data-p3]").forEach(function (b) { b.classList.remove("hecho"); });
       vaciarCajas(r3);
       Pasos.limpiarFeedback($("p3-fb"));
+      reservarExplicacion($("p3-explicacion"), trazaNombre);
     },
     alPaso: function (paso) { pintarPasoReparto(r3, paso); },
     alTerminar: terminarP3
   });
+  reservarExplicacion($("p3-explicacion"), trazaNombre);
   document.querySelectorAll("[data-p3]").forEach(function (b) {
     b.addEventListener("click", function () {
       p3Forma = b.getAttribute("data-p3");
       trazaP3.cancelar();
       pintarLlamadaP3();
+      reservarExplicacion($("p3-explicacion"), trazaNombre);
     });
   });
 
@@ -664,15 +685,18 @@
       document.querySelectorAll("[data-p4]").forEach(function (b) { b.classList.remove("hecho"); });
       vaciarCajas(r4);
       Pasos.limpiarFeedback($("p4-fb"));
+      reservarExplicacion($("p4-explicacion"), trazaDefecto);
     },
     alPaso: function (paso) { pintarPasoReparto(r4, paso); },
     alTerminar: terminarP4
   });
+  reservarExplicacion($("p4-explicacion"), trazaDefecto);
   document.querySelectorAll("[data-p4]").forEach(function (b) {
     b.addEventListener("click", function () {
       p4Actual = Number(b.getAttribute("data-p4"));
       trazaP4.cancelar();
       pintarLlamadaP4();
+      reservarExplicacion($("p4-explicacion"), trazaDefecto);
     });
   });
 
