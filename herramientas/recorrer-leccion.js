@@ -7,6 +7,7 @@
      node herramientas/recorrer-leccion.js variables tocar        además toca los botones de cada paso
      node herramientas/recorrer-leccion.js variables tocar 3      solo el paso 3 (desde 0)
      node herramientas/recorrer-leccion.js portada                la portada (index.html)
+     node herramientas/recorrer-leccion.js variables 1366x657     solo en ese tamaño
 
    Abre cada paso directamente (guarda en localStorage que el alumno llegó hasta ahí) a
    1366×657 y 390×844 y revisa:
@@ -37,7 +38,8 @@ const archivo = leccion === "portada" ? path.join(RAIZ, "index.html") : path.joi
 const nombre = leccion.replace(/\//g, "-");
 const CAPTURAS = path.join(RAIZ, "capturas", "lecciones", nombre);
 fs.mkdirSync(CAPTURAS, { recursive: true });
-const TAMANOS = [[1366, 657], [390, 844]];
+const tamArg = args.filter((a) => /^\d+x\d+$/.test(a)).map((a) => a.split("x").map(Number));
+const TAMANOS = tamArg.length ? tamArg : [[1366, 657], [390, 844]];
 
 async function revisar(p, w, h) {
   return p.evaluate(([w, h]) => {

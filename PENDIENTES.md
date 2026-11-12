@@ -13,6 +13,12 @@ Por orden de prioridad:
    - **Sí se mueve al correr, poco**: `paso-repetidos` de Quicksort (25 px: la lista partida crece un piso más de lo guardado, y una línea del código se parte en dos al llevar una ficha), `paso-millon` y `paso-mitades` de ¿Cuál es más rápida? (14–28 px), `paso-total` de Sumar (17 px), `paso-codigo` de Mezclar (8 px) y los `paso-jugar` de los proyectos de Búsquedas y Otras estructuras (28 px).
    - **A 1920×950**, `paso-funcion` de Imprimir combinaciones termina con las notas bajo el código (hay que bajar unos 270 px) y `paso-baja` del Candado se pasa 38 px. Se ven ordenados; compactar las tarjetas que esperan a un renglón los haría caber.
    - Al tocar cualquier lección, pasar `node herramientas/seguir-consola.js <lección> detalle` (y `capturar` para ver el lugar guardado).
+00a. **Lo que aún no cabe a 1366×657** (registro del 2026-11-12, «Pantalla baja»). Con el modo compacto, de 296 pasos que no cabían quedan 133 (84 ya al entrar). Son de tres clases:
+   - **Proyectos y el Candado (45 pasos)**: programas de 26 a 48 líneas; no van a caber. Lo que importa ahí es que el código y lo que se ve se sigan a la vez (columna derecha fija).
+   - **Recursión y búsqueda recursiva con pila (34 pasos)**: la consola y la pila quedan fijas al bajar; el código cabe, pero la explicación y los botones quedan 50–250 px bajo el pie (A practicar, Dígitos y bases, Imprimir combinaciones, Recursión 1 y 2). Idea: botones encima del código, o pegados al pie, en esos pasos.
+   - **Sueltos (54 pasos)**, casi todos porque crecen al tocar (un mensaje de «Comprobar», otra opción): los más grandes, `paso-corre` de Errores (179 px), `paso-cinta` de Salir antes (163), `paso-preguntar` de Buscar en un texto (134), `paso-usabas` de Funciones de Python (126), `paso-leer` de Tuplas (125), `paso-poner` de Diccionarios (119), `paso-textos` de Listas (112) y tres de Volver a pedir (99–109). Unos 25 se pasan menos de 40 px.
+   - Para medirlo: `node herramientas/recorrer-leccion.js <lección> tocar 1366x657` (el tamaño es una opción nueva).
+   - **Mirar en una laptop de verdad** si la letra de 15 px se lee bien; si no, subir `font-size` en el bloque «Pantalla baja» de `base.css` (93.75 %).
 00. **Probar con alumnos «quién llama a quién» en Recursión 1/7** (ver el registro del 2026-11-10): si el paso nuevo «Una llamada dentro de otra» (las cajas de colores, una por llamada) responde a «¿cómo pasó de abrir(0) a abrir(1)?», y si los dos tiempos de la vuelta en la traza («↩ vuelve a abrir(1)» y luego «▶ sigue») se siguen bien o alargan demasiado (la traza pasó de 24 a 28 toques). Si funciona, llevar `nombra` y `vuelve` a `cuenta_regresiva` (paso 2, donde los títulos son más largos) y a Recursión que devuelve valores. Quedaron sin hacer, de las alternativas que se propusieron: pintar cada tarjeta de la pila del color de su caja, apagar las líneas del `else` cuando termina el caso base y preguntar «¿quién sigue?» en el momento en que termina `abrir(0)`.
 0. **Lo que quedó de los arreglos compartidos del 2026-11-08** (ver el registro de ese día, «Arreglos en las piezas compartidas»):
    - **Pasos con traza que aún no caben enteros a 1366×657**: con la pila compacta y `data-visual-fija` se ven juntos el código, los botones y la pila tras bajar unos 200 px una vez, pero el paso entero (enunciado, código de 8 a 14 líneas, explicación y botones) suma unos 600 px. Siguen sin caber del todo: el Candado, «el True baja» (674 px el código y los botones), y la columna fija de Recursión 1 (ida y vuelta), la búsqueda recursiva, Candado 2 y Mergesort 3 (600–700 px: la tarjeta del programa queda bajo el pie hasta bajar del todo). Los pasos de deshacer de Recursión 1 (900 px) no se midieron recorriéndolos. A 1920×1080, en Candado 2 el reparto cambia una vez a mitad de la traza.
@@ -122,6 +128,19 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Para los casos de Problemas resueltos, la prueba ya está en el repositorio: `node herramientas/probar-caso.js <caso>` (y `catalogo`). Para las lecciones, unos scripts sueltos (no guardados) recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-12 · Pantalla baja: un modo compacto para las laptops
+
+Parte 2 de los pendientes: los pasos que no caben a 1366×657. Se midió todo antes de tocar nada (`recorrer-leccion.js … tocar 1366x657` en las 80 lecciones; el tamaño es una opción nueva de la herramienta): **de 655 pasos, 296 no cabían** en los 540 px que quedan entre la cabecera y el pie (185 ya al entrar; la mitad se pasaba 80 px o menos). Eran demasiados para arreglarlos uno por uno y casi todos por lo mismo: márgenes, interlineado y botones pensados para una pantalla alta.
+
+**El arreglo, en un solo lugar** (`base.css`, bloque «Pantalla baja», `@media (min-width: 1024px) and (max-height: 720px)`; la misma consulta que ya usaban ocho lecciones):
+- la letra base pasa de 16 a 15 px **solo en las lecciones** (`html:has(.leccion-pasos)`): todo lo que se mide en rem se achica un 6 %; la portada y los casos de Problemas resueltos no cambian;
+- los espacios (`--esp-4` a `--esp-7`) se ciñen un 15–20 %;
+- el código va con interlineado 1.55 en vez de 1.7 (con `:where()`, para que mande la regla propia de una lección, p. ej. `.codigo--largo`);
+- menos margen en el paso, en el panel de lo que se ve y en el pie.
+`pasos.js` calculaba con 60 px fijos (3.75rem) dónde queda fija la columna derecha: ahora lo calcula con la letra base de verdad.
+
+**Resultado, medido en las 80 lecciones a 1366×657:** de 296 pasos que no cabían quedan **133** (de 185 a **84** al entrar). Ningún «se sale» ni error de JavaScript nuevo; la consola sigue sin moverse (`seguir-consola.js 1366x657`: solo `paso-aprobados` de Sumar, que ya estaba). En pantallas de más de 720 px de alto y en el móvil no cambia nada. Lo que queda está en «Para la siguiente sesión», punto 00a.
 
 ### 2026-11-12 · Lo de la consola, mirado con ojos
 

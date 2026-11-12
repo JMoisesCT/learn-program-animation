@@ -80,7 +80,9 @@
      pila, si el código va primero en el HTML. Para eso, lo que acompaña a la consola en
      la salida se junta en un .lab__notas. */
   var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
-  var BAJO_CABECERA = 60;   // 3.75rem: donde queda fija la columna derecha (base.css)
+  // 3.75rem: donde queda fija la columna derecha (base.css). En una pantalla baja la letra
+  // base es más chica y el rem mide menos
+  var BAJO_CABECERA = 3.75 * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
 
   // Lo más alta que puede ser la columna derecha para quedar fija bajo la cabecera sin
   // pasar del final del paso, ni con la página bajada del todo (si pasara, la salida
