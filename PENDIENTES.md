@@ -129,6 +129,17 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-15 · La firma del autor
+
+El autor pidió que el sitio diga quién lo hizo, a la vista pero sin molestar. Quedó en tres lugares, todos en español:
+- **Portada**: «Un curso de Moisés C.» bajo el título, en letra pequeña y tenue (`<p class="firma">` en `index.html`).
+- **Resumen final de cada lección**: «Lección preparada por Moisés C.» bajo los botones «Repetir» y «Siguiente». La pone `pasos.js` al iniciar (en el último paso, el que tiene `.celebracion`), así que no hay que escribirla en cada lección ni en las nuevas. Estilo `.firma` en `base.css`.
+- **`<meta name="author" content="Moisés C.">`** en las 98 páginas (lecciones, casos, catálogo y portada). Una página nueva debe llevarla.
+
+No se puso nada en la cabecera ni en el pie de las lecciones (están ceñidos para que el paso quepa) ni en los casos de Problemas resueltos (si se quiere, la idea era «Cuaderno de Moisés C.» en la portada de cada caso, en letra de lápiz).
+
+Medido en las 80 lecciones a 1366×657, 1280×800 y 390×844: la firma se ve sobre el pie en 68 resúmenes; en los 12 que ya no cabían antes (los proyectos, con el programa completo en el resumen, y Funciones que usan funciones a 1366×657) queda al final, bajando. Sin errores de JavaScript ni desborde.
+
 ### 2026-11-12 · Pantalla baja: un modo compacto para las laptops
 
 Parte 2 de los pendientes: los pasos que no caben a 1366×657. Se midió todo antes de tocar nada (`recorrer-leccion.js … tocar 1366x657` en las 80 lecciones; el tamaño es una opción nueva de la herramienta): **de 655 pasos, 296 no cabían** en los 540 px que quedan entre la cabecera y el pie (185 ya al entrar; la mitad se pasaba 80 px o menos). Eran demasiados para arreglarlos uno por uno y casi todos por lo mismo: márgenes, interlineado y botones pensados para una pantalla alta.

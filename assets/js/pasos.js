@@ -261,6 +261,15 @@
     var total = pasos.length;
     pasos.forEach(envolverIntro);
     pasos.forEach(prepararArriba);
+    // La firma del autor, al final del resumen (una sola vez por lección, cuando el alumno
+    // ya terminó): se pone aquí para no repetirla en cada página
+    var resumen = pasos[total - 1];
+    if (resumen && resumen.querySelector(":scope > .celebracion") && !resumen.querySelector(".firma")) {
+      var firma = document.createElement("p");
+      firma.className = "firma";
+      firma.textContent = "Lección preparada por Moisés C.";
+      resumen.appendChild(firma);
+    }
     // «Siguiente: Quicksort →»: en el móvil la flecha quedaba sola en otro renglón. Un
     // espacio que no se parte la deja pegada a la última palabra.
     raiz.querySelectorAll(".btn").forEach(function (b) {
