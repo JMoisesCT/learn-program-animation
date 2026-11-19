@@ -252,7 +252,12 @@
 
   function iniciar(opciones) {
     opciones = opciones || {};
-    var alEntrar = opciones.alEntrar || {};
+    // Las lecciones en inglés (en/) dicen lang="en": los textos que pone este script cambian
+  var EN = /^en/i.test(document.documentElement.lang || "");
+  var T = EN
+    ? { firma: "Lesson by Moisés C.", reto: "Challenge", comprobar: "Check", terminar: "Finish", continuar: "Continue", paso: "Step ", de: " of " }
+    : { firma: "Lección preparada por Moisés C.", reto: "Reto", comprobar: "Comprobar", terminar: "Terminar", continuar: "Continuar", paso: "Paso ", de: " de " };
+  var alEntrar = opciones.alEntrar || {};
     var comprobar = opciones.comprobar || {};
 
     var raiz = document.querySelector(".leccion");
@@ -267,7 +272,7 @@
     if (resumen && resumen.querySelector(":scope > .celebracion") && !resumen.querySelector(".firma")) {
       var firma = document.createElement("p");
       firma.className = "firma";
-      firma.textContent = "Lección preparada por Moisés C.";
+      firma.textContent = T.firma;
       resumen.appendChild(firma);
     }
     // «Siguiente: Quicksort →»: en el móvil la flecha quedaba sola en otro renglón. Un
@@ -313,7 +318,7 @@
 
     function esReto(i) {
       var etiqueta = pasos[i].querySelector(".paso__etiqueta");
-      return !!etiqueta && etiqueta.textContent.trim() === "Reto";
+      return !!etiqueta && etiqueta.textContent.trim() === T.reto;
     }
 
     var leccion = {
@@ -350,10 +355,10 @@
     function actualizarBotones() {
       btnAtras.disabled = actual === 0;
       if (modoComprobar()) {
-        btnPrincipal.textContent = "Comprobar";
+        btnPrincipal.textContent = T.comprobar;
         btnPrincipal.disabled = !listo;
       } else {
-        btnPrincipal.textContent = actual === total - 1 ? "Terminar" : "Continuar";
+        btnPrincipal.textContent = actual === total - 1 ? T.terminar : T.continuar;
         btnPrincipal.disabled = necesitaInteraccion(actual);
       }
     }
@@ -362,7 +367,7 @@
       var pct = Math.round(((actual + 1) / total) * 100);
       relleno.style.width = pct + "%";
       barra.setAttribute("aria-valuenow", String(pct));
-      barra.setAttribute("aria-valuetext", "Paso " + (actual + 1) + " de " + total);
+      barra.setAttribute("aria-valuetext", T.paso + (actual + 1) + T.de + total);
       if (contador) contador.textContent = (actual + 1) + " / " + total;
     }
 
