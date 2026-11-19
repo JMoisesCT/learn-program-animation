@@ -94,10 +94,10 @@ function elegirBoton(usados) {
   const texto = (b) => (b.textContent || "").trim();
   const marca = (b, tipo) => { b.setAttribute("data-toca", "1"); return { tipo, texto: texto(b).slice(0, 40) }; };
   paso.querySelectorAll("[data-toca]").forEach((b) => b.removeAttribute("data-toca"));
-  const no = /↺|reiniciar|repetir|otra vez|de nuevo|ver la respuesta|pausa/i;
-  let b = visibles.find((x) => /Ejecutar línea/.test(texto(x)));
+  const no = /↺|reiniciar|repetir|otra vez|de nuevo|ver la respuesta|pausa|reset|repeat|again|show the answer|pause/i;
+  let b = visibles.find((x) => /Ejecutar línea|Run line/.test(texto(x)));
   if (b) return marca(b, "linea");
-  b = visibles.find((x) => /^Siguiente|▸/.test(texto(x)) && !no.test(texto(x)));
+  b = visibles.find((x) => /^Siguiente|^Next|▸/.test(texto(x)) && !no.test(texto(x)));
   if (b) return marca(b, "linea");
   b = visibles.find((x) => /▶/.test(texto(x)) && !no.test(texto(x)) && (usados[texto(x)] || 0) < 2);
   if (b) return marca(b, "todo");
@@ -105,7 +105,7 @@ function elegirBoton(usados) {
   const campo = Array.from(paso.querySelectorAll("input[type=text], input:not([type])")).find((c) => c.offsetParent && !c.disabled);
   if (campo && (usados["«campo»"] || 0) < 8) { campo.setAttribute("data-toca", "1"); return { tipo: "campo", texto: "«campo»" }; }
   // Opciones (predecir antes de ejecutar) y otros botones: cada uno, una vez
-  b = visibles.find((x) => !no.test(texto(x)) && !/Enviar/.test(texto(x)) && !(usados[texto(x)] || 0));
+  b = visibles.find((x) => !no.test(texto(x)) && !/Enviar|Send/.test(texto(x)) && !(usados[texto(x)] || 0));
   if (b) return marca(b, "otro");
   return null;
 }
@@ -134,7 +134,7 @@ async function recorrerPaso(p, w, h) {
         c.dispatchEvent(new Event("input", { bubbles: true }));
         c.dispatchEvent(new Event("change", { bubbles: true }));
         const paso = document.querySelector(".paso:not([hidden])");
-        const enviar = Array.from(paso.querySelectorAll("button")).find((x) => /Enviar/.test(x.textContent) && x.offsetParent && !x.disabled);
+        const enviar = Array.from(paso.querySelectorAll("button")).find((x) => /Enviar|Send/.test(x.textContent) && x.offsetParent && !x.disabled);
         if (enviar) enviar.click();
       }, dato);
       b.texto = "escribe «" + dato + "»";
@@ -192,14 +192,16 @@ async function recorrerPaso(p, w, h) {
 }
 
 async function revisarLeccion(b, leccion) {
-  const archivo = path.join(RAIZ, "lecciones", leccion, "index.html");
+  // «en/…»: el curso en inglés vive en en/lessons/
+  const archivo = /^en\//.test(leccion) ? path.join(RAIZ, "en", "lessons", leccion.slice(3), "index.html")
+    : path.join(RAIZ, "lecciones", leccion, "index.html");
   const html = fs.readFileSync(archivo, "utf8");
   const id = (html.match(/data-leccion="([^"]+)"/) || [])[1];
   const url = "file://" + archivo;
   const salida = [];
   const resumen = [];
   for (const [w, h] of TAMANOS) {
-    const ctx = await b.newContext({ viewport: { width: w, height: h } });
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, locale: /^en\//.test(leccion) ? "en-US" : "es-PE" });
     const p = await ctx.newPage();
     const errores = [];
     p.on("pageerror", (e) => errores.push(e.message));

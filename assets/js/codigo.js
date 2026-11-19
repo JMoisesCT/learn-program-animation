@@ -334,7 +334,7 @@
     if (!salida.length) {
       var vacia = document.createElement("span");
       vacia.className = "consola__vacia";
-      vacia.textContent = "(sin salida)";
+      vacia.textContent = /^en/i.test(document.documentElement.lang || "") ? "(no output)" : "(sin salida)";
       el.appendChild(vacia);
       return;
     }

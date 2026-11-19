@@ -8,6 +8,8 @@
      node herramientas/recorrer-leccion.js variables tocar 3      solo el paso 3 (desde 0)
      node herramientas/recorrer-leccion.js portada                la portada (index.html)
      node herramientas/recorrer-leccion.js variables 1366x657     solo en ese tamaño
+     node herramientas/recorrer-leccion.js en/variables/formulas  el curso en inglés (en/lessons/…)
+     node herramientas/recorrer-leccion.js en/portada             la portada en inglés (en/index.html)
 
    Abre cada paso directamente (guarda en localStorage que el alumno llegó hasta ahí) a
    1366×657 y 390×844 y revisa:
@@ -34,7 +36,11 @@ if (!leccion) {
   console.log("Uso: node herramientas/recorrer-leccion.js <tema[/sublección] | portada> [tocar] [reducir] [paso]");
   process.exit(1);
 }
-const archivo = leccion === "portada" ? path.join(RAIZ, "index.html") : path.join(RAIZ, "lecciones", leccion, "index.html");
+// «en/…»: el curso en inglés vive en en/lessons/
+const archivo = leccion === "portada" ? path.join(RAIZ, "index.html")
+  : leccion === "en/portada" ? path.join(RAIZ, "en", "index.html")
+  : /^en\//.test(leccion) ? path.join(RAIZ, "en", "lessons", leccion.slice(3), "index.html")
+  : path.join(RAIZ, "lecciones", leccion, "index.html");
 const nombre = leccion.replace(/\//g, "-");
 const CAPTURAS = path.join(RAIZ, "capturas", "lecciones", nombre);
 fs.mkdirSync(CAPTURAS, { recursive: true });
@@ -85,13 +91,14 @@ async function revisar(p, w, h) {
   const html = fs.readFileSync(archivo, "utf8");
   const id = (html.match(/data-leccion="([^"]+)"/) || [])[1];
   for (const [w, h] of TAMANOS) {
-    const ctx = await b.newContext({ viewport: { width: w, height: h }, reducedMotion: reducir ? "reduce" : "no-preference" });
+    // El idioma del navegador: la portada en español lleva al curso en inglés si no es español (idioma.js)
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, locale: /^en\//.test(leccion) ? "en-US" : "es-PE", reducedMotion: reducir ? "reduce" : "no-preference" });
     const p = await ctx.newPage();
     const errores = [];
     p.on("pageerror", (e) => errores.push(e.message));
     p.on("console", (m) => { if (m.type() === "error") errores.push(m.text()); });
     const url = "file://" + archivo;
-    if (leccion === "portada") {
+    if (leccion === "portada" || leccion === "en/portada") {
       await p.goto(url);
       await p.waitForTimeout(800);
       await p.screenshot({ path: path.join(CAPTURAS, `${w}-portada.png`), fullPage: true });

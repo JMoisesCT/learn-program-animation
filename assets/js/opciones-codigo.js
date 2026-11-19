@@ -75,7 +75,9 @@
     if (marcar && !(antes && antes.classList.contains("op-leyenda"))) {
       var leyenda = document.createElement("p");
       leyenda.className = "op-leyenda";
-      leyenda.innerHTML = "En gris, lo que es igual en todas las opciones. Fíjate en las líneas con <b>raya</b>: ahí cambian.";
+      leyenda.innerHTML = /^en/i.test(document.documentElement.lang || "")
+        ? "In gray, what is the same in every option. Look at the lines with a <b>bar</b>: that is where they differ."
+        : "En gris, lo que es igual en todas las opciones. Fíjate en las líneas con <b>raya</b>: ahí cambian.";
       grupo.parentNode.insertBefore(leyenda, grupo);
     }
   }

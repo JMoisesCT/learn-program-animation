@@ -45,6 +45,9 @@
 (function () {
   "use strict";
 
+  // Las lecciones en inglés (en/) dicen lang="en"
+  var EN = /^en/i.test(document.documentElement.lang || "");
+
   function crear(o) {
     var pasos = [];
     var i = 0;
@@ -55,11 +58,17 @@
     var nombreReproducir = textoReproducir.replace(/^[^\p{L}]+/u, "");
     // El texto inicial, de más largo a más corto: se muestra el más largo que quepa en el alto
     // de los pasos, así no reserva un renglón de más en todos los pasos de la traza
-    var inicios = o.reproducir
-      ? ["Toca «Ejecutar línea» para ir paso a paso, o «" + nombreReproducir + "» para verlo seguido.",
-        "Toca «Ejecutar línea» o «" + nombreReproducir + "».",
-        "Toca «Ejecutar línea»."]
-      : ["Toca «Ejecutar línea» para empezar.", "Toca «Ejecutar línea»."];
+    var inicios = EN
+      ? (o.reproducir
+        ? ["Tap “Run line” to go step by step, or “" + nombreReproducir + "” to watch it all.",
+          "Tap “Run line” or “" + nombreReproducir + "”.",
+          "Tap “Run line”."]
+        : ["Tap “Run line” to start.", "Tap “Run line”."])
+      : (o.reproducir
+        ? ["Toca «Ejecutar línea» para ir paso a paso, o «" + nombreReproducir + "» para verlo seguido.",
+          "Toca «Ejecutar línea» o «" + nombreReproducir + "».",
+          "Toca «Ejecutar línea»."]
+        : ["Toca «Ejecutar línea» para empezar.", "Toca «Ejecutar línea»."]);
     var inicio = inicios[0];
     var enInicio = true;    // la explicación muestra el texto inicial
 
@@ -165,7 +174,7 @@
 
     function alternar() {
       if (timer) { detener(); return; }
-      o.reproducir.textContent = "⏸ Pausa";
+      o.reproducir.textContent = EN ? "⏸ Pause" : "⏸ Pausa";
       o.reproducir.setAttribute("aria-pressed", "true");
       avanzar();
       if (!terminado()) timer = setInterval(avanzar, intervalo);
