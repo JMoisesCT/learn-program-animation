@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text and numbers · Learn to program</title>
+  <meta name="description" content="Interactive lesson: the int and str types in Python, joining text, converting with int() and str(), and input().">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    /* Color for text (str); numbers (int) use the usual blue */
+    :root { --tipo-str: #a8480a; --tipo-str-suave: #fff1e3; }
+
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .control-slider { margin-top: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .btn--invisible { visibility: hidden; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .consola__linea--error { color: var(--color-error); }
+    .opciones legend { padding: 0; margin-bottom: var(--esp-1); font-weight: 600; }
+
+    /* ---------- Boxes with a type ---------- */
+    .caja__cuerpo, .caja__valor, .caja__nombre { transition: border-color var(--dur), background-color var(--dur), color var(--dur); }
+    .caja__nombre { font-size: var(--texto-lg); }
+    .caja__tipo { font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; color: var(--color-texto-suave); min-height: 1.3em; }
+    /* Empty, it is as tall as with its type written: the box does not grow (or push the output) when filled */
+    .caja__tipo:empty::before { content: "\200b"; }
+    .caja--str .caja__cuerpo { border-color: var(--tipo-str); background: linear-gradient(to bottom, transparent 30%, var(--tipo-str-suave) 30%); }
+    .caja--str .caja__cuerpo::before, .caja--str .caja__cuerpo::after { background: var(--tipo-str); }
+    .caja--str .caja__valor { border-color: var(--tipo-str); }
+    .caja--str .caja__nombre { color: var(--tipo-str); background: var(--tipo-str-suave); }
+    .caja--str .caja__tipo { color: var(--tipo-str); }
+    .caja--int .caja__tipo { color: var(--color-azul); }
+    .caja--neutra .caja__cuerpo { border-color: #8a929c; background: linear-gradient(to bottom, transparent 30%, var(--color-superficie-2) 30%); }
+    .caja--neutra .caja__cuerpo::before, .caja--neutra .caja__cuerpo::after { background: #8a929c; }
+    .caja--neutra .caja__valor { border-color: #8a929c; }
+    .caja--neutra .caja__nombre { color: var(--color-texto); background: var(--color-superficie-2); }
+
+    /* Step 1: boxes you tap */
+    .caja-boton { font: inherit; color: inherit; background: none; border: 0; padding: var(--esp-2); border-radius: var(--radio); cursor: pointer; }
+    .caja-boton:hover .caja__cuerpo { transform: translateY(-2px); }
+    .caja-boton .caja__cuerpo { transition: transform var(--dur-rapida), border-color var(--dur), background-color var(--dur); }
+
+    /* ---------- Chips: a single value ---------- */
+    .ficha {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--fuente-codigo);
+      font-size: var(--texto-lg);
+      font-weight: 700;
+      line-height: 1.4;
+      padding: 0.1em 0.55em;
+      border: 2px solid;
+      border-radius: var(--radio-sm);
+      white-space: pre;
+    }
+    .ficha--int { color: var(--color-azul); background: var(--color-azul-suave); border-color: var(--color-azul); }
+    .ficha--str { color: var(--tipo-str); background: var(--tipo-str-suave); border-color: var(--tipo-str); }
+    .ficha__esp { opacity: 0.5; }
+
+    /* Joining chips: a + b → they come together */
+    .union { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); min-height: 3.5rem; transition: gap var(--dur) ease; }
+    .union__op { display: inline-block; max-width: 2rem; overflow: hidden; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; color: var(--color-texto-suave); transition: opacity var(--dur), max-width var(--dur); }
+    .union--juntar { gap: 0; }
+    .union--juntar .union__op { opacity: 0; max-width: 0; }
+    .union__op--mal { color: var(--color-error); }
+    .union--choca .ficha { animation: sacudir 420ms ease; }
+    .union__resultado { animation: valor-pulso 300ms ease-out, aparecer var(--dur) ease; }
+    /* Desktop: in "Text + number = error", the box and the clashing join side by side,
+       so the output and the message fit below (the box does not move when the join appears) */
+    @media (min-width: 1024px) {
+      #paso-error .lab__visual { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: var(--esp-5); }
+      #paso-error .lab .cajas { padding-block: 0; }
+    }
+    .flecha-abajo { text-align: center; color: var(--color-texto-suave); font-size: var(--texto-lg); margin: var(--esp-1) 0; }
+
+    /* Step 2: piles of dots */
+    .fila-suma { display: grid; gap: var(--esp-2); justify-items: center; padding: var(--esp-3) 0; }
+    .fila-suma + .fila-suma { border-top: 1px solid var(--color-borde); }
+    .fila-suma__codigo { font-family: var(--fuente-codigo); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .monton { display: inline-grid; justify-items: center; gap: var(--esp-1); }
+    .monton__bolitas { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; width: 3.6rem; padding: 6px; border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); }
+    .monton--grande .monton__bolitas { width: 6rem; }
+    .bolita { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--color-azul); }
+    .monton__num { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* Step 4: sorting */
+    .bandeja { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-3); min-height: 4rem; padding: var(--esp-3); border-radius: var(--radio); background: var(--color-superficie-2); }
+    .bandeja__vacia { color: var(--color-texto-suave); font-size: var(--texto-sm); }
+    .cubos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); margin-top: var(--esp-4); }
+    .cubo { display: flex; flex-direction: column; gap: var(--esp-2); min-height: 9rem; padding: var(--esp-3); border: 3px dashed; border-radius: var(--radio); cursor: pointer; transition: box-shadow var(--dur-rapida); }
+    .cubo--int { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .cubo--str { border-color: var(--tipo-str); background: var(--tipo-str-suave); }
+    .cubo--sobre { box-shadow: 0 0 0 5px rgba(11, 122, 62, 0.25); }
+    .cubo__destino { font: inherit; font-weight: 700; background: none; border: 0; padding: var(--esp-1); cursor: pointer; text-align: center; }
+    .cubo--int .cubo__destino { color: var(--color-azul); }
+    .cubo--str .cubo__destino { color: var(--tipo-str); }
+    .cubo__destino small { display: block; font-weight: 400; font-size: var(--texto-xs); }
+    .cubo__contenido { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); }
+    .ficha-boton { cursor: grab; font-size: var(--texto-md); transition: transform var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .ficha--neutra { color: var(--color-texto); background: var(--color-superficie); border-color: var(--color-borde); box-shadow: 0 3px 0 var(--color-borde); }
+    .ficha-boton[aria-pressed="true"] { border-color: var(--color-acento); box-shadow: 0 0 0 4px var(--color-acento-suave); transform: translateY(-3px); }
+    .ficha--mal { color: var(--color-pista); background: var(--color-pista-suave); border-color: var(--color-pista); animation: sacudir 360ms ease; }
+
+    /* Step 6: converting machines */
+    .maquina { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2); padding: var(--esp-2) 0; }
+    .maquina__flecha { color: var(--color-texto-suave); font-size: var(--texto-lg); }
+    .maquina__cuerpo { display: grid; justify-items: center; padding: var(--esp-1) var(--esp-3); border-radius: var(--radio); background: var(--color-codigo-fondo); color: var(--color-codigo-texto); font-family: var(--fuente-codigo); font-weight: 700; }
+    .maquina__engranaje { font-size: 1.4rem; line-height: 1.2; }
+    .maquina--trabajando .maquina__engranaje { animation: girar 600ms linear; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    /* Step 7: a console that waits for an answer */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 5.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:disabled { border-color: transparent; background: none; color: var(--tipo-str); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+
+    /* Steps 8 and 9: code options */
+    .opciones--codigo { grid-template-columns: 1fr; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre-wrap; padding: var(--esp-3) var(--esp-4); }
+    .opciones--cortas { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+    .opciones--cortas .opcion span { font-size: var(--texto-md); white-space: nowrap; }
+    .cambio { font-weight: inherit; color: var(--color-azul); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+    #p8-resultado .expresion { margin: var(--esp-3) 0 0; }
+
+    /* Step 9: challenge tests */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; gap: var(--esp-1); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__entrada { color: var(--color-texto-suave); font-family: var(--fuente); }
+    .prueba__res { font-weight: 700; overflow-wrap: anywhere; }
+    .prueba__res--ok { color: var(--color-ok); }
+    .prueba__res--mal { color: var(--color-pista); }
+    .prueba__res--error { color: var(--color-error); }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="variables-tipos">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: two boxes that look alike -->
+    <section class="paso" id="paso-parecidos" data-requiere aria-labelledby="t-parecidos">
+      <span class="paso__etiqueta">Variables 4/5 · Text and numbers</span>
+      <h1 class="paso__titulo" id="t-parecidos">Two almost identical boxes</h1>
+      <p>Both hold a 5… or do they? Tap each box to see what is inside.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">a</span> = <span class="tk-numero">5</span></span><span class="linea"><span class="tk-variable">b</span> = <span class="tk-texto">"5"</span></span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <button type="button" class="caja caja-boton caja--neutra" data-var="a" aria-label="See what a holds">
+              <span class="caja__cuerpo"><span class="caja__valor">5</span></span>
+              <code class="caja__nombre">a</code>
+              <span class="caja__tipo">?</span>
+            </button>
+            <button type="button" class="caja caja-boton caja--neutra" data-var="b" aria-label="See what b holds">
+              <span class="caja__cuerpo"><span class="caja__valor">"5"</span></span>
+              <code class="caja__nombre">b</code>
+              <span class="caja__tipo">?</span>
+            </button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="fb-parecidos" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The surprise: 5 + 5 and "5" + "5" -->
+    <section class="paso" id="paso-sorpresa" data-comprobar aria-labelledby="t-sorpresa">
+      <h2 class="paso__titulo" id="t-sorpresa">What do you get?</h2>
+      <p>Guess what each line shows before you run it.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-numero">5</span> + <span class="tk-numero">5</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"5"</span> + <span class="tk-texto">"5"</span>)</span></code></pre>
+          <fieldset class="opciones" id="p2-l1">
+            <legend>Line 1 shows:</legend>
+            <label class="opcion"><input type="radio" name="p2-l1" value="10"><span>10</span></label>
+            <label class="opcion"><input type="radio" name="p2-l1" value="55"><span>55</span></label>
+            <label class="opcion"><input type="radio" name="p2-l1" value="error"><span>Error</span></label>
+          </fieldset>
+          <fieldset class="opciones" id="p2-l2">
+            <legend>Line 2 shows:</legend>
+            <label class="opcion"><input type="radio" name="p2-l2" value="10"><span>10</span></label>
+            <label class="opcion"><input type="radio" name="p2-l2" value="55"><span>55</span></label>
+            <label class="opcion"><input type="radio" name="p2-l2" value="error"><span>Error</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="fila-suma">
+            <span class="fila-suma__codigo">5 + 5</span>
+            <div class="union" id="p2-num"></div>
+          </div>
+          <div class="fila-suma">
+            <span class="fila-suma__codigo">"5" + "5"</span>
+            <div class="union" id="p2-txt"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="fb-sorpresa" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Joining text -->
+    <section class="paso" id="paso-unir" data-requiere aria-labelledby="t-unir">
+      <h2 class="paso__titulo" id="t-unir">Gluing text with <code>+</code></h2>
+      <p>With text, <code>+</code> glues one piece right after the other. Type your name, then remove the space to see what happens.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">name</span> = <span class="tk-texto">"<span id="p3-codigo-nombre">Ana</span>"</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Hello,<span id="p3-codigo-espacio"> </span>"</span> + <span class="tk-variable">name</span>)</span></code></pre>
+          <div class="campo" style="margin-top: var(--esp-4)">
+            <label for="p3-nombre">Your name</label>
+            <input type="text" id="p3-nombre" value="Ana" maxlength="12" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-espacio" aria-pressed="false">Remove the space</button>
+          </div>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="union" id="p3-union"></div>
+          <div class="flecha-abajo">↓</div>
+          <div class="union" id="p3-resultado"></div>
+          <p class="explicacion" id="p3-explicacion"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="fb-unir" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Sorting: number or text? -->
+    <section class="paso" id="paso-clasificar" data-comprobar aria-labelledby="t-clasificar">
+      <h2 class="paso__titulo" id="t-clasificar">Number or text?</h2>
+      <p>Tap a value, then its box (or drag it). Look closely at the quotes.</p>
+      <div class="tarjeta">
+        <div class="bandeja" id="p4-bandeja" aria-label="Values to sort"></div>
+        <div class="cubos">
+          <div class="cubo cubo--int" data-tipo="int">
+            <button type="button" class="cubo__destino">int<small>numbers</small></button>
+            <div class="cubo__contenido"></div>
+          </div>
+          <div class="cubo cubo--str" data-tipo="str">
+            <button type="button" class="cubo__destino">str<small>text</small></button>
+            <div class="cubo__contenido"></div>
+          </div>
+        </div>
+        <div class="feedback" id="fb-clasificar" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. The error: mixing types -->
+    <section class="paso" id="paso-error" data-requiere aria-labelledby="t-error">
+      <h2 class="paso__titulo" id="t-error">Text + number = error</h2>
+      <p>We want to print “I’m 12 years old”. Run the code and see what happens on line 2.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p5-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">age</span> = <span class="tk-numero">12</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"I'm "</span> + <span class="tk-variable">age</span> + <span class="tk-texto">" years old"</span>)</span></code></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja caja--int" id="p5-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">age</code>
+              <span class="caja__tipo"></span>
+            </div>
+          </div>
+          <div class="union" id="p5-union" aria-hidden="true"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="fb-error" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Converting: str() and int() -->
+    <section class="paso" id="paso-convertir" data-requiere aria-labelledby="t-convertir">
+      <h2 class="paso__titulo" id="t-convertir">Converting: <code>str()</code> and <code>int()</code></h2>
+      <p><code>str()</code> turns a number into text; <code>int()</code> turns text into a number. Move the age.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p6-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">age</span> = <span class="tk-numero" id="p6-valor">12</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"I'm "</span> + <span class="tk-funcion">str</span>(<span class="tk-variable">age</span>) + <span class="tk-texto">" years old"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">int</span>(<span class="tk-texto">"5"</span>) + <span class="tk-funcion">int</span>(<span class="tk-texto">"5"</span>))</span></code></pre>
+          <div class="control-slider">
+            <label for="p6-slider"><span>Value of <code>age</code></span> <output id="p6-salida" for="p6-slider">12</output></label>
+            <input type="range" id="p6-slider" min="1" max="99" value="12">
+          </div>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="maquina" id="p6-maquina-str">
+            <span id="p6-entra"></span>
+            <span class="maquina__flecha">→</span>
+            <span class="maquina__cuerpo"><span class="maquina__engranaje">⚙️</span>str()</span>
+            <span class="maquina__flecha">→</span>
+            <span id="p6-sale"></span>
+          </div>
+          <div class="maquina">
+            <span class="ficha ficha--str">"5"</span>
+            <span class="maquina__flecha">→</span>
+            <span class="maquina__cuerpo"><span class="maquina__engranaje">⚙️</span>int()</span>
+            <span class="maquina__flecha">→</span>
+            <span class="ficha ficha--int">5</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="fb-convertir" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. input() always gives text -->
+    <section class="paso" id="paso-input" data-requiere aria-labelledby="t-input">
+      <h2 class="paso__titulo" id="t-input"><code>input()</code>: asking the user</h2>
+      <p><code>input()</code> waits for someone to type something. Answer in the console and see what <code>age</code> holds.</p>
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p7-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">age</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Age? "</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">age</span> + <span class="tk-numero">1</span>)</span></code></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario btn--invisible" id="p7-reiniciar">↺ Reset</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas">
+            <div class="caja" id="p7-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">age</code>
+              <span class="caja__tipo"></span>
+            </div>
+          </div>
+          <div class="union" id="p7-union" aria-hidden="true"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola">
+            <span class="consola__titulo">Console</span>
+            <div class="entrada">
+              <label for="p7-entrada">Age?</label>
+              <input type="text" id="p7-entrada" inputmode="numeric" maxlength="3" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="p7-enviar">Send ⏎</button>
+            </div>
+            <span class="consola__linea consola__linea--error" id="p7-error" aria-live="polite" hidden>TypeError: can only concatenate str (not "int") to str</span>
+          </div>
+          <div class="feedback" id="fb-input" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Fixing the program -->
+    <section class="paso" id="paso-arreglar" data-comprobar aria-labelledby="t-arreglar">
+      <h2 class="paso__titulo" id="t-arreglar">Fix it with <code>int()</code></h2>
+      <p>If you type <strong id="p8-n">12</strong>, we want it to show <strong id="p8-n1">13</strong>. Which fix works?</p>
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p8-opciones">
+          <legend class="visualmente-oculto">Pick the fix</legend>
+          <label class="opcion"><input type="radio" name="p8" value="c"><span>age = input("Age? ")
+print(<b class="cambio">int(</b>age + 1<b class="cambio">)</b>)</span></label>
+          <label class="opcion"><input type="radio" name="p8" value="a"><span>age = <b class="cambio">int(</b>input("Age? ")<b class="cambio">)</b>
+print(age + 1)</span></label>
+          <label class="opcion"><input type="radio" name="p8" value="d"><span>age = input("Age? ")
+print(<b class="cambio">str(</b>age<b class="cambio">)</b> + 1)</span></label>
+          <label class="opcion"><input type="radio" name="p8" value="b"><span>age = input("Age? ")
+print(<b class="cambio">int(</b>age<b class="cambio">)</b> + 1)</span></label>
+        </fieldset>
+        <div id="p8-resultado" hidden>
+          <div class="cajas">
+            <div class="caja" id="p8-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">age</code>
+              <span class="caja__tipo"></span>
+            </div>
+          </div>
+          <div class="expresion" id="p8-expresion"></div>
+          <div class="consola" id="p8-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+        </div>
+        <div class="feedback" id="fb-arreglar" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="p8-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="btn-p8-otra">↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">The birthday</h2>
+      <p>Fill in the blank so it says how old you will be next year. We will test it with three people.</p>
+      <div class="tarjeta">
+        <pre class="codigo" id="reto-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">name</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Name? "</span>)</span><span class="linea"><span class="tk-variable">age</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"Age? "</span>))</span><span class="linea"><span class="tk-variable">phrase</span> = <span class="tk-texto">"Hi "</span> + <span class="tk-variable">name</span> + <span class="tk-texto">", you will be "</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">phrase</span> + <span class="hueco" id="reto-hueco">?</span> + <span class="tk-texto">" years old"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--cortas" id="opciones-reto">
+          <legend class="visualmente-oculto">What goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="a"><span>age + 1</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="b"><span>str(age) + "1"</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="c"><span>str(age + 1)</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" aria-label="Tests" hidden></ul>
+        <div class="feedback" id="fb-reto" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 10. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Numbers add up, text gets glued; use <code>int()</code> and <code>str()</code> to go from one to the other.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-numero">5</span> + <span class="tk-numero">5</span>)      <span class="tk-comentario"># 10</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"5"</span> + <span class="tk-texto">"5"</span>)  <span class="tk-comentario"># 55</span></span><span class="linea"><span class="tk-variable">age</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"Age: "</span>))</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"I'm "</span> + <span class="tk-funcion">str</span>(<span class="tk-variable">age</span>) + <span class="tk-texto">" years old"</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../fstrings/index.html">Next: Messages with f-strings →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  var ESPERA = Pasos.reducirMovimiento ? 0 : 550;
+  var ERROR_TIPO = 'TypeError: can only concatenate str (not "int") to str';
+
+  /* ---------- Chips and joins (shared) ---------- */
+  function escapar(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Spaces in a text show as ␣ so you can tell when one is missing
+  function conEspacios(s) {
+    return escapar(s).replace(/ /g, '<span class="ficha__esp">␣</span>');
+  }
+
+  // A number is drawn in blue; a text, in orange and with quotes
+  function ficha(valor, extra) {
+    var clase = "ficha " + (typeof valor === "number" ? "ficha--int" : "ficha--str") + (extra ? " " + extra : "");
+    var contenido = typeof valor === "number" ? String(valor) : '"' + conEspacios(valor) + '"';
+    return '<span class="' + clase + '">' + contenido + "</span>";
+  }
+
+  var OP = '<span class="union__op">+</span>';
+
+  function pintarUnion(el, valores) {
+    clearTimeout(el._timer);
+    el.classList.remove("union--juntar", "union--choca");
+    el.innerHTML = valores.map(function (v) { return ficha(v); }).join(OP);
+  }
+
+  // The pieces move together and turn into the result (html)
+  function juntar(el, resultado, fin) {
+    clearTimeout(el._timer);
+    el.classList.remove("union--juntar");
+    void el.offsetWidth;
+    el.classList.add("union--juntar");
+    el._timer = setTimeout(function () {
+      el.classList.remove("union--juntar");
+      el.innerHTML = resultado;
+      if (fin) fin();
+    }, ESPERA);
+  }
+
+  // The pieces do not fit: the first + becomes ✗ and everything shakes
+  function chocar(el) {
+    clearTimeout(el._timer);
+    var op = el.querySelector(".union__op");
+    if (op) {
+      op.textContent = "✗";
+      op.classList.add("union__op--mal");
+    }
+    el.classList.remove("union--choca");
+    void el.offsetWidth;
+    el.classList.add("union--choca");
+  }
+
+  /* ---------- Boxes with a type ---------- */
+  function tipoDe(valor) { return typeof valor === "number" ? "int" : "str"; }
+  function mostrar(valor) { return typeof valor === "number" ? String(valor) : '"' + valor + '"'; }
+
+  function tipoCaja(caja, tipo) {
+    caja.classList.toggle("caja--int", tipo === "int");
+    caja.classList.toggle("caja--str", tipo === "str");
+    caja.querySelector(".caja__tipo").textContent = tipo || "";
+  }
+
+  function ponerValor(caja, valor) {
+    tipoCaja(caja, tipoDe(valor));
+    Caja.poner(caja, mostrar(valor));
+  }
+
+  function vaciarCaja(caja) {
+    tipoCaja(caja, "");
+    Caja.vaciar(caja);
+  }
+
+  // Timers for chained animations; they are cancelled when the step changes
+  var timers = [];
+  function despues(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function cancelarTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+  }
+
+  function limpiarOpciones(paso) {
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+  }
+
+  /* ---------- 1. Two almost identical boxes ---------- */
+  var textosParecidos = {
+    a: "<strong>a</strong> holds the <strong>number</strong> 5. Python calls it <code>int</code> (short for <em>integer</em>, a whole number).",
+    b: "<strong>b</strong> holds the <strong>text</strong> \"5\": the quotes make it text. Python calls it <code>str</code> (short for <em>string</em>, a string of characters)."
+  };
+
+  function entrarParecidos(paso, leccion) {
+    var vistos = {};
+    var cajas = paso.querySelectorAll("[data-var]");
+    cajas.forEach(function (c) {
+      c.className = "caja caja-boton caja--neutra";
+      c.querySelector(".caja__tipo").textContent = "?";
+      c.onclick = function () {
+        var v = c.getAttribute("data-var");
+        vistos[v] = true;
+        c.classList.remove("caja--neutra");
+        tipoCaja(c, v === "a" ? "int" : "str");
+        Codigo.marcar($("p1-codigo"), { activas: [v === "a" ? 0 : 1] });
+        $("p1-explicacion").innerHTML = textosParecidos[v];
+        if (vistos.a && vistos.b) {
+          Pasos.feedback($("fb-parecidos"), "ok",
+            "They look almost the same, but they are different types. And the type changes what you can do with them.");
+          leccion.desbloquear();
+        }
+      };
+    });
+    Codigo.limpiar($("p1-codigo"));
+    $("p1-explicacion").textContent = "Tap box a and box b.";
+    Pasos.limpiarFeedback($("fb-parecidos"));
+  }
+
+  /* ---------- 2. What do you get? ---------- */
+  function monton(n, grande) {
+    var bolitas = "";
+    for (var i = 0; i < n; i++) bolitas += '<span class="bolita"></span>';
+    return '<span class="monton' + (grande ? " monton--grande" : "") + '"><span class="monton__bolitas">' +
+      bolitas + '</span><span class="monton__num">' + n + "</span></span>";
+  }
+
+  function prepararSorpresa() {
+    cancelarTimers();
+    clearTimeout($("p2-num")._timer);
+    $("p2-num").classList.remove("union--juntar");
+    $("p2-num").innerHTML = monton(5) + OP + monton(5);
+    pintarUnion($("p2-txt"), ["5", "5"]);
+    Codigo.limpiar($("p2-codigo"));
+    Codigo.consola($("p2-consola"), []);
+  }
+
+  function entrarSorpresa(paso, leccion) {
+    prepararSorpresa();
+    limpiarOpciones(paso);
+    Pasos.limpiarFeedback($("fb-sorpresa"));
+    var radios = paso.querySelectorAll('input[type="radio"]');
+    radios.forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        r.closest("fieldset").querySelectorAll(".opcion").forEach(function (o) {
+          o.classList.remove("opcion--correcta", "opcion--incorrecta");
+        });
+        Pasos.limpiarFeedback($("fb-sorpresa"));
+        var listas = paso.querySelectorAll('input[type="radio"]:checked').length === 2;
+        leccion.listoParaComprobar(listas);
+      };
+    });
+  }
+
+  var pistasSorpresa = {
+    l1: {
+      "55": "Line 1: with no quotes, 5 is a number. With numbers, + really adds.",
+      "error": "Line 1: adding two numbers is exactly what + knows how to do."
+    },
+    l2: {
+      "10": "Line 2: with quotes, they are text. + does not add them: it glues one right after the other.",
+      "error": "Line 2: two texts can be joined with +. They get glued together."
+    }
+  };
+
+  function comprobarSorpresa(paso) {
+    var r1 = paso.querySelector('input[name="p2-l1"]:checked');
+    var r2 = paso.querySelector('input[name="p2-l2"]:checked');
+    if (!r1 || !r2) return false;
+    var ok1 = r1.value === "10";
+    var ok2 = r2.value === "55";
+    r1.closest(".opcion").classList.add(ok1 ? "opcion--correcta" : "opcion--incorrecta");
+    r2.closest(".opcion").classList.add(ok2 ? "opcion--correcta" : "opcion--incorrecta");
+
+    if (!ok1 || !ok2) {
+      var pistas = [];
+      if (!ok1) pistas.push(pistasSorpresa.l1[r1.value]);
+      if (!ok2) pistas.push(pistasSorpresa.l2[r2.value]);
+      Pasos.feedback($("fb-sorpresa"), "pista", pistas.join(" "));
+      return false;
+    }
+
+    paso.querySelectorAll('input[type="radio"]').forEach(function (r) { r.disabled = true; });
+    prepararSorpresa();
+    Codigo.marcar($("p2-codigo"), { activas: [0] });
+    juntar($("p2-num"), '<span class="union__resultado">' + monton(10, true) + "</span>", function () {
+      Codigo.agregar($("p2-consola"), "10");
+      despues(700, function () {
+        Codigo.marcar($("p2-codigo"), { activas: [1] });
+        juntar($("p2-txt"), ficha("55", "union__resultado"), function () {
+          Codigo.agregar($("p2-consola"), "55");
+        });
+      });
+    });
+    Pasos.feedback($("fb-sorpresa"), "ok",
+      "Exactly! Numbers add up: 5 + 5 = 10. Text gets glued: \"5\" + \"5\" = \"55\".");
+    return true;
+  }
+
+  /* ---------- 3. Gluing text ---------- */
+  function entrarUnir(paso, leccion) {
+    var campo = $("p3-nombre");
+    var btnEspacio = $("p3-espacio");
+    var conEspacio = true;
+    var cambioNombre = false;
+    var cambioEspacio = false;
+
+    function pintar() {
+      var saludo = conEspacio ? "Hello, " : "Hello,";
+      var nombre = campo.value;
+      $("p3-codigo-nombre").textContent = nombre;
+      $("p3-codigo-espacio").textContent = conEspacio ? " " : "";
+      pintarUnion($("p3-union"), [saludo, nombre]);
+      $("p3-resultado").innerHTML = ficha(saludo + nombre, "union__resultado");
+      Codigo.consola($("p3-consola"), [saludo + nombre]);
+      btnEspacio.textContent = conEspacio ? "Remove the space" : "Add the space";
+      btnEspacio.setAttribute("aria-pressed", conEspacio ? "false" : "true");
+      $("p3-explicacion").innerHTML = conEspacio
+        ? "The space goes <strong>inside</strong> the quotes of \"Hello, \"."
+        : "No space: the words stick together. <strong>+ adds nothing</strong>, it only joins.";
+    }
+
+    function revisar() {
+      if (cambioNombre && cambioEspacio) {
+        Pasos.feedback($("fb-unir"), "ok",
+          "+ glues text exactly as it is, without adding spaces. If you want one, you have to put it in yourself.");
+        leccion.desbloquear();
+      } else if (cambioNombre) {
+        Pasos.feedback($("fb-unir"), "pista", "Now tap “Remove the space” and look at the output.");
+      } else if (cambioEspacio) {
+        Pasos.feedback($("fb-unir"), "pista", "Now type your name in the field.");
+      }
+    }
+
+    campo.value = "Ana";
+    campo.oninput = function () {
+      cambioNombre = campo.value.trim() !== "" && campo.value !== "Ana";
+      pintar();
+      revisar();
+    };
+    btnEspacio.onclick = function () {
+      conEspacio = !conEspacio;
+      cambioEspacio = true;
+      pintar();
+      revisar();
+    };
+    Pasos.limpiarFeedback($("fb-unir"));
+    pintar();
+  }
+
+  /* ---------- 4. Number or text? ---------- */
+  var VALORES = [
+    { texto: "7", tipo: "int" },
+    { texto: '"hello"', tipo: "str" },
+    { texto: '"7"', tipo: "str" },
+    { texto: "100", tipo: "int" },
+    { texto: '"3 cats"', tipo: "str" },
+    { texto: "0", tipo: "int" },
+    { texto: '"100"', tipo: "str" }
+  ];
+
+  function entrarClasificar(paso, leccion) {
+    var lugar = VALORES.map(function () { return null; });   // null | "int" | "str"
+    var elegido = null;
+    var resuelto = false;
+    var bandeja = $("p4-bandeja");
+    var cubos = paso.querySelectorAll(".cubo");
+
+    function contenido(tipo) {
+      return paso.querySelector('.cubo[data-tipo="' + tipo + '"] .cubo__contenido');
+    }
+
+    function crearFicha(i) {
+      var v = VALORES[i];
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "ficha ficha-boton ficha--neutra";
+      if (resuelto) b.className = "ficha ficha-boton ficha--" + v.tipo;
+      b.textContent = v.texto;
+      b.setAttribute("data-i", i);
+      if (lugar[i] === null) {
+        b.setAttribute("aria-pressed", elegido === i ? "true" : "false");
+        b.draggable = true;
+      } else {
+        b.setAttribute("aria-label", v.texto + ", in the box " + lugar[i] + ". Tap to take it out.");
+        b.draggable = !resuelto;
+      }
+      b.disabled = resuelto;
+      b.addEventListener("dragstart", function (e) {
+        e.dataTransfer.setData("text/plain", String(i));
+        e.dataTransfer.effectAllowed = "move";
+      });
+      return b;
+    }
+
+    function pintar(foco) {
+      bandeja.textContent = "";
+      contenido("int").textContent = "";
+      contenido("str").textContent = "";
+      var quedan = 0;
+      VALORES.forEach(function (v, i) {
+        var b = crearFicha(i);
+        if (lugar[i] === null) { bandeja.appendChild(b); quedan++; }
+        else contenido(lugar[i]).appendChild(b);
+      });
+      if (!quedan) {
+        var vacia = document.createElement("span");
+        vacia.className = "bandeja__vacia";
+        vacia.textContent = resuelto ? "Everything is in its place!" : "All sorted. Tap “Check”.";
+        bandeja.appendChild(vacia);
+      }
+      if (!resuelto) leccion.listoParaComprobar(!quedan);
+      if (foco !== undefined && foco !== null) {
+        var f = paso.querySelector('[data-i="' + foco + '"]');
+        if (f) f.focus();
+      }
+    }
+
+    function mover(i, tipo) {
+      lugar[i] = tipo;
+      elegido = null;
+      Pasos.limpiarFeedback($("fb-clasificar"));
+      // Focus moves to the next value to sort
+      var siguiente = lugar.indexOf(null);
+      pintar(siguiente !== -1 ? siguiente : undefined);
+      if (siguiente === -1) paso.querySelector('.cubo[data-tipo="' + tipo + '"] .cubo__destino').focus();
+    }
+
+    function soltarEn(tipo) {
+      if (resuelto) return;
+      if (elegido === null) {
+        Pasos.feedback($("fb-clasificar"), "pista", "First tap a value above; then its box.");
+        return;
+      }
+      mover(elegido, tipo);
+    }
+
+    bandeja.onclick = function (e) {
+      var b = e.target.closest(".ficha-boton");
+      if (!b || resuelto) return;
+      var i = Number(b.getAttribute("data-i"));
+      elegido = elegido === i ? null : i;
+      pintar(i);
+    };
+    bandeja.ondragover = function (e) { e.preventDefault(); };
+    bandeja.ondrop = function (e) {
+      e.preventDefault();
+      var i = Number(e.dataTransfer.getData("text/plain"));
+      if (!isNaN(i) && !resuelto) { lugar[i] = null; elegido = null; pintar(); }
+    };
+
+    cubos.forEach(function (c) {
+      var tipo = c.getAttribute("data-tipo");
+      c.onclick = function (e) {
+        var b = e.target.closest(".ficha-boton");
+        if (b) {
+          // Taking a value out of a box: it goes back up
+          if (resuelto) return;
+          lugar[Number(b.getAttribute("data-i"))] = null;
+          elegido = null;
+          Pasos.limpiarFeedback($("fb-clasificar"));
+          pintar();
+          c.querySelector(".cubo__destino").focus();
+          return;
+        }
+        soltarEn(tipo);
+      };
+      c.ondragover = function (e) { e.preventDefault(); c.classList.add("cubo--sobre"); };
+      c.ondragleave = function () { c.classList.remove("cubo--sobre"); };
+      c.ondrop = function (e) {
+        e.preventDefault();
+        c.classList.remove("cubo--sobre");
+        var i = Number(e.dataTransfer.getData("text/plain"));
+        if (!isNaN(i) && !resuelto) mover(i, tipo);
+      };
+    });
+
+    paso._comprobar = function () {
+      var mal = [];
+      VALORES.forEach(function (v, i) { if (lugar[i] !== v.tipo) mal.push(i); });
+      if (!mal.length) {
+        resuelto = true;
+        pintar();
+        Pasos.feedback($("fb-clasificar"), "ok",
+          "Perfect! If it has quotes, it is text (str), even if there is a number inside.");
+        return true;
+      }
+      mal.forEach(function (i) {
+        var b = paso.querySelector('[data-i="' + i + '"]');
+        b.classList.remove("ficha--neutra");
+        b.classList.add("ficha--mal");
+      });
+      var textoEnInt = mal.some(function (i) { return VALORES[i].tipo === "str"; });
+      Pasos.feedback($("fb-clasificar"), "pista",
+        (textoEnInt
+          ? "Does it have quotes? Then it is text (str), even if there is a number inside."
+          : "With no quotes, a number is an int.") +
+        (mal.length === 1 ? " 1 value is" : " " + mal.length + " values are") + " in the wrong place: they go back up.");
+      despues(Pasos.reducirMovimiento ? 600 : 1100, function () {
+        mal.forEach(function (i) { lugar[i] = null; });
+        pintar();
+      });
+      return false;
+    };
+
+    cancelarTimers();
+    Pasos.limpiarFeedback($("fb-clasificar"));
+    pintar();
+  }
+
+  /* ---------- 5. Text + number = error ---------- */
+  var trazaError = Traza.crear({
+    codigo: $("p5-codigo"),
+    explicacion: $("p5-explicacion"),
+    consola: $("p5-consola"),
+    ejecutar: $("p5-ejecutar"),
+    reproducir: $("p5-reproducir"),
+    reiniciar: $("p5-reiniciar"),
+    intervalo: 1600,
+    generar: function () {
+      return [
+        { linea: 0, estado: "caja", texto: "Line 1: <strong>age</strong> holds the number 12 (an <code>int</code>)." },
+        {
+          linea: 1, estado: "error", salida: ERROR_TIPO, error: true,
+          texto: "Line 2: Python joins from left to right, and <code>\"I'm \" + 12</code> does not fit. " +
+            "The error says: “you can only join text (str) with text, not with an int.”"
+        }
+      ];
+    },
+    alReiniciar: function () {
+      vaciarCaja($("p5-caja"));
+      $("p5-union").textContent = "";
+    },
+    alPaso: function (paso) {
+      if (paso.estado === "caja") {
+        ponerValor($("p5-caja"), 12);
+        return;
+      }
+      pintarUnion($("p5-union"), ["I'm ", 12, " years old"]);
+      chocar($("p5-union"));
+    },
+    alTerminar: function () {
+      Pasos.feedback($("fb-error"), "ok",
+        "Python does not guess whether you want to add or glue: both sides of + have to be the same type.");
+      if (leccionActual) leccionActual.desbloquear();
+    }
+  });
+
+  var leccionActual = null;
+
+  /* The join keeps the height of the three chips from the start (on mobile they wrap onto
+     several lines): the output below does not move down when they appear */
+  Codigo.reservarAlto($("p5-union"), [["I'm ", 12, " years old"]], function (copia, valores) { pintarUnion(copia, valores); });
+
+  function entrarError(paso, leccion) {
+    leccionActual = leccion;
+    trazaError.reiniciar();
+    Pasos.limpiarFeedback($("fb-error"));
+  }
+
+  /* ---------- 6. Converting ---------- */
+  var EDAD_INICIAL = 12;
+
+  function pintarConvertir(n, animar) {
+    $("p6-valor").textContent = n;
+    $("p6-salida").textContent = n;
+    $("p6-entra").innerHTML = ficha(n);
+    $("p6-sale").innerHTML = ficha(String(n));
+    Codigo.consola($("p6-consola"), ["I'm " + n + " years old", "10"]);
+    if (animar) {
+      var m = $("p6-maquina-str");
+      m.classList.remove("maquina--trabajando");
+      void m.offsetWidth;
+      m.classList.add("maquina--trabajando");
+    }
+  }
+
+  function entrarConvertir(paso, leccion) {
+    var slider = $("p6-slider");
+    slider.value = EDAD_INICIAL;
+    pintarConvertir(EDAD_INICIAL, false);
+    Pasos.limpiarFeedback($("fb-convertir"));
+    slider.oninput = function () {
+      var n = Number(slider.value);
+      pintarConvertir(n, true);
+      if (n !== EDAD_INICIAL) {
+        Pasos.feedback($("fb-convertir"), "ok",
+          "str(age) turns " + n + " into \"" + n + "\": now it can be glued to the text.");
+        leccion.desbloquear();
+      }
+    };
+  }
+
+  /* ---------- 7. input() ---------- */
+  var edadUsuario = 12;   // what was answered in step 7 (if it is a number)
+
+  function entrarInput(paso, leccion) {
+    var campo = $("p7-entrada");
+    var btnEnviar = $("p7-enviar");
+    var btnReiniciar = $("p7-reiniciar");
+
+    function preparar() {
+      cancelarTimers();
+      campo.value = "";
+      campo.disabled = false;
+      btnEnviar.hidden = false;
+      $("p7-error").hidden = true;
+      $("p7-union").textContent = "";
+      vaciarCaja($("p7-caja"));
+      Codigo.marcar($("p7-codigo"), { activas: [0] });
+      $("p7-explicacion").innerHTML = "Python stops at line 1 and <strong>waits</strong>. Type your age in the console.";
+      Pasos.limpiarFeedback($("fb-input"));
+      btnReiniciar.classList.add("btn--invisible");
+    }
+
+    function enviar() {
+      var texto = campo.value.trim();
+      if (!texto) {
+        Pasos.feedback($("fb-input"), "pista", "Type your age first.");
+        campo.focus();
+        return;
+      }
+      if (/^\d{1,3}$/.test(texto)) edadUsuario = Number(texto);
+      campo.value = texto;
+      campo.disabled = true;
+      btnEnviar.hidden = true;
+      Pasos.limpiarFeedback($("fb-input"));
+      ponerValor($("p7-caja"), texto);
+      $("p7-explicacion").innerHTML = "<code>input()</code> stores what you typed as <strong>text</strong>: " +
+        escapar('"' + texto + '"') + ", with quotes.";
+      btnReiniciar.classList.remove("btn--invisible");
+      btnReiniciar.focus();
+
+      despues(Pasos.reducirMovimiento ? 900 : 1600, function () {
+        Codigo.marcar($("p7-codigo"), { activas: [1] });
+        pintarUnion($("p7-union"), [texto, 1]);
+        chocar($("p7-union"));
+        $("p7-error").hidden = false;
+        $("p7-explicacion").innerHTML = "Line 2: <code>" + escapar('"' + texto + '"') + " + 1</code> mixes text and a number. Error!";
+        Pasos.feedback($("fb-input"), "ok",
+          "input() always gives you text, even if you type a number. To add, you have to convert it.");
+        leccion.desbloquear();
+      });
+    }
+
+    btnEnviar.onclick = enviar;
+    // Enter in the field sends the answer (instead of pressing "Continue")
+    campo.onkeydown = function (e) {
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      enviar();
+    };
+    btnReiniciar.onclick = function () {
+      preparar();
+      campo.focus();
+    };
+    preparar();
+  }
+
+  /* ---------- 8. Fixing it ---------- */
+  var pistasArreglo = {
+    c: "int() comes too late: age + 1 is worked out first, and that already fails because age is text.",
+    d: "str() turns things into text, but age was already text. To add 1 you need a number: int()."
+  };
+
+  function entrarArreglar(paso, leccion) {
+    cancelarTimers();
+    $("p8-n").textContent = edadUsuario;
+    $("p8-n1").textContent = edadUsuario + 1;
+    $("p8-resultado").hidden = true;
+    $("p8-otra").hidden = true;
+    limpiarOpciones(paso);
+    Pasos.limpiarFeedback($("fb-arreglar"));
+    paso.querySelectorAll('input[name="p8"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        limpiarOpciones(paso);
+        Pasos.limpiarFeedback($("fb-arreglar"));
+        leccion.listoParaComprobar(true);
+      };
+    });
+    $("btn-p8-otra").onclick = function () {
+      entrarArreglar(paso, leccion);
+      paso.querySelector('input[name="p8"]').focus();
+    };
+  }
+
+  function expresion(partes) {
+    return partes.map(function (p, i) {
+      return (i ? '<span class="expresion__flecha" aria-hidden="true">→</span>' : "") + "<span>" + p + "</span>";
+    }).join("");
+  }
+
+  function comprobarArreglar(paso) {
+    var marcada = paso.querySelector('input[name="p8"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    var n = edadUsuario;
+
+    if (marcada.value !== "a" && marcada.value !== "b") {
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback($("fb-arreglar"), "pista", pistasArreglo[marcada.value]);
+      return false;
+    }
+
+    opcion.classList.add("opcion--correcta");
+    paso.querySelectorAll('input[name="p8"]').forEach(function (r) { r.disabled = true; });
+    $("p8-resultado").hidden = false;
+    $("p8-otra").hidden = false;
+    Codigo.consola($("p8-consola"), []);
+    $("p8-expresion").innerHTML = "";
+    var caja = $("p8-caja");
+    ponerValor(caja, String(n));
+
+    if (marcada.value === "a") {
+      // int() converts right after reading: the box goes from text to number
+      despues(ESPERA + 400, function () {
+        ponerValor(caja, n);
+        $("p8-expresion").innerHTML = expresion(["age + 1", n + " + 1", "<strong>" + (n + 1) + "</strong>"]);
+        Codigo.agregar($("p8-consola"), String(n + 1));
+      });
+      Pasos.feedback($("fb-arreglar"), "ok",
+        "That’s it! int() converts the text right after reading it: age is already a number. (int(age) + 1 also worked.)");
+    } else {
+      despues(ESPERA, function () {
+        $("p8-expresion").innerHTML = expresion(["int(age) + 1", n + " + 1", "<strong>" + (n + 1) + "</strong>"]);
+        Codigo.agregar($("p8-consola"), String(n + 1));
+      });
+      Pasos.feedback($("fb-arreglar"), "ok",
+        "Nice! age is still text, but int(age) converts it just for the addition. (int(input(…)) also worked.)");
+    }
+    return true;
+  }
+
+  /* ---------- 9. Challenge ---------- */
+  var PRUEBAS = [["Ana", 12], ["Luis", 9], ["Sol", 30]];
+  var HUECOS = { a: "age + 1", b: 'str(age) + "1"', c: "str(age + 1)" };
+  var pistasReto = {
+    a: "age is a number and the rest is text: you have to convert it with str() before gluing it.",
+    b: "str(age) + \"1\" glues a 1 on the end: 12 → \"121\". Add first, then convert."
+  };
+
+  function salidaReto(opcion, nombre, edad) {
+    if (opcion === "a") return { error: true, texto: ERROR_TIPO };
+    var trozo = opcion === "b" ? String(edad) + "1" : String(edad + 1);
+    return { texto: "Hi " + nombre + ", you will be " + trozo + " years old", ok: opcion === "c" };
+  }
+
+  function entrarReto(paso, leccion) {
+    $("reto-hueco").textContent = "?";
+    $("reto-pruebas").hidden = true;
+    limpiarOpciones(paso);
+    Pasos.limpiarFeedback($("fb-reto"));
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+      r.onchange = function () {
+        $("reto-hueco").textContent = HUECOS[r.value];
+        $("reto-pruebas").hidden = true;
+        limpiarOpciones(paso);
+        Pasos.limpiarFeedback($("fb-reto"));
+        leccion.listoParaComprobar(true);
+      };
+    });
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var lista = $("reto-pruebas");
+    lista.textContent = "";
+    PRUEBAS.forEach(function (p) {
+      var res = salidaReto(marcada.value, p[0], p[1]);
+      var li = document.createElement("li");
+      var entrada = document.createElement("span");
+      entrada.className = "prueba__entrada";
+      entrada.textContent = "Type: " + p[0] + " and " + p[1];
+      var salida = document.createElement("span");
+      salida.className = "prueba__res prueba__res--" + (res.error ? "error" : res.ok ? "ok" : "mal");
+      salida.textContent = (res.error ? "✗ " : res.ok ? "✓ " : "✗ ") + res.texto;
+      li.appendChild(entrada);
+      li.appendChild(salida);
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+
+    var opcion = marcada.closest(".opcion");
+    if (marcada.value === "c") {
+      opcion.classList.add("opcion--correcta");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      Pasos.feedback($("fb-reto"), "ok",
+        "Challenge complete! First you add with numbers (age + 1), then you convert to text to glue it.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("fb-reto"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* When the step changes, pending animations from the previous one are stopped */
+  function alEntrar(fn) {
+    return function (paso, leccion, info) {
+      cancelarTimers();
+      trazaError.detener();
+      fn(paso, leccion, info);
+    };
+  }
+
+  Pasos.iniciar({
+    alEntrar: {
+      "paso-parecidos": alEntrar(entrarParecidos),
+      "paso-sorpresa": alEntrar(entrarSorpresa),
+      "paso-unir": alEntrar(entrarUnir),
+      "paso-clasificar": alEntrar(entrarClasificar),
+      "paso-error": alEntrar(entrarError),
+      "paso-convertir": alEntrar(entrarConvertir),
+      "paso-input": alEntrar(entrarInput),
+      "paso-arreglar": alEntrar(entrarArreglar),
+      "paso-reto": alEntrar(entrarReto)
+    },
+    comprobar: {
+      "paso-sorpresa": comprobarSorpresa,
+      "paso-clasificar": function (paso) { return paso._comprobar ? paso._comprobar() : false; },
+      "paso-arreglar": comprobarArreglar,
+      "paso-reto": comprobarReto
+    }
+  });
+})();
+</script>
+</body>
+</html>
