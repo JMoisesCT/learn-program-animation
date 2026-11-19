@@ -131,6 +131,12 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-19 · Texto y números, paso 8: todo en una pantalla
+
+El autor notó que «Arréglalo con `int()`» (Texto y números, paso 8) no cabía: al acertar, las cuatro opciones, la caja, la cuenta, la salida y el mensaje iban uno debajo de otro y había que bajar (308 px de más a 1366×657, 195 px a 1690×896, 457 px en el móvil), así que se perdía qué opción produjo qué. Arreglo en el CSS de la lección (español e inglés):
+- **Escritorio**: las opciones van de dos en dos y, al acertar, la tarjeta pasa a una rejilla: la caja (con «Probar otra opción» debajo) a la izquierda y la cuenta, la salida y el mensaje a su lado. Cabe en 1024×700, 1280×800, 1366×657, 1690×896 y 1920×1080.
+- **Móvil**: al acertar queda solo la opción elegida (las otras vuelven con «Probar otra opción»); la opción, la caja, la cuenta y la salida se ven juntas en la primera pantalla y el mensaje queda justo debajo.
+
 ### 2026-11-19 · Curso en inglés: portada, idioma automático y Variables
 
 El autor pidió un curso en inglés de verdad («para que sea más general») y que el navegador detecte el idioma de la PC. Se empezó por el primer tema.
