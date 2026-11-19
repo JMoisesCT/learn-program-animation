@@ -6,6 +6,8 @@ Notas para retomar el trabajo en la siguiente sesión. Lo más reciente, arriba.
 
 Por orden de prioridad:
 
+0000. **Curso en inglés: seguir tema por tema** (registro del 2026-11-19). Variables está completo en `en/`. Lo siguiente, Condicionales (5 lecciones + su proyecto), con el mismo método: copiar la lección, traducir texto y código, recalcular lo que dependa de los textos y comparar las pruebas con la versión en español. Al hacerlo: cambiar «Back to the course →» de `en/lessons/variables/fstrings/` por «Next: Conditionals →» y añadir la tarjeta en `en/index.html`. Quedan sin decidir: un selector de idioma dentro de las lecciones (hoy solo en las portadas), traducir Problemas resueltos y si los navegadores en portugués, francés, etc. deben ir al curso en español (hoy van al inglés; es una línea en `idioma.js`).
+
 000. **Lo que quedó de «La consola no cambia de lugar»** (registros del 2026-11-11 y del 2026-11-12). Se miraron las capturas del móvil y se arregló lo que se veía roto; queda, por si el autor o los alumnos lo notan:
    - **Lienzos guardados en blanco** (se aceptan: es donde se dibuja): el árbol de Árbol de llamadas (`paso-arbol` 400 px, `paso-deshacer` 340 px), la lista que se parte en Quicksort (`paso-traza`, `paso-base`, `paso-repetidos`, 230–280 px) y Mergesort (`paso-traza`, `paso-orden`, 190–225 px). Quedan bajo la primera pantalla. Si molestan, un fondo tenue o un rótulo («aquí se dibuja el árbol») bastaría.
    - **Lugares guardados de 120–170 px entre los botones y la salida** (cajas, listas o diccionarios que nacen al ejecutar): `paso-recorrer` de Estructuras juntas, `paso-tupla`, `paso-desempaquetar` y `paso-reto` de Tuplas, `paso-sorted` y `paso-reverse` de Ordenar y buscar, `paso-textos` de Búsqueda binaria, `paso-listas` de Dos nombres, `paso-error` de Texto y números, `paso-paralelas` y `paso-del` de Diccionarios, `paso-datos` de Cada error con su nombre. No se ven rotos; el que moleste se cambia a `data-salida="arriba"` (se probó en 7 pasos y queda bien en móvil y escritorio).
@@ -128,6 +130,17 @@ Por orden de prioridad:
 Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_modules/playwright`, Chromium en `/opt/pw-browsers`), sin instalar nada en el repo. Para los casos de Problemas resueltos, la prueba ya está en el repositorio: `node herramientas/probar-caso.js <caso>` (y `catalogo`). Para las lecciones, unos scripts sueltos (no guardados) recorren cada lección: marcan todo el progreso en `localStorage` (`lpa:progreso`), pulsan «Ejecutar línea» en cada paso, comprueban que no haya errores de JavaScript ni restos de animaciones, y sacan capturas en escritorio (1280 px) y móvil (390 px) en `capturas/`.
 
 ## Registro de cambios
+
+### 2026-11-19 · Curso en inglés: portada, idioma automático y Variables
+
+El autor pidió un curso en inglés de verdad («para que sea más general») y que el navegador detecte el idioma de la PC. Se empezó por el primer tema.
+- **`en/index.html`**: portada en inglés con Variables (5 lecciones) y una tarjeta «More topics are on the way» que lleva al curso en español. Sin la banda de Problemas resueltos.
+- **`assets/js/idioma.js`**: la portada en español, la primera vez, va a `en/` si el navegador no prefiere español. El selector «Español · English» (`.idiomas`, en las dos portadas) guarda la elección (`lpa:idioma`) y ya no se redirige. Probado con en-US (→ inglés), es-PE (→ español), pt-BR (→ inglés) y eligiendo «Español» desde la portada en inglés.
+- **Piezas compartidas** con sus textos en inglés según `lang`: `pasos.js`, `traza.js`, `codigo.js`, `opciones-codigo.js` y «not run» en `base.css`.
+- **Las 5 lecciones** en `en/lessons/variables/` (`formulas/`, `reuse/`, `types/`, `fstrings/`): texto, comentarios y código Python en inglés (`age`, `price`, `quantity`, `average`, `"Hello, "`), dinero en `$`, los mismos números. Mismo `data-leccion` y mismos pasos: el progreso es uno solo para los dos idiomas. Ajustes para que quepa en el móvil: `"I'm "` en vez de `"I am "` (Text and numbers) y «Each pays» (f-strings).
+- **Herramientas**: `recorrer-leccion.js` y `seguir-consola.js` aceptan `en/<tema>[/<lección>]` y `en/portada`, y abren el navegador en el idioma de la página (si no, la portada en español se iba al inglés durante la prueba).
+- Pruebas: `recorrer-leccion.js … tocar` y `seguir-consola.js … detalle` dan en inglés lo mismo que en español (sin avisos nuevos), y cada reto se probó con respuestas buenas y malas.
+- Reglas nuevas en `CLAUDE.md`, «Curso en inglés» (estructura, glosario, cómo traducir una lección).
 
 ### 2026-11-15 · La firma del autor
 
