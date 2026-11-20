@@ -56,6 +56,22 @@
 (function () {
   "use strict";
 
+  // Las lecciones en inglés (en/) dicen lang="en": los textos de las tarjetas cambian
+  var EN = /^en/i.test(document.documentElement.lang || "");
+  var T = EN ? {
+    programa: "Program", sinVars: "no variables yet", nadaFalta: "nothing left to do", falta: "still to do: ",
+    arriba: "waiting for the one above", espera: "waiting for ", ahora: "Now running:", elPrograma: "the program",
+    enLinea: " on line ", devuelve: "↩ returns ", vuelveProg: "↩ goes back to the program", vuelveA: "↩ goes back to ",
+    termina: "↩ ends", linea: "‖ line ", esperaA: " · waiting for ", pausada: "‖ paused", sigue: "▶ continues",
+    trabajando: "working", pila: "Call stack · ", tarjeta: " card", tarjetas: " cards"
+  } : {
+    programa: "Programa", sinVars: "sin variables todavía", nadaFalta: "no le falta nada", falta: "le falta: ",
+    arriba: "esperando a la de arriba", espera: "esperando a ", ahora: "Ahora corre:", elPrograma: "el programa",
+    enLinea: " en la línea ", devuelve: "↩ devuelve ", vuelveProg: "↩ vuelve al programa", vuelveA: "↩ vuelve a ",
+    termina: "↩ termina", linea: "‖ línea ", esperaA: " · espera a ", pausada: "‖ pausada", sigue: "▶ sigue",
+    trabajando: "trabajando", pila: "Pila de llamadas · ", tarjeta: " tarjeta", tarjetas: " tarjetas"
+  };
+
   function reducir() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
@@ -67,7 +83,7 @@
     return el;
   }
 
-  function programa(vars) { return { titulo: "Programa", vars: vars || [] }; }
+  function programa(vars) { return { titulo: T.programa, vars: vars || [] }; }
   function llamada(titulo, vars, devuelve) { return { titulo: titulo, vars: vars || [], devuelve: devuelve }; }
 
   function nombreFuncion(titulo) { return titulo.slice(0, titulo.indexOf("(")); }
@@ -80,7 +96,7 @@
     else titulo.appendChild(crear("code", "", datos.titulo));
     var estado = crear("span", "marco__estado");
     var vars = crear("div", "marco__vars");
-    var vacia = crear("span", "marco__vacia", "sin variables todavía");
+    var vacia = crear("span", "marco__vacia", T.sinVars);
     var falta = crear("p", "marco__falta");
     falta.hidden = true;
     vars.appendChild(vacia);
@@ -103,8 +119,8 @@
     if (falta === undefined || el.getAttribute("data-falta") === clave) return;
     el.setAttribute("data-falta", clave);
     el.textContent = "";
-    if (falta === "") { el.textContent = "no le falta nada"; return; }
-    el.appendChild(document.createTextNode("le falta: "));
+    if (falta === "") { el.textContent = T.nadaFalta; return; }
+    el.appendChild(document.createTextNode(T.falta));
     var code = el.appendChild(crear("code"));
     // Dónde va la pieza: la llamada que espera, el ▢ o el valor recibido
     var k = -1, largo = 0;
@@ -159,13 +175,13 @@
   // a la tarjeta de encima
   function esperando(titulo, arriba) {
     var nombre = nombreFuncion(arriba);
-    return nombre === nombreFuncion(titulo) ? "esperando a la de arriba" : "esperando a " + nombre + "()";
+    return nombre === nombreFuncion(titulo) ? T.arriba : T.espera + nombre + "()";
   }
 
   /* ---------- Rótulo: qué llamada ejecuta el código ahora ---------- */
   function crearRotulo(pre) {
     var raiz = crear("p", "rotulo");
-    raiz.appendChild(crear("span", "rotulo__etiqueta", "Ahora corre:"));
+    raiz.appendChild(crear("span", "rotulo__etiqueta", T.ahora));
     var cuerpo = crear("span", "rotulo__cuerpo");
     raiz.appendChild(cuerpo);
     pre.parentNode.insertBefore(raiz, pre);
@@ -176,7 +192,7 @@
     var nivel = pila.length - 1;
     var datos = pila[nivel];
     cuerpo.textContent = "";
-    if (nivel === 0) cuerpo.appendChild(crear("span", "rotulo__programa", "el programa"));
+    if (nivel === 0) cuerpo.appendChild(crear("span", "rotulo__programa", T.elPrograma));
     else cuerpo.appendChild(crear("code", "rotulo__llamada", datos.titulo));
     datos.vars.forEach(function (par) {
       var c = crear("span", "var");
@@ -261,18 +277,18 @@
         m.raiz.classList.toggle("marco--esperando", !arriba);
         m.raiz.classList.toggle("marco--destino", vuelve && nivel === pila.length - 2);
         m.vuelve = arriba && vuelve;
-        var linea = datos.linea !== undefined ? " en la línea " + (datos.linea + 1) : "";
+        var linea = datos.linea !== undefined ? T.enLinea + (datos.linea + 1) : "";
         var pausada = !arriba && datos.linea !== undefined;
         var sigue = arriba && datos.sigue && !termina;
         var estado = "";
-        if (datos.devuelve !== undefined) estado = "↩ devuelve " + datos.devuelve;
-        else if (arriba && vuelve && datos.termina) estado = "↩ vuelve " + (nivel === 1 ? "al programa" : "a " + pila[nivel - 1].titulo);
-        else if (datos.termina) estado = "↩ termina";
-        else if (pausada && datos.nombra) estado = "‖ línea " + (datos.linea + 1) + " · espera a " + pila[nivel + 1].titulo;
-        else if (pausada) estado = "‖ pausada" + linea;
+        if (datos.devuelve !== undefined) estado = T.devuelve + datos.devuelve;
+        else if (arriba && vuelve && datos.termina) estado = nivel === 1 ? T.vuelveProg : T.vuelveA + pila[nivel - 1].titulo;
+        else if (datos.termina) estado = T.termina;
+        else if (pausada && datos.nombra) estado = T.linea + (datos.linea + 1) + T.esperaA + pila[nivel + 1].titulo;
+        else if (pausada) estado = T.pausada + linea;
         else if (!arriba) estado = esperando(datos.titulo, pila[nivel + 1].titulo);
-        else if (sigue) estado = "▶ sigue" + linea;
-        else if (nivel > 0) estado = "trabajando";
+        else if (sigue) estado = T.sigue + linea;
+        else if (nivel > 0) estado = T.trabajando;
         if (m.estado.textContent !== estado) m.estado.textContent = estado;
         m.estado.className = "marco__estado" + (termina ? " marco__estado--devuelve" : pausada ? " marco__estado--pausada" :
           sigue ? " marco__estado--sigue" : "") + (pausada && datos.nombra ? " marco__estado--nombra" : "");
@@ -286,7 +302,7 @@
         pintarToca(m, arriba && e.tocable ? e.tocable : "");
         m.devuelve = datos.devuelve;
       });
-      titulo.textContent = "Pila de llamadas · " + pila.length + (pila.length === 1 ? " tarjeta" : " tarjetas");
+      titulo.textContent = T.pila + pila.length + (pila.length === 1 ? T.tarjeta : T.tarjetas);
       var recibido = marcos[pila.length - 1].falta.querySelector(".marco__recibido");
       if (baja && recibido && window.Codigo) Codigo.volar(baja.desde, recibido, String(baja.valor), "vuelo--salida");
       if (codigo) {
