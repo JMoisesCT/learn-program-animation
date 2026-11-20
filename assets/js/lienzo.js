@@ -35,6 +35,7 @@
     var cursor = { fila: 0, col: 0 };
     var activa = null;
     var modo = null;            // null o { objetivo: [...] } al comparar
+    var EN = /^en/i.test(document.documentElement.lang || "");
     var animar = {};            // "f,c" -> retraso en ms de las casillas recién escritas
 
     raiz.classList.add("lienzo");
@@ -52,8 +53,10 @@
       var visibles = lineas.slice();
       if (!visibles[visibles.length - 1].length) visibles.pop();
       raiz.setAttribute("aria-label", visibles.length
-        ? "Pantalla: " + visibles.map(function (l) { return l.length ? "«" + texto(l) + "»" : "línea vacía"; }).join(", ")
-        : "Pantalla vacía");
+        ? (EN ? "Screen: " : "Pantalla: ") + visibles.map(function (l) {
+            return l.length ? (EN ? "“" + texto(l) + "”" : "«" + texto(l) + "»") : (EN ? "empty line" : "línea vacía");
+          }).join(", ")
+        : (EN ? "Empty screen" : "Pantalla vacía"));
     }
 
     function casilla(clase, contenido) {
