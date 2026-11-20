@@ -438,9 +438,16 @@
     // Una línea de consola larga ocupa dos renglones: la copia se parte igual, con la letra
     // de la consola, en vez de salirse por la derecha en uno solo
     var enConsola = destino.matches(".consola__linea");
-    if (enConsola) {
-      copia.style.whiteSpace = "pre-wrap";
-      copia.style.fontSize = getComputedStyle(destino).fontSize;
+    var estilo = getComputedStyle(destino);
+    if (enConsola) copia.style.whiteSpace = "pre-wrap";
+    // Con la letra del destino: una lección puede achicar una caja (.caja__valor) y la copia,
+    // que mide lo mismo que el destino, llevaría la letra grande de base.css y se saldría
+    copia.style.fontSize = estilo.fontSize;
+    // Si es la misma pieza (la copia lleva la clase del destino), también su relleno
+    var base = (clase || "").split(" ")[0];
+    if (base && destino.classList.contains(base)) {
+      copia.style.paddingLeft = estilo.paddingLeft;
+      copia.style.paddingRight = estilo.paddingRight;
     }
     document.body.appendChild(copia);
 
