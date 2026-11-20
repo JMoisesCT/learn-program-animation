@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Functions that decide · Learn to program</title>
+  <meta name="description" content="Interactive lesson: return inside if and elif, functions that return True or False, return ends the function, None, and the difference between print and return in Python.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .btn-codigo { font-family: var(--fuente-codigo); font-weight: 700; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rotulo { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: 0.06em; }
+    .elegir { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-bottom: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    /* The ✓ keeps its place from the start: when it appears it doesn't widen the button or
+       split the row into two lines (what's below, and with it the output, doesn't move down) */
+    .elegir .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+    .elegir .btn.hecho::after { visibility: visible; }
+    #p2-comparacion { align-content: flex-start; }
+    .control-slider { margin-top: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .lab .expresion { margin: var(--esp-4) 0 0; }
+    .opciones legend { padding: 0; margin-bottom: var(--esp-1); font-weight: 600; }
+
+    /* What the call returns */
+    .devuelto { display: inline-grid; place-items: center; min-width: 2.5rem; padding: 0.1em 0.6em; border-radius: var(--radio-sm); border: 2px dashed var(--color-borde); color: var(--color-texto-suave); }
+    .devuelto--lleno { border-style: solid; border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .devuelto--cambio { animation: valor-pulso 260ms ease-out; }
+
+    /* Step 1: the function's paths, one per return */
+    .caminos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .camino { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); transition: border-color var(--dur-rapida), background-color var(--dur-rapida), opacity var(--dur-rapida); }
+    .camino code { padding: 0; background: none; }
+    .camino__pregunta { font-weight: 700; white-space: nowrap; }
+    .camino__nada { font-size: var(--texto-xs); font-style: italic; color: var(--color-texto-suave); }
+    .camino__return { grid-column: 1 / -1; font-size: var(--texto-sm); color: var(--color-texto-suave); white-space: nowrap; }
+    .camino--elegido { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .camino--elegido .camino__return { font-weight: 700; color: var(--color-ok); }
+    .camino--elegido .camino__return::after { content: "  ← exits here"; font-family: var(--fuente); font-size: var(--texto-xs); }
+    .camino--sin-llegar { opacity: 0.5; border-style: dashed; }
+    .probadas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); list-style: none; margin: var(--esp-4) 0 0; padding: 0; }
+    .probadas li { padding: 0.15em 0.75em; border-radius: 999px; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); background: var(--color-superficie-2); color: var(--color-texto-suave); }
+    .probadas li.probada { background: var(--color-ok-suave); color: var(--color-ok); }
+    .probadas li.probada::after { content: " ✓"; }
+
+    /* Step 2: where we are */
+    .estado-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .lugar { display: inline-block; padding: 0.15em 0.75em; border-radius: 999px; font-weight: 700; background: var(--color-superficie); color: var(--color-texto); transition: background-color var(--dur), color var(--dur); }
+    .lugar--funcion { background: var(--color-azul-suave); color: var(--color-azul); }
+    .comparar { display: flex; align-items: flex-end; justify-content: center; gap: var(--esp-5); margin-top: var(--esp-2); }
+    .comparar .cajas { padding: var(--esp-4) 0 0; }
+    .comparar__regla { flex: 1; max-width: 16rem; padding-bottom: var(--esp-3); }
+    .comparar__regla .regla { margin: 0 0 var(--esp-5); }
+    .comparar__leyenda { margin: 0; font-size: var(--texto-xs); color: var(--color-texto-suave); text-align: center; }
+    .comparar__leyenda strong { color: var(--color-acento); }
+    .paso-cadena { animation: aparecer var(--dur) ease both; }
+
+    /* Step 3: predict */
+    #p3-opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #p3-opciones .opcion span { padding: var(--esp-3) var(--esp-2); font-size: var(--texto-md); }
+    .cadena { min-height: 3.5rem; padding: var(--esp-3); border-radius: var(--radio); background: var(--color-superficie); font-size: var(--texto-md); }
+    .lab__visual .cadena { background: var(--color-superficie); }
+    .cadena__paso { animation: aparecer var(--dur) ease both; }
+    .cadena__paso:nth-child(2), .cadena__paso:nth-child(3) { animation-delay: 250ms; }
+    .cadena__paso:nth-child(4), .cadena__paso:nth-child(5) { animation-delay: 500ms; }
+    .cadena__vacia { font-family: var(--fuente); font-size: var(--texto-sm); font-weight: 400; color: var(--color-texto-suave); }
+
+    /* Step 4: a box with None */
+    #p4-calculo { min-height: 2.6rem; }
+    .zona-fn + .rotulo { margin-top: var(--esp-5); }
+    .rotulo code { padding: 0; background: none; text-transform: none; letter-spacing: 0; }
+    .zona-fn { transition: opacity var(--dur); }
+    .zona-fn--fuera { opacity: 0.45; }
+    .caja--nada .caja__valor { color: var(--color-texto-suave); font-style: italic; border-style: dashed; }
+
+    /* Challenge: versions of the function */
+    #reto-opciones { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+    #reto-opciones .opcion span { height: 100%; padding: var(--esp-3) var(--esp-4); text-align: left; font-size: var(--texto-sm); }
+    .version__nombre { display: block; margin-bottom: var(--esp-1); font-family: var(--fuente); font-size: var(--texto-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .version__codigo { display: block; white-space: pre; overflow-x: auto; font-size: var(--texto-xs); font-weight: 600; line-height: 1.6; }
+    .version__pruebas { display: grid; gap: 0.15rem; margin-top: var(--esp-2); padding-top: var(--esp-2); border-top: 1px solid var(--color-borde); font-size: var(--texto-xs); }
+    .version__pruebas i { font-style: normal; }
+    .version__pruebas .ok { color: var(--color-ok); }
+    .version__pruebas .mal { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* Desktop: the grade control in a single row, so it fits on the screen below the code */
+    @media (min-width: 1024px) {
+      #paso-caminos .codigo { font-size: 1.05rem; }
+      #paso-caminos .control-slider { display: flex; align-items: center; gap: var(--esp-4); margin-top: var(--esp-3); }
+      #paso-caminos .control-slider label { flex: none; gap: var(--esp-3); }
+      #paso-caminos .control-slider input { flex: 1; min-width: 0; }
+    }
+
+    @media (max-width: 480px) {
+      .expresion { font-size: var(--texto-md); }
+      .camino { padding: var(--esp-2); }
+      .comparar { flex-direction: column; align-items: center; gap: var(--esp-3); }
+      .comparar__regla { width: 100%; padding-bottom: 0; }
+      .camino--elegido .camino__return::after { content: "  ←"; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones-return">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: several paths, each with its own return -->
+    <section class="paso" id="paso-caminos" data-requiere aria-labelledby="t-caminos">
+      <span class="paso__etiqueta">Functions 4/7 · Functions that decide</span>
+      <h1 class="paso__titulo" id="t-caminos">A function with several exits</h1>
+      <p>Inside a function you can use <code>if</code> and <code>elif</code>, and put a <code>return</code> on each path. Move the grade and find the <strong>three exits</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">rate</span>(<span class="tk-variable">grade</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">18</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"Excellent"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"Passed"</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"Failed"</span></span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">rate</span>(<span class="tk-numero" id="p1-codigo-nota">15</span>))</span></code></pre>
+          <div class="control-slider">
+            <label for="p1-slider"><span>Grade (0 to 20)</span> <output id="p1-salida" for="p1-slider">15</output></label>
+            <input type="range" id="p1-slider" min="0" max="20" value="15">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <ol class="caminos" id="p1-caminos" aria-label="Paths of the function"></ol>
+          <div class="expresion" aria-live="polite">
+            <span id="p1-llamada">rate(15)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="devuelto devuelto--lleno" id="p1-devuelto">"Passed"</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <ul class="probadas" aria-label="Exits found">
+            <li data-camino="0">"Excellent"</li><li data-camino="1">"Passed"</li><li data-camino="2">"Failed"</li>
+          </ul>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. return ends the function -->
+    <section class="paso" id="paso-termina" data-requiere aria-labelledby="t-termina">
+      <h2 class="paso__titulo" id="t-termina"><code>return</code> ends the function</h2>
+      <p>When Python reaches a <code>return</code>, it hands over the value and <strong>leaves</strong> the function right away. Will “Well done!” be printed? Run it with both grades.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" role="group" aria-label="Grade we pass in">
+            <button type="button" class="btn btn-secundario btn-codigo" data-p2="15" aria-pressed="true">grade 15</button>
+            <button type="button" class="btn btn-secundario btn-codigo" data-p2="8" aria-pressed="false">grade 8</button>
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">passed</span>(<span class="tk-variable">grade</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-palabra">True</span></span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Well done!"</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-palabra">False</span></span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">passed</span>(<span class="tk-numero" id="p2-codigo-nota">15</span>))</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="estado-fila">Now in: <span class="lugar" id="p2-lugar">main program</span></p>
+          <div class="comparar">
+            <div class="cajas">
+              <div class="caja" id="p2-caja">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">grade</code>
+              </div>
+            </div>
+            <div class="comparar__regla">
+              <div class="regla" aria-hidden="true">
+                <div class="regla__zona regla__zona--fin" style="left:55%"></div>
+                <span class="regla__marca" style="left:55%">11</span>
+                <span class="regla__punto" id="p2-punto" hidden></span>
+              </div>
+              <p class="comparar__leyenda">Grades from 0 to 20. In the <strong>green zone</strong> (11 or more) the condition is True.</p>
+            </div>
+          </div>
+          <div class="expresion" id="p2-comparacion" aria-live="polite"></div>
+          <div class="expresion" aria-live="polite">
+            <span id="p2-llamada">passed(15)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="devuelto" id="p2-devuelto">?</span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Return True or False -->
+    <section class="paso" id="paso-si-no" data-requiere aria-labelledby="t-si-no">
+      <h2 class="paso__titulo" id="t-si-no">Functions that answer yes or no</h2>
+      <p>A condition is already <code>True</code> or <code>False</code>, so the function can return it as it is. Predict what happens in each case.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-def" aria-label="Code of the function"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">passed</span>(<span class="tk-variable">grade</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">11</span></span></code></pre>
+          <p class="rotulo" id="p3-contador" style="margin-top:var(--esp-4)">Question 1 of 3</p>
+          <pre class="codigo" id="p3-codigo" aria-label="Code of the question" style="margin-top:var(--esp-2)"><code></code></pre>
+          <fieldset class="opciones" id="p3-opciones">
+            <legend>What does it print?</legend>
+          </fieldset>
+          <div class="fila-botones" id="p3-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p3-otra-btn">Next question ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="expresion cadena" id="p3-cadena" aria-live="polite"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. print or return, and None -->
+    <section class="paso" id="paso-none" data-requiere aria-labelledby="t-none">
+      <h2 class="paso__titulo" id="t-none">Show or return?</h2>
+      <p>Both functions make a 10 appear… but do <code>x</code> and <code>y</code> hold the same thing? Run it line by line.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p4-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">show_double</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span> * <span class="tk-numero">2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">double</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">n</span> * <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">x</span> = <span class="tk-funcion">show_double</span>(<span class="tk-numero">5</span>)</span><span class="linea"><span class="tk-variable">y</span> = <span class="tk-funcion">double</span>(<span class="tk-numero">5</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">x</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">y</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zona-fn zona-fn--fuera" id="p4-zona-fn">
+            <p class="rotulo" id="p4-fn">Inside the function</p>
+            <div class="cajas">
+              <div class="caja caja--acento" id="p4-caja-n">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">n</code>
+              </div>
+            </div>
+            <div class="expresion" id="p4-calculo" aria-live="polite"></div>
+          </div>
+          <p class="rotulo">Program</p>
+          <div class="cajas">
+            <div class="caja" id="p4-caja-x">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">x</code>
+            </div>
+            <div class="caja" id="p4-caja-y">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">y</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota"><code>print</code> shows a value to whoever is looking at the screen; <code>return</code> hands it to the program so it can store it and keep using it.</p>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Which versions work?</h2>
+      <p>All four try to do the same as <code>rate</code>: <strong>18 or more</strong> is "Excellent", <strong>11 to 17</strong> is "Passed" and <strong>less than 11</strong> is "Failed". Mark <strong>all</strong> the ones that always return the right thing.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones" id="reto-opciones">
+          <legend class="visualmente-oculto">Versions of rate</legend>
+          <label class="opcion"><input type="checkbox" name="reto" value="0"><span><b class="version__nombre">Version A</b><code class="version__codigo">def rate(grade):
+    if grade &gt;= 11:
+        return "Passed"
+    elif grade &gt;= 18:
+        return "Excellent"
+    else:
+        return "Failed"</code><small class="version__pruebas" hidden></small></span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="1"><span><b class="version__nombre">Version B</b><code class="version__codigo">def rate(grade):
+    if grade &gt;= 18:
+        return "Excellent"
+    if grade &gt;= 11:
+        return "Passed"
+    return "Failed"</code><small class="version__pruebas" hidden></small></span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="2"><span><b class="version__nombre">Version C</b><code class="version__codigo">def rate(grade):
+    if grade &gt;= 18:
+        print("Excellent")
+    elif grade &gt;= 11:
+        print("Passed")
+    else:
+        print("Failed")</code><small class="version__pruebas" hidden></small></span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="3"><span><b class="version__nombre">Version D</b><code class="version__codigo">def rate(grade):
+    if grade &lt; 11:
+        return "Failed"
+    elif grade &lt; 18:
+        return "Passed"
+    return "Excellent"</code><small class="version__pruebas" hidden></small></span></label>
+        </fieldset>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try again</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A function can have several <code>return</code>s: <strong>one</strong> runs and the function ends there. If it reaches none of them, it returns <code>None</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">rate</span>(<span class="tk-variable">grade</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-comentario"># it ends here</span></span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"Passed"</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-texto">"Failed"</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">passed</span>(<span class="tk-variable">grade</span>):</span><span class="linea">    <span class="tk-comentario"># returns True or False</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">11</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">show</span>(<span class="tk-variable">grade</span>):</span><span class="linea">    <span class="tk-comentario"># no return: returns None</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">grade</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../scope/index.html">Next: Local variables →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  var leccion; // assigned at the end, with Pasos.iniciar
+
+  /* Box for what a call returns: "?" while there is no value */
+  function pintarDevuelto(el, valor) {
+    var texto = valor === null ? "?" : String(valor);
+    var cambia = el.textContent !== texto;
+    el.textContent = texto;
+    el.classList.toggle("devuelto--lleno", valor !== null);
+    if (cambia && valor !== null) {
+      el.classList.remove("devuelto--cambio");
+      void el.offsetWidth;
+      el.classList.add("devuelto--cambio");
+    }
+  }
+
+  /* Chain of an expression being worked out: "grade >= 11" → "15 >= 11" → True.
+     partes: texts; if ultimo is true/false, the last term is a True / False chip */
+  function pintarCadena(el, partes, ultimo) {
+    el.textContent = "";
+    partes.forEach(function (texto, i) {
+      if (i > 0) {
+        var flecha = crear("span", "expresion__flecha", "→");
+        flecha.setAttribute("aria-hidden", "true");
+        el.appendChild(flecha);
+      }
+      var t = crear("span", i === partes.length - 1 && i > 0 ? "paso-cadena" : "");
+      if (i === partes.length - 1 && typeof ultimo === "boolean") Codigo.booleano(t, ultimo);
+      else t.textContent = texto;
+      el.appendChild(t);
+    });
+  }
+
+  /* ---------- 1. Several exits ---------- */
+  var CAMINOS_P1 = [
+    { palabra: "if", limite: 18, devuelve: '"Excellent"' },
+    { palabra: "elif", limite: 11, devuelve: '"Passed"' },
+    { palabra: "else", devuelve: '"Failed"' }
+  ];
+  var PREGUNTAS_P1 = [1, 3, 5];   // lines of the if, elif and else
+  var RETURNS_P1 = [2, 4, 6];     // line of each path's return
+  var p1Vistos = {};
+
+  CAMINOS_P1.forEach(function (c) {
+    var li = crear("li", "camino");
+    c.pregunta = crear("code", "camino__pregunta");
+    c.respuesta = crear("span");
+    li.appendChild(c.pregunta);
+    li.appendChild(c.respuesta);
+    li.appendChild(crear("code", "camino__return", "return " + c.devuelve));
+    c.fila = li;
+    $("p1-caminos").appendChild(li);
+  });
+
+  function caminoDe(nota) { return nota >= 18 ? 0 : nota >= 11 ? 1 : 2; }
+
+  function pintarP1(interaccion) {
+    var nota = Number($("p1-slider").value);
+    var k = caminoDe(nota);
+    $("p1-salida").textContent = nota;
+    $("p1-codigo-nota").textContent = nota;
+    $("p1-llamada").textContent = "rate(" + nota + ")";
+
+    CAMINOS_P1.forEach(function (c, i) {
+      c.pregunta.textContent = c.limite ? c.palabra + " " + nota + " >= " + c.limite : c.palabra;
+      c.fila.classList.toggle("camino--elegido", i === k);
+      c.fila.classList.toggle("camino--sin-llegar", i > k);
+      if (i > k) {
+        c.respuesta.className = "camino__nada";
+        c.respuesta.textContent = c.limite ? "not asked" : "not reached";
+      } else if (c.limite) {
+        Codigo.booleano(c.respuesta, i === k);
+      } else {
+        c.respuesta.className = "camino__nada";
+        c.respuesta.textContent = "none was True";
+      }
+    });
+
+    // The questions run up to the one that is True, plus its return; the rest is skipped
+    var activas = PREGUNTAS_P1.slice(0, k + 1).concat([RETURNS_P1[k], 8]);
+    var saltadas = [1, 2, 3, 4, 5, 6].filter(function (l) { return activas.indexOf(l) === -1; });
+    Codigo.marcar($("p1-codigo"), { activas: activas, saltadas: saltadas });
+
+    var valor = CAMINOS_P1[k].devuelve;
+    if (valor !== $("p1-devuelto").textContent || !interaccion) Codigo.consola($("p1-consola"), [valor.slice(1, -1)]);
+    pintarDevuelto($("p1-devuelto"), valor);
+
+    p1Vistos[k] = true;
+    document.querySelector('.probadas li[data-camino="' + k + '"]').classList.add("probada");
+    if (!interaccion) return;
+    var faltan = CAMINOS_P1.filter(function (c, i) { return !p1Vistos[i]; });
+    if (!faltan.length) {
+      Pasos.feedback($("p1-fb"), "ok", "Three paths, three returns: depending on the grade, only one runs, and the function returns that value.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p1-fb"), "pista", "You still need to find " + faltan.map(function (c) { return c.devuelve; }).join(" and ") + ".");
+    }
+  }
+
+  /* ---------- 2. return ends the function ---------- */
+  var p2Nota = 15;
+  var p2Hechos = {};
+
+  function trazaTermina() {
+    var v = p2Nota;
+    var pasa = v >= 11;
+    var t = [
+      { linea: 6, texto: "Calls <strong>passed(" + v + ")</strong>: jumps to the function.", estado: { devuelto: null } },
+      { linea: 0, texto: "The parameter <strong>grade</strong> gets " + v + ".", estado: { lugar: "funcion", nota: v } },
+      { linea: 1, texto: "To decide, it compares <strong>grade</strong> with 11. First it swaps grade for its value: <strong>" + v + " &gt;= 11</strong>.", estado: { comparar: 1 } },
+      { linea: 1, texto: pasa
+          ? "Is " + v + " greater than or equal to 11? <strong>Yes</strong>, it's in the green zone → <strong>True</strong>: it goes into the if."
+          : "Is " + v + " greater than or equal to 11? <strong>No</strong>, " + v + " is less than 11 → <strong>False</strong>: it skips what's inside the if and goes on at line 5.",
+        estado: { comparar: 2 } }
+    ];
+    if (pasa) {
+      t.push({ linea: 2, texto: "<strong>return True</strong>: hands over True and the function <strong>ends here</strong>. What's below doesn't run anymore.", estado: { devuelto: "True" } });
+    } else {
+      t.push({ linea: 4, texto: "<strong>return False</strong>: hands over False and the function ends.", estado: { devuelto: "False" } });
+    }
+    t.push({ linea: 6, flecha: true, salida: pasa ? "True" : "False", texto: "Back in the program: passed(" + v + ") is " + (pasa ? "True" : "False") + " and print shows it.", estado: { lugar: "principal" } });
+    return t;
+  }
+
+  function pintarLugarP2(lugar) {
+    var dentro = lugar === "funcion";
+    $("p2-lugar").textContent = dentro ? "inside passed()" : "main program";
+    $("p2-lugar").classList.toggle("lugar--funcion", dentro);
+  }
+
+  function pintarComparacionP2(etapa, el, nota) {
+    if (nota === undefined) nota = p2Nota;
+    var partes = ["grade >= 11", nota + " >= 11", "?"].slice(0, etapa + 1);
+    if (etapa < 2) partes.push("?");
+    pintarCadena(el || $("p2-comparacion"), partes, etapa === 2 ? nota >= 11 : undefined);
+  }
+  // The comparison keeps the height of its longest state (on mobile it reaches two lines):
+  // when it grows it doesn't push the output
+  Codigo.reservarAlto($("p2-comparacion"), [[1, 15], [2, 15], [1, 8], [2, 8]], function (copia, e) {
+    pintarComparacionP2(e[0], copia, e[1]);
+  });
+
+  /* A repeatable trace builds its steps when it runs, and only then reserves the height of
+     its explanations. Here it's reserved beforehand, with the texts for the chosen grade: so
+     the first line doesn't change that height or push the output (on mobile it's below) */
+  function reservarExplicacion(el, generar) {
+    Codigo.reservarAlto(el, [el.textContent].concat(generar().map(function (p) { return p.texto || ""; })),
+      function (copia, texto) { copia.innerHTML = texto; });
+  }
+
+  function pintarLlamadaP2() {
+    Caja.vaciar($("p2-caja"));
+    $("p2-punto").hidden = true;
+    pintarComparacionP2(0);
+    $("p2-codigo-nota").textContent = p2Nota;
+    $("p2-llamada").textContent = "passed(" + p2Nota + ")";
+    pintarDevuelto($("p2-devuelto"), null);
+    pintarLugarP2("principal");
+    document.querySelectorAll("[data-p2]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.getAttribute("data-p2")) === p2Nota));
+    });
+  }
+
+  function terminarP2() {
+    // When it ends, the function's lines that never ran are dimmed
+    var pasa = p2Nota >= 11;
+    Codigo.marcar($("p2-codigo"), { activas: [6], saltadas: pasa ? [3, 4] : [2, 3] });
+    p2Hechos[p2Nota] = true;
+    document.querySelector('[data-p2="' + p2Nota + '"]').classList.add("hecho");
+    if (p2Hechos[15] && p2Hechos[8]) {
+      Pasos.feedback($("p2-fb"), "ok", "“Well done!” is never printed: return hands over the value and the function ends right then. What's below it never gets to run.");
+      leccion.desbloquear();
+    } else if (pasa) {
+      Pasos.feedback($("p2-fb"), "pista", "See? “Well done!” didn't come out, and return False was never reached either. Now try grade 8.");
+    } else {
+      Pasos.feedback($("p2-fb"), "pista", "With 8 it skips the if and reaches return False. Now try 15: will “Well done!” come out?");
+    }
+  }
+
+  /* ---------- 3. Yes or no: predict ---------- */
+  function tk(clase, texto) { return '<span class="tk-' + clase + '">' + texto + "</span>"; }
+  function lineaHTML(html) { return '<span class="linea">' + html + "</span>"; }
+
+  var PREGUNTAS_P3 = [
+    { codigo: [tk("funcion", "print") + "(" + tk("funcion", "passed") + "(" + tk("numero", "14") + "))"],
+      nota: 14, opciones: ["True", "False"], ok: "True",
+      bien: "14 >= 11 is True, and that's exactly what the function returns.",
+      pista: "Put the grade into the condition: is it true that 14 >= 11?" },
+    { codigo: [tk("funcion", "print") + "(" + tk("funcion", "passed") + "(" + tk("numero", "11") + "))"],
+      nota: 11, opciones: ["True", "False"], ok: "True",
+      bien: ">= means “greater than or equal to”: 11 >= 11 is True. With an 11 you pass.",
+      pista: "Careful with the edge: >= means “greater than or equal to”." },
+    { codigo: [
+        tk("palabra", "if") + " " + tk("funcion", "passed") + "(" + tk("numero", "10") + "):",
+        "    " + tk("funcion", "print") + "(" + tk("texto", '"You passed!"') + ")",
+        tk("palabra", "else") + ":",
+        "    " + tk("funcion", "print") + "(" + tk("texto", '"Study more"') + ")"
+      ],
+      nota: 10, opciones: ["You passed!", "Study more"], ok: "Study more",
+      bien: "passed(10) returns False, so the if is skipped and it goes to the else. A function that returns True or False can be used directly as a condition.",
+      pista: "First work out passed(10): is 10 >= 11? Then the if decides." }
+  ];
+  var p3Actual = 0;
+
+  function pintarCadenaP3(q) {
+    var cadena = $("p3-cadena");
+    cadena.textContent = "";
+    if (!q) {
+      cadena.appendChild(crear("span", "cadena__vacia", "Answer and you'll see how it's worked out."));
+      return;
+    }
+    var r = q.nota >= 11;
+    [ "passed(" + q.nota + ")", q.nota + " >= 11" ].forEach(function (texto) {
+      cadena.appendChild(crear("span", "cadena__paso", texto));
+      var flecha = crear("span", "expresion__flecha cadena__paso", "→");
+      flecha.setAttribute("aria-hidden", "true");
+      cadena.appendChild(flecha);
+    });
+    var chip = crear("span", "cadena__paso");
+    Codigo.booleano(chip, r);
+    chip.classList.add("cadena__paso");
+    cadena.appendChild(chip);
+  }
+
+  function pintarPreguntaP3() {
+    var q = PREGUNTAS_P3[p3Actual];
+    $("p3-contador").textContent = "Question " + (p3Actual + 1) + " of " + PREGUNTAS_P3.length;
+    $("p3-codigo").querySelector("code").innerHTML = q.codigo.map(lineaHTML).join("");
+    var fs = $("p3-opciones");
+    fs.querySelectorAll(".opcion").forEach(function (o) { o.remove(); });
+    q.opciones.forEach(function (op) {
+      var label = crear("label", "opcion");
+      var input = crear("input");
+      input.type = "radio";
+      input.name = "p3";
+      input.value = op;
+      input.addEventListener("change", responderP3);
+      label.appendChild(input);
+      label.appendChild(crear("span", "", op));
+      fs.appendChild(label);
+    });
+    $("p3-otra").hidden = true;
+    Codigo.limpiar($("p3-def"));
+    pintarCadenaP3(null);
+    Pasos.limpiarFeedback($("p3-fb"));
+  }
+
+  function responderP3(e) {
+    var q = PREGUNTAS_P3[p3Actual];
+    var radios = document.querySelectorAll('#p3-opciones input[name="p3"]');
+    radios.forEach(function (r) { r.closest(".opcion").classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    var opcion = e.target.closest(".opcion");
+    if (e.target.value !== q.ok) {
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback($("p3-fb"), "pista", q.pista);
+      return;
+    }
+    opcion.classList.add("opcion--correcta");
+    radios.forEach(function (r) { r.disabled = true; });
+    Codigo.marcar($("p3-def"), { activas: [1] });
+    pintarCadenaP3(q);
+    Codigo.agregar($("p3-consola"), q.ok);
+    var ultima = p3Actual === PREGUNTAS_P3.length - 1;
+    Pasos.feedback($("p3-fb"), "ok", q.bien);
+    if (ultima) leccion.desbloquear();
+    else {
+      $("p3-otra").hidden = false;
+      $("p3-otra-btn").focus();
+    }
+  }
+
+  function entrarSiNo(paso, l, info) {
+    if (!info.primeraVez) return;
+    p3Actual = 0;
+    Codigo.consola($("p3-consola"), []);
+    pintarPreguntaP3();
+  }
+
+  /* ---------- 4. print or return ---------- */
+  function trazaNone() {
+    return [
+      { linea: 6, texto: "Calls <strong>show_double(5)</strong>: jumps to the function, taking the 5 along." },
+      { linea: 0, texto: "The parameter <strong>n</strong> gets 5.", estado: { fn: "show_double", n: 5 } },
+      { linea: 1, salida: "10", texto: "Works out n * 2 → 5 * 2 → 10, and <strong>print</strong> shows it on the screen… but showing is not returning.", estado: { calculo: ["n * 2", "5 * 2", "10"] } },
+      { linea: 6, flecha: true, texto: "The function ended <strong>without a return</strong>: it returns <strong>None</strong>, which in Python means “nothing”. x stores None.", estado: { fn: null, x: "None" } },
+      { linea: 7, texto: "Calls <strong>double(5)</strong>: jumps to the function, taking the 5 along." },
+      { linea: 3, texto: "The parameter <strong>n</strong> gets 5.", estado: { fn: "double", n: 5 } },
+      { linea: 4, texto: "Works out n * 2 → 5 * 2 → <strong>10</strong>, and return hands the 10 back to the caller.", estado: { calculo: ["n * 2", "5 * 2", "10"] } },
+      { linea: 7, flecha: true, texto: "double(5) is 10, and it's stored in <strong>y</strong>.", estado: { fn: null, y: 10 } },
+      { linea: 8, salida: "None", texto: "print(x) shows None: there's no number in x." },
+      { linea: 9, salida: "10", texto: "print(y) shows 10." }
+    ];
+  }
+
+  /* The function's zone: shows its n while it runs and empties when it returns */
+  function pintarFuncionP4(fn) {
+    $("p4-fn").innerHTML = fn ? "Inside <code>" + fn + "()</code>" : "Inside the function";
+    $("p4-zona-fn").classList.toggle("zona-fn--fuera", !fn);
+    if (!fn) {
+      Caja.vaciar($("p4-caja-n"));
+      $("p4-calculo").textContent = "";
+    }
+  }
+
+  /* ---------- 5. Challenge ---------- */
+  var NOTAS_RETO = [19, 14, 5];
+  function esperado(n) { return n >= 18 ? "Excellent" : n >= 11 ? "Passed" : "Failed"; }
+  var VERSIONES = [
+    function (n) { return n >= 11 ? "Passed" : n >= 18 ? "Excellent" : "Failed"; },
+    function (n) { return esperado(n); },
+    function () { return null; },   // only prints: returns None
+    function (n) { return n < 11 ? "Failed" : n < 18 ? "Passed" : "Excellent"; }
+  ];
+  var PISTAS_RETO = {
+    0: "In version A, a grade of 19 goes into grade >= 11 first: the question about 18 comes too late.",
+    2: "Version C shows the text with print, but it has no return: it returns None."
+  };
+
+  function marcadas() {
+    return Array.prototype.map.call(document.querySelectorAll("#reto-opciones input:checked"), function (r) {
+      return Number(r.value);
+    });
+  }
+
+  function correcta(i) {
+    return NOTAS_RETO.every(function (n) { return VERSIONES[i](n) === esperado(n); });
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+      o.querySelector(".version__pruebas").hidden = true;
+    });
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto() {
+    limpiarReto();
+    leccion.listoParaComprobar(marcadas().length > 0);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  /* Tests a version with the three grades and writes it under its code */
+  function mostrarPruebas(i, opcion) {
+    var cont = opcion.querySelector(".version__pruebas");
+    cont.textContent = "";
+    NOTAS_RETO.forEach(function (n) {
+      var r = VERSIONES[i](n);
+      var bien = r === esperado(n);
+      cont.appendChild(crear("i", bien ? "ok" : "mal",
+        "rate(" + n + ") → " + (r === null ? "None" : '"' + r + '"') + (bien ? " ✓" : " ✗")));
+    });
+    cont.hidden = false;
+  }
+
+  function comprobarReto(paso) {
+    var elegidas = marcadas();
+    if (!elegidas.length) return false;
+    var malas = elegidas.filter(function (i) { return !correcta(i); });
+    elegidas.forEach(function (i) {
+      var opcion = paso.querySelector('input[name="reto"][value="' + i + '"]').closest(".opcion");
+      opcion.classList.add(correcta(i) ? "opcion--correcta" : "opcion--incorrecta");
+      mostrarPruebas(i, opcion);
+    });
+    var total = VERSIONES.filter(function (f, i) { return correcta(i); }).length;
+    var faltan = total - (elegidas.length - malas.length);
+
+    if (!malas.length && !faltan) {
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! B doesn't need elif or else: each return ends the function, so if it reaches the next line, the question above was False. D asks the other way around, but in an order that also works.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", malas.length
+      ? (PISTAS_RETO[malas[0]] || "Look at the tests in orange.") + " Unmark it."
+      : "The ones you marked work, but you're missing " + (faltan === 1 ? "one" : faltan) + ". Trace each version with a grade of 19, 14 and 5.");
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  $("p1-slider").addEventListener("input", function () { pintarP1(true); });
+  pintarP1(false);
+
+  pintarLlamadaP2();
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaTermina,
+    intervalo: 1300,
+    repetible: true,
+    alReiniciar: function () {
+      p2Hechos = {};
+      document.querySelectorAll("[data-p2]").forEach(function (b) { b.classList.remove("hecho"); });
+      pintarLlamadaP2();
+      Pasos.limpiarFeedback($("p2-fb"));
+      reservarExplicacion($("p2-explicacion"), trazaTermina);
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.devuelto === null) pintarLlamadaP2();
+      if (e.lugar) pintarLugarP2(e.lugar);
+      if (e.nota !== undefined) {
+        Caja.poner($("p2-caja"), e.nota, $("p2-codigo-nota"));  // comes from the call's argument
+        $("p2-punto").style.left = (e.nota / 20 * 100) + "%";
+        $("p2-punto").hidden = false;
+      }
+      if (e.comparar) pintarComparacionP2(e.comparar);
+      if (e.devuelto) pintarDevuelto($("p2-devuelto"), e.devuelto);
+    },
+    alTerminar: terminarP2
+  });
+  reservarExplicacion($("p2-explicacion"), trazaTermina);
+  document.querySelectorAll("[data-p2]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      p2Nota = Number(b.getAttribute("data-p2"));
+      trazaP2.cancelar();
+      pintarLlamadaP2();
+      reservarExplicacion($("p2-explicacion"), trazaTermina);
+    });
+  });
+
+  $("p3-otra-btn").addEventListener("click", function () {
+    p3Actual++;
+    pintarPreguntaP3();
+    $("p3-opciones").querySelector("input").focus();
+  });
+
+  Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaNone,
+    alReiniciar: function () {
+      pintarFuncionP4(null);
+      Caja.vaciar($("p4-caja-x"));
+      Caja.vaciar($("p4-caja-y"));
+      $("p4-caja-x").classList.remove("caja--nada");
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.fn !== undefined) pintarFuncionP4(e.fn);
+      // n comes from the 5 in its call: show_double(5) on line 7, double(5) on line 8
+      if (e.n !== undefined) Caja.poner($("p4-caja-n"), e.n,
+        Codigo.piezaEnLinea($("p4-codigo").querySelectorAll(".linea")[e.fn === "double" ? 7 : 6], String(e.n)));
+      if (e.calculo) pintarCadena($("p4-calculo"), e.calculo);
+      if (e.x !== undefined) {
+        Caja.poner($("p4-caja-x"), e.x);
+        $("p4-caja-x").classList.add("caja--nada");
+      }
+      if (e.y !== undefined) Caja.poner($("p4-caja-y"), e.y);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p4-fb"), "ok", "Both showed a 10, but only double returned it. A function without a return returns None.");
+      leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // When the step changes, any running execution is paused
+  function pausar() { trazaP2.detener(); }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-caminos": pausar,
+      "paso-termina": pausar,
+      "paso-si-no": function (paso, l, info) { pausar(); entrarSiNo(paso, l, info); },
+      "paso-none": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

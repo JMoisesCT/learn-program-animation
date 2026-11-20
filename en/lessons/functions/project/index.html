@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project: rock, paper, scissors · Learn to program</title>
+  <meta name="description" content="Functions project: build the rock, paper, scissors game in Python, part by part, with functions that return values, random.randint, if / elif, while True, break and a score.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    /* The game console doesn’t grow forever: after a few rounds it scrolls and shows the latest */
+    #d-registro, #t-registro { max-height: 13rem; margin-top: 1.1rem; overflow-y: auto; overscroll-behavior: contain; }
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+
+    /* ---------- Console that waits for answers ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 7rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+    /* Shortcuts: they type the move into the field and send it */
+    .jugadas { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: var(--esp-3); font-family: var(--fuente); }
+    .jugadas .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-size: var(--texto-sm); }
+
+    /* ---------- The duel: your move against the PC’s ---------- */
+    .duelo { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--esp-3); }
+    .duelo__lado { display: grid; justify-items: center; gap: var(--esp-1); padding: var(--esp-3) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), opacity var(--dur), background-color var(--dur); }
+    .duelo__quien { font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .duelo__mano { font-size: 2.75rem; line-height: 1.1; }
+    .duelo__mano--entra { animation: mano-entra 480ms var(--curva-rebote) both; }
+    .duelo__nombre { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); color: var(--tipo-str); min-height: 1.5em; }
+    .duelo__vs { font-weight: 700; color: var(--color-texto-suave); }
+    .duelo__lado--gana { border-color: var(--color-acento); background: var(--color-acento-suave); }
+    .duelo__lado--pierde { opacity: 0.6; }
+    .duelo__resultado { min-height: 1.6em; margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; }
+    .duelo__resultado--tu { color: var(--color-ok); }
+    .duelo__resultado--pc { color: var(--color-texto-suave); }
+    @keyframes mano-entra { from { transform: scale(0.3) rotate(-25deg); opacity: 0; } }
+    .tablero { display: flex; justify-content: center; align-items: baseline; gap: var(--esp-3); margin: var(--esp-3) 0 0; font-weight: 700; color: var(--color-texto-suave); }
+    .tablero strong { font-family: var(--fuente-codigo); font-size: var(--texto-xl); color: var(--color-texto); }
+    .tablero strong.tablero--cambio { animation: valor-pulso 300ms ease-out; color: var(--color-acento); }
+
+    /* ---------- Program variables ---------- */
+    .vars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-1) var(--esp-3); max-width: 15rem; margin: var(--esp-4) auto 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .vars dt { font-weight: 700; color: var(--color-azul); }
+    .vars dd { margin: 0; font-weight: 700; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .vars dd.vars--valor { color: var(--color-azul); }
+    .vars dd.vars--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Missions ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Options and tests ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__etiqueta { font-family: var(--fuente-codigo); overflow-wrap: anywhere; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* ---------- Part 3: the rules and the results table ---------- */
+    .reglas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: 0 0 var(--esp-4); padding: 0; list-style: none; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .reglas strong { color: var(--color-texto); }
+    .elegir-reglas { display: grid; gap: var(--esp-2); margin: 0 0 var(--esp-4); padding: 0; border: 0; }
+    .elegir-reglas legend { padding: 0; margin-bottom: var(--esp-2); font-weight: 600; }
+    .elegir-reglas label { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2) var(--esp-3); }
+    .elegir-reglas select { font: inherit; font-family: var(--fuente-codigo); font-weight: 700; min-height: 2.5rem; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--tipo-str); }
+    .elegir-reglas select:focus-visible { border-color: var(--color-azul); border-radius: var(--radio-sm); }
+    .tabla-wrap { overflow-x: auto; margin-top: var(--esp-4); }
+    .tabla { margin: 0 auto; border-collapse: separate; border-spacing: 0.2rem; font-size: var(--texto-sm); }
+    .tabla caption { margin-bottom: var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tabla th { padding: var(--esp-1) var(--esp-2); font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .tabla th[scope="row"] { text-align: right; }
+    .tabla td { min-width: 4.5rem; padding: var(--esp-2); text-align: center; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-family: var(--fuente-codigo); font-weight: 700; background: var(--color-superficie); transition: background-color var(--dur), border-color var(--dur), color var(--dur); }
+    .tabla td.res--tu { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .tabla td.res--pc { background: var(--color-superficie-2); color: #4b5563; }
+    .tabla td.res--empate { color: var(--color-texto-suave); }
+    .tabla td.res--mal { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); animation: sacudir 360ms ease; }
+    .tabla td.res--cambio { animation: valor-pulso 300ms ease-out; }
+    .tabla__esquina { font-family: var(--fuente); font-size: var(--texto-xs); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+      .duelo { gap: var(--esp-2); }
+      .duelo__mano { font-size: 2.25rem; }
+      .tabla td { min-width: 0; padding: var(--esp-2) 0.15rem; font-size: 0.8rem; }
+      .tabla th { padding: var(--esp-1) 0.1rem; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. What we are going to build -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="t-demo">
+      <span class="paso__etiqueta">Functions 7/7 · Project</span>
+      <h1 class="paso__titulo" id="t-demo">Project: rock, paper, scissors</h1>
+      <p>You’re going to program the classic game against the computer: <strong>rock crushes scissors, scissors cut paper and paper covers rock</strong>. First, play a few rounds.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="d-registro" aria-live="polite"></div>
+            <div id="d-fila">
+              <div class="entrada">
+                <label for="d-campo">Your move:</label>
+                <input type="text" id="d-campo" maxlength="8" autocomplete="off" spellcheck="false" autocapitalize="none">
+                <button type="button" class="btn btn-secundario" id="d-enviar">Send ⏎</button>
+              </div>
+              <div class="jugadas" role="group" aria-label="Type a move">
+                <button type="button" class="btn btn-secundario" data-jugada="rock">✊ rock</button>
+                <button type="button" class="btn btn-secundario" data-jugada="paper">✋ paper</button>
+                <button type="button" class="btn btn-secundario" data-jugada="scissors">✌️ scissors</button>
+                <button type="button" class="btn btn-secundario" data-jugada="quit">quit</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Play again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="d-vuelta" aria-live="polite"></p>
+          <div class="duelo" id="d-duelo"></div>
+          <p class="duelo__resultado" id="d-resultado" aria-live="polite"></p>
+          <p class="tablero" id="d-tablero"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Part 1: from the number to the text -->
+    <section class="paso" id="paso-texto" data-comprobar aria-labelledby="t-texto">
+      <span class="paso__etiqueta">Part 1 of 4</span>
+      <h2 class="paso__titulo" id="t-texto">From the number to the text</h2>
+      <p>The computer will pick a number from 1 to 3. You need a function that translates it: 1 is <code>"rock"</code>, 2 is <code>"paper"</code> and 3 is <code>"scissors"</code>. Which one <strong>returns</strong> the text correctly?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">Which function translates the number correctly?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="print"><span>def number_to_text(n):
+    if n == 1:
+        print("rock")
+    elif n == 2:
+        print("paper")
+    else:
+        print("scissors")</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="comillas"><span>def number_to_text(n):
+    if n == 1:
+        return rock
+    elif n == 2:
+        return paper
+    else:
+        return scissors</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>def number_to_text(n):
+    if n == 1:
+        return "rock"
+    elif n == 2:
+        return "paper"
+    else:
+        return "scissors"</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="sin-tijera"><span>def number_to_text(n):
+    if n == 1:
+        return "rock"
+    elif n == 2:
+        return "paper"</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Part 2: the PC’s move -->
+    <section class="paso" id="paso-pc" data-comprobar aria-labelledby="t-pc">
+      <span class="paso__etiqueta">Part 2 of 4</span>
+      <h2 class="paso__titulo" id="t-pc">The PC’s move</h2>
+      <p><code>pc_move()</code> takes nothing: it picks a number with <code>random.randint(1, 3)</code> and translates it with <code>number_to_text</code>, the function from part 1. Which one is right? We’ll call it three times.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">Which version of pc_move is right?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="numero"><span>def pc_move():
+    n = random.randint(1, 3)
+    return n</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>def pc_move():
+    n = random.randint(1, 3)
+    return number_to_text(n)</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="sin-return"><span>def pc_move():
+    n = random.randint(1, 3)
+    number_to_text(n)</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="fija"><span>def pc_move():
+    n = random.randint(1, 3)
+    return number_to_text(1)</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Part 3: who wins -->
+    <section class="paso" id="paso-gana" data-comprobar aria-labelledby="t-gana">
+      <span class="paso__etiqueta">Part 3 of 4</span>
+      <h2 class="paso__titulo" id="t-gana">Who wins?</h2>
+      <p><code>who_wins(you, pc)</code> returns <code>"tie"</code>, <code>"you"</code> or <code>"pc"</code>. Complete the three rules and look at the table with the 9 possible games.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <ul class="reglas" aria-label="Rules of the game">
+            <li>✊ <strong>rock</strong> crushes ✌️ scissors</li>
+            <li>✌️ <strong>scissors</strong> cut ✋ paper</li>
+            <li>✋ <strong>paper</strong> covers ✊ rock</li>
+          </ul>
+          <fieldset class="elegir-reglas">
+            <legend>What does each move beat?</legend>
+            <label><span>With <code>"rock"</code> you win if pc is</span>
+              <select data-regla="rock"><option value="">?</option><option value="rock">"rock"</option><option value="paper">"paper"</option><option value="scissors">"scissors"</option></select></label>
+            <label><span>With <code>"paper"</code> you win if pc is</span>
+              <select data-regla="paper"><option value="">?</option><option value="rock">"rock"</option><option value="paper">"paper"</option><option value="scissors">"scissors"</option></select></label>
+            <label><span>With <code>"scissors"</code> you win if pc is</span>
+              <select data-regla="scissors"><option value="">?</option><option value="rock">"rock"</option><option value="paper">"paper"</option><option value="scissors">"scissors"</option></select></label>
+          </fieldset>
+          <pre class="codigo" aria-label="Function who_wins"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">who_wins</span>(<span class="tk-variable">you</span>, <span class="tk-variable">pc</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">you</span> == <span class="tk-variable">pc</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"tie"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">you</span> == <span class="tk-texto">"rock"</span> <span class="tk-palabra">and</span> <span class="tk-variable">pc</span> == <span class="hueco" data-hueco="rock">?</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"you"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">you</span> == <span class="tk-texto">"paper"</span> <span class="tk-palabra">and</span> <span class="tk-variable">pc</span> == <span class="hueco" data-hueco="paper">?</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"you"</span></span><span class="linea">    <span class="tk-palabra">elif</span> <span class="tk-variable">you</span> == <span class="tk-texto">"scissors"</span> <span class="tk-palabra">and</span> <span class="tk-variable">pc</span> == <span class="hueco" data-hueco="scissors">?</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"you"</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-texto">"pc"</span></span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <div class="tabla-wrap">
+            <table class="tabla" id="p3-tabla">
+              <caption>who_wins(you, pc)</caption>
+              <thead><tr><th class="tabla__esquina" scope="col">you \ pc</th><th scope="col">"rock"</th><th scope="col">"paper"</th><th scope="col">"scissors"</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Part 4: the loop and the score -->
+    <section class="paso" id="paso-marcador" data-comprobar aria-labelledby="t-marcador">
+      <span class="paso__etiqueta">Part 4 of 4</span>
+      <h2 class="paso__titulo" id="t-marcador">The score</h2>
+      <p>The main program repeats rounds until you type <code>quit</code>. It still has to add up the points. We test three rounds: you <strong>win</strong>, you <strong>tie</strong> and you <strong>lose</strong>. What goes in the blank?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Your program"><code><span class="linea"><span class="tk-variable">your_score</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-variable">pc_score</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="tk-variable">you</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Your move: "</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">you</span> == <span class="tk-texto">"quit"</span>:</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea">    <span class="tk-variable">pc</span> = <span class="tk-funcion">pc_move</span>()</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"The PC chose <span class="tk-llave">{</span><span class="tk-variable">pc</span><span class="tk-llave">}</span>"</span>)</span><span class="linea">    <span class="tk-variable">winner</span> = <span class="tk-funcion">who_wins</span>(<span class="tk-variable">you</span>, <span class="tk-variable">pc</span>)</span><span class="linea"><span class="hueco" id="p4-hueco">?</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"You <span class="tk-llave">{</span><span class="tk-variable">your_score</span><span class="tk-llave">}</span> - <span class="tk-llave">{</span><span class="tk-variable">pc_score</span><span class="tk-llave">}</span> PC"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">What goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="else"><span>    if winner == "you":
+        your_score += 1
+    else:
+        pc_score += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="funcion"><span>    if who_wins == "you":
+        your_score += 1
+    elif who_wins == "pc":
+        pc_score += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>    if winner == "you":
+        your_score += 1
+    elif winner == "pc":
+        pc_score += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="sin-if"><span>    your_score += 1
+    pc_score += 1</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Output"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Challenge: the full game -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="t-jugar">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-jugar">Your game works!</h2>
+      <p>This is your main program; the three functions are already above it. Play until you complete the <strong>three missions</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="t-codigo" aria-label="Your main program"><code id="t-codigo-lineas"></code></pre>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="t-registro" aria-live="polite"></div>
+            <div id="t-fila">
+              <div class="entrada">
+                <label for="t-campo">Your move:</label>
+                <input type="text" id="t-campo" maxlength="8" autocomplete="off" spellcheck="false" autocapitalize="none">
+                <button type="button" class="btn btn-secundario" id="t-enviar">Send ⏎</button>
+              </div>
+              <div class="jugadas" role="group" aria-label="Type a move">
+                <button type="button" class="btn btn-secundario" data-jugada="rock">✊ rock</button>
+                <button type="button" class="btn btn-secundario" data-jugada="paper">✋ paper</button>
+                <button type="button" class="btn btn-secundario" data-jugada="scissors">✌️ scissors</button>
+                <button type="button" class="btn btn-secundario" data-jugada="quit">quit</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Play again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div class="duelo" id="t-duelo"></div>
+          <p class="duelo__resultado" id="t-resultado" aria-live="polite"></p>
+          <dl class="vars" id="t-vars" aria-label="Variables"></dl>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Missions">
+            <li data-mision="gana">Win a round</li>
+            <li data-mision="empate">Tie a round</li>
+            <li data-mision="salir">End the game with “quit”</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Project complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Three small functions, each with one job, and a loop that combines them: that’s how big programs are built.</p>
+        <ul class="usado" aria-label="What you used">
+          <li>def</li><li>return</li><li>a function inside another</li><li>random.randint()</li><li>if / elif / else</li><li>and</li><li>while True</li><li>input()</li><li>break</li><li>+= 1</li><li>f-strings</li>
+        </ul>
+        <pre class="codigo resumen-codigo" aria-label="Your full program"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../../../index.html">Back to the course →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script src="../../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  var JUGADAS = ["rock", "paper", "scissors"];
+  var MANOS = { rock: "✊", paper: "✋", scissors: "✌️" };
+  // What each move beats, and with which verb
+  var GANA_A = { rock: "scissors", paper: "rock", scissors: "paper" };
+  var VERBO = { rock: "crushes scissors", paper: "covers rock", scissors: "cut paper" };
+
+  function texto(s) { return '"' + s + '"'; }
+
+  function quienGana(tu, pc) {
+    if (tu === pc) return "tie";
+    return GANA_A[tu] === pc ? "you" : "pc";
+  }
+
+  function alAzar() { return JUGADAS[Math.floor(Math.random() * 3)]; }
+
+  /* ---------- The program, line by line ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function com(t) { return '<span class="tk-comentario">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+  function fs(t) { return '<span class="tk-prefijo">f</span>' + s(t); }
+
+  var FUNCIONES = [
+    kw("def") + " " + f("number_to_text") + "(" + v("n") + "):",
+    "    " + kw("if") + " " + v("n") + " == " + n("1") + ":",
+    "        " + kw("return") + " " + s('"rock"'),
+    "    " + kw("elif") + " " + v("n") + " == " + n("2") + ":",
+    "        " + kw("return") + " " + s('"paper"'),
+    "    " + kw("else") + ":",
+    "        " + kw("return") + " " + s('"scissors"'),
+    "",
+    kw("def") + " " + f("pc_move") + "():",
+    "    " + v("n") + " = " + v("random") + "." + f("randint") + "(" + n("1") + ", " + n("3") + ")",
+    "    " + kw("return") + " " + f("number_to_text") + "(" + v("n") + ")",
+    "",
+    kw("def") + " " + f("who_wins") + "(" + v("you") + ", " + v("pc") + "):",
+    "    " + kw("if") + " " + v("you") + " == " + v("pc") + ":",
+    "        " + kw("return") + " " + s('"tie"'),
+    "    " + kw("elif") + " " + v("you") + " == " + s('"rock"') + " " + kw("and") + " " + v("pc") + " == " + s('"scissors"') + ":",
+    "        " + kw("return") + " " + s('"you"'),
+    "    " + kw("elif") + " " + v("you") + " == " + s('"paper"') + " " + kw("and") + " " + v("pc") + " == " + s('"rock"') + ":",
+    "        " + kw("return") + " " + s('"you"'),
+    "    " + kw("elif") + " " + v("you") + " == " + s('"scissors"') + " " + kw("and") + " " + v("pc") + " == " + s('"paper"') + ":",
+    "        " + kw("return") + " " + s('"you"'),
+    "    " + kw("else") + ":",
+    "        " + kw("return") + " " + s('"pc"'),
+    ""
+  ];
+
+  var PRINCIPAL = [
+    v("your_score") + " = " + n("0"),
+    v("pc_score") + " = " + n("0"),
+    kw("while") + " " + kw("True") + ":",
+    "    " + v("you") + " = " + f("input") + "(" + s('"Your move: "') + ")",
+    "    " + kw("if") + " " + v("you") + " == " + s('"quit"') + ":",
+    "        " + kw("break"),
+    "    " + v("pc") + " = " + f("pc_move") + "()",
+    "    " + f("print") + "(" + fs('"The PC chose ' + llave("pc") + '"') + ")",
+    "    " + v("winner") + " = " + f("who_wins") + "(" + v("you") + ", " + v("pc") + ")",
+    "    " + kw("if") + " " + v("winner") + " == " + s('"you"') + ":",
+    "        " + v("your_score") + " += " + n("1"),
+    "    " + kw("elif") + " " + v("winner") + " == " + s('"pc"') + ":",
+    "        " + v("pc_score") + " += " + n("1"),
+    "    " + f("print") + "(" + fs('"You ' + llave("your_score") + " - " + llave("pc_score") + ' PC"') + ")",
+    f("print") + "(" + s('"Thanks for playing!"') + ")"
+  ];
+
+  function pintarLineas(code, lineas, hechas) {
+    code.innerHTML = lineas.map(function (h, i) {
+      return '<span class="linea' + (hechas && hechas.indexOf(i) !== -1 ? " linea--hecha" : "") + '">' + h + "</span>";
+    }).join("");
+  }
+
+  /* Paints a list of tests: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = crear("li", p.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "prueba__etiqueta", p.etiqueta));
+      li.appendChild(crear("span", "prueba__salida", p.salida));
+      li.appendChild(crear("span", "prueba__marca", p.ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correct" : ", incorrect"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* ---------- Pick-an-option steps (parts 1, 2 and 4) ----------
+     cfg: { id, nombre, correcta, hueco (optional), probar(valor) → filas, ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiarMarcas() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiarMarcas();
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      if (cfg.hueco) $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiarMarcas();
+        lista.hidden = true;
+        Pasos.limpiarFeedback(fb);
+        if (cfg.hueco) $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    // After a right answer, let them pick again to see why the others fail (progress is kept)
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- The game running (steps 1 and 6) ----------
+     o: { prefijo, vars (dl or null), desplazar (lines in the code before PRINCIPAL),
+          alRonda(ganador, partida), alTerminar(partida) } */
+  function crearDuelo(el) {
+    el.innerHTML = "";
+    var lados = {};
+    [["tu", "You"], ["pc", "PC"]].forEach(function (par, k) {
+      if (k === 1) el.appendChild(crear("span", "duelo__vs", "vs"));
+      var lado = crear("div", "duelo__lado");
+      lado.appendChild(crear("span", "duelo__quien", par[1]));
+      var mano = crear("span", "duelo__mano", "❔");
+      mano.setAttribute("aria-hidden", "true");
+      lado.appendChild(mano);
+      lado.appendChild(crear("code", "duelo__nombre", ""));
+      el.appendChild(lado);
+      lados[par[0]] = lado;
+    });
+    return lados;
+  }
+
+  function pintarLado(lado, jugada, clase) {
+    var mano = lado.querySelector(".duelo__mano");
+    mano.textContent = jugada ? MANOS[jugada] : "❔";
+    mano.classList.remove("duelo__mano--entra");
+    if (jugada) {
+      void mano.offsetWidth;
+      mano.classList.add("duelo__mano--entra");
+    }
+    lado.querySelector(".duelo__nombre").textContent = jugada ? texto(jugada) : "";
+    lado.classList.toggle("duelo__lado--gana", clase === "gana");
+    lado.classList.toggle("duelo__lado--pierde", clase === "pierde");
+  }
+
+  function crearJuego(o) {
+    var p = o.prefijo;
+    var lados = crearDuelo($(p + "-duelo"));
+    var resultado = $(p + "-resultado");
+    var tablero = $(p + "-tablero");
+    var partida = {};
+    var d = o.desplazar || 0;
+
+    function lineas(lista) { return lista.map(function (i) { return i + d; }); }
+
+    function pintarTablero(cambia) {
+      if (!tablero) return;
+      tablero.innerHTML = "You <strong></strong> – <strong></strong> PC";
+      var nums = tablero.querySelectorAll("strong");
+      nums[0].textContent = partida.puntosTu;
+      nums[1].textContent = partida.puntosPc;
+      if (cambia === "you") nums[0].classList.add("tablero--cambio");
+      if (cambia === "pc") nums[1].classList.add("tablero--cambio");
+    }
+
+    function pintarVars(cambia) {
+      if (!o.vars) return;
+      o.vars.innerHTML = "";
+      [["you", partida.tu === undefined ? undefined : texto(partida.tu)],
+       ["pc", partida.pc === undefined ? undefined : texto(partida.pc)],
+       ["winner", partida.ganador === undefined ? undefined : texto(partida.ganador)],
+       ["your_score", partida.puntosTu], ["pc_score", partida.puntosPc]].forEach(function (par) {
+        var dt = crear("dt", "", par[0]);
+        var dd = crear("dd", "", par[1] === undefined ? "—" : String(par[1]));
+        if (par[1] !== undefined) dd.className = "vars--valor" + (cambia.indexOf(par[0]) !== -1 ? " vars--cambio" : "");
+        o.vars.appendChild(dt);
+        o.vars.appendChild(dd);
+      });
+    }
+
+    function marcador() { return "You " + partida.puntosTu + " - " + partida.puntosPc + " PC"; }
+
+    BucleInput.crear({
+      prefijo: p,
+      vueltas: null,
+      rotulo: "Round",
+      pregunta: "Your move:",
+      lineaInput: 3 + d,
+      siguiente: "Pick your next move.",
+      validar: function (t) {
+        return JUGADAS.indexOf(t) !== -1 || t === "quit" ? null : "Type rock, paper, scissors or quit, in lowercase.";
+      },
+      alEmpezar: function () {
+        partida = { puntosTu: 0, puntosPc: 0, rondas: 0, ganadas: 0, empates: 0 };
+        pintarLado(lados.tu, null);
+        pintarLado(lados.pc, null);
+        resultado.textContent = "";
+        resultado.className = "duelo__resultado";
+        pintarTablero();
+        pintarVars(["your_score", "pc_score"]);
+        return "<strong>your_score</strong> and <strong>pc_score</strong> start at 0.";
+      },
+      alDato: function (t) {
+        if (t === "quit") {
+          partida.tu = t;
+          partida.salio = true;
+          pintarVars(["you"]);
+          return {
+            texto: "<code>you == \"quit\"</code> is True: <code>break</code> ends the loop.",
+            camino: { activas: lineas([3, 4, 5]), saltadas: lineas([6, 7, 8, 9, 10, 11, 12, 13]) },
+            fin: true
+          };
+        }
+        var pc = alAzar();
+        var g = quienGana(t, pc);
+        partida.tu = t;
+        partida.pc = pc;
+        partida.ganador = g;
+        partida.rondas++;
+        if (g === "you") { partida.puntosTu++; partida.ganadas++; }
+        else if (g === "pc") partida.puntosPc++;
+        else partida.empates++;
+        pintarLado(lados.tu, t, g === "you" ? "gana" : g === "pc" ? "pierde" : "");
+        pintarLado(lados.pc, pc, g === "pc" ? "gana" : g === "you" ? "pierde" : "");
+        resultado.textContent = g === "you" ? "You win! " + MANOS[t] + " " + VERBO[t] + "." :
+          g === "pc" ? "The PC wins: " + MANOS[pc] + " " + VERBO[pc] + "." : "Tie: you both picked " + t + ".";
+        resultado.className = "duelo__resultado" + (g === "you" ? " duelo__resultado--tu" : g === "pc" ? " duelo__resultado--pc" : "");
+        pintarTablero(g);
+        var cambia = ["you", "pc", "winner"];
+        if (g === "you") cambia.push("your_score");
+        if (g === "pc") cambia.push("pc_score");
+        pintarVars(cambia);
+        var caminos = {
+          "you": { activas: lineas([3, 4, 6, 7, 8, 9, 10, 13]), saltadas: lineas([5, 11, 12]) },
+          "pc": { activas: lineas([3, 4, 6, 7, 8, 9, 11, 12, 13]), saltadas: lineas([5, 10]) },
+          "tie": { activas: lineas([3, 4, 6, 7, 8, 9, 11, 13]), saltadas: lineas([5, 10, 12]) }
+        };
+        var suma = g === "you" ? "+1 for you." : g === "pc" ? "+1 for the PC." : "nobody scores.";
+        if (o.alRonda) o.alRonda(g, partida);
+        return {
+          texto: "pc_move() returned <code>" + texto(pc) + "</code> and who_wins returned <code>" + texto(g) + "</code>: " + suma,
+          camino: caminos[g],
+          salida: ["The PC chose " + pc, marcador()]
+        };
+      },
+      alFinal: function () {
+        return { linea: 14 + d, texto: "Game over.", salida: "Thanks for playing!" };
+      },
+      alTerminar: function () { o.alTerminar(partida); }
+    });
+
+    // The explanation keeps the height of its longest text: from one round to the next it
+    // doesn’t change height or push the console, which goes below it
+    if ($(p + "-explicacion")) {
+      var textos = [
+        "<strong>your_score</strong> and <strong>pc_score</strong> start at 0. <code>input()</code> waits for the first value.",
+        "<code>you == \"quit\"</code> is True: <code>break</code> ends the loop. Game over."
+      ];
+      JUGADAS.forEach(function (pc) {
+        [["you", "+1 for you."], ["pc", "+1 for the PC."], ["tie", "nobody scores."]].forEach(function (g) {
+          textos.push("pc_move() returned <code>" + texto(pc) + "</code> and who_wins returned <code>" + texto(g[0]) +
+            "</code>: " + g[1] + " Pick your next move.");
+        });
+      });
+      Codigo.reservarAlto($(p + "-explicacion"), textos, function (copia, html) { copia.innerHTML = html; });
+    }
+
+    // The shortcuts type the move and send it, as if it were typed
+    document.querySelectorAll("#" + p + "-fila [data-jugada]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $(p + "-campo").value = b.getAttribute("data-jugada");
+        $(p + "-enviar").click();
+      });
+    });
+  }
+
+  /* ---------- 1. Demo ---------- */
+  var demoLista = false;
+
+  function desbloquearDemo() {
+    if (demoLista) return;
+    demoLista = true;
+    leccion.desbloquear();
+  }
+
+  crearJuego({
+    prefijo: "d",
+    vars: null,
+    alRonda: function (g, partida) {
+      if (partida.rondas >= 3) {
+        Pasos.feedback($("d-fb"), "ok", "Now you know how it works! Keep playing if you want, or type quit. Then we’ll build it in four parts.");
+        desbloquearDemo();
+      }
+    },
+    alTerminar: function (partida) {
+      if (!partida.rondas) {
+        Pasos.feedback($("d-fb"), "pista", "You quit without playing a single round. Tap “Play again” and play a few.");
+        return;
+      }
+      Pasos.feedback($("d-fb"), "ok", "Game over: you " + partida.puntosTu + ", PC " + partida.puntosPc +
+        ". That’s how your game will work. Now we’ll build it in four parts.");
+      desbloquearDemo();
+    }
+  });
+
+  /* ---------- 2. Part 1: from the number to the text ---------- */
+  var parte1 = crearEleccion({
+    id: "paso-texto",
+    nombre: "p1",
+    correcta: "bien",
+    probar: function (valor) {
+      return [1, 2, 3].map(function (k) {
+        var bien = texto(JUGADAS[k - 1]);
+        var sale = valor === "bien" ? bien :
+          valor === "print" ? "None" :
+          valor === "comillas" ? "💥 NameError" :
+          k === 3 ? "None" : bien;
+        return { etiqueta: "number_to_text(" + k + ")", salida: sale, ok: sale === bien };
+      });
+    },
+    ok: "Nice! Each path of the if returns its text with return, and the else takes care of 3.",
+    pistas: {
+      print: "This function writes the text on the screen, but doesn’t return it: it returns None. The program needs to store it, so use return.",
+      comillas: "Without quotes, rock is the name of a variable… that doesn’t exist: NameError. Text goes in quotes.",
+      "sin-tijera": "With 3 it takes none of the paths and reaches the end without a return: it returns None. The else for \"scissors\" is missing."
+    }
+  });
+
+  /* ---------- 3. Part 2: the PC’s move ---------- */
+  function tresJugadas() {
+    var r = [alAzar(), alAzar(), alAzar()];
+    // Not all three the same: that way you see it changes
+    if (r[0] === r[1] && r[1] === r[2]) r[2] = JUGADAS[(JUGADAS.indexOf(r[2]) + 1) % 3];
+    return r;
+  }
+
+  var parte2 = crearEleccion({
+    id: "paso-pc",
+    nombre: "p2",
+    correcta: "bien",
+    probar: function (valor) {
+      return tresJugadas().map(function (j, k) {
+        var fila = { etiqueta: "pc_move() · call " + (k + 1) };
+        if (valor === "bien") { fila.salida = texto(j); fila.ok = true; }
+        else if (valor === "numero") { fila.salida = String(JUGADAS.indexOf(j) + 1); fila.ok = false; }
+        else if (valor === "sin-return") { fila.salida = "None"; fila.ok = false; }
+        else { fila.salida = k === 0 ? texto("rock") : texto("rock") + " again"; fila.ok = k === 0; }
+        return fila;
+      });
+    },
+    ok: "Exactly! pc_move uses another function: randint picks the number and number_to_text translates it. Whatever number_to_text returns, pc_move returns too.",
+    pistas: {
+      numero: "It returns the number (1, 2 or 3), not the text. It still needs to translate it with number_to_text(n).",
+      "sin-return": "It calls number_to_text, but doesn’t return what comes out: without return, pc_move returns None.",
+      fija: "It always translates 1: the PC plays rock every time. You have to pass it n, the random number."
+    }
+  });
+
+  /* ---------- 4. Part 3: who wins ---------- */
+  var reglas = { rock: "", paper: "", scissors: "" };
+  var resueltaP3 = false;
+
+  function quienGanaAlumno(tu, pc) {
+    if (tu === pc) return "tie";
+    return reglas[tu] === pc ? "you" : "pc";
+  }
+
+  // The CSS class of each result
+  var CLASE_RES = { you: "tu", pc: "pc", tie: "empate" };
+
+  function pintarTabla(revisar) {
+    var tbody = document.querySelector("#p3-tabla tbody");
+    var previas = {};
+    tbody.querySelectorAll("td").forEach(function (td) { previas[td.getAttribute("data-par")] = td.textContent; });
+    tbody.innerHTML = "";
+    var malas = [];
+    JUGADAS.forEach(function (tu) {
+      var tr = crear("tr");
+      var th = crear("th", "", texto(tu));
+      th.setAttribute("scope", "row");
+      tr.appendChild(th);
+      JUGADAS.forEach(function (pc) {
+        var par = tu + "-" + pc;
+        var r = quienGanaAlumno(tu, pc);
+        var td = crear("td", "res--" + CLASE_RES[r], texto(r));
+        td.setAttribute("data-par", par);
+        if (previas[par] !== undefined && previas[par] !== td.textContent) td.classList.add("res--cambio");
+        if (revisar && r !== quienGana(tu, pc)) {
+          td.classList.add("res--mal");
+          malas.push([tu, pc]);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    return malas;
+  }
+
+  function pintarHuecosP3() {
+    document.querySelectorAll("[data-hueco]").forEach(function (h) {
+      var valor = reglas[h.getAttribute("data-hueco")];
+      h.textContent = valor ? texto(valor) : "?";
+    });
+  }
+
+  // Uses the `leccion` it receives: when resuming on this step, Pasos.iniciar calls it
+  // before returning, and the variable below has no value yet
+  function entrarGana(paso, leccion) {
+    Pasos.limpiarFeedback($("p3-fb"));
+    pintarTabla(false);
+    if (resueltaP3) return;
+    leccion.listoParaComprobar(JUGADAS.every(function (j) { return reglas[j]; }));
+  }
+
+  function comprobarGana() {
+    var malas = pintarTabla(true);
+    if (!malas.length) {
+      resueltaP3 = true;
+      Pasos.feedback($("p3-fb"), "ok", "All 9 games come out right! First it checks for a tie; then the three cases where you win. If it’s none of them, the PC wins.");
+      return true;
+    }
+    var tu = malas[0][0];
+    var pc = malas[0][1];
+    var debe = quienGana(tu, pc);
+    var gana = debe === "you" ? tu : pc;
+    Pasos.feedback($("p3-fb"), "pista", "With you = " + texto(tu) + " and pc = " + texto(pc) + ", " +
+      (debe === "you" ? "you" : "the PC") + " should win: " + MANOS[gana] + " " + gana + " " + VERBO[gana] +
+      ". Check the rule for " + texto(tu) + ".");
+    return false;
+  }
+
+  document.querySelectorAll("[data-regla]").forEach(function (sel) {
+    sel.addEventListener("change", function () {
+      reglas[sel.getAttribute("data-regla")] = sel.value;
+      pintarHuecosP3();
+      pintarTabla(false);
+      Pasos.limpiarFeedback($("p3-fb"));
+      leccion.listoParaComprobar(JUGADAS.every(function (j) { return reglas[j]; }));
+    });
+  });
+
+  /* ---------- 5. Part 4: the score ---------- */
+  var RONDAS_PRUEBA = [["rock", "scissors"], ["paper", "paper"], ["scissors", "rock"]];
+  var parte4 = crearEleccion({
+    id: "paso-marcador",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      var tu = 0, pc = 0, bTu = 0, bPc = 0;
+      return RONDAS_PRUEBA.map(function (r) {
+        var g = quienGana(r[0], r[1]);
+        if (g === "you") bTu++;
+        if (g === "pc") bPc++;
+        if (valor === "bien") { tu = bTu; pc = bPc; }
+        else if (valor === "else") { if (g === "you") tu++; else pc++; }
+        else if (valor === "sin-if") { tu++; pc++; }
+        var sale = "You " + tu + " - " + pc + " PC";
+        return { etiqueta: MANOS[r[0]] + " " + r[0] + " vs " + MANOS[r[1]] + " " + r[1], salida: sale, ok: sale === "You " + bTu + " - " + bPc + " PC" };
+      });
+    },
+    ok: "That’s it! If you win, your score goes up; if the PC wins, its score does; and in a tie nobody scores.",
+    pistas: {
+      "else": "With else, everything that isn’t “you” scores for the PC… ties too! Ask for \"pc\" with elif.",
+      funcion: "who_wins without parentheses is the recipe, not what it returned: it’s never equal to \"you\". Compare winner, which stores the result.",
+      "sin-if": "Without an if, both go up every round, no matter who wins. You have to ask who won."
+    }
+  });
+
+  /* ---------- 6. The full game ---------- */
+  var misiones = {};
+  var juegoListo = false;
+  pintarLineas($("t-codigo-lineas"), [
+    kw("import") + " " + v("random"),
+    com("# the three functions from parts 1 to 3 ✓")
+  ].concat(PRINCIPAL), [1]);
+  pintarLineas($("r-codigo-lineas"), [kw("import") + " " + v("random"), ""].concat(FUNCIONES, PRINCIPAL));
+
+  function cumplir(m) {
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  function comprobarMisiones(alFinal) {
+    var faltan = ["gana", "empate", "salir"].filter(function (m) { return !misiones[m]; });
+    if (!faltan.length) {
+      // The console clears the message on every move: put it back
+      Pasos.feedback($("t-fb"), "ok", "Missions complete! Your game picks at random, decides who wins, keeps the score and ends when you want.");
+      if (!juegoListo) {
+        juegoListo = true;
+        leccion.desbloquear();
+      }
+      return;
+    }
+    if (!alFinal) return;
+    var pistas = {
+      gana: "You still need to win a round: keep trying, the PC picks at random.",
+      empate: "You still need a tie: it happens when the PC picks the same as you. Keep trying!"
+    };
+    Pasos.feedback($("t-fb"), "pista", pistas[faltan[0]] + " Tap “Play again”.");
+  }
+
+  // Above the main program there are two lines: import and the comment
+  crearJuego({
+    prefijo: "t",
+    vars: $("t-vars"),
+    desplazar: 2,
+    alRonda: function (g) {
+      if (g === "you") cumplir("gana");
+      if (g === "tie") cumplir("empate");
+      comprobarMisiones(false);
+    },
+    alTerminar: function (partida) {
+      if (partida.salio) cumplir("salir");
+      comprobarMisiones(true);
+    }
+  });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-texto": parte1.entrar,
+      "paso-pc": parte2.entrar,
+      "paso-gana": entrarGana,
+      "paso-marcador": parte4.entrar
+    },
+    comprobar: {
+      "paso-texto": parte1.comprobar,
+      "paso-pc": parte2.comprobar,
+      "paso-gana": comprobarGana,
+      "paso-marcador": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Functions that use functions · Learn to program</title>
+  <meta name="description" content="Interactive lesson: Python functions that call other functions, functions with a loop inside (counting vowels, factorial) and the call stack, with cards that pile up and come off at each return.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+
+    /* ---------- Step 2: you decide what Python does ---------- */
+    .decidir { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--esp-3); margin-top: var(--esp-4); }
+    .decidir .btn { min-height: 3rem; padding: var(--esp-2) var(--esp-4); font-size: var(--texto-sm); line-height: 1.3; }
+    .decidir .btn code { font-weight: 700; }
+    .btn--fallo { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); animation: sacudir 360ms ease; }
+    /* The options keep the height of the longest ones (Codigo.reservarAlto) and "Again" shows up
+       in the same place at the end: what is below (on mobile, the output and the stack) does not move */
+    .decidir-lugar { display: grid; margin-top: var(--esp-4); }
+    .decidir-lugar > * { grid-area: 1 / 1; min-width: 0; margin-top: 0; }
+    .decidir-lugar > .fila-botones { align-self: center; }
+    .marcador-pasos { min-height: 1.7em; margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* ---------- Step 3: the letters the loop goes through ---------- */
+    .campo-palabra { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin: 0 0 var(--esp-4); }
+    .campo-palabra label { font-weight: 700; }
+    .campo-palabra input { width: 10rem; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; padding: var(--esp-1) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .campo-palabra input:focus-visible { border-color: var(--color-azul); border-radius: var(--radio-sm); }
+    .campo-palabra input[aria-invalid="true"] { border-color: var(--color-pista); }
+    .letras { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0 0 var(--esp-3); list-style: none; }
+    .letra { position: relative; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); color: var(--color-texto); transition: background-color var(--dur), border-color var(--dur), transform var(--dur) var(--curva-rebote), color var(--dur); }
+    .letra--true { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .letra--false { background: var(--color-superficie-2); color: #4b5563; }
+    .letra--actual { border-color: var(--color-azul); transform: translateY(-4px) scale(1.08); }
+    .letra--actual:not(.letra--true):not(.letra--false) { background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- Step 4: the chain of multiplications ---------- */
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+    .libros { margin: var(--esp-2) 0 0; text-align: center; font-size: 1.6rem; letter-spacing: 0.1em; min-height: 2.2rem; }
+    .cadena { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-1) var(--esp-2); margin: var(--esp-4) 0 0; font-family: var(--fuente-codigo); font-weight: 700; }
+    .cadena__factor { display: grid; place-items: center; min-width: 2.2rem; height: 2.2rem; border-radius: var(--radio-sm); border: 2px dashed var(--color-borde); color: var(--color-texto-suave); transition: background-color var(--dur-rapida), border-color var(--dur-rapida), color var(--dur-rapida), transform var(--dur-rapida) var(--curva-rebote); }
+    .cadena__factor--hecho { border-style: solid; border-color: var(--color-acento); color: var(--color-acento); }
+    .cadena__factor--actual { border-style: solid; border-color: var(--color-acento); background: var(--color-acento); color: #fff; transform: scale(1.12); }
+    .cadena__signo { color: var(--color-texto-suave); }
+    .cadena__total { padding: 0 var(--esp-2); color: var(--color-ok); font-size: var(--texto-lg); }
+
+    /* ---------- Challenge: code options and tests ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .letra { width: 2.1rem; height: 2.1rem; }
+      .letras { gap: var(--esp-1); }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-visual-fija data-leccion="funciones-componer">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: a function that calls another one, and the stack of cards -->
+    <section class="paso" id="paso-pila" data-requiere aria-labelledby="t-pila">
+      <span class="paso__etiqueta">Functions 6/7 · Functions that use functions</span>
+      <h1 class="paso__titulo" id="t-pila">A function that calls another</h1>
+      <p><code>average</code> does not add on its own: it asks <code>add</code> for help. Each call puts a <strong>card</strong> on top of the one before. Run it and watch the stack.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">add</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">a</span> + <span class="tk-variable">b</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">average</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-variable">total</span> = <span class="tk-funcion">add</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">total</span> / <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">grade</span> = <span class="tk-funcion">average</span>(<span class="tk-numero">14</span>, <span class="tk-numero">17</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">grade</span>)</span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p1-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota">This tower of cards is called the <strong>call stack</strong>: only the top card works; the ones below wait.</p>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. You decide: stack or remove -->
+    <section class="paso" id="paso-decidir" data-visual-fija="no" data-salida="arriba" data-requiere aria-labelledby="t-decidir">
+      <h2 class="paso__titulo" id="t-decidir">Now you are Python</h2>
+      <p>At each moment, choose what happens: is a new card <strong>stacked</strong>, or is the top one <strong>removed</strong>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">double</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">x</span> * <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">quadruple</span>(<span class="tk-variable">x</span>):</span><span class="linea">    <span class="tk-variable">y</span> = <span class="tk-funcion">double</span>(<span class="tk-variable">x</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">double</span>(<span class="tk-variable">y</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">quadruple</span>(<span class="tk-numero">3</span>))</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="decidir-lugar">
+            <div class="decidir" id="p2-opciones" role="group" aria-label="What does Python do?"></div>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="p2-otra" hidden>↺ Again</button>
+            </div>
+          </div>
+          <p class="marcador-pasos" id="p2-marcador"></p>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. A loop inside a function -->
+    <section class="paso" id="paso-vocales" data-requiere aria-labelledby="t-vocales">
+      <h2 class="paso__titulo" id="t-vocales">A loop inside a function</h2>
+      <p>Anything you already know fits inside a function, a <code>for</code> too. Type a word and let <code>count_vowels</code> go through it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="campo-palabra">
+            <label for="p3-palabra">Word:</label>
+            <input type="text" id="p3-palabra" value="banana" maxlength="10" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="p3-fb">
+          </div>
+          <pre class="codigo" id="p3-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">count_vowels</span>(<span class="tk-variable">text</span>):</span><span class="linea">    <span class="tk-variable">count</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">letter</span> <span class="tk-palabra">in</span> <span class="tk-variable">text</span>:</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">letter</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">            <span class="tk-variable">count</span> += <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">count</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">n</span> = <span class="tk-funcion">count_vowels</span>(<span class="tk-texto">"<span id="p3-codigo-palabra">banana</span>"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p3-pila"></div>
+          <ol class="letras" id="p3-letras" aria-hidden="true"></ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Factorial: multiplying in a loop -->
+    <section class="paso" id="paso-factorial" data-requiere aria-labelledby="t-factorial">
+      <h2 class="paso__titulo" id="t-factorial">In how many ways?</h2>
+      <p>In how many ways can you arrange some books on a shelf? You multiply <strong>1&nbsp;×&nbsp;2&nbsp;×&nbsp;3&nbsp;×&nbsp;…</strong> up to the number of books. That is the <strong>factorial</strong>, and a function with a <code>for</code> works it out.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p4-n">Books <output id="p4-n-valor" for="p4-n">4</output></label>
+            <input type="range" id="p4-n" min="1" max="6" step="1" value="4">
+          </div>
+          <p class="libros" id="p4-libros" aria-hidden="true"></p>
+          <pre class="codigo" id="p4-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">factorial</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-variable">result</span> = <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-variable">n</span> + <span class="tk-numero">1</span>):</span><span class="linea">        <span class="tk-variable">result</span> *= <span class="tk-variable">i</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">result</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">ways</span> = <span class="tk-funcion">factorial</span>(<span class="tk-numero" id="p4-codigo-n">4</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"<span class="tk-llave">{</span><span class="tk-variable">ways</span><span class="tk-llave">}</span> ways"</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p4-pila"></div>
+          <div class="cadena" id="p4-cadena" aria-hidden="true"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Which one counts right?</h2>
+      <p>Only one version of <code>count_vowels</code> works. Look at the indentation: where does <code>count</code> start, and where does the <code>return</code> go? We will test it with three words.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">Which version counts the vowels right?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="dentro-for"><span>def count_vowels(text):
+    count = 0
+    for letter in text:
+        if letter in "aeiou":
+            count += 1
+        return count</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="reinicia"><span>def count_vowels(text):
+    for letter in text:
+        count = 0
+        if letter in "aeiou":
+            count += 1
+    return count</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>def count_vowels(text):
+    count = 0
+    for letter in text:
+        if letter in "aeiou":
+            count += 1
+    return count</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="dentro-if"><span>def count_vowels(text):
+    count = 0
+    for letter in text:
+        if letter in "aeiou":
+            count += 1
+            return count</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A function can call another one and have loops inside. Each call <strong>stacks</strong> a card and each <code>return</code> removes the top one.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">add</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">a</span> + <span class="tk-variable">b</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">average</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-comentario"># average uses add</span></span><span class="linea">    <span class="tk-variable">total</span> = <span class="tk-funcion">add</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">total</span> / <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">count_vowels</span>(<span class="tk-variable">text</span>):</span><span class="linea">    <span class="tk-variable">count</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-palabra">for</span> <span class="tk-variable">letter</span> <span class="tk-palabra">in</span> <span class="tk-variable">text</span>:</span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">letter</span> <span class="tk-palabra">in</span> <span class="tk-texto">"aeiou"</span>:</span><span class="linea">            <span class="tk-variable">count</span> += <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-comentario"># return after the for</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">count</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../project/index.html">Next: Project: rock, paper, scissors →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/pila.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function texto(s) { return '"' + s + '"'; }
+
+  var leccion; // set at the end, with Pasos.iniciar
+
+  /* Call stack (pila.js): each step brings the whole stack, from bottom to top */
+  var programa = Pila.programa;
+  var llamada = Pila.llamada;
+
+  /* ---------- 1. A function that calls another ---------- */
+  var pila1 = Pila.crear($("p1-pila"));
+
+  function trazaPromedio() {
+    var ab = [["a", 14], ["b", 17]];
+    return [
+      { linea: 0, texto: "Python remembers the recipe <strong>add</strong>. It does not run it yet.", estado: { pila: [programa()] } },
+      { linea: 3, texto: "It also remembers the recipe <strong>average</strong>.", estado: { pila: [programa()] } },
+      { linea: 7, texto: "It calls <strong>average(14, 17)</strong>: its card goes on top of the program, which waits.",
+        estado: { pila: [programa(), llamada("average(14, 17)")] } },
+      { linea: 3, texto: "On the average card, <strong>a = 14</strong> and <strong>b = 17</strong> are born.",
+        estado: { pila: [programa(), llamada("average(14, 17)", ab)] } },
+      { linea: 4, texto: "average needs <strong>add(a, b)</strong>: another card on top. Now average waits too.",
+        estado: { pila: [programa(), llamada("average(14, 17)", ab), llamada("add(14, 17)")] } },
+      { linea: 0, texto: "On the add card, <strong>its own a and its own b</strong> are born.",
+        estado: { pila: [programa(), llamada("average(14, 17)", ab), llamada("add(14, 17)", ab)] } },
+      { linea: 1, texto: "return a + b → <strong>31</strong>. add ends: its card is about to come off.",
+        estado: { pila: [programa(), llamada("average(14, 17)", ab), llamada("add(14, 17)", ab, "31")] } },
+      { linea: 4, flecha: true, texto: "Back in average, which was waiting: the 31 is saved in <strong>total</strong>.",
+        estado: { pila: [programa(), llamada("average(14, 17)", ab.concat([["total", 31]]))] } },
+      { linea: 5, texto: "return total / 2 → <strong>15.5</strong>. average ends: its card goes.",
+        estado: { pila: [programa(), llamada("average(14, 17)", ab.concat([["total", 31]]), "15.5")], leer: [1, "total"] } },
+      { linea: 7, flecha: true, texto: "Back in the program: the 15.5 is saved in <strong>grade</strong>.",
+        estado: { pila: [programa([["grade", 15.5]])] } },
+      { linea: 8, salida: "15.5", texto: "It prints <strong>15.5</strong>. Only the program card is left.",
+        estado: { pila: [programa([["grade", 15.5]])], leer: [0, "grade"] } }
+    ];
+  }
+
+  /* ---------- 2. You are Python ----------
+     Each moment: the line, the stack at that moment, the question and two options.
+     An option with devuelve removes the top card, showing what it returned. */
+  var pila2 = Pila.crear($("p2-pila"));
+  var C = "quadruple(3)";
+  var MOMENTOS = [
+    { linea: 7, pila: [programa()],
+      texto: "Python already remembered both recipes. It reaches <code>print(quadruple(3))</code>, but to print it needs the value of quadruple(3). What does it do?",
+      opciones: [
+        { html: "📥 Stack <code>quadruple(3)</code>", ok: true },
+        { html: "🖨️ Print <code>3</code>", pista: "Not yet: print needs what quadruple(3) returns, and to find out, you have to call it." }
+      ] },
+    { linea: 4, pila: [programa(), llamada(C, [["x", 3]])],
+      texto: "quadruple(3) was stacked, with <strong>x = 3</strong>. Its first line is <code>y = double(x)</code>. What does it do?",
+      opciones: [
+        { html: "📥 Stack <code>double(3)</code>", ok: true },
+        { html: "📤 Remove <code>quadruple(3)</code>", pista: "quadruple has not reached its return yet: it cannot leave. First it needs what double(x) returns." }
+      ] },
+    { linea: 1, pila: [programa(), llamada(C, [["x", 3]]), llamada("double(3)", [["x", 3]])],
+      texto: "double(3) goes on top, with <strong>its own x = 3</strong>; quadruple waits. It reaches <code>return x * 2</code>. What does it do?",
+      opciones: [
+        { html: "📤 Remove <code>double(3)</code>: returns 6", ok: true, devuelve: "6" },
+        { html: "📥 Stack <code>double(6)</code>", pista: "return does not call anyone: it works out 3 * 2, hands it over and the function ends." }
+      ] },
+    { linea: 5, pila: [programa(), llamada(C, [["x", 3], ["y", 6]])],
+      texto: "double returned 6 and its card left: the 6 was saved in <strong>y</strong>. Now quadruple reaches <code>return double(y)</code>. What does it do?",
+      opciones: [
+        { html: "📥 Stack <code>double(6)</code>", ok: true },
+        { html: "📤 Remove <code>quadruple(3)</code>: returns 6", pista: "To return double(y), it first has to know what it is worth: it has to call double again." }
+      ] },
+    { linea: 1, pila: [programa(), llamada(C, [["x", 3], ["y", 6]]), llamada("double(6)", [["x", 6]])],
+      texto: "A <strong>new</strong> double card, now with x = 6. It reaches <code>return x * 2</code>. What does it do?",
+      opciones: [
+        { html: "📤 Remove <code>double(6)</code>: returns 12", ok: true, devuelve: "12" },
+        { html: "📤 Remove <code>quadruple(3)</code>", pista: "You can only remove the top card, and the top card is double(6)." }
+      ] },
+    { linea: 5, pila: [programa(), llamada(C, [["x", 3], ["y", 6]])],
+      texto: "double(y) was <strong>12</strong>. The return of quadruple now has its value. What does it do?",
+      opciones: [
+        { html: "📤 Remove <code>quadruple(3)</code>: returns 12", ok: true, devuelve: "12" },
+        { html: "📥 Stack <code>double(12)</code>", pista: "There are no more calls on that line: return double(y) already knows that double(y) is 12." }
+      ] },
+    { linea: 7, pila: [programa()],
+      texto: "Back in the program: quadruple(3) was 12. What does it print?",
+      opciones: [
+        { html: "🖨️ Print <code>12</code>", ok: true },
+        { html: "🖨️ Print <code>6</code>", pista: "6 is what the first double returned. quadruple returned what the second one did." }
+      ] }
+  ];
+  var momento = 0;
+  var FIN_DECIDIR = "It prints <strong>12</strong>! The stack has only the program card again.";
+
+  function pintarOpciones(cont, opciones, alElegir) {
+    cont.textContent = "";
+    opciones.forEach(function (op) {
+      var b = crear("button", "btn btn-secundario");
+      b.type = "button";
+      b.innerHTML = "<span>" + op.html + "</span>";
+      if (alElegir) b.addEventListener("click", function () { alElegir(op, b); });
+      cont.appendChild(b);
+    });
+  }
+
+  // The question and the options keep the height of the longest ones: from one moment to the
+  // next they do not change height or push what is below
+  Codigo.reservarAlto($("p2-explicacion"), MOMENTOS.map(function (m) { return m.texto; }).concat([FIN_DECIDIR]),
+    function (copia, texto) { copia.innerHTML = texto; });
+  Codigo.reservarAlto($("p2-opciones"), MOMENTOS, function (copia, m) { pintarOpciones(copia, m.opciones); });
+
+  function mostrarMomento() {
+    var m = MOMENTOS[momento];
+    Codigo.marcar($("p2-codigo"), { activas: [m.linea] });
+    pila2.pintar({ pila: m.pila });
+    $("p2-explicacion").innerHTML = m.texto;
+    $("p2-marcador").textContent = "Moment " + (momento + 1) + " of " + MOMENTOS.length;
+    // The order of the options changes, so it is not always the first one
+    var orden = m.opciones.slice();
+    if (Math.random() < 0.5) orden.reverse();
+    pintarOpciones($("p2-opciones"), orden, elegir);
+  }
+
+  function elegir(op, boton) {
+    if (!op.ok) {
+      boton.classList.remove("btn--fallo");
+      void boton.offsetWidth;
+      boton.classList.add("btn--fallo");
+      Pasos.feedback($("p2-fb"), "pista", op.pista);
+      return;
+    }
+    Pasos.limpiarFeedback($("p2-fb"));
+    var m = MOMENTOS[momento];
+    if (op.devuelve) {
+      // The top card shows what it returns right before it leaves
+      var pila = m.pila.slice();
+      var arriba = pila[pila.length - 1];
+      pila[pila.length - 1] = llamada(arriba.titulo, arriba.vars, op.devuelve);
+      pila2.pintar({ pila: pila });
+    }
+    momento++;
+    if (momento < MOMENTOS.length) {
+      mostrarMomento();
+      var primero = $("p2-opciones").querySelector("button");
+      if (primero) primero.focus();
+      return;
+    }
+    Codigo.agregar($("p2-consola"), "12");
+    $("p2-opciones").textContent = "";
+    $("p2-marcador").textContent = "";
+    $("p2-explicacion").innerHTML = FIN_DECIDIR;
+    Pasos.feedback($("p2-fb"), "ok", "That is how Python thinks! Each call stacks a card and each return removes the top one. double had two different cards: one per call.");
+    $("p2-otra").hidden = false;
+    $("p2-otra").focus();
+    leccion.desbloquear();
+  }
+
+  function empezarDecidir() {
+    momento = 0;
+    $("p2-otra").hidden = true;
+    Codigo.consola($("p2-consola"), []);
+    Pasos.limpiarFeedback($("p2-fb"));
+    pila2.vaciar();
+    mostrarMomento();
+  }
+
+  /* ---------- 3. A loop inside a function ---------- */
+  var pila3 = Pila.crear($("p3-pila"));
+  var palabra = "banana";
+  var F3 = function () { return "count_vowels(" + texto(palabra) + ")"; };
+
+  function pintarLetras(actual, marcas) {
+    var ol = $("p3-letras");
+    if (ol.children.length !== palabra.length || ol.getAttribute("data-palabra") !== palabra) {
+      ol.textContent = "";
+      ol.setAttribute("data-palabra", palabra);
+      palabra.split("").forEach(function (c) { ol.appendChild(crear("li", "letra", c)); });
+    }
+    Array.prototype.forEach.call(ol.children, function (li, k) {
+      li.classList.toggle("letra--actual", k === actual);
+      li.classList.toggle("letra--true", marcas[k] === true);
+      li.classList.toggle("letra--false", marcas[k] === false);
+    });
+  }
+
+  function trazaVocales() {
+    var t = F3();
+    var pasos = [
+      { linea: 7, texto: "It calls <strong>" + t + "</strong>: its card is stacked.", estado: { pila: [programa(), llamada(t)] } },
+      { linea: 0, texto: "<strong>text</strong> is born with the word.", estado: { pila: [programa(), llamada(t, [["text", texto(palabra)]])] } },
+      { linea: 1, texto: "<strong>count</strong> starts at 0, before the loop.", estado: { pila: [programa(), llamada(t, [["text", texto(palabra)], ["count", 0]])] } }
+    ];
+    var cuenta = 0;
+    var marcas = {};
+    palabra.split("").forEach(function (c, k) {
+      var vars = function () { return [["text", texto(palabra)], ["count", cuenta], ["letter", texto(c)]]; };
+      pasos.push({ linea: 2, texto: "Round " + (k + 1) + ": <strong>letter = " + texto(c) + "</strong>.",
+        estado: { pila: [programa(), llamada(t, vars())], actual: k, marcas: Object.assign({}, marcas) } });
+      var vocal = "aeiou".indexOf(c) !== -1;
+      marcas[k] = vocal;
+      pasos.push({ linea: 3, texto: texto(c) + ' in "aeiou" is ' + chip(vocal) + (vocal ? ": it is a vowel." : ": not a vowel, it does not add."),
+        estado: { pila: [programa(), llamada(t, vars())], actual: k, marcas: Object.assign({}, marcas), leer: [1, "letter"] } });
+      if (vocal) {
+        cuenta++;
+        pasos.push({ linea: 4, texto: "<strong>count</strong> goes up to " + cuenta + ".",
+          estado: { pila: [programa(), llamada(t, vars())], actual: k, marcas: Object.assign({}, marcas) } });
+      }
+    });
+    var final = [["text", texto(palabra)], ["count", cuenta], ["letter", texto(palabra.slice(-1))]];
+    pasos.push(
+      { linea: 5, texto: "No letters are left and the for ends. return count → <strong>" + cuenta + "</strong>: the card goes.",
+        estado: { pila: [programa(), llamada(t, final, String(cuenta))], marcas: marcas, leer: [1, "count"] } },
+      { linea: 7, flecha: true, texto: "Back in the program: the " + cuenta + " is saved in <strong>n</strong>.",
+        estado: { pila: [programa([["n", cuenta]])], marcas: marcas } },
+      { linea: 8, salida: String(cuenta), texto: "It prints <strong>" + cuenta + "</strong>.",
+        estado: { pila: [programa([["n", cuenta]])], marcas: marcas, leer: [0, "n"] } }
+    );
+    return pasos;
+  }
+
+  var p3Palabras = {};
+
+  function terminarVocales() {
+    var n = palabra.split("").filter(function (c) { return "aeiou".indexOf(c) !== -1; }).length;
+    p3Palabras[palabra] = true;
+    var otra = Object.keys(p3Palabras).length < 2 ? " Type another word and try it." : "";
+    Pasos.feedback($("p3-fb"), "ok", texto(palabra) + " has " + n + (n === 1 ? " vowel" : " vowels") +
+      ". The for works inside the function's card, and return goes after the for, once it has looked at every letter." + otra);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 4. Factorial ---------- */
+  var pila4 = Pila.crear($("p4-pila"));
+  var nLibros = 4;
+  var LIBROS = ["📕", "📗", "📘", "📙", "📓", "📔"];
+
+  function factorial(n) {
+    var r = 1;
+    for (var i = 1; i <= n; i++) r *= i;
+    return r;
+  }
+
+  function pintarCadena(hasta, actual, total) {
+    var cont = $("p4-cadena");
+    cont.textContent = "";
+    for (var i = 1; i <= nLibros; i++) {
+      if (i > 1) cont.appendChild(crear("span", "cadena__signo", "×"));
+      var clase = "cadena__factor";
+      if (i === actual) clase += " cadena__factor--actual";
+      else if (i <= hasta) clase += " cadena__factor--hecho";
+      cont.appendChild(crear("span", clase, String(i)));
+    }
+    cont.appendChild(crear("span", "cadena__signo", "="));
+    cont.appendChild(crear("span", "cadena__total", total === undefined ? "?" : String(total)));
+  }
+
+  function trazaFactorial() {
+    var n = nLibros;
+    var t = "factorial(" + n + ")";
+    var pasos = [
+      { linea: 6, texto: "It calls <strong>" + t + "</strong>: its card is stacked.", estado: { pila: [programa(), llamada(t)], hasta: 0 } },
+      { linea: 0, texto: "<strong>n = " + n + "</strong> is born.", estado: { pila: [programa(), llamada(t, [["n", n]])], hasta: 0 } },
+      { linea: 1, texto: "<strong>result</strong> starts at 1: if it started at 0, everything would give 0.", estado: { pila: [programa(), llamada(t, [["n", n], ["result", 1]])], hasta: 0 } }
+    ];
+    var r = 1;
+    for (var i = 1; i <= n; i++) {
+      pasos.push({ linea: 2, texto: "Round " + i + ": <strong>i = " + i + "</strong>.",
+        estado: { pila: [programa(), llamada(t, [["n", n], ["result", r], ["i", i]])], hasta: i - 1, actual: i } });
+      var antes = r;
+      r *= i;
+      pasos.push({ linea: 3, texto: "result = " + antes + " × " + i + " = <strong>" + r + "</strong>.",
+        estado: { pila: [programa(), llamada(t, [["n", n], ["result", r], ["i", i]])], hasta: i, actual: i } });
+    }
+    pasos.push(
+      { linea: 4, texto: "The for ended. return result → <strong>" + r + "</strong>: the card goes.",
+        estado: { pila: [programa(), llamada(t, [["n", n], ["result", r], ["i", n]], String(r))], hasta: n, total: r, leer: [1, "result"] } },
+      { linea: 6, flecha: true, texto: "The " + r + " is saved in <strong>ways</strong>.",
+        estado: { pila: [programa([["ways", r]])], hasta: n, total: r } },
+      { linea: 7, salida: r + " ways", texto: "It prints <strong>" + r + " ways</strong>.",
+        estado: { pila: [programa([["ways", r]])], hasta: n, total: r, leer: [0, "ways"] } }
+    );
+    return pasos;
+  }
+
+  function pintarLibros() {
+    $("p4-n-valor").textContent = String(nLibros);
+    $("p4-codigo-n").textContent = String(nLibros);
+    $("p4-libros").textContent = LIBROS.slice(0, nLibros).join("");
+  }
+
+  /* ---------- 5. Challenge ---------- */
+  var VERSIONES = {
+    bien: function (t) { var c = 0; t.split("").forEach(function (l) { if ("aeiou".indexOf(l) !== -1) c++; }); return c; },
+    "dentro-for": function (t) { return "aeiou".indexOf(t[0]) !== -1 ? 1 : 0; },
+    reinicia: function (t) { return "aeiou".indexOf(t[t.length - 1]) !== -1 ? 1 : 0; },
+    "dentro-if": function (t) { return VERSIONES.bien(t) > 0 ? 1 : "None"; }
+  };
+  var PISTAS_RETO = {
+    "dentro-for": "That return is inside the for: the function ends in the first round, after looking at only one letter.",
+    reinicia: "count = 0 is inside the for: it goes back to 0 on every letter, so it only counts the last one.",
+    "dentro-if": "That return is inside the if: the function ends at the first vowel, so it never goes past 1."
+  };
+
+  function pintarPruebas(valor) {
+    var lista = $("reto-pruebas");
+    lista.textContent = "";
+    ["sun", "banana", "idea"].forEach(function (t) {
+      var sale = String(VERSIONES[valor](t));
+      var ok = sale === String(VERSIONES.bien(t));
+      var li = crear("li", ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", "count_vowels(" + texto(t) + ")"));
+      li.appendChild(crear("span", "prueba__salida", sale));
+      li.appendChild(crear("span", "prueba__marca", ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", "count_vowels of " + t + ": " + sale + (ok ? ", correct" : ", incorrect"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    pintarPruebas(marcada.value);
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! count starts at 0 before the loop, goes up with each vowel, and return goes after the for, once it has looked at every letter.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  var trazaP1 = Traza.crear({
+    codigo: $("p1-codigo"),
+    explicacion: $("p1-explicacion"),
+    consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"),
+    reproducir: $("p1-reproducir"),
+    reiniciar: $("p1-reiniciar"),
+    generar: trazaPromedio,
+    intervalo: 1500,
+    alReiniciar: function () {
+      pila1.vaciar();
+      Pasos.limpiarFeedback($("p1-fb"));
+    },
+    alPaso: function (paso) { pila1.pintar(paso.estado); },
+    alTerminar: function () {
+      Pasos.feedback($("p1-fb"), "ok", "average called add and waited for its answer. Each return removed the top card and handed its value to the one below.");
+      leccion.desbloquear();
+    }
+  });
+
+  $("p2-otra").addEventListener("click", function () {
+    empezarDecidir();
+    var primero = $("p2-opciones").querySelector("button");
+    if (primero) primero.focus();
+  });
+  empezarDecidir();
+
+  pintarLetras(-1, {});
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaVocales,
+    intervalo: 750,
+    repetible: true,
+    alReiniciar: function () {
+      pila3.vaciar();
+      pintarLetras(-1, {});
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: function (paso) {
+      pila3.pintar(paso.estado);
+      pintarLetras(paso.estado.actual === undefined ? -1 : paso.estado.actual, paso.estado.marcas || {});
+    },
+    alTerminar: terminarVocales
+  });
+  $("p3-palabra").addEventListener("input", function () {
+    var valor = this.value.trim();
+    var valida = /^[a-z]{1,10}$/.test(valor);
+    this.setAttribute("aria-invalid", String(!valida));
+    $("p3-ejecutar").disabled = !valida;
+    $("p3-reproducir").disabled = !valida;
+    trazaP3.cancelar();
+    if (!valida) {
+      Pasos.feedback($("p3-fb"), "pista", "Type a word in lowercase letters (a to z), up to 10 letters long.");
+      return;
+    }
+    Pasos.limpiarFeedback($("p3-fb"));
+    palabra = valor;
+    $("p3-codigo-palabra").textContent = palabra;
+    pila3.vaciar();
+    pintarLetras(-1, {});
+  });
+
+  pintarLibros();
+  pintarCadena(0, 0);
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaFactorial,
+    intervalo: 1000,
+    repetible: true,
+    alReiniciar: function () {
+      pila4.vaciar();
+      pintarCadena(0, 0);
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: function (paso) {
+      pila4.pintar(paso.estado);
+      pintarCadena(paso.estado.hasta, paso.estado.actual, paso.estado.total);
+    },
+    alTerminar: function () {
+      var r = factorial(nLibros);
+      Pasos.feedback($("p4-fb"), "ok", nLibros + (nLibros === 1 ? " book" : " books") + " can be arranged in " + r +
+        (r === 1 ? " way" : " ways") + ". The for multiplies 1 × 2 × … × " + nLibros + " and return hands over the result. Move the slider and try another number.");
+      leccion.desbloquear();
+    }
+  });
+  $("p4-n").addEventListener("input", function () {
+    nLibros = Number(this.value);
+    trazaP4.cancelar();
+    pintarLibros();
+    pila4.vaciar();
+    pintarCadena(0, 0);
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // When the step changes, any running execution pauses
+  function pausar() { trazaP1.detener(); trazaP3.detener(); trazaP4.detener(); }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-pila": pausar,
+      "paso-decidir": pausar,
+      "paso-vocales": pausar,
+      "paso-factorial": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
