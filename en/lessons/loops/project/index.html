@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project: guess the number · Learn to program</title>
+  <meta name="description" content="Loops project: build a number-guessing game in Python, part by part, with random, while True, if / elif / else, a try counter and break.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+
+    /* ---------- Console that waits for answers ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 6rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- Where the secret can be ----------
+       The green zone is the numbers that can still be the secret;
+       each hint trims it. The lines are the earlier guesses. */
+    .marcador { padding: var(--esp-6) var(--esp-2) 0; }
+    .marcador .regla { margin: 0; }
+    .regla__zona { transition: left var(--dur) ease, width var(--dur) ease; }
+    .regla__raya { position: absolute; top: -0.3rem; bottom: -0.3rem; width: 2px; margin-left: -1px; background: #8a929c; border-radius: 1px; }
+    .regla__punto { transition: left var(--dur) ease, background-color var(--dur); }
+    .regla__punto--acierto { background: var(--color-acento); }
+    .regla__valor { position: absolute; bottom: calc(100% + 0.7rem); transform: translateX(-50%); font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); transition: left var(--dur) ease; }
+    .regla__valor--acierto { color: var(--color-acento); }
+    .marcador__extremos { display: flex; justify-content: space-between; margin-top: var(--esp-2); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .rango { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rango strong { color: var(--color-acento); font-family: var(--fuente-codigo); }
+
+    /* ---------- Program variables ---------- */
+    .vars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-1) var(--esp-3); max-width: 14rem; margin: var(--esp-4) auto 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .vars dt { font-weight: 700; color: var(--color-azul); }
+    .vars dd { margin: 0; font-weight: 700; color: var(--color-texto-suave); }
+    .vars dd.vars--valor { color: var(--color-azul); }
+    .vars dd.vars--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Missions ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Options and tests ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    /* On desktop, more compact code options: so the prompt, the code and
+       the options fit on one screen */
+    @media (min-width: 1024px) { .opciones--codigo .opcion span { line-height: 1.45; padding-block: var(--esp-2); } }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas li:nth-child(4) { animation-delay: 600ms; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="bucles-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. What we are going to build -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="t-demo">
+      <span class="paso__etiqueta">Loops 8/8 · Project</span>
+      <h1 class="paso__titulo" id="t-demo">Project: guess the number</h1>
+      <p>You’re going to program a game: the computer thinks of a number from <strong>1 to 50</strong> and you guess it with hints. First, play a game.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="d-registro" aria-live="polite"></div>
+            <div class="entrada" id="d-fila">
+              <label for="d-campo">Your number:</label>
+              <input type="text" id="d-campo" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="d-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Play again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="d-vuelta" aria-live="polite"></p>
+          <div class="marcador" aria-hidden="true">
+            <div class="regla" id="d-regla"></div>
+            <div class="marcador__extremos"><span>1</span><span>50</span></div>
+          </div>
+          <p class="rango" id="d-rango" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Part 1: the secret number -->
+    <section class="paso" id="paso-secreto" data-comprobar aria-labelledby="t-secreto">
+      <span class="paso__etiqueta">Part 1 of 4</span>
+      <h2 class="paso__titulo" id="t-secreto">The secret number</h2>
+      <p><code>random.randint(1, 50)</code> picks a random number from 1 to 50, both included. Which line stores the secret correctly? We’ll test it in three games.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Your program"><code><span class="linea"><span class="tk-palabra">import</span> <span class="tk-variable">random</span></span><span class="linea"><span class="hueco" id="p1-hueco">?</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">Which line stores the secret number?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="fijo"><span>secret = 25</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="cero"><span>secret = random.randint(0, 50)</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>secret = random.randint(1, 50)</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="input"><span>secret = int(input("Secret number: "))</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Part 2: the hints -->
+    <section class="paso" id="paso-pistas" data-comprobar aria-labelledby="t-pistas">
+      <span class="paso__etiqueta">Part 2 of 4</span>
+      <h2 class="paso__titulo" id="t-pistas">Giving hints</h2>
+      <p>Now, one guess. If the secret is <strong>30</strong>, which code answers <strong>10</strong>, <strong>45</strong> and <strong>30</strong> correctly?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">Which code gives the right hints?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="dos-if"><span>guess = int(input("Your number: "))
+if guess &lt; secret:
+    print("Higher")
+if guess &gt; secret:
+    print("Lower")
+else:
+    print("You got it!")</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>guess = int(input("Your number: "))
+if guess &lt; secret:
+    print("Higher")
+elif guess &gt; secret:
+    print("Lower")
+else:
+    print("You got it!")</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="reves"><span>guess = int(input("Your number: "))
+if guess &lt; secret:
+    print("Lower")
+elif guess &gt; secret:
+    print("Higher")
+else:
+    print("You got it!")</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="sin-int"><span>guess = input("Your number: ")
+if guess &lt; secret:
+    print("Higher")
+elif guess &gt; secret:
+    print("Lower")
+else:
+    print("You got it!")</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Part 3: repeat until you get it -->
+    <section class="paso" id="paso-repetir" data-comprobar aria-labelledby="t-repetir">
+      <span class="paso__etiqueta">Part 3 of 4</span>
+      <h2 class="paso__titulo" id="t-repetir">Repeat until you get it</h2>
+      <p>With <code>while True</code> the game asks again and again. Where does the <code>break</code> go? We test with the secret 30 and the guesses 10, 45 and 30.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p3-opciones">
+          <legend class="visualmente-oculto">Where does the break go?</legend>
+          <label class="opcion"><input type="radio" name="p3" value="sin-break"><span>while True:
+    guess = int(input("Your number: "))
+    if guess &lt; secret:
+        print("Higher")
+    elif guess &gt; secret:
+        print("Lower")
+    else:
+        print("You got it!")</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="fin"><span>while True:
+    guess = int(input("Your number: "))
+    if guess &lt; secret:
+        print("Higher")
+    elif guess &gt; secret:
+        print("Lower")
+    else:
+        print("You got it!")
+    break</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="bien"><span>while True:
+    guess = int(input("Your number: "))
+    if guess &lt; secret:
+        print("Higher")
+    elif guess &gt; secret:
+        print("Lower")
+    else:
+        print("You got it!")
+        break</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Part 4: counting the tries -->
+    <section class="paso" id="paso-contar" data-comprobar aria-labelledby="t-contar">
+      <span class="paso__etiqueta">Part 4 of 4</span>
+      <h2 class="paso__titulo" id="t-contar">Counting the tries</h2>
+      <p>When you get it, the game will say how many tries you took. With 10, 45 and 30 it should say <strong>Got it in 3 tries!</strong> What goes in the blank?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Your program"><code><span class="linea linea--hecha"><span class="tk-comentario"># Part 1: the secret ✓</span></span><span class="linea"><span class="hueco" id="p4-hueco">?</span></span><span class="linea linea--hecha">    <span class="tk-comentario"># Parts 2 and 3: hints ✓</span></span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Got it in <span class="tk-llave">{</span><span class="tk-variable">tries</span><span class="tk-llave">}</span> tries!"</span>)</span><span class="linea">        <span class="tk-palabra">break</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">What goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="dentro"><span>while True:
+    tries = 0
+    guess = int(input("Your number: "))
+    tries += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>tries = 0
+while True:
+    guess = int(input("Your number: "))
+    tries += 1</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="sin-suma"><span>tries = 0
+while True:
+    guess = int(input("Your number: "))</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="antes"><span>tries = 0
+tries += 1
+while True:
+    guess = int(input("Your number: "))</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Output"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Challenge: the full game -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="t-jugar">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-jugar">Your game works!</h2>
+      <p>This is your full program. Play as many games as you need to complete the <strong>three missions</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="t-codigo" aria-label="Your full program"><code id="t-codigo-lineas"></code></pre>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div class="marcador" aria-hidden="true">
+            <div class="regla" id="t-regla"></div>
+            <div class="marcador__extremos"><span>1</span><span>50</span></div>
+          </div>
+          <p class="rango" id="t-rango" aria-live="polite"></p>
+          <dl class="vars" id="t-vars" aria-label="Variables"></dl>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo">Your number:</label>
+              <input type="text" id="t-campo" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Play again</button>
+          </div>
+          <ul class="misiones" id="t-misiones" aria-label="Missions">
+            <li data-mision="alto">Get a “Higher”</li>
+            <li data-mision="bajo">Get a “Lower”</li>
+            <li data-mision="rapido">Get it in 6 tries or fewer</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎯</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Project complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A loop that asks, compares and stops when you get it right: that’s how many games work.</p>
+        <ul class="usado" aria-label="What you used">
+          <li>import random</li><li>randint()</li><li>while True</li><li>int(input())</li><li>if / elif / else</li><li>+= 1</li><li>break</li>
+        </ul>
+        <pre class="codigo resumen-codigo" aria-label="Your full program"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../../../index.html">Back to the course →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script src="../../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  var MAXIMO = 50;
+
+  /* ---------- The full program, line by line ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+
+  var L = [
+    kw("import") + " " + v("random"),
+    v("secret") + " = " + v("random") + "." + f("randint") + "(" + n("1") + ", " + n("50") + ")",
+    v("tries") + " = " + n("0"),
+    kw("while") + " " + kw("True") + ":",
+    "    " + v("guess") + " = " + f("int") + "(" + f("input") + "(" + s('"Your number: "') + "))",
+    "    " + v("tries") + " += " + n("1"),
+    "    " + kw("if") + " " + v("guess") + " &lt; " + v("secret") + ":",
+    "        " + f("print") + "(" + s('"Higher"') + ")",
+    "    " + kw("elif") + " " + v("guess") + " &gt; " + v("secret") + ":",
+    "        " + f("print") + "(" + s('"Lower"') + ")",
+    "    " + kw("else") + ":",
+    "        " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"Got it in ' + llave("tries") + ' tries!"') + ")",
+    "        " + kw("break")
+  ];
+
+  function pintarLineas(code, lineas) {
+    code.innerHTML = lineas.map(function (h) { return '<span class="linea">' + h + "</span>"; }).join("");
+  }
+
+  /* Paints a list of tests: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = p.etiqueta;
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correct" : ", incorrect"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* ---------- Choose-an-option steps (the four parts) ----------
+     cfg: { id, nombre, correcta, hueco (optional), probar(valor) → rows, ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".tarjeta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiarMarcas() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiarMarcas();
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      if (cfg.hueco) $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiarMarcas();
+        lista.hidden = true;
+        Pasos.limpiarFeedback(fb);
+        if (cfg.hueco) $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    // After a right answer, lets you choose again to see why the others fail (progress is kept)
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- The game running (steps 1 and 6) ----------
+     o: { prefijo, vars (dl or null), alPista(tipo), alTerminar(partida) } */
+  function alAzar() { return 1 + Math.floor(Math.random() * MAXIMO); }
+
+  /* Positions on the ruler, in %: each number takes 1/50 of the width */
+  function centro(x) { return ((x - 0.5) / MAXIMO) * 100; }
+
+  function crearJuego(o) {
+    var p = o.prefijo;
+    var partida = {};
+
+    function pintarRegla(ultimo, acierto) {
+      var regla = $(p + "-regla");
+      regla.textContent = "";
+      var zona = document.createElement("div");
+      zona.className = "regla__zona";
+      zona.style.left = ((partida.desde - 1) / MAXIMO) * 100 + "%";
+      zona.style.width = ((partida.hasta - partida.desde + 1) / MAXIMO) * 100 + "%";
+      regla.appendChild(zona);
+      partida.lista.slice(0, -1).forEach(function (x) {
+        var raya = document.createElement("span");
+        raya.className = "regla__raya";
+        raya.style.left = centro(x) + "%";
+        regla.appendChild(raya);
+      });
+      if (ultimo) {
+        var punto = document.createElement("span");
+        punto.className = "regla__punto" + (acierto ? " regla__punto--acierto" : "");
+        punto.style.left = centro(ultimo) + "%";
+        var valor = document.createElement("span");
+        valor.className = "regla__valor" + (acierto ? " regla__valor--acierto" : "");
+        valor.style.left = centro(ultimo) + "%";
+        valor.textContent = ultimo;
+        regla.appendChild(punto);
+        regla.appendChild(valor);
+      }
+      $(p + "-rango").innerHTML = acierto
+        ? "The secret was <strong>" + partida.secreto + "</strong>!"
+        : "The secret is between <strong>" + partida.desde + "</strong> and <strong>" + partida.hasta + "</strong>";
+    }
+
+    function pintarVars(cambia, revelar) {
+      if (!o.vars) return;
+      o.vars.innerHTML = "";
+      [["secret", revelar ? partida.secreto : "?"], ["guess", partida.intento], ["tries", partida.intentos]].forEach(function (par) {
+        var dt = document.createElement("dt");
+        dt.textContent = par[0];
+        var dd = document.createElement("dd");
+        if (par[1] === undefined) {
+          dd.textContent = "—";
+        } else {
+          dd.textContent = String(par[1]);
+          dd.className = "vars--valor" + (cambia.indexOf(par[0]) !== -1 ? " vars--cambio" : "");
+        }
+        o.vars.appendChild(dt);
+        o.vars.appendChild(dd);
+      });
+    }
+
+    /* The explanation keeps the height of its longest text: on mobile, the output below
+       doesn't move up or down from one guess to the next */
+    if ($(p + "-explicacion")) {
+      Codigo.reservarAlto($(p + "-explicacion"), [
+        "The computer already picked its secret number, and <strong>tries</strong> starts at 0. <code>input()</code> waits for the first value.",
+        "50 &lt; secret is " + chip(true) + ": “Higher”. Try another number.",
+        "50 &lt; secret is " + chip(false) + " and 50 &gt; secret is " + chip(true) + ": “Lower”. Try another number.",
+        "Not less, not greater: it goes to the <code>else</code>. You got it! <code>break</code> ends the loop."
+      ], function (copia, texto) { copia.innerHTML = texto; });
+    }
+
+    BucleInput.crear({
+      prefijo: p,
+      vueltas: null,
+      rotulo: "Try",
+      pregunta: "Your number:",
+      lineaInput: 4,
+      siguiente: "Try another number.",
+      validar: function (texto) {
+        return /^\d{1,2}$/.test(texto) && Number(texto) >= 1 && Number(texto) <= MAXIMO
+          ? null : "Type a whole number from 1 to 50.";
+      },
+      alEmpezar: function () {
+        partida = { secreto: alAzar(), desde: 1, hasta: MAXIMO, intentos: 0, lista: [], intento: undefined };
+        pintarRegla(null, false);
+        pintarVars(["secret", "tries"]);
+        return "The computer already picked its secret number, and <strong>tries</strong> starts at 0.";
+      },
+      alDato: function (texto) {
+        var x = Number(texto);
+        partida.intento = x;
+        partida.intentos++;
+        partida.lista.push(x);
+        if (x < partida.secreto) {
+          partida.desde = Math.max(partida.desde, x + 1);
+          pintarRegla(x, false);
+          pintarVars(["guess", "tries"]);
+          if (o.alPista) o.alPista("alto");
+          return {
+            texto: x + " &lt; secret is " + chip(true) + ": “Higher”.",
+            camino: { activas: [4, 5, 6, 7], saltadas: [8, 9, 10, 11, 12] },
+            salida: ["Higher"]
+          };
+        }
+        if (x > partida.secreto) {
+          partida.hasta = Math.min(partida.hasta, x - 1);
+          pintarRegla(x, false);
+          pintarVars(["guess", "tries"]);
+          if (o.alPista) o.alPista("bajo");
+          return {
+            texto: x + " &lt; secret is " + chip(false) + " and " + x + " &gt; secret is " + chip(true) + ": “Lower”.",
+            camino: { activas: [4, 5, 6, 8, 9], saltadas: [7, 10, 11, 12] },
+            salida: ["Lower"]
+          };
+        }
+        partida.desde = partida.hasta = x;
+        pintarRegla(x, true);
+        pintarVars(["secret", "guess", "tries"], true);
+        return {
+          texto: "Not less, not greater: it goes to the <code>else</code>. You got it! <code>break</code> ends the loop.",
+          camino: { activas: [4, 5, 6, 8, 10, 11, 12], saltadas: [7, 9] },
+          salida: ["Got it in " + partida.intentos + " tries!"],
+          fin: true
+        };
+      },
+      alTerminar: function () { o.alTerminar(partida); }
+    });
+  }
+
+  /* ---------- 1. Demo ---------- */
+  crearJuego({
+    prefijo: "d",
+    vars: null,
+    alTerminar: function (partida) {
+      Pasos.feedback($("d-fb"), "ok", "You guessed it in " + partida.intentos + (partida.intentos === 1 ? " try" : " tries") +
+        "! That’s how your game will work. Play more if you want; then we’ll build it in four parts.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 2. Part 1: the secret number ---------- */
+  function tresDistintos() {
+    var r = [alAzar()];
+    while (r.length < 3) {
+      var x = alAzar();
+      // If chance repeats a number, take any other one (without getting stuck in a loop)
+      if (r.indexOf(x) !== -1) x = (r[r.length - 1] + 16) % MAXIMO + 1;
+      r.push(x);
+    }
+    return r;
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-secreto",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) {
+      if (valor === "input") {
+        return [{ etiqueta: "Game 1", salida: "the player types the secret!", ok: false }];
+      }
+      if (valor === "fijo") {
+        return [
+          { etiqueta: "Game 1", salida: "secret = 25", ok: true },
+          { etiqueta: "Game 2", salida: "secret = 25 again", ok: false },
+          { etiqueta: "Game 3", salida: "secret = 25 again", ok: false }
+        ];
+      }
+      var nums = tresDistintos();
+      if (valor === "cero") nums[1] = 0;
+      return nums.map(function (x, k) {
+        return { etiqueta: "Game " + (k + 1), salida: "secret = " + x, ok: x >= 1 };
+      });
+    },
+    ok: "Good! Each game has a different secret, always between 1 and 50.",
+    pistas: {
+      fijo: "With a fixed number, by the second game you already know it. Let random pick it.",
+      cero: "randint includes both ends: with (0, 50) you can get 0, which isn’t in the game.",
+      input: "This way the player types the secret… and already knows it! Let the computer pick it with random."
+    }
+  });
+
+  /* ---------- 3. Part 2: the hints ---------- */
+  var SECRETO_PRUEBA = 30;
+  var PROGRAMAS_PISTAS = {
+    bien: function (x) { return x < SECRETO_PRUEBA ? "Higher" : x > SECRETO_PRUEBA ? "Lower" : "You got it!"; },
+    reves: function (x) { return x < SECRETO_PRUEBA ? "Lower" : x > SECRETO_PRUEBA ? "Higher" : "You got it!"; },
+    "dos-if": function (x) {
+      var r = [];
+      if (x < SECRETO_PRUEBA) r.push("Higher");
+      r.push(x > SECRETO_PRUEBA ? "Lower" : "You got it!");
+      return r.join(" / ");
+    },
+    "sin-int": function () { return "💥 TypeError"; }
+  };
+
+  var parte2 = crearEleccion({
+    id: "paso-pistas",
+    nombre: "p2",
+    correcta: "bien",
+    probar: function (valor) {
+      return [10, 45, 30].map(function (x) {
+        var sale = PROGRAMAS_PISTAS[valor](x);
+        return { etiqueta: "Your number: " + x, salida: sale, ok: sale === PROGRAMAS_PISTAS.bien(x) };
+      });
+    },
+    ok: "Exactly! If the guess is smaller, the secret is higher; if it’s bigger, lower. And elif makes only one hint come out.",
+    pistas: {
+      reves: "With 10 it says “Lower”, but the secret (30) is bigger than 10: the messages are backwards.",
+      "dos-if": "With 10 you get “Higher” and also “You got it!”: the else belongs to the second if, not the first. Use elif.",
+      "sin-int": "input() gives text, and comparing \"10\" < 30 is an error: you can’t compare text with a number. It needs int()."
+    }
+  });
+
+  /* ---------- 4. Part 3: repeat until you get it ---------- */
+  var parte3 = crearEleccion({
+    id: "paso-repetir",
+    nombre: "p3",
+    correcta: "bien",
+    probar: function (valor) {
+      var filas = [];
+      [10, 45, 30].forEach(function (x, k) {
+        if (valor === "fin" && k > 0) {
+          filas.push({ etiqueta: "Your number: " + x, salida: "(the game already ended)", ok: false });
+        } else {
+          filas.push({ etiqueta: "Your number: " + x, salida: PROGRAMAS_PISTAS.bien(x), ok: true });
+        }
+      });
+      if (valor === "bien") filas.push({ etiqueta: "After", salida: "end of the game", ok: true });
+      if (valor === "sin-break") filas.push({ etiqueta: "After", salida: "Your number: … it keeps asking!", ok: false });
+      return filas;
+    },
+    ok: "That’s it! The break is inside the else: the loop only ends when you get it right.",
+    pistas: {
+      "sin-break": "Without break, while True never ends: even if you get it right, it asks again.",
+      fin: "That break has the indentation of the while, not the else: it runs in every round and the game ends after the first guess."
+    }
+  });
+
+  /* ---------- 5. Part 4: counting the tries ---------- */
+  var CUENTAS = { bien: 3, dentro: 1, "sin-suma": 0, antes: 1 };
+  var parte4 = crearEleccion({
+    id: "paso-contar",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      return [{ etiqueta: "With 10, 45 and 30", salida: "Got it in " + CUENTAS[valor] + " tries!", ok: valor === "bien" }];
+    },
+    ok: "That’s it! The counter starts at 0 before the loop and goes up by 1 on each guess.",
+    pistas: {
+      dentro: "tries = 0 is inside the loop: it goes back to 0 in every round, so it always says 1.",
+      "sin-suma": "tries starts at 0, but it never goes up: it needs tries += 1 inside the loop.",
+      antes: "tries += 1 is before the while: it adds only once. It has to go inside, to add on every guess."
+    }
+  });
+
+  /* ---------- 6. The full game ---------- */
+  var misiones = {};
+  pintarLineas($("t-codigo-lineas"), L);
+  pintarLineas($("r-codigo-lineas"), L);
+
+  function cumplir(m) {
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  crearJuego({
+    prefijo: "t",
+    vars: $("t-vars"),
+    alPista: cumplir,
+    alTerminar: function (partida) {
+      if (partida.intentos <= 6) cumplir("rapido");
+      var faltan = ["alto", "bajo", "rapido"].filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) {
+        Pasos.feedback($("t-fb"), "ok", "Missions complete! Your game gives hints, counts the tries and ends when you get it right.");
+        leccion.desbloquear();
+        return;
+      }
+      var pistas = {
+        alto: "To get “Higher”, try a number smaller than the secret, like 1.",
+        bajo: "To get “Lower”, try a number bigger than the secret, like 50.",
+        rapido: "Trick: always try the number in the middle of what’s left. Each hint rules out half."
+      };
+      Pasos.feedback($("t-fb"), "pista", "You got it in " + partida.intentos + "! " + pistas[faltan[0]] + " Tap “Play again”.");
+    }
+  });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-secreto": parte1.entrar,
+      "paso-pistas": parte2.entrar,
+      "paso-repetir": parte3.entrar,
+      "paso-contar": parte4.entrar
+    },
+    comprobar: {
+      "paso-secreto": parte1.comprobar,
+      "paso-pistas": parte2.comprobar,
+      "paso-repetir": parte3.comprobar,
+      "paso-contar": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>

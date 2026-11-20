@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deciding in each round · Learn to program</title>
+  <meta name="description" content="Interactive lesson: an if inside a loop in Python to filter, count the ones that pass and find the largest.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    :root { --tipo-str: #a8480a; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .lab__principal > .fila-botones:first-child { margin-top: 0; }
+    .btn code { font-weight: 700; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rotulo { text-align: center; font-family: var(--fuente-codigo); font-weight: 700; margin: 0; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .cajas--dos { padding-top: var(--esp-4); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    /* On mobile, a bit smaller so the expression fits on one line */
+    @media (max-width: 480px) { .lab__visual .expresion { font-size: var(--texto-md); } }
+
+    /* ---------- Step 1: tiles that pass the filter ---------- */
+    .baldosas { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--esp-2); max-width: 20rem; margin: var(--esp-3) auto 0; padding: 0; list-style: none; }
+    .baldosa { display: grid; place-items: center; aspect-ratio: 1; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); color: var(--color-texto-suave); transition: background-color var(--dur), border-color var(--dur), color var(--dur), opacity var(--dur); }
+    .baldosa--si { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); animation: valor-pulso 280ms ease-out both; }
+    .baldosa--no { opacity: 0.45; }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-3) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda .booleano { font-size: var(--texto-xs); }
+
+    /* ---------- Step 2: one round, one question ---------- */
+    .vueltas { display: flex; justify-content: center; gap: var(--esp-2); margin: var(--esp-2) 0 0; padding: 0; list-style: none; }
+    .vuelta { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radio-sm); border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-lg); color: var(--color-texto-suave); transition: background-color var(--dur), border-color var(--dur), transform var(--dur) var(--curva-rebote), color var(--dur); }
+    .vuelta--true { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .vuelta--false { background: var(--color-superficie-2); color: #4b5563; }
+    .vuelta--actual { border-color: var(--color-azul); transform: translateY(-4px) scale(1.08); }
+    .vuelta--actual:not(.vuelta--true):not(.vuelta--false) { background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- Console that asks for values ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 6rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .vuelta-actual { margin: var(--esp-4) 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- Step 3: the class grades ---------- */
+    .fichas { display: flex; justify-content: center; gap: var(--esp-2); margin: var(--esp-3) 0 0; padding: 0; list-style: none; }
+    .ficha { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radio-sm); border: 2px dashed var(--color-borde); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); color: var(--color-texto-suave); }
+    .ficha--true, .ficha--false { border-style: solid; animation: valor-entra 420ms var(--curva-rebote) both; }
+    .ficha--true { border-color: var(--color-acento); background: var(--color-acento-suave); color: var(--color-acento); }
+    .ficha--false { background: var(--color-superficie); color: #4b5563; }
+
+    /* ---------- Step 4: bars for the jumps ---------- */
+    .barras { display: flex; justify-content: center; align-items: flex-end; gap: var(--esp-4); min-height: 8rem; margin: var(--esp-3) 0 0; padding: 0; list-style: none; }
+    .barras li { display: flex; flex-direction: column; align-items: center; gap: var(--esp-1); width: 2.75rem; }
+    /* Fixed-height area: the bar takes the % of the jump compared to the largest */
+    .barra__zona { display: flex; align-items: flex-end; width: 100%; height: 6.5rem; border-bottom: 2px solid var(--color-borde); }
+    .barra { width: 100%; min-height: 3px; border-radius: 6px 6px 0 0; background: #c9ced5; transition: height var(--dur) ease, background-color var(--dur); }
+    .barra--record { background: var(--color-acento); }
+    .barra__valor { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-xs); }
+    /* The notice takes its own width (not a bar's) so it doesn't wrap into three lines */
+    .barras .barras__vacio { width: auto; align-self: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    /* On desktop, slightly shorter bars: the console on the right fits on screen */
+    @media (min-width: 1024px) {
+      .barras { min-height: 6.5rem; }
+      .barra__zona { height: 5rem; }
+    }
+
+    /* ---------- Challenge ---------- */
+    .opciones--codigo { grid-template-columns: 1fr; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .dichos { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: var(--esp-3) var(--esp-4); list-style: none; border: 2px dashed var(--color-borde); border-radius: var(--radio); }
+    .dichos__titulo { flex-basis: 100%; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .dicho { padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-weight: 700; animation: aparecer var(--dur) ease both; }
+    .dicho--pum { background: var(--color-azul-suave); color: var(--color-azul); }
+
+    @media (max-width: 480px) {
+      .vuelta, .ficha { width: 2.4rem; height: 2.4rem; font-size: var(--texto-md); }
+      .barras { gap: var(--esp-3); }
+      .baldosa { font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="bucles-condiciones">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: an if that filters -->
+    <section class="paso" id="paso-filtro" data-requiere aria-labelledby="t-filtro">
+      <span class="paso__etiqueta">Loops 3/8 · Deciding in each round</span>
+      <h1 class="paso__titulo" id="t-filtro">An <code>if</code> in each round</h1>
+      <p>If you put an <code>if</code> inside the loop, the question is asked <strong>once per round</strong>. Try the three conditions.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="fila-botones" role="group" aria-label="Condition of the if">
+            <button type="button" class="btn btn-secundario" data-condicion="par" aria-pressed="true"><code>n % 2 == 0</code></button>
+            <button type="button" class="btn btn-secundario" data-condicion="tres" aria-pressed="false"><code>n % 3 == 0</code></button>
+            <button type="button" class="btn btn-secundario" data-condicion="mayor" aria-pressed="false"><code>n &gt; 8</code></button>
+          </div>
+          <pre class="codigo" aria-label="Code" style="margin-top:var(--esp-4)"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">n</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-numero">13</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span id="f-condicion"></span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="f-rotulo"></p>
+          <ol class="baldosas" id="f-baldosas" aria-hidden="true"></ol>
+          <p class="leyenda" aria-hidden="true"><span><span class="booleano booleano--true">True</span> reaches the print</span><span><span class="booleano booleano--false">False</span> skips it</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="f-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="f-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Line by line: even or odd -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="t-traza">
+      <h2 class="paso__titulo" id="t-traza">Even or odd?</h2>
+      <p>With <code>else</code>, each round picks one of the two paths. Run it and watch what happens to each number.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <p class="rotulo">range(1, 6)</p>
+          <ol class="vueltas" id="tz-vueltas" aria-label="Numbers of range(1, 6)">
+            <li class="vuelta">1</li><li class="vuelta">2</li><li class="vuelta">3</li><li class="vuelta">4</li><li class="vuelta">5</li>
+          </ol>
+          <div class="expresion" aria-hidden="true">
+            <span id="tz-sustituida">n % 2 == 0</span>
+            <span class="expresion__flecha" id="tz-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="tz-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="tz-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">n</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="tz-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">n</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-numero">6</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> % <span class="tk-numero">2</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"<span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span> is even"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"<span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span> is odd"</span>)</span></code></pre>
+          <p class="explicacion" id="tz-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="tz-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="tz-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="tz-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="tz-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="tz-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Count the ones that pass -->
+    <section class="paso" id="paso-contar" data-requiere aria-labelledby="t-contar">
+      <h2 class="paso__titulo" id="t-contar">Count the ones that pass</h2>
+      <p>A counter inside the <code>if</code> only goes up when the condition is <code>True</code>. Type the grades of five students (0 to 20; you pass with 11): how many pass?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="ap-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">passed</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">5</span>):</span><span class="linea">    <span class="tk-variable">grade</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"Grade: "</span>))</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">grade</span> &gt;= <span class="tk-numero">11</span>:</span><span class="linea">        <span class="tk-variable">passed</span> += <span class="tk-numero">1</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Passed: <span class="tk-llave">{</span><span class="tk-variable">passed</span><span class="tk-llave">}</span>"</span>)</span></code></pre>
+          <p class="explicacion" id="ap-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="ap-vuelta" aria-live="polite"></p>
+          <ol class="fichas" id="ap-fichas" aria-hidden="true"></ol>
+          <div class="expresion" aria-hidden="true">
+            <span id="ap-sustituida">grade &gt;= 11</span>
+            <span class="expresion__flecha" id="ap-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="ap-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="ap-caja-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">grade</code>
+            </div>
+            <div class="caja" id="ap-caja-aprobados">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">passed</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="ap-registro" aria-live="polite"></div>
+            <div class="entrada" id="ap-fila">
+              <label for="ap-campo">Grade:</label>
+              <input type="text" id="ap-campo" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="ap-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="ap-otra" hidden>↺ Another class</button>
+          </div>
+          <div class="feedback" id="ap-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Find the largest -->
+    <section class="paso" id="paso-record" data-requiere aria-labelledby="t-record">
+      <h2 class="paso__titulo" id="t-record">The record</h2>
+      <p>To keep the largest, compare each value with the best so far. Type four long jumps (in cm).</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="rc-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">record</span> = <span class="tk-numero">0</span></span><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">i</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">4</span>):</span><span class="linea">    <span class="tk-variable">jump</span> = <span class="tk-funcion">int</span>(<span class="tk-funcion">input</span>(<span class="tk-texto">"Jump: "</span>))</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">jump</span> &gt; <span class="tk-variable">record</span>:</span><span class="linea">        <span class="tk-variable">record</span> = <span class="tk-variable">jump</span></span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"New record!"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Record: <span class="tk-llave">{</span><span class="tk-variable">record</span><span class="tk-llave">}</span> cm"</span>)</span></code></pre>
+          <p class="explicacion" id="rc-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="rc-vuelta" aria-live="polite"></p>
+          <ol class="barras" id="rc-barras" aria-hidden="true"></ol>
+          <div class="expresion" aria-hidden="true">
+            <span id="rc-sustituida">jump &gt; record</span>
+            <span class="expresion__flecha" id="rc-flecha" hidden>→</span>
+            <span class="booleano booleano--false" id="rc-resultado" hidden>False</span>
+          </div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="rc-caja-salto">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">jump</code>
+            </div>
+            <div class="caja" id="rc-caja-record">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">record</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="rc-registro" aria-live="polite"></div>
+            <div class="entrada" id="rc-fila">
+              <label for="rc-campo">Jump:</label>
+              <input type="text" id="rc-campo" inputmode="numeric" maxlength="3" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="rc-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="rc-otra" hidden>↺ Another series</button>
+          </div>
+          <div class="feedback" id="rc-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">The Boom! game</h2>
+      <p>We count from 1 to 9, but on <strong>multiples of 3</strong> you say “Boom!” instead of the number: 1, 2, Boom!, 4… Which program does it right?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">Which program plays Boom! correctly?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="sin-else"><span>for n in range(1, 10):
+    if n % 3 == 0:
+        print("Boom!")
+    print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="igual"><span>for n in range(1, 10):
+    if n == 3:
+        print("Boom!")
+    else:
+        print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>for n in range(1, 10):
+    if n % 3 == 0:
+        print("Boom!")
+    else:
+        print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="fuera"><span>for n in range(1, 10):
+    print(n)
+if n % 3 == 0:
+    print("Boom!")</span></label>
+        </fieldset>
+
+        <ol class="dichos" id="reto-dichos" hidden aria-label="Output of the chosen program"></ol>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">An <code>if</code> inside the loop is asked in each round: use it to filter, count the ones that pass and keep the largest.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">for</span> <span class="tk-variable">n</span> <span class="tk-palabra">in</span> <span class="tk-funcion">range</span>(<span class="tk-numero">1</span>, <span class="tk-numero">11</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> % <span class="tk-numero">2</span> == <span class="tk-numero">0</span>:   <span class="tk-comentario"># in each round</span></span><span class="linea">        <span class="tk-variable">evens</span> += <span class="tk-numero">1</span>   <span class="tk-comentario"># only if True</span></span><span class="linea"></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-variable">value</span> &gt; <span class="tk-variable">record</span>:</span><span class="linea">    <span class="tk-variable">record</span> = <span class="tk-variable">value</span>   <span class="tk-comentario"># the largest so far</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../text/index.html">Next: Looping over text →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script src="../../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  /* Expression in the visual part: “14 >= 11 → True”. Without a result, just the question. */
+  function pintarExpresion(p, texto, valor) {
+    $(p + "-sustituida").textContent = texto;
+    var hay = valor !== undefined;
+    $(p + "-flecha").hidden = !hay;
+    $(p + "-resultado").hidden = !hay;
+    if (hay) Codigo.booleano($(p + "-resultado"), valor);
+  }
+
+  var leccion; // set at the end, with Pasos.iniciar
+
+  /* ---------- 1. An if in each round ---------- */
+  var CONDICIONES = {
+    par: {
+      texto: "n % 2 == 0",
+      html: '<span class="tk-variable">n</span> % <span class="tk-numero">2</span> == <span class="tk-numero">0</span>',
+      f: function (n) { return n % 2 === 0; }
+    },
+    tres: {
+      texto: "n % 3 == 0",
+      html: '<span class="tk-variable">n</span> % <span class="tk-numero">3</span> == <span class="tk-numero">0</span>',
+      f: function (n) { return n % 3 === 0; }
+    },
+    mayor: {
+      texto: "n > 8",
+      html: '<span class="tk-variable">n</span> &gt; <span class="tk-numero">8</span>',
+      f: function (n) { return n > 8; }
+    }
+  };
+  var condicionesVistas = {};
+  var baldosas = $("f-baldosas");
+  for (var b = 1; b <= 12; b++) {
+    var li = document.createElement("li");
+    li.className = "baldosa";
+    li.textContent = b;
+    baldosas.appendChild(li);
+  }
+
+  function pintarFiltro(clave) {
+    var c = CONDICIONES[clave];
+    $("f-condicion").innerHTML = c.html;
+    $("f-rotulo").textContent = "if " + c.texto;
+    document.querySelectorAll("#paso-filtro [data-condicion]").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.getAttribute("data-condicion") === clave));
+    });
+
+    // Turn them all off, then light up in order the ones that give True
+    var celdas = baldosas.children;
+    var salida = [];
+    for (var k = 0; k < celdas.length; k++) celdas[k].classList.remove("baldosa--si", "baldosa--no");
+    void baldosas.offsetWidth;
+    for (var n = 1; n <= 12; n++) {
+      var si = c.f(n);
+      if (si) {
+        celdas[n - 1].style.animationDelay = (salida.length * 70) + "ms";
+        salida.push(String(n));
+      }
+      celdas[n - 1].classList.add(si ? "baldosa--si" : "baldosa--no");
+    }
+    Codigo.consola($("f-consola"), salida);
+    condicionesVistas[clave] = true;
+  }
+
+  /* ---------- 2. Even or odd? ---------- */
+  function trazaParidad() {
+    var t = [];
+    for (var n = 1; n <= 5; n++) {
+      var par = n % 2 === 0;
+      t.push({ linea: 0, texto: "<strong>n</strong> takes the value <strong>" + n + "</strong>.", estado: { n: n } });
+      t.push({
+        linea: 1,
+        texto: n + " % 2 gives " + (n % 2) + ", and " + (n % 2) + " == 0 is " + chip(par) + ".",
+        estado: { n: n, par: par }
+      });
+      if (par) {
+        t.push({ linea: 2, salida: n + " is even", texto: "It was <strong>True</strong>: it goes into the <code>if</code>. Back to the top." });
+      } else {
+        t.push({ linea: 3, texto: "It was <strong>False</strong>: it jumps to the <code>else</code>." });
+        t.push({ linea: 4, salida: n + " is odd", texto: "It prints and goes back to the top for the next number." });
+      }
+    }
+    t.push({ linea: 0, texto: "<code>range(1, 6)</code> ran out: end of the loop.", estado: { fin: true } });
+    return t;
+  }
+
+  function pintarVueltas(actual) {
+    $("tz-vueltas").querySelectorAll(".vuelta").forEach(function (el, k) {
+      el.classList.toggle("vuelta--actual", k + 1 === actual);
+    });
+  }
+
+  /* ---------- 3. Count the ones that pass ---------- */
+  var ap = { aprobados: 0, vuelta: 0, vistos: {} };
+
+  // The last thing typed in the console and a line of code (for the flights)
+  function escrito(prefijo) {
+    var l = $(prefijo + "-registro").lastElementChild;
+    return l ? l.querySelector(".registro__respuesta") || l : null;
+  }
+  function lineaDe(prefijo, n) { return $(prefijo + "-codigo").querySelectorAll(".linea")[n]; }
+
+  /* The explanation keeps the height of its longest text: on mobile, the console below doesn't
+     move up or down from one round to the next */
+  function reservarExplicacion(prefijo, textos) {
+    Codigo.reservarAlto($(prefijo + "-explicacion"), textos, function (copia, texto) { copia.innerHTML = texto; });
+  }
+  reservarExplicacion("ap", [
+    "<strong>passed</strong> starts at 0. <code>input()</code> waits for the first value.",
+    "20 &gt;= 11 is " + chip(true) + ": <strong>passed</strong> goes up to 5. Type the next one.",
+    "10 &gt;= 11 is " + chip(false) + ": line 5 is skipped and <strong>passed</strong> stays at 4. Type the next one.",
+    "10 &gt;= 11 is " + chip(false) + ": line 5 is skipped and <strong>passed</strong> stays at 4. <code>range(5)</code> ran out: it prints the counter."
+  ]);
+  reservarExplicacion("rc", [
+    "<strong>record</strong> starts at 0. <code>input()</code> waits for the first value.",
+    "888 &gt; 888 is " + chip(true) + ": <strong>record</strong> becomes 888. Type the next one.",
+    "888 &gt; 888 is " + chip(false) + ": <strong>record</strong> stays at 888. Type the next one.",
+    "888 &gt; 888 is " + chip(false) + ": <strong>record</strong> stays at 888. End of the loop: it prints the best jump."
+  ]);
+
+  BucleInput.crear({
+    prefijo: "ap",
+    vueltas: 5,
+    pregunta: "Grade:",
+    lineaInput: 2,
+    validar: function (v) {
+      return /^\d{1,2}$/.test(v) && Number(v) <= 20 ? null : "Type a whole-number grade from 0 to 20, for example 14.";
+    },
+    alEmpezar: function () {
+      ap.aprobados = 0;
+      ap.vuelta = 0;
+      Caja.vaciar($("ap-caja-nota"));
+      Caja.poner($("ap-caja-aprobados"), 0);
+      pintarExpresion("ap", "grade >= 11");
+      var fichas = $("ap-fichas");
+      fichas.textContent = "";
+      for (var k = 0; k < 5; k++) {
+        var f = document.createElement("li");
+        f.className = "ficha";
+        f.textContent = "·";
+        fichas.appendChild(f);
+      }
+      return "<strong>passed</strong> starts at 0.";
+    },
+    alDato: function (texto) {
+      var nota = Number(texto);
+      var ok = nota >= 11;
+      ap.vistos[ok] = true;
+      // The grade flies from what was typed in the console
+      Caja.poner($("ap-caja-nota"), nota, escrito("ap"));
+      pintarExpresion("ap", nota + " >= 11", ok);
+      var ficha = $("ap-fichas").children[ap.vuelta];
+      ficha.textContent = nota;
+      ficha.className = "ficha ficha--" + ok;
+      ap.vuelta++;
+      if (ok) {
+        ap.aprobados++;
+        Caja.poner($("ap-caja-aprobados"), ap.aprobados, Codigo.piezaEnLinea(lineaDe("ap", 4), []));
+        return {
+          texto: nota + " &gt;= 11 is " + chip(true) + ": <strong>passed</strong> goes up to " + ap.aprobados + ".",
+          camino: { activas: [2, 3, 4] }
+        };
+      }
+      return {
+        texto: nota + " &gt;= 11 is " + chip(false) + ": line 5 is skipped and <strong>passed</strong> stays at " + ap.aprobados + ".",
+        camino: { activas: [2, 3], saltadas: [4] }
+      };
+    },
+    alFinal: function () {
+      return { linea: 5, texto: "<code>range(5)</code> ran out: it prints the counter.", salida: "Passed: " + ap.aprobados };
+    },
+    alTerminar: function () {
+      var fb = $("ap-fb");
+      if (ap.vistos["true"] && ap.vistos["false"]) {
+        Pasos.feedback(fb, "ok", "The counter is inside the if: it only goes up with the grades that give True.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", (ap.vistos["true"] ? "Everyone passed! " : "Nobody passed. ") +
+          "Tap “Another class” and mix grades of 11 or more with grades below 11.");
+      }
+    }
+  });
+
+  /* ---------- 4. The record ---------- */
+  var rc = { record: 0, saltos: [], noRecord: false };
+
+  function pintarBarras(indiceRecord) {
+    var lista = $("rc-barras");
+    lista.textContent = "";
+    if (!rc.saltos.length) {
+      var vacio = document.createElement("li");
+      vacio.className = "barras__vacio";
+      vacio.textContent = "The jumps will show up here";
+      lista.appendChild(vacio);
+      return;
+    }
+    var maximo = Math.max.apply(null, rc.saltos);
+    rc.saltos.forEach(function (s, k) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="barra__zona"><span class="barra"></span></span><span class="barra__valor"></span>';
+      var barra = li.querySelector(".barra");
+      barra.style.height = ((s / maximo) * 100) + "%";
+      barra.classList.toggle("barra--record", k === indiceRecord);
+      li.lastChild.textContent = s;
+      lista.appendChild(li);
+    });
+  }
+
+  BucleInput.crear({
+    prefijo: "rc",
+    vueltas: 4,
+    pregunta: "Jump:",
+    lineaInput: 2,
+    validar: function (v) {
+      return /^\d{1,3}$/.test(v) && Number(v) > 0 ? null : "Type the jump in centimeters, for example 120.";
+    },
+    alEmpezar: function () {
+      rc.record = 0;
+      rc.saltos = [];
+      rc.indice = -1;
+      Caja.vaciar($("rc-caja-salto"));
+      Caja.poner($("rc-caja-record"), 0);
+      pintarExpresion("rc", "jump > record");
+      pintarBarras(-1);
+      return "<strong>record</strong> starts at 0.";
+    },
+    alDato: function (texto) {
+      var salto = Number(texto);
+      var antes = rc.record;
+      var nuevo = salto > antes;
+      rc.saltos.push(salto);
+      Caja.poner($("rc-caja-salto"), salto, escrito("rc"));
+      pintarExpresion("rc", salto + " > " + antes, nuevo);
+      if (nuevo) {
+        rc.record = salto;
+        rc.indice = rc.saltos.length - 1;
+        Caja.poner($("rc-caja-record"), salto, Codigo.piezaEnLinea(lineaDe("rc", 4), []));
+      } else {
+        rc.noRecord = true;
+      }
+      pintarBarras(rc.indice);
+      if (nuevo) {
+        return {
+          texto: salto + " &gt; " + antes + " is " + chip(true) + ": <strong>record</strong> becomes " + salto + ".",
+          camino: { activas: [2, 3, 4, 5] },
+          salida: ["New record!"]
+        };
+      }
+      return {
+        texto: salto + " &gt; " + antes + " is " + chip(false) + ": <strong>record</strong> stays at " + antes + ".",
+        camino: { activas: [2, 3], saltadas: [4, 5] }
+      };
+    },
+    alFinal: function () {
+      return { linea: 6, texto: "End of the loop: it prints the best jump.", salida: "Record: " + rc.record + " cm" };
+    },
+    alTerminar: function () {
+      var fb = $("rc-fb");
+      if (rc.noRecord) {
+        Pasos.feedback(fb, "ok", "record only changes when a jump beats it. At the end it holds the largest of all.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", "They were all records! Each jump beat the one before. Tap “Another series” and try a jump shorter than the record.");
+      }
+    }
+  });
+
+  /* ---------- 5. Challenge ---------- */
+  var programas = {
+    bien: function (n) { return [n % 3 === 0 ? "Boom!" : String(n)]; },
+    "sin-else": function (n) { return n % 3 === 0 ? ["Boom!", String(n)] : [String(n)]; },
+    igual: function (n) { return [n === 3 ? "Boom!" : String(n)]; }
+  };
+  var pistasReto = {
+    "sin-else": "Without else, print(n) runs in every round: on multiples of 3 you get “Boom!” and the number too.",
+    igual: "n == 3 is only True for 3: 6 and 9 slip through. For every multiple of 3, look at the remainder: n % 3 == 0.",
+    fuera: "The if isn't indented: it's outside the loop. It's asked only once, at the end, when n is already 9."
+  };
+
+  function salidaDe(valor) {
+    var r = [];
+    for (var n = 1; n <= 9; n++) {
+      r = r.concat(valor === "fuera" ? [String(n)] : programas[valor](n));
+    }
+    if (valor === "fuera") r.push("Boom!");   // n is 9 when the loop ends
+    return r;
+  }
+
+  function mostrarDichos(valor) {
+    var lista = $("reto-dichos");
+    lista.innerHTML = '<li class="dichos__titulo" aria-hidden="true">Output</li>';
+    salidaDe(valor).forEach(function (d, k) {
+      var li = document.createElement("li");
+      li.className = "dicho" + (d === "Boom!" ? " dicho--pum" : "");
+      li.style.animationDelay = (k * 60) + "ms";
+      li.textContent = d;
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-dichos").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto() {
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Each time you enter the challenge it starts clean, even if it was already solved */
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    mostrarDichos(marcada.value);
+
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! Each round asks n % 3 == 0, and the else makes only one thing come out: “Boom!” or the number.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  document.querySelectorAll("#paso-filtro [data-condicion]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      pintarFiltro(btn.getAttribute("data-condicion"));
+      var cuantas = Object.keys(condicionesVistas).length;
+      if (cuantas === 3) {
+        Pasos.feedback($("f-fb"), "ok", "The question repeats in each round: only the numbers that give True reach the print.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("f-fb"), "pista", "The loop is the same; only the question changes. You still have a condition to try.");
+      }
+    });
+  });
+
+  var traza = Traza.crear({
+    codigo: $("tz-codigo"),
+    explicacion: $("tz-explicacion"),
+    consola: $("tz-consola"),
+    ejecutar: $("tz-ejecutar"),
+    reproducir: $("tz-reproducir"),
+    reiniciar: $("tz-reiniciar"),
+    generar: trazaParidad,
+    intervalo: 750,
+    alReiniciar: function () {
+      Caja.vaciar($("tz-caja"));
+      $("tz-vueltas").querySelectorAll(".vuelta").forEach(function (el) {
+        el.classList.remove("vuelta--actual", "vuelta--true", "vuelta--false");
+      });
+      pintarExpresion("tz", "n % 2 == 0");
+      Pasos.limpiarFeedback($("tz-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.n !== undefined && e.par === undefined) {
+        Caja.poner($("tz-caja"), e.n);
+        pintarVueltas(e.n);
+        pintarExpresion("tz", e.n + " % 2 == 0");
+      }
+      if (e.par !== undefined) {
+        pintarExpresion("tz", e.n + " % 2 == 0", e.par);
+        $("tz-vueltas").children[e.n - 1].classList.add(e.par ? "vuelta--true" : "vuelta--false");
+      }
+      if (e.fin) pintarVueltas(-1);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("tz-fb"), "ok", "Five rounds, five questions. With True it goes to the if; with False, to the else.");
+      leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // After getting it right, you can choose again to see why the others fail (progress is kept)
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  pintarFiltro("par");
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-filtro": function () { traza.detener(); },
+      "paso-contar": function () { traza.detener(); },
+      "paso-record": function () { traza.detener(); },
+      "paso-reto": function (paso) { traza.detener(); entrarReto(paso); },
+      "paso-resumen": function () { traza.detener(); }
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
