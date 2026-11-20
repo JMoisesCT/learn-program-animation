@@ -321,15 +321,33 @@
       fin = p.resultado.getBoundingClientRect().bottom;
       return fin;
     });
-    var renglones = 9 * remPx();   // lo que debería poder crecer la consola: unos 6 renglones
-    if (guardado + limite - fin >= renglones) return 0;
-    // Los últimos que quepan bajo el código
+    // Cuánto va a crecer la consola: lo que imprime una traza (data-imprime, de traza.js) o,
+    // si pide datos (BucleInput), unos 6 renglones. Si no se sabe, no se mueve nada
+    var crecera = lineas ? 9 * remPx() : 0;
+    if (!lineas && consola.hasAttribute("data-imprime")) {
+      var prueba = document.createElement("span");
+      prueba.className = "consola__linea";
+      prueba.textContent = "M";
+      consola.appendChild(prueba);
+      var alto = prueba.offsetHeight;
+      var conLineas = consola.offsetHeight + alto * (Number(consola.getAttribute("data-imprime")) - 1);
+      prueba.remove();
+      crecera = Math.max(0, conLineas - consola.offsetHeight);
+    }
+    if (!crecera || guardado + limite - fin >= crecera) return 0;
+    // Los últimos que quepan bajo el código (solo mensajes, notas y botones: un mensaje de
+    // error o unas misiones se quedan junto a la consola)
     // (lo que mide su contenido: en la rejilla, la columna se estira hasta abajo)
     p.principal.style.alignSelf = "start";
     var libre = limite - p.principal.getBoundingClientRect().bottom - remPx();
     p.principal.style.alignSelf = "";
     var cuantos = 0, suma = 0;
-    for (var k = altos.length - 1; k >= 0 && suma + altos[k] <= libre; k--) { suma += altos[k]; cuantos++; }
+    var siguen = [];
+    for (var el = consola.nextElementSibling; el; el = el.nextElementSibling) siguen.push(el);
+    for (var k = altos.length - 1; k >= 0 && suma + altos[k] <= libre && siguen[k].matches(".feedback, .nota, .fila-botones"); k--) {
+      suma += altos[k];
+      cuantos++;
+    }
     return suma > 0 ? cuantos : 0;
   }
 
