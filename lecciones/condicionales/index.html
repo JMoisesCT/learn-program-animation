@@ -48,8 +48,28 @@
     .semaforo[data-color="rojo"] .semaforo__luz--rojo { background: #ef4444; box-shadow: 0 0 22px #ef4444; }
     .semaforo[data-color="ambar"] .semaforo__luz--ambar { background: #f5a00b; box-shadow: 0 0 22px #f5a00b; }
     .semaforo[data-color="verde"] .semaforo__luz--verde { background: #22c55e; box-shadow: 0 0 22px #22c55e; }
-    .peaton { font-size: 3rem; line-height: 1; transition: transform var(--dur) var(--curva-rebote); }
-    .peaton--cruza { transform: translateX(1.5rem); }
+    /* La pista vista desde arriba: una vereda a cada lado y el paso de cebra en medio. En rojo
+       o ámbar el peatón espera en su vereda; en verde cruza por las rayas, dando pasos */
+    .calle { position: relative; width: min(15rem, 52vw); height: 9.5rem; border-radius: var(--radio-sm); overflow: hidden;
+      background: linear-gradient(90deg, #cfd6df 0 2.6rem, #3b414a 2.6rem calc(100% - 2.6rem), #cfd6df calc(100% - 2.6rem)); }
+    .calle::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px;
+      background: repeating-linear-gradient(180deg, #f5c542 0 0.7rem, transparent 0.7rem 1.4rem); }
+    .calle__cebra { position: absolute; left: 2.6rem; right: 2.6rem; top: 50%; height: 3.6rem; margin-top: -1.8rem;
+      background: repeating-linear-gradient(90deg, #f8fafc 0 0.55rem, transparent 0.55rem 1.1rem) #3b414a; }
+    .peaton { position: absolute; left: 0.2rem; top: 50%; margin-top: -1.35rem; font-size: 2.4rem; line-height: 1;
+      transition: left 1.6s cubic-bezier(0.45, 0, 0.55, 1); }
+    .peaton__cuerpo { display: inline-block; }
+    .peaton--cruza { left: calc(100% - 2.6rem); }
+    /* 🚶 mira a la izquierda: se da vuelta para caminar hacia la derecha y sube y baja a cada paso */
+    .peaton--cruza .peaton__cuerpo { animation: dar-paso 0.32s ease-in-out 5 alternate; transform: scaleX(-1); }
+    @keyframes dar-paso {
+      from { transform: scaleX(-1) translateY(0) rotate(0deg); }
+      to { transform: scaleX(-1) translateY(-4px) rotate(-6deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .peaton { transition: none; }
+      .peaton--cruza .peaton__cuerpo { animation: none; }
+    }
 
     /* Paso 4: dos caminos */
     .caminos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-3); margin: var(--esp-4) 0; }
@@ -163,7 +183,10 @@
               <span class="semaforo__luz semaforo__luz--ambar"></span>
               <span class="semaforo__luz semaforo__luz--verde"></span>
             </div>
-            <span class="peaton" id="p2-peaton" aria-hidden="true">🚶</span>
+            <div class="calle" aria-hidden="true">
+              <div class="calle__cebra"></div>
+              <span class="peaton" id="p2-peaton"><span class="peaton__cuerpo">🧍</span></span>
+            </div>
           </div>
           <div class="expresion" aria-live="polite">
             <span id="p2-sustituida">"rojo" == "verde"</span>
@@ -479,6 +502,9 @@
 
   /* ---------- 3. if con semáforo ---------- */
   var p2 = vistos();
+  $("p2-peaton").addEventListener("transitionend", function (e) {
+    if (e.propertyName === "left" && this.classList.contains("peaton--cruza")) this.firstChild.textContent = "🧍";
+  });
   var nombresColor = { rojo: "rojo", ambar: "ámbar", verde: "verde" };
   function pintarP2(color) {
     var r = color === "verde";
@@ -489,7 +515,12 @@
     Codigo.booleano($("p2-resultado"), r);
     Codigo.marcar($("p2-codigo"), r ? { activas: [1, 2] } : { activas: [1], saltadas: [2] });
     Codigo.consola($("p2-consola"), r ? ["¡Puedes cruzar!"] : []);
-    $("p2-peaton").classList.toggle("peaton--cruza", r);
+    // Cruza caminando (🚶) y, al otro lado, se queda parado (🧍); en rojo o ámbar vuelve a esperar
+    var peaton = $("p2-peaton");
+    if (peaton.classList.contains("peaton--cruza") !== r) {
+      peaton.classList.toggle("peaton--cruza", r);
+      peaton.firstChild.textContent = r ? "🚶" : "🧍";
+    }
     document.querySelectorAll("#paso-if [data-color]").forEach(function (b) {
       if (b.tagName === "BUTTON") b.setAttribute("aria-pressed", String(b.getAttribute("data-color") === color));
     });
