@@ -132,6 +132,16 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-20 · Una consola que crece no saca el paso de la pantalla
+
+El autor mandó capturas de cuatro pasos de Bucles donde la página bajaba mientras la consola crecía: el récord (Decidir en cada vuelta), `while True` hasta escribir «salir» (break y continue), «Fila por fila» (Bucles anidados) y el juego completo del proyecto. Se arregló en las piezas compartidas, así que sirve para todo el curso:
+- **`pasos.js`, «Una consola que crece»**: al entrar al paso (en escritorio), la consola recibe un tope (`consola--tope`) que deja lugar a lo que aparece debajo al terminar (se mide mostrándolo un instante); al llenarse se desplaza por dentro con lo último a la vista (`Codigo.agregar`; en `BucleInput`, el registro `consola__lineas`, con un difuminado arriba). En los pasos con `BucleInput`, el lugar que sobra se le guarda al registro, no a lo que se ve. Si a la derecha no hay lugar para lo que la consola va a crecer (`data-imprime`, que anota `Traza`; o unos 6 renglones si pide datos), el mensaje, las notas o los botones que van al final pasan bajo el código (`.lab__notas` dentro de `.lab__principal`, `paso--notas-izquierda`).
+- **`bucle-input.js`**: «Otra…» pasa dentro de la consola y al terminar ocupa el lugar del campo de escribir (`consola__otra`, `consola__entrada`).
+- **Proyecto: adivina el número**: las tres misiones en una fila en escritorio.
+- Resultado (escribiendo datos hasta terminar o ejecutando la traza entera, en español e inglés): los cuatro pasos y «Contar» ya no bajan la página a 1460×860, 1640×900 y 1680×895; a 1390×790 todos menos el juego del proyecto (baja 55–76 px: el programa de 13 líneas llena la columna izquierda y el mensaje no tiene dónde ir). A 1366×657 bajan 2–34 px (la consola guarda al menos 3 renglones) y el juego, ~100.
+- Recorrido de todo el curso antes y después (al entrar a cada paso, 1366×657 y 1600×900): ningún paso quedó peor, 30 mejoraron, y el mensaje pasa a la izquierda en 49. `seguir-consola.js` sin avisos en Bucles anidados, Decidir en cada vuelta, Imprimir combinaciones, Recorrer un diccionario, Funciones y Recorrer y acumular.
+- **Por revisar**: el juego del proyecto a 1390×790 y 1366×657 (quizá el mensaje final dentro de la consola o misiones más cortas); los demás juegos completos con `BucleInput` (proyectos de Funciones, Texto a fondo, Listas, Otras estructuras, Búsquedas, Ordenar, Errores, Matrices) no se probaron escribiendo datos hasta el final.
+
 ### 2026-11-20 · Los retos de Bucles caben al responder
 
 El autor pidió arreglar los retos que no cabían al acertar. Nueva herramienta `herramientas/responder-retos.js` (responde cada paso con «Comprobar» y mide el paso después de responder). Antes no cabían: Decidir en cada vuelta (+78 px a 1366×657, +296 a 1024×700, +276 en el móvil), Recorrer un texto (+36, +304, +241), Bucles anidados (+68, +17 a 1280, +25), Dibujar patrones (+83, +50, +75) y las cuatro partes del proyecto (hasta +283 a 1366, +498 a 1024, +466 en el móvil). Bucles 1, Contar y acumular y break ya cabían. Arreglos (en español e inglés, solo CSS de cada lección salvo dos envolturas en el HTML):
