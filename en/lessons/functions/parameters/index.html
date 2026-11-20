@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multiple parameters · Learn to program</title>
+  <meta name="description" content="Interactive lesson: Python functions with multiple parameters: the order of the arguments, keyword arguments, and default values.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .lab__principal > .fila-botones:first-child { margin-top: 0; }
+    .btn-codigo { font-family: var(--fuente-codigo); font-weight: 700; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .rotulo { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: 0.06em; }
+    .elegir { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-bottom: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    /* The ✓ keeps its place from the start: when it shows up it does not widen the button or split
+       the row in two lines (what is below, and so the output, does not move down) */
+    .elegir .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+    .elegir .btn.hecho::after { visibility: visible; }
+
+    /* Handing out: each argument travels along an arrow to its parameter box */
+    .reparto__args, .reparto__params { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: center; align-items: start; }
+    .reparto__args { min-height: 2.6rem; margin-top: var(--esp-2); }
+    .arg { max-width: 100%; padding: 0.25em 0.8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 999px; border: 2px solid var(--color-borde); background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto); transition: border-color var(--dur-rapida), background-color var(--dur-rapida), color var(--dur-rapida); }
+    .arg--activo { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .reparto__flechas { display: block; width: 100%; height: 2.75rem; overflow: visible; }
+    .reparto__flechas line { stroke: #b8c0ca; stroke-width: 3; stroke-dasharray: 6 5; stroke-linecap: round; vector-effect: non-scaling-stroke; transition: stroke var(--dur-rapida); }
+    .reparto__flechas line.activa { stroke: var(--color-azul); stroke-dasharray: none; }
+    .reparto__params .caja { gap: var(--esp-1); }
+    .reparto__params .caja__cuerpo { width: 9rem; height: 5rem; }
+    .reparto__params .caja__valor { max-width: 8.5rem; padding: 0 var(--esp-2); font-size: var(--texto-md); }
+    .defecto { font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); }
+    /* Where there is a default value, the label keeps its place: when it shows up it does not push the output */
+    #p4-reparto .defecto[hidden] { display: block !important; visibility: hidden; }
+    .reparto .rotulo:last-child { margin-top: var(--esp-2); }
+
+    /* Challenge */
+    #reto-opciones { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+    #reto-opciones .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+    .opciones legend { padding: 0; margin-bottom: var(--esp-1); font-weight: 600; }
+    .objetivo { margin: var(--esp-4) 0 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-lg); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .prueba__res { font-weight: 700; }
+    .prueba__res--ok { color: var(--color-ok); }
+    .prueba__res--mal { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* Desktop: the three calls take two rows; packed closer, the run buttons fit on the screen */
+    @media (min-width: 1024px) {
+      #paso-defecto .elegir { gap: var(--esp-1) var(--esp-2); margin-bottom: var(--esp-3); }
+      #paso-defecto .elegir .btn { min-height: 2.25rem; padding-block: var(--esp-1); }
+      #paso-defecto .explicacion, #paso-defecto .fila-botones { margin-top: var(--esp-3); }
+    }
+
+    @media (max-width: 480px) {
+      /* With room for the ✓, “By position” and “By name” still fit in one row */
+      .elegir .btn { padding-inline: 0.6rem; }
+      .arg { font-size: var(--texto-xs); }
+      .reparto__params .caja__cuerpo { width: 8rem; height: 4.5rem; }
+      .reparto__params .caja__valor { max-width: 7.5rem; font-size: var(--texto-xs); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones-parametros">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: two values, two boxes -->
+    <section class="paso" id="paso-dos" data-requiere aria-labelledby="t-dos">
+      <span class="paso__etiqueta">Functions 3/7 · Multiple parameters</span>
+      <h1 class="paso__titulo" id="t-dos">Two values, two boxes</h1>
+      <p>A function can take several values, separated by commas. Each <strong>argument</strong> in the call travels to its <strong>parameter</strong> box. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">introduce</span>(<span class="tk-variable">name</span>, <span class="tk-variable">age</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">f"{</span><span class="tk-variable">name</span><span class="tk-texto">} is {</span><span class="tk-variable">age</span><span class="tk-texto">} years old"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">introduce</span>(<span class="tk-texto">"Ana"</span>, <span class="tk-numero">15</span>)</span></code></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="reparto" id="p1-reparto" data-params="name age"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Order matters -->
+    <section class="paso" id="paso-orden" data-requiere aria-labelledby="t-orden">
+      <h2 class="paso__titulo" id="t-orden">Order matters</h2>
+      <p>Python hands out the arguments <strong>by position</strong>: the first one to the first parameter, the second one to the second. Run it, swap the numbers, and run it again.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">subtract</span>(<span class="tk-variable">a</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">a</span> - <span class="tk-variable">b</span></span><span class="linea"></span><span class="linea" id="p2-llamada"></span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p2-intercambiar">⇄ Swap</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="reparto" id="p2-reparto" data-params="a b"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Keyword arguments -->
+    <section class="paso" id="paso-nombre" data-requiere aria-labelledby="t-nombre">
+      <h2 class="paso__titulo" id="t-nombre">Arguments by name</h2>
+      <p>If you write <code>parameter=value</code>, each value goes to the box you name, in any order you like. Try both ways.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" role="group" aria-label="Way to call">
+            <button type="button" class="btn btn-secundario" data-p3="posicion" aria-pressed="true">By position</button>
+            <button type="button" class="btn btn-secundario" data-p3="nombre" aria-pressed="false">By name</button>
+          </div>
+          <pre class="codigo" id="p3-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">introduce</span>(<span class="tk-variable">name</span>, <span class="tk-variable">age</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">f"{</span><span class="tk-variable">name</span><span class="tk-texto">} is {</span><span class="tk-variable">age</span><span class="tk-texto">} years old"</span>)</span><span class="linea"></span><span class="linea" id="p3-llamada"></span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="reparto" id="p3-reparto" data-params="name age"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Default values -->
+    <section class="paso" id="paso-defecto" data-requiere aria-labelledby="t-defecto">
+      <h2 class="paso__titulo" id="t-defecto">Default values</h2>
+      <p>A parameter can come with a <strong>default</strong> value: it is used if the call does not give it another one. Try it with and without the second argument.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" role="group" aria-label="Call">
+            <button type="button" class="btn btn-secundario btn-codigo" data-p4="0" aria-pressed="true">greet("Ana")</button>
+            <button type="button" class="btn btn-secundario btn-codigo" data-p4="1" aria-pressed="false">greet("Luis", "Hi")</button>
+            <button type="button" class="btn btn-secundario btn-codigo" data-p4="2" aria-pressed="false">greet("Eva", greeting="Hey")</button>
+          </div>
+          <pre class="codigo" id="p4-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">greet</span>(<span class="tk-variable">name</span>, <span class="tk-variable">greeting</span>=<span class="tk-texto">"Hello"</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">f"{</span><span class="tk-variable">greeting</span><span class="tk-texto">}, {</span><span class="tk-variable">name</span><span class="tk-texto">}!"</span>)</span><span class="linea"></span><span class="linea" id="p4-llamada"></span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="reparto" id="p4-reparto" data-params="name greeting"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota">Parameters with a default value go <strong>at the end</strong>: the required ones come first.</p>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Which ones work?</h2>
+      <p>Check <strong>all</strong> the calls that print exactly this sentence:</p>
+      <p class="objetivo">Ana is 15 years old</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">introduce</span>(<span class="tk-variable">name</span>, <span class="tk-variable">age</span>=<span class="tk-numero">15</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">f"{</span><span class="tk-variable">name</span><span class="tk-texto">} is {</span><span class="tk-variable">age</span><span class="tk-texto">} years old"</span>)</span></code></pre>
+        <fieldset class="opciones" id="reto-opciones">
+          <legend class="visualmente-oculto">Calls</legend>
+          <label class="opcion"><input type="checkbox" name="reto" value="0"><span>introduce("Ana", 15)</span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="1"><span>introduce(15, "Ana")</span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="2"><span>introduce(age=15, name="Ana")</span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="3"><span>introduce("Ana")</span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="4"><span>introduce("Ana", 16)</span></label>
+          <label class="opcion"><input type="checkbox" name="reto" value="5"><span>introduce(age=15)</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="What each checked call prints"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try again</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Arguments are handed out <strong>by position</strong>, unless you give them <strong>by name</strong>; and a parameter with a <strong>default</strong> value can be left out.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">greet</span>(<span class="tk-variable">name</span>, <span class="tk-variable">greeting</span>=<span class="tk-texto">"Hello"</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">f"{</span><span class="tk-variable">greeting</span><span class="tk-texto">}, {</span><span class="tk-variable">name</span><span class="tk-texto">}!"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">greet</span>(<span class="tk-texto">"Ana"</span>, <span class="tk-texto">"Hey"</span>)               <span class="tk-comentario"># by position</span></span><span class="linea"><span class="tk-funcion">greet</span>(<span class="tk-variable">greeting</span>=<span class="tk-texto">"Hey"</span>, <span class="tk-variable">name</span>=<span class="tk-texto">"Ana"</span>) <span class="tk-comentario"># by name</span></span><span class="linea"><span class="tk-funcion">greet</span>(<span class="tk-texto">"Ana"</span>)                      <span class="tk-comentario"># greeting = "Hello"</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../return/index.html">Next: Functions that decide →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  var leccion; // assigned at the end, with Pasos.iniciar
+  var ORDINAL = ["1st", "2nd"];
+
+  /* ---------- Highlighting of the call line ---------- */
+  function tk(clase, texto) { return '<span class="tk-' + clase + '">' + texto + "</span>"; }
+
+  // An argument: { texto: '"Ana"' | '15', nombre: 'age' (optional) }
+  function argHTML(a) {
+    var valor = tk(a.texto.charAt(0) === '"' ? "texto" : "numero", a.texto);
+    return a.nombre ? tk("variable", a.nombre) + "=" + valor : valor;
+  }
+
+  function llamadaHTML(fn, args) {
+    return tk("funcion", fn) + "(" + args.map(argHTML).join(", ") + ")";
+  }
+
+  function argTexto(a) { return a.nombre ? a.nombre + "=" + a.texto : a.texto; }
+
+  /* ---------- Handing out: arguments → arrows → parameter boxes ---------- */
+  var SVG = "http://www.w3.org/2000/svg";
+
+  function crearReparto(el) {
+    var params = el.getAttribute("data-params").split(" ");
+    el.innerHTML =
+      '<p class="rotulo">Arguments (in the call)</p>' +
+      '<div class="reparto__args"></div>' +
+      '<svg class="reparto__flechas" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"></svg>' +
+      '<div class="reparto__params"></div>' +
+      '<p class="rotulo">Parameters (in the function)</p>';
+    var cont = el.querySelector(".reparto__params");
+    var cajas = params.map(function (p) {
+      var caja = document.createElement("div");
+      caja.className = "caja";
+      caja.innerHTML = '<div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>' +
+        '<code class="caja__nombre"></code><span class="defecto" hidden>default</span>';
+      caja.querySelector(".caja__nombre").textContent = p;
+      cont.appendChild(caja);
+      return caja;
+    });
+    return { raiz: el, params: params, cajas: cajas, args: [], lineas: [] };
+  }
+
+  /* Places the arguments of the call and joins each one to its box */
+  function ponerArgs(r, args) {
+    var fila = r.raiz.querySelector(".reparto__args");
+    var svg = r.raiz.querySelector(".reparto__flechas");
+    fila.textContent = "";
+    svg.textContent = "";
+    r.args = [];
+    r.lineas = [];
+    args.forEach(function (a, i) {
+      var chip = document.createElement("span");
+      chip.className = "arg";
+      chip.textContent = argTexto(a);
+      fila.appendChild(chip);
+      r.args.push(chip);
+      var destino = destinoDe(r, a, i);
+      var linea = document.createElementNS(SVG, "line");
+      linea.setAttribute("x1", 25 + 50 * i);
+      linea.setAttribute("y1", 2);
+      linea.setAttribute("x2", 25 + 50 * destino);
+      linea.setAttribute("y2", 38);
+      svg.appendChild(linea);
+      r.lineas.push(linea);
+    });
+    vaciarCajas(r);
+  }
+
+  function destinoDe(r, a, i) { return a.nombre ? r.params.indexOf(a.nombre) : i; }
+
+  function vaciarCajas(r) {
+    r.cajas.forEach(function (c) {
+      Caja.vaciar(c);
+      c.querySelector(".defecto").hidden = true;
+    });
+    activar(r, -1);
+  }
+
+  function activar(r, i) {
+    r.args.forEach(function (c, k) { c.classList.toggle("arg--activo", k === i); });
+    r.lineas.forEach(function (l, k) { l.classList.toggle("activa", k === i); });
+  }
+
+  /* Trace of a call:
+       c = { r, args, lineaLlamada, defectos: { indiceParam: texto }, finales: [pasos…] } */
+  function trazaLlamada(c) {
+    var n = c.args.length;
+    var t = [{
+      linea: c.lineaLlamada,
+      texto: "A call with <strong>" + n + "</strong> argument" + (n > 1 ? "s" : "") + ": Python jumps to the function.",
+      estado: { vaciar: true }
+    }];
+    c.args.forEach(function (a, i) {
+      var d = destinoDe(c.r, a, i);
+      var p = c.r.params[d];
+      t.push({
+        linea: 0,
+        texto: a.nombre
+          ? "<code>" + argTexto(a) + "</code>: the " + a.texto + " goes straight to the <strong>" + p + "</strong> box."
+          : "The " + ORDINAL[i] + " argument, <code>" + a.texto + "</code>, goes to the " + ORDINAL[d] + " parameter: <strong>" + p + "</strong>.",
+        estado: { arg: i, caja: d, valor: a.texto }
+      });
+    });
+    Object.keys(c.defectos || {}).forEach(function (k) {
+      var d = Number(k);
+      var usado = c.args.some(function (a, i) { return destinoDe(c.r, a, i) === d; });
+      if (usado) return;
+      t.push({
+        linea: 0,
+        texto: "Nobody gave <strong>" + c.r.params[d] + "</strong> a value: it uses the default, <code>" + c.defectos[k] + "</code>.",
+        estado: { arg: -1, caja: d, valor: c.defectos[k], defecto: true }
+      });
+    });
+    return t.concat(c.finales);
+  }
+
+  /* A repeatable trace builds its steps when it runs, and only then reserves the height of
+     its explanations. Here it is reserved earlier, with the texts of the chosen call: that way
+     the first line does not change that height or push the output (on mobile it goes below) */
+  function reservarExplicacion(el, generar) {
+    Codigo.reservarAlto(el, [el.textContent].concat(generar().map(function (p) { return p.texto || ""; })),
+      function (copia, texto) { copia.innerHTML = texto; });
+  }
+
+  function pintarPasoReparto(r, paso) {
+    var e = paso.estado || {};
+    if (e.vaciar) vaciarCajas(r);
+    if (e.arg !== undefined) activar(r, e.arg);
+    if (e.caja !== undefined) {
+      // The value comes from its argument (the default one, from the def, where it is written)
+      Caja.poner(r.cajas[e.caja], e.valor, e.arg >= 0 ? r.args[e.arg] : undefined);
+      r.cajas[e.caja].querySelector(".defecto").hidden = !e.defecto;
+    }
+    if (e.fin) activar(r, -1);
+  }
+
+  /* ---------- 1. Two values, two boxes ---------- */
+  var r1 = crearReparto($("p1-reparto"));
+  var ARGS_P1 = [{ texto: '"Ana"' }, { texto: "15" }];
+  ponerArgs(r1, ARGS_P1);
+
+  function trazaDos() {
+    return trazaLlamada({
+      r: r1, args: ARGS_P1, lineaLlamada: 3,
+      finales: [{ linea: 1, salida: "Ana is 15 years old", texto: "With both boxes full, it prints the sentence.", estado: { fin: true } }]
+    });
+  }
+
+  /* ---------- 2. Order matters ---------- */
+  var r2 = crearReparto($("p2-reparto"));
+  var p2Cambiado = false;
+  var p2Hechos = {};
+
+  function argsP2() {
+    return p2Cambiado ? [{ texto: "3" }, { texto: "10" }] : [{ texto: "10" }, { texto: "3" }];
+  }
+
+  function pintarLlamadaP2() {
+    $("p2-llamada").innerHTML = tk("funcion", "print") + "(" + llamadaHTML("subtract", argsP2()) + ")";
+    ponerArgs(r2, argsP2());
+  }
+
+  function trazaOrden() {
+    var args = argsP2();
+    var a = Number(args[0].texto);
+    var b = Number(args[1].texto);
+    return trazaLlamada({
+      r: r2, args: args, lineaLlamada: 3,
+      finales: [
+        { linea: 1, texto: "return " + a + " - " + b + " → <strong>" + (a - b) + "</strong>.", estado: { fin: true } },
+        { linea: 3, flecha: true, salida: a - b, texto: "subtract(" + a + ", " + b + ") is " + (a - b) + ", and print shows it." }
+      ]
+    });
+  }
+
+  function terminarP2() {
+    p2Hechos[p2Cambiado ? "b" : "a"] = true;
+    if (p2Hechos.a && p2Hechos.b) {
+      Pasos.feedback($("p2-fb"), "ok", "Same numbers, different order, different result: 10 - 3 = 7, but 3 - 10 = -7.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p2-fb"), "pista", "Now tap “⇄ Swap” and run it again.");
+    }
+  }
+
+  /* ---------- 3. By name ---------- */
+  var r3 = crearReparto($("p3-reparto"));
+  var p3Forma = "posicion";
+  var p3Hechos = {};
+  var ARGS_P3 = {
+    posicion: [{ texto: '"Ana"' }, { texto: "15" }],
+    nombre: [{ nombre: "age", texto: "15" }, { nombre: "name", texto: '"Ana"' }]
+  };
+
+  function pintarLlamadaP3() {
+    $("p3-llamada").innerHTML = llamadaHTML("introduce", ARGS_P3[p3Forma]);
+    ponerArgs(r3, ARGS_P3[p3Forma]);
+    document.querySelectorAll("[data-p3]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-p3") === p3Forma));
+    });
+  }
+
+  function trazaNombre() {
+    return trazaLlamada({
+      r: r3, args: ARGS_P3[p3Forma], lineaLlamada: 3,
+      finales: [{ linea: 1, salida: "Ana is 15 years old", texto: "It prints the sentence.", estado: { fin: true } }]
+    });
+  }
+
+  function terminarP3() {
+    p3Hechos[p3Forma] = true;
+    document.querySelector('[data-p3="' + p3Forma + '"]').classList.add("hecho");
+    if (p3Hechos.posicion && p3Hechos.nombre) {
+      Pasos.feedback($("p3-fb"), "ok", "The same sentence: by name, the order in the call no longer matters.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p3-fb"), "pista", "Now try the other way to call it and compare the arrows.");
+    }
+  }
+
+  /* ---------- 4. Default values ---------- */
+  var r4 = crearReparto($("p4-reparto"));
+  var LLAMADAS_P4 = [
+    { args: [{ texto: '"Ana"' }], salida: "Hello, Ana!" },
+    { args: [{ texto: '"Luis"' }, { texto: '"Hi"' }], salida: "Hi, Luis!" },
+    { args: [{ texto: '"Eva"' }, { nombre: "greeting", texto: '"Hey"' }], salida: "Hey, Eva!" }
+  ];
+  var p4Actual = 0;
+  var p4Hechos = {};
+
+  function pintarLlamadaP4() {
+    $("p4-llamada").innerHTML = llamadaHTML("greet", LLAMADAS_P4[p4Actual].args);
+    ponerArgs(r4, LLAMADAS_P4[p4Actual].args);
+    document.querySelectorAll("[data-p4]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.getAttribute("data-p4")) === p4Actual));
+    });
+  }
+
+  function trazaDefecto() {
+    var ll = LLAMADAS_P4[p4Actual];
+    return trazaLlamada({
+      r: r4, args: ll.args, lineaLlamada: 3, defectos: { 1: '"Hello"' },
+      finales: [{ linea: 1, salida: ll.salida, texto: "It prints the greeting.", estado: { fin: true } }]
+    });
+  }
+
+  function terminarP4() {
+    p4Hechos[p4Actual] = true;
+    document.querySelector('[data-p4="' + p4Actual + '"]').classList.add("hecho");
+    var conDefecto = p4Hechos[0];
+    var sinDefecto = p4Hechos[1] || p4Hechos[2];
+    if (conDefecto && sinDefecto) {
+      Pasos.feedback($("p4-fb"), "ok", "If you give it no greeting, it uses \"Hello\"; if you give it one, it uses yours.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p4-fb"), "pista", conDefecto
+        ? "Now try a call that does give it a greeting."
+        : "Now try greet(\"Ana\"), without the second argument.");
+    }
+  }
+
+  /* ---------- 5. Challenge ---------- */
+  var OBJETIVO = "Ana is 15 years old";
+  var RESULTADOS_RETO = [
+    "Ana is 15 years old",
+    "15 is Ana years old",
+    "Ana is 15 years old",
+    "Ana is 15 years old",
+    "Ana is 16 years old",
+    null // error: name is missing
+  ];
+
+  function marcadas() {
+    return Array.prototype.map.call(document.querySelectorAll('#reto-opciones input:checked'), function (r) {
+      return Number(r.value);
+    });
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto() {
+    limpiarReto();
+    leccion.listoParaComprobar(marcadas().length > 0);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var elegidas = marcadas();
+    if (!elegidas.length) return false;
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var malas = 0;
+    elegidas.forEach(function (i) {
+      var res = RESULTADOS_RETO[i];
+      var bien = res === OBJETIVO;
+      if (!bien) malas++;
+      var opcion = paso.querySelector('input[name="reto"][value="' + i + '"]').closest(".opcion");
+      opcion.classList.add(bien ? "opcion--correcta" : "opcion--incorrecta");
+      var li = document.createElement("li");
+      var llamada = document.createElement("span");
+      llamada.textContent = opcion.querySelector("span").textContent;
+      var r = document.createElement("span");
+      r.className = "prueba__res prueba__res--" + (bien ? "ok" : "mal");
+      r.textContent = "→ " + (res === null ? "Error: name is missing ✗" : res + (bien ? " ✓" : " ✗"));
+      li.appendChild(llamada);
+      li.appendChild(r);
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+
+    var correctas = RESULTADOS_RETO.filter(function (r) { return r === OBJETIVO; }).length;
+    var faltan = correctas - (elegidas.length - malas);
+    if (!malas && !faltan) {
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! By position, by name, or leaving the age as the default: all three print the same sentence.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", malas
+      ? "Look at what each call marked in orange prints, and uncheck it."
+      : "All the ones you checked work, but you are missing " + (faltan === 1 ? "one" : faltan) + ". Remember that age has a default value.");
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  var trazaP1 = Traza.crear({
+    codigo: $("p1-codigo"),
+    explicacion: $("p1-explicacion"),
+    consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"),
+    reproducir: $("p1-reproducir"),
+    reiniciar: $("p1-reiniciar"),
+    generar: trazaDos,
+    intervalo: 1200,
+    alReiniciar: function () {
+      vaciarCajas(r1);
+      Pasos.limpiarFeedback($("p1-fb"));
+    },
+    alPaso: function (paso) { pintarPasoReparto(r1, paso); },
+    alTerminar: function () {
+      Pasos.feedback($("p1-fb"), "ok", "Two arguments, two parameters: each value lands in its box.");
+      leccion.desbloquear();
+    }
+  });
+
+  pintarLlamadaP2();
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaOrden,
+    repetible: true,
+    alPaso: function (paso) { pintarPasoReparto(r2, paso); },
+    alReiniciar: function () {
+      p2Hechos = {};
+      vaciarCajas(r2);
+      Pasos.limpiarFeedback($("p2-fb"));
+      reservarExplicacion($("p2-explicacion"), trazaOrden);
+    },
+    alTerminar: terminarP2
+  });
+  reservarExplicacion($("p2-explicacion"), trazaOrden);
+  $("p2-intercambiar").addEventListener("click", function () {
+    p2Cambiado = !p2Cambiado;
+    trazaP2.cancelar();
+    pintarLlamadaP2();
+    reservarExplicacion($("p2-explicacion"), trazaOrden);
+  });
+
+  pintarLlamadaP3();
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaNombre,
+    intervalo: 1200,
+    repetible: true,
+    alReiniciar: function () {
+      p3Hechos = {};
+      document.querySelectorAll("[data-p3]").forEach(function (b) { b.classList.remove("hecho"); });
+      vaciarCajas(r3);
+      Pasos.limpiarFeedback($("p3-fb"));
+      reservarExplicacion($("p3-explicacion"), trazaNombre);
+    },
+    alPaso: function (paso) { pintarPasoReparto(r3, paso); },
+    alTerminar: terminarP3
+  });
+  reservarExplicacion($("p3-explicacion"), trazaNombre);
+  document.querySelectorAll("[data-p3]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      p3Forma = b.getAttribute("data-p3");
+      trazaP3.cancelar();
+      pintarLlamadaP3();
+      reservarExplicacion($("p3-explicacion"), trazaNombre);
+    });
+  });
+
+  pintarLlamadaP4();
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaDefecto,
+    intervalo: 1200,
+    repetible: true,
+    alReiniciar: function () {
+      p4Hechos = {};
+      document.querySelectorAll("[data-p4]").forEach(function (b) { b.classList.remove("hecho"); });
+      vaciarCajas(r4);
+      Pasos.limpiarFeedback($("p4-fb"));
+      reservarExplicacion($("p4-explicacion"), trazaDefecto);
+    },
+    alPaso: function (paso) { pintarPasoReparto(r4, paso); },
+    alTerminar: terminarP4
+  });
+  reservarExplicacion($("p4-explicacion"), trazaDefecto);
+  document.querySelectorAll("[data-p4]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      p4Actual = Number(b.getAttribute("data-p4"));
+      trazaP4.cancelar();
+      pintarLlamadaP4();
+      reservarExplicacion($("p4-explicacion"), trazaDefecto);
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // When the step changes, any running execution is paused
+  function pausar() { trazaP1.detener(); trazaP3.detener(); trazaP4.detener(); }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-dos": pausar,
+      "paso-orden": pausar,
+      "paso-nombre": pausar,
+      "paso-defecto": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Functions · Learn to program</title>
+  <meta name="description" content="Interactive lesson: define and call functions, parameters and return in Python.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong { color: var(--color-texto); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .cajas { padding-top: var(--esp-4); }
+    .btn-llamada { font-family: var(--fuente-codigo); }
+
+    /* Steps 1 and 2: call counter and "where we are" */
+    .estado-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2) var(--esp-4); margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .estado-fila strong { color: var(--color-texto); }
+    .lugar { display: inline-block; padding: 0.15em 0.75em; border-radius: 999px; font-weight: 700; background: var(--color-superficie-2); color: var(--color-texto); transition: background-color var(--dur), color var(--dur); }
+    .lugar--funcion { background: var(--color-azul-suave); color: var(--color-azul); }
+    .estado-fila--arriba { margin: var(--esp-5) 0 var(--esp-3); }
+    @media (min-width: 1024px) { #paso-salto .fila-botones { margin-top: var(--esp-3); } }
+
+    /* Step 1: the recipe and one stamp per call */
+    .receta { display: grid; gap: var(--esp-2); padding: var(--esp-3) var(--esp-4); border: 2px dashed var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), box-shadow var(--dur); }
+    .receta--activa { border-style: solid; border-color: var(--color-azul); box-shadow: 0 0 0 4px var(--color-azul-suave); }
+    .receta__titulo { font-weight: 700; }
+    .receta__pasos { display: grid; gap: var(--esp-1); margin: 0; padding: 0; list-style: none; counter-reset: receta; }
+    .receta__pasos li { display: flex; align-items: center; gap: var(--esp-2); padding: var(--esp-1) var(--esp-2); border-radius: var(--radio-sm); counter-increment: receta; transition: background-color var(--dur-rapida), opacity var(--dur-rapida); }
+    .receta__pasos li::before { content: counter(receta); display: grid; place-items: center; flex: none; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--color-superficie-2); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta__pasos code { font-size: var(--texto-sm); }
+    .receta__pasos .receta__paso--actual { background: var(--color-azul-suave); }
+    .receta__pasos .receta__paso--actual::before { background: var(--color-azul); color: #fff; }
+    .receta__pasos .receta__paso--hecho::before { content: "✓"; background: var(--color-ok); color: #fff; }
+    .receta__estado { font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    /* Room for two rows of stamps from the start: the output below does not move down
+       with each call (the last one counts the ones that no longer fit, "+3 ✓") */
+    .sellos { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; align-content: flex-start; gap: var(--esp-2); height: 4.25rem; margin-top: var(--esp-3); }
+    .sello { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.15em 0.7em; border: 2px solid var(--color-ok); border-radius: 999px; background: var(--color-ok-suave); color: var(--color-ok); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; animation: sellar 420ms var(--curva-rebote) both; }
+    @keyframes sellar { from { transform: scale(1.8) rotate(-12deg); opacity: 0; } }
+
+    /* Step 2: map of the program; the 🔖 mark says where Python will return */
+    .mapa { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--esp-3); }
+    .mapa__zona { display: grid; align-content: start; gap: var(--esp-2); padding: var(--esp-3); border: 2px dashed var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), box-shadow var(--dur); }
+    .mapa__zona--activa { border-style: solid; border-color: var(--color-acento); box-shadow: 0 0 0 4px var(--color-acento-suave); }
+    .mapa__zona--funcion.mapa__zona--activa { border-color: var(--color-azul); box-shadow: 0 0 0 4px var(--color-azul-suave); }
+    .mapa__titulo { font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .mapa__titulo code { text-transform: none; }
+    .mapa__lineas { display: grid; gap: var(--esp-1); margin: 0; padding: 0; list-style: none; }
+    .mapa__lineas li { padding: var(--esp-1) var(--esp-2); border: 2px solid transparent; border-radius: var(--radio-sm); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; transition: background-color var(--dur-rapida), border-color var(--dur-rapida), transform var(--dur-rapida) var(--curva-rebote); }
+    .mapa__lineas .mapa__linea--actual { border-color: var(--color-acento); background: var(--color-acento-suave); transform: scale(1.04); }
+    .mapa__zona--funcion .mapa__linea--actual { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .mapa__lineas .mapa__linea--vuelta { border-style: dashed; border-color: var(--color-pista); }
+    .mapa__lineas .mapa__linea--vuelta::after { content: "🔖 will return here"; display: inline-block; margin-left: var(--esp-2); padding: 0 0.5em; border-radius: 999px; background: var(--color-pista-suave); color: var(--color-pista); font-family: var(--fuente); font-size: 0.75rem; white-space: nowrap; animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    /* Step 3: name field */
+    .campo { margin: var(--esp-4) 0 0; }
+    #p3-caja .caja__cuerpo { width: auto; min-width: 7.5rem; padding-inline: var(--esp-4); }
+    #p3-caja .caja__valor { max-width: 15rem; font-size: var(--texto-lg); }
+
+    /* Step 4: the machine */
+    .maquina { display: flex; align-items: center; justify-content: center; gap: var(--esp-2); flex-wrap: wrap; padding: var(--esp-2) 0 var(--esp-3); }
+    .maquina__flecha { color: var(--color-texto-suave); font-size: var(--texto-lg); }
+    .maquina__valor { display: grid; place-items: center; min-width: 3.25rem; height: 3.25rem; padding: 0 var(--esp-2); border-radius: var(--radio-sm); border: 2px dashed var(--color-borde); font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-xl); color: var(--color-texto-suave); transition: border-color var(--dur), background-color var(--dur), color var(--dur); }
+    .maquina__valor--lleno { border-style: solid; border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); animation: valor-pulso 260ms ease-out; }
+    .maquina__valor--salida.maquina__valor--lleno { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .maquina__cuerpo { display: grid; justify-items: center; gap: 0.1rem; padding: var(--esp-2) var(--esp-4); border-radius: var(--radio); background: var(--color-codigo-fondo); color: var(--color-codigo-texto); font-family: var(--fuente-codigo); font-weight: 700; }
+    .maquina__engranaje { font-size: 1.6rem; line-height: 1.2; }
+    .maquina--trabajando .maquina__engranaje { animation: girar 700ms linear infinite; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+
+    /* Step 5: challenge */
+    #p5-opciones { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+    #p5-opciones .opcion span { font-size: var(--texto-sm); padding: var(--esp-4) var(--esp-2); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__llamada { white-space: nowrap; }
+    .prueba__res { font-weight: 700; }
+    .prueba__res--ok { color: var(--color-ok); }
+    .prueba__res--mal { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="funciones">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: a recipe with a name -->
+    <section class="paso" id="paso-receta" data-requiere aria-labelledby="t-receta">
+      <span class="paso__etiqueta">Functions 1/7</span>
+      <h1 class="paso__titulo" id="t-receta">A function is a recipe with a name</h1>
+      <p>You write the instructions <strong>once</strong> and use them whenever you want by calling the function by its name. Use it several times: all at once or line by line.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p1-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">greet</span>():</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Hello!"</span>)</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"How are you?"</span>)</span></code></pre>
+          <p class="estado-fila" aria-live="polite">Calls: <strong id="p1-llamadas">0</strong></p>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario btn-llamada" id="p1-llamar" aria-pressed="false">greet()</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual" aria-hidden="true">
+          <div class="receta" id="p1-receta">
+            <span class="receta__titulo">📜 Recipe <code>greet</code></span>
+            <ol class="receta__pasos">
+              <li data-linea="1"><code>print("Hello!")</code></li>
+              <li data-linea="2"><code>print("How are you?")</code></li>
+            </ol>
+            <span class="receta__estado" id="p1-receta-estado"></span>
+          </div>
+          <div class="sellos" id="p1-sellos"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota"><code>def</code> only <strong>defines</strong> the recipe: it does nothing until you call it with <code>greet()</code>.</p>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The jump: call and come back -->
+    <section class="paso" id="paso-salto" data-requiere aria-labelledby="t-salto">
+      <h2 class="paso__titulo" id="t-salto">Calling is jumping… and coming back</h2>
+      <p>When you call a function, Python jumps to its code and, when it finishes, comes back to where it was. Run it line by line.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">greet</span>():</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Hello!"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"Start"</span>)</span><span class="linea"><span class="tk-funcion">greet</span>()</span><span class="linea"><span class="tk-funcion">greet</span>()</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-texto">"End"</span>)</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="estado-fila estado-fila--arriba">
+            <span>Now in: <span class="lugar" id="p2-lugar">main program</span></span>
+            <span>Calls: <strong id="p2-llamadas">0</strong></span>
+          </p>
+          <div class="mapa" id="p2-mapa" aria-hidden="true">
+            <div class="mapa__zona" data-zona="principal">
+              <span class="mapa__titulo">Main program</span>
+              <ol class="mapa__lineas">
+                <li data-linea="3">print("Start")</li>
+                <li data-linea="4">greet()</li>
+                <li data-linea="5">greet()</li>
+                <li data-linea="6">print("End")</li>
+              </ol>
+            </div>
+            <div class="mapa__zona mapa__zona--funcion" data-zona="funcion">
+              <span class="mapa__titulo">Inside <code>greet()</code></span>
+              <ol class="mapa__lineas">
+                <li data-linea="1">print("Hello!")</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Parameters -->
+    <section class="paso" id="paso-parametro" data-requiere aria-labelledby="t-parametro">
+      <h2 class="paso__titulo" id="t-parametro">Parameters: giving data to the function</h2>
+      <p>You pass it a value inside the parentheses. Inside, the parameter <code>name</code> keeps it like a variable. Try two names.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <div class="campo">
+            <label for="p3-nombre">Name we pass in</label>
+            <input type="text" id="p3-nombre" value="Ana" maxlength="12" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="cajas">
+            <div class="caja" id="p3-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">name</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">greet</span>(<span class="tk-variable">name</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Hello, "</span> + <span class="tk-variable">name</span> + <span class="tk-texto">"!"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">greet</span>(<span class="tk-texto">"<span id="p3-codigo-nombre">Ana</span>"</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. return -->
+    <section class="paso" id="paso-return" data-requiere aria-labelledby="t-return">
+      <h2 class="paso__titulo" id="t-return"><code>return</code>: the function gives you something back</h2>
+      <p>Like a machine: one value goes in, another comes out. Pick the number and run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <div class="maquina" id="p4-maquina" aria-hidden="true">
+            <span class="maquina__valor" id="p4-entra">?</span>
+            <span class="maquina__flecha">→</span>
+            <span class="maquina__cuerpo"><span class="maquina__engranaje">⚙️</span>double</span>
+            <span class="maquina__flecha">→</span>
+            <span class="maquina__valor maquina__valor--salida" id="p4-sale">?</span>
+          </div>
+          <div class="control-slider">
+            <label for="p4-slider"><span>Number that goes in</span> <output id="p4-salida" for="p4-slider">4</output></label>
+            <input type="range" id="p4-slider" min="0" max="10" value="4">
+          </div>
+          <div class="cajas">
+            <div class="caja" id="p4-caja-n">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">n</code>
+            </div>
+            <div class="caja" id="p4-caja-resultado">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">result</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="p4-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">double</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">n</span> * <span class="tk-numero">2</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">result</span> = <span class="tk-funcion">double</span>(<span class="tk-numero" id="p4-codigo-n">4</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">result</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota"><code>print</code> only shows a value on the screen; <code>return</code> hands it back so you can save it and keep using it.</p>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Find the area</h2>
+      <p>The area of a rectangle is <strong>base × height</strong>. What should the function return so it works with <strong>any</strong> rectangle?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">area</span>(<span class="tk-variable">base</span>, <span class="tk-variable">height</span>):</span><span class="linea">    <span class="tk-palabra">return</span> <span class="hueco" id="p5-hueco">?</span></span></code></pre>
+
+        <fieldset class="opciones" id="p5-opciones">
+          <legend class="visualmente-oculto">What the function returns</legend>
+          <label class="opcion"><input type="radio" name="reto" value="suma"><span>base + height</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="producto"><span>base * height</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="fijo"><span>3 * 4</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="cuadrado"><span>base * base</span></label>
+        </fieldset>
+
+        <ul class="pruebas" id="p5-pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="p5-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="p5-otra-btn">↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A function is a recipe with a name: you define it with <code>def</code>, call it whenever you want, and it gives you back a value with <code>return</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">name</span>(<span class="tk-variable">parameter</span>):</span><span class="linea">    <span class="tk-comentario"># instructions</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-variable">value</span></span><span class="linea"></span><span class="linea"><span class="tk-variable">x</span> = <span class="tk-funcion">name</span>(<span class="tk-numero">5</span>)  <span class="tk-comentario"># call</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="python/index.html">Next: Python's functions →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  var leccion; // assigned at the end, with Pasos.iniciar
+
+  /* ---------- 1. Recipe with a name ---------- */
+  var p1Llamadas = 0;
+  var p1Pasos = 0;   // steps run, to know whether another call started
+
+  function trazaReceta() {
+    return [
+      { linea: 0, texto: "You call <strong>greet()</strong>: Python jumps to the recipe." },
+      { linea: 1, salida: "Hello!", texto: "Prints “Hello!”." },
+      { linea: 2, salida: "How are you?", texto: "Prints “How are you?”. The recipe is done." }
+    ];
+  }
+
+  // The recipe shows which instruction is running and which ones are done
+  function pintarReceta(linea) {
+    var activa = linea !== null;
+    $("p1-receta").classList.toggle("receta--activa", activa);
+    $("p1-receta").querySelectorAll("li").forEach(function (li) {
+      var l = Number(li.getAttribute("data-linea"));
+      li.classList.toggle("receta__paso--actual", l === linea);
+      li.classList.toggle("receta__paso--hecho", activa && l < linea);
+    });
+    $("p1-receta-estado").textContent = activa
+      ? "Running: call " + (p1Llamadas + 1) + "."
+      : p1Llamadas ? "Done. You can call it again." : "Saved: it does nothing until it is called.";
+  }
+
+  // The stamps have room for two rows. If the stamp for one more call no longer fits, the
+  // last one starts counting the ones that don't fit ("+3 ✓"): so the output stays in place
+  var p1Sobran = 0;
+  function sellar() {
+    var caja = $("p1-sellos");
+    var mas = caja.querySelector(".sello--mas");
+    if (!mas) {
+      var s = document.createElement("span");
+      s.className = "sello";
+      s.textContent = "greet() ✓";
+      caja.appendChild(s);
+      if (s.offsetTop - caja.offsetTop + s.offsetHeight <= caja.clientHeight + 1) return;
+      s.remove();
+      mas = caja.lastElementChild;
+      if (!mas) return;
+      mas.classList.add("sello--mas");
+      p1Sobran = 1;
+    }
+    p1Sobran++;
+    mas.textContent = "+" + p1Sobran + " ✓";
+  }
+
+  /* ---------- 2. Call and come back ---------- */
+  function trazaSalto() {
+    var t = [
+      { linea: 0, texto: "Python reads the definition of <strong>greet</strong> and remembers it. It doesn't run what's inside yet.", estado: { lugar: "principal", marca: null } },
+      { linea: 3, salida: "Start", texto: "Prints “Start”." }
+    ];
+    [4, 5].forEach(function (linea, k) {
+      t.push({ linea: linea, texto: (k ? "Another call" : "A call to <strong>greet()</strong>") + ": it jumps to the function.", estado: { llamadas: k + 1 } });
+      t.push({ linea: 1, salida: "Hello!", texto: "Inside the function: prints “Hello!”. Python remembers line " + (linea + 1) + " to come back.", estado: { lugar: "funcion", marca: linea } });
+      t.push({ linea: linea, flecha: true, texto: "The function is done: it comes back right where it was called.", estado: { lugar: "principal", marca: null } });
+    });
+    t.push({ linea: 6, salida: "End", texto: "The program goes on: prints “End”." });
+    return t;
+  }
+
+  // Lights up on the map the line that runs and the zone where Python is
+  function pintarMapa(linea, lugar, marca) {
+    $("p2-mapa").querySelectorAll(".mapa__zona").forEach(function (z) {
+      z.classList.toggle("mapa__zona--activa", z.getAttribute("data-zona") === lugar);
+    });
+    $("p2-mapa").querySelectorAll("li").forEach(function (li) {
+      var l = Number(li.getAttribute("data-linea"));
+      li.classList.toggle("mapa__linea--actual", l === linea);
+      li.classList.toggle("mapa__linea--vuelta", l === marca);
+    });
+  }
+  var p2 = { lugar: "principal", marca: null };
+
+  function pintarLugar(lugar) {
+    var el = $("p2-lugar");
+    var dentro = lugar === "funcion";
+    el.textContent = dentro ? "inside greet()" : "main program";
+    el.classList.toggle("lugar--funcion", dentro);
+  }
+
+  /* ---------- 3. Parameters ---------- */
+  var p3Nombres = {};
+  var p3Nombre = "";
+
+  function nombreP3() { return $("p3-nombre").value.trim(); }
+
+  function trazaParametro() {
+    p3Nombre = nombreP3();
+    var texto = '"' + p3Nombre + '"';
+    return [
+      { linea: 3, texto: "Calls <strong>greet(" + texto + ")</strong>: it jumps to the function, taking that text along.", estado: { nombre: null } },
+      { linea: 0, texto: "The parameter <strong>name</strong> gets " + texto + ".", estado: { nombre: texto } },
+      { linea: 1, salida: "Hello, " + p3Nombre + "!", texto: "Prints “Hello, " + p3Nombre + "!”." }
+    ];
+  }
+
+  // Without a name it doesn't run: it warns and stops the button from doing anything
+  function exigirNombreP3(e) {
+    if (nombreP3()) return;
+    e.stopImmediatePropagation();
+    Pasos.feedback($("p3-fb"), "pista", "Type a name first.");
+    $("p3-nombre").focus();
+  }
+
+  function terminarP3() {
+    p3Nombres[p3Nombre.toLowerCase()] = true;
+    if (Object.keys(p3Nombres).length >= 2) {
+      Pasos.feedback($("p3-fb"), "ok", "Same function, different result: it depends on the value you pass in.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p3-fb"), "pista", "Now change the name and run it again.");
+    }
+  }
+
+  /* ---------- 4. return ---------- */
+  function valorP4() { return Number($("p4-slider").value); }
+
+  function trazaDoble() {
+    var v = valorP4();
+    return [
+      { linea: 3, texto: "Calls <strong>double(" + v + ")</strong>: it jumps to the function, taking the " + v + " along.", estado: { entra: v } },
+      { linea: 0, texto: "The parameter <strong>n</strong> gets " + v + ".", estado: { n: v } },
+      { linea: 1, texto: "return " + v + " * 2 → <strong>" + (v * 2) + "</strong>. The function hands back that value and ends.", estado: { sale: v * 2 } },
+      { linea: 3, texto: "double(" + v + ") turns into " + (v * 2) + ", which is saved in <strong>result</strong>.", estado: { resultado: v * 2 } },
+      { linea: 4, salida: v * 2, texto: "Prints " + (v * 2) + "." }
+    ];
+  }
+
+  function pintarMaquina(el, valor) {
+    el.textContent = valor === null ? "?" : valor;
+    el.classList.remove("maquina__valor--lleno");
+    if (valor !== null) {
+      void el.offsetWidth;
+      el.classList.add("maquina__valor--lleno");
+    }
+  }
+
+  /* ---------- 5. Challenge ---------- */
+  var opcionesReto = {
+    suma: function (b, a) { return b + a; },
+    producto: function (b, a) { return b * a; },
+    fijo: function () { return 12; },
+    cuadrado: function (b) { return b * b; }
+  };
+  var pistasReto = {
+    suma: "That adds the sides. You find the area by multiplying.",
+    fijo: "It works for a 3 × 4 rectangle, but not for the others. Use the parameters.",
+    cuadrado: "That way you only use the base. Where is the height?"
+  };
+  var pruebasReto = [[3, 4], [5, 2], [10, 7]];
+
+  function limpiarReto() {
+    document.querySelectorAll("#p5-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("p5-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("p5-fb"));
+  }
+
+  function cambiarReto(e) {
+    $("p5-hueco").textContent = e.target.closest(".opcion").querySelector("span").textContent;
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  /* Every time you enter the challenge it starts clean, even if it was already solved */
+  function entrarReto(paso) {
+    $("p5-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    $("p5-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  /* Tests the chosen option with several rectangles */
+  function mostrarPruebas(fn) {
+    var lista = $("p5-pruebas");
+    lista.innerHTML = "";
+    pruebasReto.forEach(function (p) {
+      var obtenido = fn(p[0], p[1]);
+      var bien = obtenido === p[0] * p[1];
+      var li = document.createElement("li");
+      var llamada = document.createElement("span");
+      llamada.className = "prueba__llamada";
+      llamada.textContent = "area(" + p[0] + ", " + p[1] + ")";
+      var res = document.createElement("span");
+      res.className = "prueba__res prueba__res--" + (bien ? "ok" : "mal");
+      res.textContent = "→ " + obtenido + (bien ? " ✓" : " ✗ (should be " + p[0] * p[1] + ")");
+      li.appendChild(llamada);
+      li.appendChild(res);
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    mostrarPruebas(opcionesReto[marcada.value]);
+
+    if (marcada.value === "producto") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("p5-fb"), "ok", "Exactly! With the parameters, the same function works for any rectangle.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("p5-otra").hidden = false;
+      return true;
+    }
+
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("p5-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  // The recipe status keeps the height of its longest text (on mobile it takes two rows)
+  Codigo.reservarAlto($("p1-receta-estado"), [
+    "Saved: it does nothing until it is called.", "Running: call 10.", "Done. You can call it again."
+  ], function (copia, texto) { copia.textContent = texto; });
+
+  var trazaP1 = Traza.crear({
+    codigo: $("p1-codigo"),
+    explicacion: $("p1-explicacion"),
+    consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"),
+    reproducir: $("p1-llamar"),
+    reiniciar: $("p1-reiniciar"),
+    generar: trazaReceta,
+    intervalo: 900,
+    repetible: true,
+    alReiniciar: function () {
+      p1Llamadas = 0;
+      $("p1-llamadas").textContent = "0";
+      $("p1-sellos").textContent = "";
+      pintarReceta(null);
+      Pasos.limpiarFeedback($("p1-fb"));
+    },
+    alPaso: function (paso) {
+      p1Pasos++;
+      pintarReceta(paso.linea);
+    },
+    alTerminar: function () {
+      p1Llamadas++;
+      $("p1-llamadas").textContent = p1Llamadas;
+      sellar();
+      // Lets you see the last instruction before marking the recipe as done (if no other call started)
+      var hecho = p1Pasos;
+      setTimeout(function () { if (p1Pasos === hecho) pintarReceta(null); }, 700);
+      if (p1Llamadas >= 2) {
+        Pasos.feedback($("p1-fb"), "ok", "Written once, used " + p1Llamadas + " times. That's the idea.");
+        leccion.desbloquear();
+      }
+    }
+  });
+
+  Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaSalto,
+    alReiniciar: function () {
+      pintarLugar("principal");
+      p2 = { lugar: null, marca: null };
+      pintarMapa(null, null, null);
+      $("p2-llamadas").textContent = "0";
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.lugar) { pintarLugar(e.lugar); p2.lugar = e.lugar; }
+      if (e.marca !== undefined) p2.marca = e.marca;
+      if (e.llamadas !== undefined) $("p2-llamadas").textContent = e.llamadas;
+      pintarMapa(paso.linea, p2.lugar, p2.marca);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p2-fb"), "ok", "Each call jumps to the function and, when it ends, comes back to the same place.");
+      leccion.desbloquear();
+    }
+  });
+
+  // These are registered before the Traza ones so they can stop a run without a name
+  $("p3-reproducir").addEventListener("click", exigirNombreP3);
+  $("p3-ejecutar").addEventListener("click", exigirNombreP3);
+
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaParametro,
+    intervalo: 900,
+    repetible: true,
+    alReiniciar: function () {
+      p3Nombres = {};
+      Caja.vaciar($("p3-caja"));
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.nombre === null) Caja.vaciar($("p3-caja"));
+      else if (e.nombre !== undefined) Caja.poner($("p3-caja"), e.nombre, $("p3-codigo-nombre").parentNode);
+    },
+    alTerminar: terminarP3
+  });
+
+  $("p3-nombre").addEventListener("input", function () {
+    $("p3-codigo-nombre").textContent = nombreP3();
+    trazaP3.cancelar();
+    Caja.vaciar($("p3-caja"));
+  });
+  // Enter in the field runs the code (instead of pressing "Continue")
+  $("p3-nombre").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.isComposing) return;
+    e.preventDefault();
+    if (nombreP3()) trazaP3.reproducir();
+    else exigirNombreP3(e);
+  });
+
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaDoble,
+    alReiniciar: function () {
+      $("p4-codigo-n").textContent = valorP4();
+      pintarMaquina($("p4-entra"), null);
+      pintarMaquina($("p4-sale"), null);
+      $("p4-maquina").classList.remove("maquina--trabajando");
+      Caja.vaciar($("p4-caja-n"));
+      Caja.vaciar($("p4-caja-resultado"));
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: function (paso) {
+      var e = paso.estado || {};
+      if (e.entra !== undefined) pintarMaquina($("p4-entra"), e.entra);
+      if (e.n !== undefined) {
+        Caja.poner($("p4-caja-n"), e.n, $("p4-codigo-n"));  // flies from the call's argument
+        $("p4-maquina").classList.add("maquina--trabajando");
+      }
+      if (e.sale !== undefined) {
+        pintarMaquina($("p4-sale"), e.sale);
+        $("p4-maquina").classList.remove("maquina--trabajando");
+      }
+      if (e.resultado !== undefined) Caja.poner($("p4-caja-resultado"), e.resultado);
+    },
+    alTerminar: function () {
+      var v = valorP4();
+      Pasos.feedback($("p4-fb"), "ok", "return gives the value back to whoever called: double(" + v + ") is " + (v * 2) + ".");
+      leccion.desbloquear();
+    }
+  });
+
+  $("p4-slider").addEventListener("input", function () {
+    $("p4-salida").textContent = valorP4();
+    trazaP4.reiniciar();
+  });
+
+  document.querySelectorAll('#p5-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+
+  // After a right answer, lets you choose again to see why the others fail (progress isn't lost)
+  $("p5-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // When the step changes, any run in progress is paused
+  function pausar() { trazaP1.detener(); trazaP3.detener(); }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-receta": pausar,
+      "paso-salto": pausar,
+      "paso-parametro": pausar,
+      "paso-return": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
