@@ -185,11 +185,27 @@
   }
 
   function equilibrar(paso) {
+    var p = partes(paso);
+    if (p && paso._notasIzquierda) notasIzquierda(paso, p, consolaDe(p), 0);
+    repartir(paso);
+    var cuantos = p && escritorio && escritorio.matches && !paso._consolaArriba && !paso.hidden ? decidirNotas(paso) : 0;
+    if (cuantos) {
+      notasIzquierda(paso, p, consolaDe(p), cuantos);
+      repartir(paso);
+    }
+    toparConsola(paso);
+  }
+
+  function repartir(paso) {
     if (paso._consolaArriba) { sostenerArriba(paso, true); return; }
     var p = partes(paso);
     paso.classList.remove("paso--derecha-fija");
     paso.style.removeProperty("--alto-visual");
+    // El registro de una consola que pide datos (BucleInput) crece sin tope: en esos pasos
+    // el lugar que sobra se le guarda a él, no a lo que se ve (que guarda el suyo)
+    var lineas = p && consolaDe(p) && consolaDe(p).querySelector(".consola__lineas");
     if (p) p.visual.style.minHeight = "";
+    if (lineas) lineas.style.minHeight = "";
     if (!p || !escritorio || !escritorio.matches || !repartoNormal(paso)) return;
     var izquierda = altoIzquierda(p);
     var alto = p.visual.offsetHeight;
@@ -201,12 +217,153 @@
     // El panel de lo que se ve se estira hasta el final de la columna del código, o hasta
     // lo que se ve de la pantalla si el código es más alto. Y no baja de lo que mide ahora
     var objetivo = Math.min(izquierda, tope);
-    if (derecha < objetivo) alto += objetivo - derecha;
+    if (lineas) {
+      // Sin quitarle el lugar a lo que aparece al terminar (el mensaje, «Otra…»)
+      var sobra = objetivo - derecha - loQueAparece(p.resultado, consolaDe(p), function () {
+        return p.resultado.getBoundingClientRect().bottom;
+      }) - cambioAlTerminar(consolaDe(p));
+      if (sobra > 0) lineas.style.minHeight = (lineas.offsetHeight + sobra) + "px";
+    } else if (derecha < objetivo) alto += objetivo - derecha;
     p.visual.style.minHeight = alto + "px";
     if (paso.getAttribute("data-visual-fija") !== "no" && izquierda > tope) {
       paso.style.setProperty("--alto-visual", alto + "px");
       paso.classList.add("paso--derecha-fija");
     }
+  }
+
+  /* Una consola que crece (BucleInput, una traza larga) en escritorio. Antes empujaba lo
+     de abajo («Otra serie», el mensaje) bajo el pie y la página bajaba. Al entrar al paso
+     (y al cambiar el tamaño de la ventana) se decide:
+     - Si a la derecha no queda lugar para que la consola crezca unos renglones y además
+       quepa lo que aparece debajo al terminar, lo último de eso (lo que va tras la
+       consola en .lab__resultado, lo más que quepa, desde el final) pasa a la columna del
+       código, bajo la explicación: en un .lab__notas al final de .lab__principal
+       (paso--notas-izquierda). Las lecciones guardan sus referencias al cargar, así que
+       mover el mensaje o un botón no las rompe.
+     - La consola crece hasta donde lo permite la pantalla; después se desplaza por dentro
+       y muestra siempre lo último (Codigo.agregar), como una terminal (consola--tope). Lo
+       que crece es la consola entera o, si la tiene, su .consola__lineas (el registro de
+       BucleInput, así el campo de escribir queda a la vista). Nunca menos de 4 renglones.
+     Lo que aparece al terminar (botones escondidos, el mensaje vacío, que se mide con dos
+     renglones) se muestra un instante para medirlo. No se aplica con la salida arriba (la
+     pila tiene su propio reparto) ni en el móvil. */
+  function consolaDe(p) {
+    return p ? p.resultado.querySelector(":scope > .consola, :scope > .lab__notas ~ .consola") || p.resultado.querySelector(".consola") : null;
+  }
+
+  // Cuánto crece lo que hay en «zona» (fuera de la consola) cuando aparece lo escondido
+  function loQueAparece(zona, consola, medir) {
+    var antes = medir();
+    var cambios = [];
+    zona.querySelectorAll("[hidden], .feedback:empty").forEach(function (el) {
+      if (consola.contains(el)) return;
+      var escondido = el.parentElement && el.parentElement.closest("[hidden]");
+      if (escondido && zona.contains(escondido)) return;
+      if (el.hidden) { el.hidden = false; cambios.push(function () { el.hidden = true; }); }
+      else { el.innerHTML = "M<br>M"; cambios.push(function () { el.innerHTML = ""; }); }
+    });
+    var despues = medir();
+    cambios.forEach(function (deshacer) { deshacer(); });
+    return Math.max(0, despues - antes);
+  }
+
+  // El límite de abajo, en coordenadas de la ventana: el pie y el relleno del paso
+  function limiteAbajo(paso, p) {
+    var fondo = Math.max(p.principal.getBoundingClientRect().bottom, p.visual.getBoundingClientRect().bottom,
+      p.resultado.getBoundingClientRect().bottom);
+    var relleno = Math.max(0, paso.getBoundingClientRect().bottom - fondo);
+    var pie = document.querySelector(".leccion-pie");
+    return window.innerHeight - (pie ? pie.offsetHeight : 0) - window.scrollY - relleno;
+  }
+
+  function remPx() { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16; }
+
+  // Pone (o quita) en un .lab__notas a la izquierda los últimos «cuantos» elementos que van
+  // tras la consola
+  function notasIzquierda(paso, p, consola, cuantos) {
+    var notas = paso._notasIzquierda;
+    if (!cuantos) {
+      if (!notas) return;
+      while (notas.firstChild) p.resultado.appendChild(notas.firstChild);
+      notas.remove();
+      paso._notasIzquierda = null;
+      paso.classList.remove("paso--notas-izquierda");
+      return;
+    }
+    var siguen = [];
+    for (var el = consola.nextElementSibling; el; el = el.nextElementSibling) siguen.push(el);
+    notas = document.createElement("div");
+    notas.className = "lab__notas";
+    siguen.slice(siguen.length - cuantos).forEach(function (el) { notas.appendChild(el); });
+    p.principal.appendChild(notas);
+    paso._notasIzquierda = notas;
+    paso.classList.add("paso--notas-izquierda");
+  }
+
+  // ¿Cuántos de los últimos elementos tras la consola conviene pasar a la izquierda? (con
+  // el reparto ya hecho). 0: ninguno
+  function decidirNotas(paso) {
+    var p = partes(paso);
+    var consola = consolaDe(p);
+    if (!consola || consola.parentNode !== p.resultado || !consola.nextElementSibling) return 0;
+    if (paso.classList.contains("paso--derecha-fija") || !repartoNormal(paso)) return 0;
+    var limite = limiteAbajo(paso, p);
+    var lineas = consola.querySelector(".consola__lineas");
+    var guardado = lineas ? lineas.offsetHeight : 0;   // el lugar que la consola ya tiene guardado
+    // El alto de cada elemento tras la consola, con lo que aparece al terminar a la vista
+    var altos = [];
+    var fin = 0;
+    loQueAparece(p.resultado, consola, function () {
+      altos = [];
+      for (var el = consola.nextElementSibling; el; el = el.nextElementSibling) {
+        altos.push(el.offsetHeight ? el.getBoundingClientRect().height + (parseFloat(getComputedStyle(el).marginTop) || 0) : 0);
+      }
+      fin = p.resultado.getBoundingClientRect().bottom;
+      return fin;
+    });
+    var renglones = 9 * remPx();   // lo que debería poder crecer la consola: unos 6 renglones
+    if (guardado + limite - fin >= renglones) return 0;
+    // Los últimos que quepan bajo el código
+    // (lo que mide su contenido: en la rejilla, la columna se estira hasta abajo)
+    p.principal.style.alignSelf = "start";
+    var libre = limite - p.principal.getBoundingClientRect().bottom - remPx();
+    p.principal.style.alignSelf = "";
+    var cuantos = 0, suma = 0;
+    for (var k = altos.length - 1; k >= 0 && suma + altos[k] <= libre; k--) { suma += altos[k]; cuantos++; }
+    return suma > 0 ? cuantos : 0;
+  }
+
+  // BucleInput, al terminar, cambia dentro de la consola el campo de escribir por «Otra…»
+  // (.consola__otra): cuánto crece la consola con ese cambio
+  function cambioAlTerminar(consola) {
+    var entrada = consola.querySelector(".consola__entrada");
+    var otra = consola.querySelector(".consola__otra > [hidden]");
+    if (!entrada || !otra || entrada.hidden) return 0;
+    var antes = consola.offsetHeight;
+    entrada.hidden = true;
+    otra.hidden = false;
+    var despues = consola.offsetHeight;
+    entrada.hidden = false;
+    otra.hidden = true;
+    return Math.max(0, despues - antes);
+  }
+
+  function toparConsola(paso) {
+    var p = partes(paso);
+    var consola = consolaDe(p);
+    if (!consola) return;
+    var crece = consola.querySelector(".consola__lineas") || consola;
+    crece.style.maxHeight = "";
+    crece.classList.remove("consola--tope");
+    if (!escritorio || !escritorio.matches || paso._consolaArriba || paso.hidden) return;
+    var limite = limiteAbajo(paso, p);
+    // Lo que queda bajo la consola en su columna, y lo que aparecerá ahí al terminar
+    var zona = p.resultado;
+    var medir = function () { return zona.getBoundingClientRect().bottom; };
+    var aparece = loQueAparece(zona, consola, medir) + cambioAlTerminar(consola);
+    var espacio = limite - medir() - aparece;
+    crece.style.maxHeight = Math.max(crece.offsetHeight + espacio, 5.5 * remPx()) + "px";
+    crece.classList.add("consola--tope");
   }
 
   /* Mientras el alumno está en el paso, el reparto no cambia. Solo se cuida que:

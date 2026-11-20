@@ -33,6 +33,8 @@
   function crear(o) {
     function $(sufijo) { return document.getElementById(o.prefijo + "-" + sufijo); }
     var registro = $("registro");
+    // Lo que crece del registro (no el campo de escribir): pasos.js le pone un tope
+    registro.classList.add("consola__lineas");
     var fila = $("fila");
     var campo = $("campo");
     var otra = $("otra");
@@ -46,6 +48,17 @@
       ? { vuelta: "Round", de: " of ", primero: " <code>input()</code> waits for the first value.", siguiente: "Type the next one.", fin: "End of loop" }
       : { vuelta: "Vuelta", de: " de ", primero: " <code>input()</code> espera el primer dato.", siguiente: "Escribe el siguiente.", fin: "Fin del bucle" };
     var rotulo = o.rotulo || T.vuelta;
+    // Al terminar, el campo de escribir se esconde y aparece «Otra…». Si ese botón va solo
+    // en una fila justo después de la consola, pasa dentro de ella, al lugar del campo: así
+    // al terminar no crece lo de abajo (y pasos.js no tiene que guardarle lugar)
+    var consolaEl = fila.closest(".consola");
+    var filaOtra = otra.parentNode;
+    if (consolaEl && !consolaEl.contains(filaOtra) && filaOtra.classList.contains("fila-botones") &&
+        filaOtra.children.length === 1 && consolaEl.nextElementSibling === filaOtra) {
+      consolaEl.appendChild(filaOtra);
+      filaOtra.classList.add("consola__otra");
+      fila.classList.add("consola__entrada");
+    }
     var vuelta = 0;
 
     function marcar(camino) { if (codigo) Codigo.marcar(codigo, camino); }
@@ -58,6 +71,13 @@
       l.children[0].textContent = o.pregunta;
       l.children[1].textContent = respuesta;
       registro.appendChild(l);
+      verUltimo();
+    }
+
+    // Con tope (pasos.js), el registro se desplaza: se ve siempre lo último
+    function verUltimo() {
+      registro.scrollTop = registro.scrollHeight;
+      registro.classList.toggle("consola--desplazada", registro.scrollTop > 0);
     }
 
     function pedir(previo) {
@@ -69,6 +89,7 @@
     function empezar() {
       vuelta = 0;
       registro.textContent = "";
+      registro.classList.remove("consola--desplazada");
       fila.hidden = false;
       otra.hidden = true;
       Pasos.limpiarFeedback(fb);
@@ -90,7 +111,7 @@
       marcar(r.camino);
       (r.salida || []).forEach(function (s) { Codigo.agregar(registro, s); });
       // Si el registro tiene un alto máximo (se desplaza), se ve siempre lo último
-      registro.scrollTop = registro.scrollHeight;
+      verUltimo();
       vuelta++;
       if (!r.fin && (!o.vueltas || vuelta < o.vueltas)) {
         pedir(r.texto);
@@ -104,7 +125,7 @@
       explicar(r.texto + (f.texto ? " " + f.texto : ""));
       indicador.textContent = T.fin;
       if (f.salida !== undefined) Codigo.agregar(registro, f.salida);
-      registro.scrollTop = registro.scrollHeight;
+      verUltimo();
       fila.hidden = true;
       otra.hidden = false;
       otra.focus();
