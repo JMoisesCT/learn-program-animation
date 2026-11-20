@@ -76,6 +76,13 @@
 
     function reservar() {
       if (o.pila) o.pila.reservar(pasos.map(function (p) { return p.estado; }));
+      // Cuántas líneas va a imprimir: pasos.js decide con eso si la consola tiene lugar
+      // para crecer o si el mensaje de debajo pasa bajo el código
+      if (o.consola && !o.repetible && pasos.length) {
+        var lineas = 0;
+        pasos.forEach(function (p) { if (p.salida !== undefined) lineas += String(p.salida).split("\n").length; });
+        o.consola.setAttribute("data-imprime", lineas);
+      }
       // Con una pila, la consola va encima de ella (pasos.js): guarda el lugar de lo que
       // va a imprimir (hasta 4 líneas), así la pila de debajo no baja con cada print
       if (o.pila && o.consola) {

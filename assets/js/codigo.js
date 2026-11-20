@@ -353,6 +353,18 @@
     l.className = "consola__linea";
     l.textContent = texto;
     el.appendChild(l);
+    alFinal(el);
+  }
+
+  /* Una consola con tope (pasos.js, en escritorio) se desplaza por dentro: se ve siempre
+     lo último que se imprimió. Si ya se desplaza, se puede recorrer con el teclado. */
+  function alFinal(el) {
+    var caja = el.classList.contains("consola--tope") ? el : el.closest(".consola--tope");
+    if (!caja) return;
+    if (caja.scrollHeight <= caja.clientHeight + 1) { caja.classList.remove("consola--desplazada"); return; }
+    caja.scrollTop = caja.scrollHeight;
+    if (!caja.hasAttribute("tabindex")) caja.setAttribute("tabindex", "0");
+    caja.classList.add("consola--desplazada");
   }
 
   function booleano(el, valor) {
