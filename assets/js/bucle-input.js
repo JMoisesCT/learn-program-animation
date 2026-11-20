@@ -40,7 +40,12 @@
     var explicacion = $("explicacion");
     var codigo = $("codigo");
     var indicador = $("vuelta");
-    var rotulo = o.rotulo || "Vuelta";
+    // Las lecciones en inglés (en/) dicen lang="en": los textos de este script cambian
+    var EN = /^en/i.test(document.documentElement.lang || "");
+    var T = EN
+      ? { vuelta: "Round", de: " of ", primero: " <code>input()</code> waits for the first value.", siguiente: "Type the next one.", fin: "End of loop" }
+      : { vuelta: "Vuelta", de: " de ", primero: " <code>input()</code> espera el primer dato.", siguiente: "Escribe el siguiente.", fin: "Fin del bucle" };
+    var rotulo = o.rotulo || T.vuelta;
     var vuelta = 0;
 
     function marcar(camino) { if (codigo) Codigo.marcar(codigo, camino); }
@@ -57,8 +62,8 @@
 
     function pedir(previo) {
       campo.value = "";
-      indicador.innerHTML = rotulo + " <strong>" + (vuelta + 1) + "</strong>" + (o.vueltas ? " de " + o.vueltas : "");
-      explicar(previo + (vuelta === 0 ? " <code>input()</code> espera el primer dato." : " " + (o.siguiente || "Escribe el siguiente.")));
+      indicador.innerHTML = rotulo + " <strong>" + (vuelta + 1) + "</strong>" + (o.vueltas ? T.de + o.vueltas : "");
+      explicar(previo + (vuelta === 0 ? T.primero : " " + (o.siguiente || T.siguiente)));
     }
 
     function empezar() {
@@ -97,7 +102,7 @@
       var f = o.alFinal ? o.alFinal() : {};
       if (f.linea !== undefined) marcar({ activas: [f.linea] });
       explicar(r.texto + (f.texto ? " " + f.texto : ""));
-      indicador.textContent = "Fin del bucle";
+      indicador.textContent = T.fin;
       if (f.salida !== undefined) Codigo.agregar(registro, f.salida);
       registro.scrollTop = registro.scrollHeight;
       fila.hidden = true;
