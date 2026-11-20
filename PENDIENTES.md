@@ -136,6 +136,13 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-20 · Arreglos que vio el autor al probar Funciones
+
+En español e inglés:
+- **El vuelo hacia una caja** (`codigo.js`, `Codigo.volar`): la copia que vuela tomaba la letra de `.caja__valor` de `base.css`, pero 45 lecciones achican la caja con su CSS; la copia medía lo mismo que la caja pequeña con la letra grande (26 px contra 17 en Varios parámetros) y «se achicaba» al llegar. Ahora la copia toma la letra del destino y, si es la misma pieza, su relleno. Vale para todas las lecciones.
+- **Funciones que usan funciones, reto, al acertar**: la leyenda de las opciones («En gris…») ocupaba la primera celda de la rejilla y desordenaba todo; ahora se esconde al acertar y la opción y la respuesta van fijas en la primera fila.
+- **Proyecto: piedra, papel o tijera, el juego completo** (paso 6): la consola iba bajo el programa de 17 líneas y el campo de escribir empujaba la página: el duelo (las manos) quedaba arriba, fuera de la pantalla. Ahora la consola va bajo el duelo (en la columna derecha en escritorio) y las variables bajo el código; en escritorio las misiones van en una fila y el registro mide 9rem. Jugando, la página ya no baja a 1366×657 ni a 1920×1000 y se ven juntos las manos, la consola y el campo; al escribir «salir» baja un poco para mostrar las misiones y el mensaje. En el móvil, las manos quedan justo encima de la consola.
+
 ### 2026-11-20 · Los retos de Funciones caben al responder
 
 El autor pidió arreglar, en los dos idiomas, lo que no cabía al responder (medido con `responder-retos.js` al traducir Funciones). Solo CSS de cada lección y una envoltura `.respuesta` en el HTML:
