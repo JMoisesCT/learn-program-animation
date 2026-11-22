@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recursion · Learn to program</title>
+  <meta name="description" content="Interactive lesson: a Python function that calls itself. The base case, the call stack that grows and empties, what happens without a base case (RecursionError) and what runs on the way in and on the way back.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .consola__linea--error { color: var(--color-error); }
+
+    /* ---------- Boxes inside boxes ----------
+       Each box has a lid that covers all of it; when you open it, the lid lifts
+       and shows what is inside: another box or, in the smallest one, the candy. */
+    .regalos { display: flex; justify-content: center; padding: var(--esp-3) 0; }
+    .regalo { position: relative; z-index: 0; display: grid; place-items: center; padding: 1.6rem 0.9rem 0.9rem; border: 3px solid var(--r-color); border-radius: 14px; background: var(--r-suave); transition: box-shadow var(--dur); }
+    .regalo--3 { --r-color: #1f5fd6; --r-suave: #e6eeff; }
+    .regalo--2 { --r-color: #0b7a3e; --r-suave: #e2f4e9; }
+    .regalo--1 { --r-color: #9a4a00; --r-suave: #fff3e2; }
+    .regalo__etiqueta { position: absolute; top: 0.2rem; left: 0; right: 0; text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--r-color); }
+    .regalo__tapa { position: absolute; inset: -3px; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; border-radius: 14px; background: var(--r-color); color: #fff; font-weight: 700; font-size: var(--texto-sm); transform-origin: 0 0; transition: transform 480ms var(--curva-rebote), opacity 380ms ease; }
+    .regalo__lazo { font-size: 1.6rem; line-height: 1; }
+    .regalo--abierta > .regalo__tapa { transform: translate(-0.6rem, -1.4rem) rotate(-14deg); opacity: 0; pointer-events: none; }
+    .regalo--siguiente > .regalo__tapa { box-shadow: 0 0 0 5px rgba(31, 95, 214, 0.28); }
+    .dulce { display: grid; place-items: center; width: 3rem; height: 3rem; font-size: 2rem; }
+    .regalo--abierta > .dulce { animation: dulce 600ms 200ms var(--curva-rebote) both; }
+    @keyframes dulce { from { transform: scale(0.3) rotate(-30deg); } }
+
+    /* The instructions to open a box */
+    .receta__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .receta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); counter-reset: receta; }
+    .receta li { position: relative; padding: var(--esp-2) var(--esp-3) var(--esp-2) 2.6rem; border-radius: var(--radio-sm); border: 2px solid transparent; background: var(--color-superficie-2); counter-increment: receta; transition: background-color var(--dur), border-color var(--dur); }
+    .receta li::before { content: counter(receta); position: absolute; left: var(--esp-3); top: var(--esp-2); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta .receta__paso--activo { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .receta .receta__paso--activo::before { background: var(--color-azul); color: #fff; }
+    .receta__mismo { font-weight: 700; color: var(--color-azul); }
+    .veces { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* ---------- Slider with a number ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- No base case: the stack that never stops growing ---------- */
+    .torre { display: flex; flex-direction: column-reverse; gap: var(--esp-1); }
+    .torre .marco { padding: var(--esp-1) var(--esp-3); }
+    .torre__mas { margin: 0; padding: var(--esp-1) 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .medidor { position: relative; height: 0.75rem; margin: var(--esp-4) 0 var(--esp-1); border-radius: 999px; background: var(--color-superficie); box-shadow: inset 0 0 0 2px var(--color-borde); overflow: hidden; }
+    .medidor__relleno { height: 100%; width: 0; border-radius: 999px; background: var(--color-azul); transition: width 120ms linear, background-color var(--dur); }
+    .medidor--lleno .medidor__relleno { background: var(--color-error); }
+    .medidor__texto { display: flex; justify-content: space-between; gap: var(--esp-3); margin: 0; font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .medidor__texto strong { font-family: var(--fuente-codigo); color: var(--color-texto); }
+
+    /* ---------- Prediction ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- A call inside a call ----------
+       What open_box(3) does, with each call replaced by what it does: one box per call,
+       inside the box of its caller (the colors of the gift boxes). When it runs,
+       the active line goes straight down, with no jumps. */
+    .copias__titulo { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .copias { font-family: var(--fuente-codigo); font-size: var(--texto-sm); line-height: 1.5; }
+    .copia { border: 2px solid transparent; border-radius: 12px; transition: border-color var(--dur), background-color var(--dur), opacity var(--dur); }
+    .copia--3 { --r-color: #1f5fd6; --r-suave: #e6eeff; }
+    .copia--2 { --r-color: #0b7a3e; --r-suave: #e2f4e9; }
+    .copia--1 { --r-color: #9a4a00; --r-suave: #fff3e2; }
+    .copia--0 { --r-color: #a3246b; --r-suave: #fde8f3; }
+    .copia--abierta { margin: 0.15rem 0; border-color: var(--r-color); background: var(--r-suave); }
+    .copia--cerrada > .copia__cuerpo, .copia--cerrada .copia__n, .copia--cerrada .copia__estado { display: none; }
+    .copia--abierta > .copia__cuerpo { animation: copia-abre 420ms var(--curva-rebote) both; transform-origin: 0 0; }
+    @keyframes copia-abre { from { transform: scaleY(0.6); opacity: 0; } }
+    .copias .linea { display: flex; align-items: center; gap: var(--esp-2); margin: 0; padding: 0.05rem 0.5rem; border-radius: 8px; transition: background-color var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .copia__cuerpo { padding: 0 0.3rem 0.25rem 1rem; }
+    .copia__llamada { min-height: 2.5rem; padding: 0.1rem 0.9rem; border: 2px solid var(--r-color); border-radius: 999px; background: var(--color-superficie); color: var(--r-color); font: inherit; font-weight: 700; cursor: pointer; }
+    .copia__llamada:disabled { cursor: default; }
+    .copia--cerrada > .linea > .copia__llamada:disabled { opacity: 0.55; }
+    .copia__llamada--toca { position: relative; }
+    .copia__llamada--toca::after { content: ""; position: absolute; inset: -6px; border: 3px solid var(--r-color); border-radius: 999px; pointer-events: none; animation: marco-toca 1.4s ease-in-out infinite; }
+    .copia__llamada--toca:hover { background: var(--r-suave); }
+    .copia--abierta > .linea > .copia__llamada { min-height: 0; padding: 0; border-color: transparent; background: none; opacity: 1; }
+    .copia__n { padding: 0 0.5em; border: 1.5px solid var(--r-color); border-radius: 999px; background: var(--color-superficie); color: var(--r-color); font-size: var(--texto-xs); font-weight: 700; }
+    .copia__estado { margin-left: auto; font-family: var(--fuente); font-size: var(--texto-xs); font-weight: 700; color: var(--r-color); text-align: right; }
+    .copia__texto { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .copia__orden { flex: none; display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--r-color); color: #fff; font-family: var(--fuente); font-size: var(--texto-xs); font-weight: 700; visibility: hidden; }
+    .copia__orden--puesto { visibility: visible; animation: valor-pulso 300ms ease-out; }
+    .copias .linea--activa { background: var(--color-superficie); box-shadow: inset 4px 0 0 var(--r-color), 0 0 0 2px var(--r-color); font-weight: 700; }
+    .copia--espera { border-style: dashed; }
+    .copia--lista { border-style: solid; }
+    .copia--lista > .linea, .copia--lista > .copia__cuerpo > .linea { opacity: 0.6; }
+    .copia--lista > .linea.linea--activa, .copia--lista > .copia__cuerpo > .linea.linea--activa { opacity: 1; }
+    #pc-copias + .fila-botones { margin-top: var(--esp-3); }
+    /* The recipe, a bit tighter: with the prediction above it, the step fits on one screen */
+    #pc-codigo { line-height: 1.5; }
+    #pc-codigo .linea { min-height: 1.5em; }
+
+    /* ---------- Challenge: code options and tests ---------- */
+    .opciones--codigo { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* ---------- The student does the way back ----------
+       The options and the question keep their space (Codigo.reservarAlto): the stack below
+       does not move while the student undoes it. */
+    .deshacer__opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .deshacer__opciones--largas { grid-template-columns: minmax(0, 1fr); }
+    .deshacer__opciones .btn--mal, .deshacer__opciones .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+    .deshacer__pista { color: var(--color-pista); }
+    #pd-regalos { padding-top: 0; }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .copias { font-size: var(--texto-xs); }
+      .copia__cuerpo { padding-left: 0.6rem; }
+      .regalo { padding: 1.5rem 0.6rem 0.6rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-visual-fija data-leccion="recursion">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: boxes inside boxes -->
+    <section class="paso" id="paso-cajas" data-requiere aria-labelledby="t-cajas">
+      <span class="paso__etiqueta">Recursion 1/7</span>
+      <h1 class="paso__titulo" id="t-cajas">A box inside a box</h1>
+      <p>You got a box as a gift. Inside there is another box, and inside that one, another… Follow the instructions until you find the gift.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="receta__titulo">📜 How to open a box</p>
+          <ol class="receta" id="p1-receta">
+            <li data-r="abrir">Take off the lid.</li>
+            <li data-r="base">If there is a candy inside: <strong>done!</strong></li>
+            <li data-r="otra">If there is another box inside: <span class="receta__mismo">open it with these same instructions</span>.</li>
+          </ol>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-otra" hidden>↺ Close the boxes</button>
+            <button type="button" class="btn btn-secundario" id="p1-abrir">Open box 3</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="regalos" id="p1-regalos" aria-hidden="true"></div>
+          <p class="veces" id="p1-veces"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. A function that calls itself -->
+    <section class="paso" id="paso-cuenta" data-requiere aria-labelledby="t-cuenta">
+      <h2 class="paso__titulo" id="t-cuenta">A function that calls itself</h2>
+      <p>Look at line 6: <code>countdown</code> calls <strong>itself</strong>, with a smaller number. That is called <strong>recursion</strong>. Run it and watch the stack.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p2-n">Starts at <output id="p2-n-valor" for="p2-n">3</output></label>
+            <input type="range" id="p2-n" min="1" max="5" step="1" value="3">
+          </div>
+          <pre class="codigo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">countdown</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Liftoff!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea">        <span class="tk-funcion">countdown</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">countdown</span>(<span class="tk-numero" id="p2-codigo-n">3</span>)</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="leyenda-fases"><span class="leyenda-fases__ida">on the way in (when calling)</span><span class="leyenda-fases__vuelta">on the way back (when returning)</span></p>
+          <p class="nota">Each call has <strong>its own</strong> <code>n</code>, on its own card. The <code>if n == 0</code> is the <strong>base case</strong>: there the function does not call itself again.</p>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. No base case -->
+    <section class="paso" id="paso-sin-base" data-salida="arriba" data-requiere aria-labelledby="t-sin-base">
+      <h2 class="paso__titulo" id="t-sin-base">What if there is no base case?</h2>
+      <p>We remove the <code>if</code>. Now the function always calls itself again. When do you think it stops?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">countdown</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)</span><span class="linea">    <span class="tk-funcion">countdown</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">countdown</span>(<span class="tk-numero">3</span>)</span></code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite">Tap “Run” and watch what happens to the stack.</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="pila__titulo" id="p3-titulo"></p>
+          <div class="torre" id="p3-torre" aria-hidden="true"></div>
+          <div class="medidor" id="p3-medidor" aria-hidden="true"><div class="medidor__relleno"></div></div>
+          <p class="medidor__texto"><span><strong id="p3-cuenta">0</strong> calls</span><span>Python's limit: about 1000</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. A call inside a call: what open_box(3) does, call by call -->
+    <section class="paso" id="paso-copias" data-requiere aria-labelledby="t-copias">
+      <h2 class="paso__titulo" id="t-copias">A call inside a call</h2>
+      <p><code>open_box(n)</code> opens box <code>n</code>: it prints <strong>before</strong> the call and <strong>after</strong> it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="pc-pregunta">Before you start: what is printed right after “A candy!”?</p>
+          <div class="prediccion" id="pc-prediccion" role="group" aria-labelledby="pc-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">I close box 1</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">I close box 3</button>
+            <button type="button" class="btn btn-secundario" data-valor="nada" aria-pressed="false">Nothing: it ends</button>
+          </div>
+          <pre class="codigo" id="pc-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">open_box</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"A candy!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"I open box <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea">        <span class="tk-funcion">open_box</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"I close box <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span></code></pre>
+          <p class="explicacion" id="pc-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <p class="copias__titulo" id="pc-titulo">What open_box(3) does</p>
+          <div class="copias" id="pc-copias" role="group" aria-labelledby="pc-titulo"></div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="pc-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="pc-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="pc-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="pc-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. On the way in and on the way back: the same, with a single copy of the code and the stack -->
+    <section class="paso" id="paso-vuelta" data-requiere aria-labelledby="t-vuelta">
+      <h2 class="paso__titulo" id="t-vuelta">On the way in and on the way back</h2>
+      <p>Python does not copy the code: it has <strong>a single</strong> recipe. To know who called whom, it uses the <strong>stack</strong>. Run the same thing and watch <strong>who each call goes back to</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p4-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">open_box</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"A candy!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"I open box <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea">        <span class="tk-funcion">open_box</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"I close box <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">open_box</span>(<span class="tk-numero">3</span>)</span></code></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="regalos" id="p4-regalos" aria-hidden="true"></div>
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="leyenda-fases"><span class="leyenda-fases__ida">on the way in (when calling)</span><span class="leyenda-fases__vuelta">on the way back (when returning)</span></p>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. The student does the way back: does it end at the base case? and undoing the stack -->
+    <section class="paso" id="paso-deshacer" data-requiere aria-labelledby="t-deshacer">
+      <h2 class="paso__titulo" id="t-deshacer">Now you do the way back</h2>
+      <p><code>open_box(3)</code> again. The three boxes are open and the candy came out: <strong>everything on the way in already happened</strong>. The stack is full. What now?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="pd-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">open_box</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"A candy!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"I open box <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea">        <span class="tk-funcion">open_box</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"I close box <span class="tk-llave">{</span><span class="tk-variable">n</span><span class="tk-llave">}</span>"</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">open_box</span>(<span class="tk-numero">3</span>)</span></code></pre>
+          <p class="explicacion" id="pd-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="pd-otra" hidden>↺ Fill the stack again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="prediccion__pregunta" id="pd-pregunta" aria-live="polite"></p>
+          <div class="prediccion deshacer__opciones" id="pd-opciones" role="group" aria-labelledby="pd-pregunta"></div>
+          <div class="regalos" id="pd-regalos" aria-hidden="true"></div>
+          <div class="pila" id="pd-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="pd-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="leyenda-fases"><span class="leyenda-fases__ida">on the way in (when calling)</span><span class="leyenda-fases__vuelta">on the way back (when returning)</span></p>
+          <div class="feedback" id="pd-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Counting up</h2>
+      <p>We want <code>count_up(3)</code> to print <strong>0, 1, 2, 3</strong>, one number per line. Which version does it? We will test it with three numbers.</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="reto-opciones">
+          <legend class="visualmente-oculto">Which version of count_up prints from 0 to n?</legend>
+          <label class="opcion"><input type="radio" name="reto" value="antes"><span>def count_up(n):
+    if n == 0:
+        print(0)
+    else:
+        print(n)
+        count_up(n - 1)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="base1"><span>def count_up(n):
+    if n == 1:
+        print(1)
+    else:
+        count_up(n - 1)
+        print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="bien"><span>def count_up(n):
+    if n == 0:
+        print(0)
+    else:
+        count_up(n - 1)
+        print(n)</span></label>
+          <label class="opcion"><input type="radio" name="reto" value="mas"><span>def count_up(n):
+    if n == 0:
+        print(0)
+    else:
+        count_up(n + 1)
+        print(n)</span></label>
+        </fieldset>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Tests"></ul>
+        <p class="nota" id="reto-nota" hidden>Each number goes on its own line; here they are side by side so they fit.</p>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        <div class="fila-botones" id="reto-otra" hidden>
+          <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A <strong>recursive</strong> function calls itself with a smaller problem, until it reaches the <strong>base case</strong>, which does not call again.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">countdown</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> == <span class="tk-numero">0</span>:</span><span class="linea">        <span class="tk-comentario"># base case: it stops here</span></span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"Liftoff!"</span>)</span><span class="linea">    <span class="tk-palabra">else</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-variable">n</span>)  <span class="tk-comentario"># on the way in</span></span><span class="linea">        <span class="tk-comentario"># it calls itself with a smaller number</span></span><span class="linea">        <span class="tk-funcion">countdown</span>(<span class="tk-variable">n</span> - <span class="tk-numero">1</span>)</span><span class="linea">        <span class="tk-comentario"># what goes here runs on the way back</span></span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="values/index.html">Next: Recursion that returns values →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/pila.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  var leccion; // set at the end, with Pasos.iniciar
+
+  /* ---------- Boxes inside boxes ----------
+     Box 3 is the outer one and box 1 the smallest; the candy is inside box 1.
+     r.pintar(abiertas, siguiente): abiertas = { 3: true, 2: true }; siguiente, the one to open next. */
+  function crearRegalos(el, n) {
+    var cajas = {};
+    var dentro = crear("span", "dulce", "🍬");
+    for (var k = 1; k <= n; k++) {
+      var caja = crear("div", "regalo regalo--" + k);
+      var tapa = crear("div", "regalo__tapa");
+      tapa.appendChild(crear("span", "regalo__lazo", "🎀"));
+      tapa.appendChild(crear("span", "", "box " + k));
+      caja.appendChild(tapa);
+      caja.appendChild(crear("span", "regalo__etiqueta", "box " + k));
+      caja.appendChild(dentro);
+      cajas[k] = caja;
+      dentro = caja;
+    }
+    el.appendChild(dentro);
+    return {
+      pintar: function (abiertas, siguiente) {
+        for (var k = 1; k <= n; k++) {
+          cajas[k].classList.toggle("regalo--abierta", !!abiertas[k]);
+          cajas[k].classList.toggle("regalo--siguiente", k === siguiente);
+        }
+      }
+    };
+  }
+
+  /* ---------- 1. Boxes inside boxes ---------- */
+  var regalos1 = crearRegalos($("p1-regalos"), 3);
+  var abiertas1 = {};
+  var porAbrir = 3;
+
+  function marcarReceta(cual) {
+    $("p1-receta").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("receta__paso--activo", li.getAttribute("data-r") === cual);
+    });
+  }
+
+  function pintarCajas1() {
+    regalos1.pintar(abiertas1, porAbrir);
+    var veces = 3 - porAbrir;
+    $("p1-veces").textContent = veces ? "You used the instructions " + (veces === 1 ? "1 time" : veces + " times") : "";
+  }
+
+  function cerrarCajas() {
+    abiertas1 = {};
+    porAbrir = 3;
+    marcarReceta(null);
+    pintarCajas1();
+    $("p1-abrir").textContent = "Open box 3";
+    $("p1-abrir").hidden = false;
+    $("p1-otra").hidden = true;
+    $("p1-explicacion").textContent = "Tap “Open box 3” to follow the instructions.";
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  function abrirCaja() {
+    var k = porAbrir;
+    abiertas1[k] = true;
+    porAbrir = k - 1;
+    pintarCajas1();
+    if (k > 1) {
+      marcarReceta("otra");
+      $("p1-explicacion").innerHTML = "Inside box " + k + " there is <strong>another box</strong>, a smaller one: box " + (k - 1) +
+        ". Time to use the <strong>same instructions</strong> on it.";
+      $("p1-abrir").textContent = "Open box " + (k - 1);
+      return;
+    }
+    marcarReceta("base");
+    $("p1-explicacion").innerHTML = "A <strong>candy</strong>! There is no other box here: the instructions end.";
+    $("p1-abrir").hidden = true;
+    $("p1-otra").hidden = false;
+    $("p1-otra").focus();
+    Pasos.feedback($("p1-fb"), "ok", "You used the same instructions 3 times, each time with a smaller box, until there was no other box. Instructions that use themselves: that is recursion.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 2. countdown ---------- */
+  var pila2 = Pila.crear($("p2-pila"), { codigo: $("p2-codigo"), rotulo: true });
+  var nInicio = 3;
+
+  function tarjeta(nombre, param, k, conVars, termina) {
+    var t = Pila.llamada(nombre + "(" + k + ")", conVars ? [[param, k]] : []);
+    if (termina) t.termina = true;
+    return t;
+  }
+
+  /* A card that waits on line 6, the line of the call, with what it still has to do when it comes back.
+     With nombra, it says who it waits for («waiting for open_box(0)») */
+  function pausada(t, falta, nombra) {
+    t.linea = 5;
+    t.falta = falta;
+    if (nombra) t.nombra = true;
+    return t;
+  }
+
+  /* The card that goes on at line 6 when the one above comes back */
+  function retoma(t, falta, nombra) {
+    t.sigue = true;
+    return pausada(t, falta, nombra);
+  }
+
+  /* The cards of countdown(n) … countdown(hasta + 1), waiting below;
+     falta(j) says what each one still has to do */
+  function debajo(nombre, param, n, hasta, falta, base) {
+    var lista = [base || Pila.programa()];
+    for (var j = n; j > hasta; j--) lista.push(pausada(tarjeta(nombre, param, j, true), falta(j), !!base));
+    return lista;
+  }
+
+  function nada() { return ""; }
+
+  function trazaCuenta() {
+    var n = nInicio;
+    var C = "countdown";
+    var pasos = [
+      { linea: 0, texto: "Python remembers the recipe <strong>countdown</strong>. It does not run it yet.", estado: { pila: [Pila.programa()] } },
+      { linea: 7, texto: "It calls <strong>countdown(" + n + ")</strong>: its card goes on the stack.",
+        estado: { pila: debajo(C, "n", n, n, nada).concat([tarjeta(C, "n", n)]) } }
+    ];
+    for (var k = n; k >= 0; k--) {
+      var abajo = debajo(C, "n", n, k, nada);
+      var nivel = abajo.length;
+      pasos.push({ linea: 0, fase: "ida",
+        texto: k === n ? "<strong>n = " + n + "</strong> is born on its card."
+          : "Another card of the <strong>same function</strong>, with <strong>its own n = " + k + "</strong>. The one below waits.",
+        estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]) } });
+      pasos.push({ linea: 1,
+        texto: "n == 0? " + k + " == 0 is " + chip(k === 0) + (k === 0 ? ": it reached the <strong>base case</strong>!" : ": not yet, it goes to the else."),
+        estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]), leer: [nivel, "n"] } });
+      if (k > 0) {
+        pasos.push({ linea: 4, salida: String(k), fase: "ida", texto: "<strong>On the way in</strong>: it prints <strong>" + k + "</strong>.",
+          estado: { pila: abajo.concat([tarjeta(C, "n", k, true)]), leer: [nivel, "n"] } });
+        pasos.push({ linea: 5,
+          texto: "It calls <strong>itself</strong> with n - 1 = <strong>" + (k - 1) + "</strong>: a smaller number. Another card goes on the stack.",
+          estado: { pila: abajo.concat([pausada(tarjeta(C, "n", k, true), ""), tarjeta(C, "n", k - 1)]) } });
+      } else {
+        pasos.push({ linea: 2, salida: "Liftoff!",
+          texto: "It prints <strong>Liftoff!</strong>. The base case does not call itself again: this card ends.",
+          estado: { pila: abajo.concat([tarjeta(C, "n", 0, true, true)]) } });
+      }
+    }
+    // The way back: each card goes on at the line of its call and, with nothing else to do, ends
+    for (var j = 1; j <= n; j++) {
+      pasos.push({ linea: 5, flecha: true, fase: "vuelta",
+        texto: "countdown(" + (j - 1) + ") ended and its card left. <strong>countdown(" + j +
+          ") goes on where it stopped</strong>: on line 6, with its n = " + j + ". It has nothing left to do, so it ends.",
+        estado: { pila: debajo(C, "n", n, j, nada).concat([retoma(tarjeta(C, "n", j, true), "")]) } });
+    }
+    pasos.push({ linea: 7, flecha: true, fase: "vuelta", texto: "Back in the program. Only its card is left: the end.", estado: { pila: [Pila.programa()] } });
+    return pasos;
+  }
+
+  function terminarCuenta() {
+    var cuenta = [];
+    for (var k = nInicio; k > 0; k--) cuenta.push(k);
+    Pasos.feedback($("p2-fb"), "ok", "It counted " + cuenta.join(", ") + " and lifted off. Each call used a smaller number until it reached the base case (n == 0), " +
+      "which does not call again. Then the cards came off from top to bottom. Move the slider and try another number.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. No base case ----------
+     Python 3 cuts this recursion off after 999 calls: it prints from 3 to -995 and raises RecursionError. */
+  var LIMITE = 999;
+  var LENTAS = 4;           // calls shown step by step; then it speeds up
+  var VISIBLES = 4;         // cards on top that are drawn
+  var timer3 = null;
+  var llamadas3 = 0;
+
+  function marco(titulo, clase) {
+    var m = crear("div", "marco " + clase);
+    var t = crear("p", "marco__titulo");
+    if (clase.indexOf("marco--programa") !== -1) t.textContent = titulo;
+    else t.appendChild(crear("code", "", titulo));
+    m.appendChild(t);
+    return m;
+  }
+
+  function pintarTorre(nuevas) {
+    var torre = $("p3-torre");
+    torre.textContent = "";
+    torre.appendChild(marco("Program", "marco--programa" + (llamadas3 ? " marco--esperando" : " marco--activo")));
+    var ocultas = Math.max(0, llamadas3 - VISIBLES);
+    if (ocultas) torre.appendChild(crear("p", "torre__mas", "… and " + ocultas + (ocultas === 1 ? " more card" : " more cards") + " down here"));
+    for (var c = ocultas + 1; c <= llamadas3; c++) {
+      var arriba = c === llamadas3;
+      var m = marco("countdown(" + (4 - c) + ")", arriba ? "marco--activo" : "marco--esperando");
+      if (arriba && nuevas) m.classList.add("marco--entra");
+      torre.appendChild(m);
+    }
+    var total = llamadas3 + 1;
+    $("p3-titulo").textContent = "Call stack · " + total + (total === 1 ? " card" : " cards");
+    $("p3-cuenta").textContent = String(llamadas3);
+    $("p3-medidor").querySelector(".medidor__relleno").style.width = (llamadas3 / LIMITE * 100) + "%";
+  }
+
+  // What it already printed: from 3 down, one line per call; the last ones show
+  function pintarSalida3() {
+    var lineas = [];
+    var desde = Math.max(1, llamadas3 - 5);
+    if (desde > 1) lineas.push("…");
+    for (var c = desde; c <= llamadas3; c++) lineas.push(String(4 - c));
+    Codigo.consola($("p3-consola"), lineas);
+  }
+
+  // The explanation keeps the height of its longest text: when it changes it does not push the output,
+  // which in this step goes above the stack (data-salida="arriba": the stack grows without moving it)
+  Codigo.reservarAlto($("p3-explicacion"), [
+    "Tap “Run” and watch what happens to the stack.",
+    "It calls itself: <strong>countdown(0)</strong>. Another card.",
+    "<strong>n = 0</strong> is born. No if stops it…",
+    "It does not stop! 0, -1, -2… <strong>n keeps going down</strong> and it always calls itself again.",
+    "Python cuts it off with a <strong>RecursionError</strong> (“maximum recursion depth exceeded”): the stack reached its limit."
+  ], function (copia, texto) { copia.innerHTML = texto; });
+
+  function pararSinBase() {
+    if (timer3) clearTimeout(timer3);
+    timer3 = null;
+  }
+
+  function reiniciarSinBase() {
+    pararSinBase();
+    llamadas3 = 0;
+    Codigo.limpiar($("p3-codigo"));
+    $("p3-medidor").classList.remove("medidor--lleno");
+    pintarTorre(false);
+    Codigo.consola($("p3-consola"), []);
+    $("p3-explicacion").textContent = "Tap “Run” and watch what happens to the stack.";
+    $("p3-ejecutar").textContent = "▶ Run";
+    $("p3-ejecutar").disabled = false;
+  }
+
+  function ejecutarSinBase() {
+    reiniciarSinBase();
+    $("p3-ejecutar").disabled = true;
+    Pasos.limpiarFeedback($("p3-fb"));
+    var pre = $("p3-codigo");
+    var momentos = [];
+    // The first calls, slowly: call, n is born, print
+    for (var c = 1; c <= LENTAS; c++) {
+      momentos.push({ c: c, fase: "llama" }, { c: c, fase: "nace" }, { c: c, fase: "imprime" });
+    }
+    var i = 0;
+    var previa = null;
+
+    function lento() {
+      var m = momentos[i++];
+      var v = 4 - m.c;
+      if (m.fase === "llama") {
+        var linea = m.c === 1 ? 4 : 2;
+        Codigo.marcar(pre, { activas: [linea] });
+        Codigo.quitarSalto(pre);
+        llamadas3 = m.c;
+        pintarTorre(true);
+        $("p3-explicacion").innerHTML = (m.c === 1 ? "It calls " : "It calls itself: ") + "<strong>countdown(" + v + ")</strong>. Another card.";
+        previa = linea;
+      } else if (m.fase === "nace") {
+        Codigo.marcar(pre, { activas: [0] });
+        if (previa === 2) Codigo.salto(pre, 2, 0);
+        $("p3-explicacion").innerHTML = "<strong>n = " + v + "</strong> is born." + (v <= 0 ? " No if stops it…" : "");
+      } else {
+        Codigo.marcar(pre, { activas: [1] });
+        Codigo.quitarSalto(pre);
+        pintarSalida3();
+        $("p3-explicacion").innerHTML = "It prints <strong>" + v + "</strong>.";
+      }
+      timer3 = setTimeout(i < momentos.length ? lento : rapido, 650);
+    }
+
+    // Then faster and faster, up to the limit
+    var salto = 1;
+    function rapido() {
+      Codigo.marcar(pre, { activas: [2] });
+      Codigo.quitarSalto(pre);
+      llamadas3 = Math.min(LIMITE, llamadas3 + salto);
+      salto = Math.ceil(salto * 1.35);
+      pintarTorre(false);
+      pintarSalida3();
+      $("p3-explicacion").innerHTML = "It does not stop! 0, -1, -2… <strong>n keeps going down</strong> and it always calls itself again.";
+      if (llamadas3 < LIMITE) { timer3 = setTimeout(rapido, 90); return; }
+      timer3 = setTimeout(desbordar, 500);
+    }
+
+    function desbordar() {
+      timer3 = null;
+      $("p3-medidor").classList.add("medidor--lleno");
+      var consola = $("p3-consola");
+      Codigo.agregar(consola, "RecursionError: maximum recursion depth exceeded");
+      consola.lastElementChild.classList.add("consola__linea--error");
+      $("p3-explicacion").innerHTML = "Python cuts it off with a <strong>RecursionError</strong> (“maximum recursion depth exceeded”): the stack reached its limit.";
+      Pasos.feedback($("p3-fb"), "ok", "Without a base case, the function calls itself nonstop: 3, 2, 1, 0, -1, -2… Python does not let the stack grow forever, so it stops the program with an error. The base case is the brake.");
+      $("p3-ejecutar").textContent = "↺ Again";
+      $("p3-ejecutar").disabled = false;
+      leccion.desbloquear();
+    }
+
+    lento();
+  }
+
+  /* ---------- 4. A call inside a call ----------
+     What open_box(3) does with each call replaced by what it does: one box per call,
+     inside the box of its caller. First the student predicts, then opens the calls one by
+     one (like the boxes in step 1) and at the end runs them: the active line goes straight down.
+     The rows (.linea) go in this order: open_box(3), I open 3, open_box(2), I open 2, open_box(1), I open 1,
+     open_box(0), candy, I close 1, I close 2, I close 3. */
+  var copiasEl = $("pc-copias");
+  var copias = {};          // n → { raiz, boton, estado }
+  var ordenes = [];         // the order number of each print, from top to bottom
+  var porAbrirC = 3;        // the next call to open (-1: all of them are open)
+  var prediccion = null;
+
+  function lineaPrint(texto) {
+    var l = crear("p", "linea");
+    l.appendChild(crear("span", "copia__texto", texto));
+    var orden = l.appendChild(crear("span", "copia__orden"));
+    orden.setAttribute("aria-hidden", "true");
+    return l;
+  }
+
+  function crearCopias() {
+    var padre = copiasEl;
+    for (var k = 3; k >= 0; k--) {
+      var raiz = crear("div", "copia copia--" + k + " copia--cerrada");
+      var cab = crear("p", "linea copia__cabecera");
+      var boton = crear("button", "copia__llamada", "open_box(" + k + ")");
+      boton.type = "button";
+      boton.setAttribute("data-n", String(k));
+      cab.appendChild(boton);
+      cab.appendChild(crear("span", "copia__n", "n = " + k));
+      var estado = cab.appendChild(crear("span", "copia__estado"));
+      var cuerpo = crear("div", "copia__cuerpo");
+      cuerpo.appendChild(lineaPrint(k > 0 ? 'print("I open box ' + k + '")' : 'print("A candy!")'));
+      raiz.appendChild(cab);
+      raiz.appendChild(cuerpo);
+      padre.appendChild(raiz);
+      copias[k] = { raiz: raiz, boton: boton, estado: estado, cuerpo: cuerpo };
+      padre = cuerpo;
+    }
+    // The «I close» of each one goes after the call it has inside
+    for (k = 1; k <= 3; k++) copias[k].cuerpo.appendChild(lineaPrint('print("I close box ' + k + '")'));
+    ordenes = copiasEl.querySelectorAll(".copia__orden");
+    copiasEl.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".copia__llamada");
+      if (b && !b.disabled) abrirCopia(Number(b.getAttribute("data-n")));
+    });
+  }
+
+  var TEXTOS_ABRIR = {
+    3: "With <strong>n = 3</strong> it is not the base case: it runs the three lines of the <code>else</code>. Its <code>open_box(n - 1)</code> is <strong>open_box(2)</strong>: tap it.",
+    2: "<strong>open_box(2)</strong> does the same, with its own n = 2, <strong>inside</strong> open_box(3), which called it. Now tap open_box(1).",
+    1: "<strong>open_box(1)</strong>, inside open_box(2). Its <code>open_box(n - 1)</code> is open_box(0): tap it.",
+    0: "With <strong>n = 0</strong> it is the base case: it only prints the candy and calls no one. Nothing is left to open: tap “Run line”."
+  };
+  var TEXTO_PREDICE = "Pick your prediction to start.";
+  var TEXTO_TOCA = "👆 Tap <code>open_box(3)</code> to see what it does.";
+  var TEXTO_EJECUTA = "Tap “Run line”: Python goes from top to bottom, with no jumps.";
+
+  // What can be tapped now: a prediction, the next call or the run buttons
+  function faseCopias(texto) {
+    var listo = porAbrirC < 0;
+    $("pc-ejecutar").disabled = !listo;
+    $("pc-reproducir").disabled = !listo;
+    for (var k = 0; k <= 3; k++) {
+      var toca = prediccion !== null && k === porAbrirC;
+      copias[k].boton.disabled = !toca;
+      copias[k].boton.classList.toggle("copia__llamada--toca", toca);
+    }
+    $("pc-explicacion").innerHTML = texto || (prediccion === null ? TEXTO_PREDICE : listo ? TEXTO_EJECUTA : porAbrirC === 3 ? TEXTO_TOCA : TEXTOS_ABRIR[porAbrirC + 1]);
+  }
+
+  // The lines of the recipe that open_box(k) uses: the whole else, or only the base case
+  function recetaDe(k) { return k > 0 ? [4, 5, 6] : [2]; }
+
+  function abrirCopia(k) {
+    if (k !== porAbrirC || prediccion === null) return;
+    copias[k].raiz.classList.remove("copia--cerrada");
+    copias[k].raiz.classList.add("copia--abierta");
+    porAbrirC = k - 1;
+    Codigo.marcar($("pc-codigo"), { activas: recetaDe(k) });
+    faseCopias(TEXTOS_ABRIR[k]);
+    var siguiente = k > 0 ? copias[k - 1].boton : $("pc-ejecutar");
+    siguiente.focus();
+  }
+
+  /* e: { activa, min, hechas, fin } — the call that is working, the smallest one that already started
+     and how many prints have run; null: it has not run yet */
+  function pintarCopias(e) {
+    for (var k = 0; k <= 3; k++) {
+      var c = copias[k];
+      var lista = !!e && (e.fin || (k < e.activa && k >= e.min));
+      var espera = !!e && !lista && k > e.activa;
+      var trabaja = !!e && !lista && k === e.activa;
+      c.raiz.classList.toggle("copia--lista", lista);
+      c.raiz.classList.toggle("copia--espera", espera);
+      c.raiz.classList.toggle("copia--trabaja", trabaja);
+      c.estado.textContent = lista ? "✓ done" : espera ? "‖ waits for open_box(" + (k - 1) + ")" : trabaja ? "▶ working" : "";
+    }
+    ordenes.forEach(function (o, i) {
+      var puesto = !!e && i < e.hechas;
+      o.textContent = puesto ? String(i + 1) : "";
+      o.classList.toggle("copia__orden--puesto", puesto);
+    });
+  }
+
+  function trazaCopias() {
+    var pasos = [];
+    var fila = 0, hechas = 0;
+    for (var k = 3; k >= 0; k--) {
+      pasos.push({ linea: fila++, flecha: false,
+        texto: k === 3 ? "The program calls <strong>open_box(3)</strong>: it starts, with n = 3."
+          : "open_box(" + (k + 1) + ") calls <strong>open_box(" + k + ")</strong> and <strong>waits for it</strong>. We go into the inner one, with its n = " + k + ".",
+        estado: { activa: k, min: k, hechas: hechas, receta: 0 } });
+      pasos.push({ linea: fila++, flecha: false,
+        texto: k > 0 ? "<strong>Before the call</strong>: it prints “I open box " + k + "”."
+          : "n is 0, the <strong>base case</strong>: it prints “A candy!” and calls no one. open_box(0) has no more lines.",
+        estado: { activa: k, min: k, hechas: ++hechas, receta: k > 0 ? 4 : 2 } });
+    }
+    for (var j = 1; j <= 3; j++) {
+      pasos.push({ linea: fila++, flecha: false,
+        texto: "<strong>open_box(" + (j - 1) + ") ended.</strong> The line below belongs to <strong>open_box(" + j + ")</strong>, the one that called it and was waiting: it prints “I close box " + j + "”.",
+        estado: { activa: j, min: 0, hechas: ++hechas, receta: 6 } });
+    }
+    return pasos;
+  }
+
+  function terminarCopias() {
+    pintarCopias({ fin: true, hechas: 7 });
+    var nombres = { "3": "I close box 3", nada: "Nothing" };
+    Pasos.feedback($("pc-fb"), "ok", (prediccion === "1" ? "Well predicted! After the candy comes “I close box 1”. "
+      : "Out came “I close box 1”, not “" + nombres[prediccion] + "”. ") +
+      "Each call is inside the one that called it. When one ends, the next line runs, and it belongs to its caller: that is why open_box(0) is followed by open_box(1).");
+    leccion.desbloquear();
+  }
+
+  crearCopias();
+
+  /* ---------- 5. On the way in and on the way back ---------- */
+  var regalos4 = crearRegalos($("p4-regalos"), 3);
+  var pila4 = Pila.crear($("p4-pila"), { codigo: $("p4-codigo"), rotulo: true });
+
+  function copia(o) { return Object.assign({}, o); }
+
+  function cierro(k) { return 'print("I close box ' + k + '")'; }
+
+  /* The program, which waits on line 9 for open_box(3) to come back */
+  function programaD(sigue) {
+    var p = Pila.programa();
+    p.linea = 8;
+    p.ficha = "program";
+    p.falta = "";
+    p.nombra = true;
+    if (sigue) p.sigue = true;
+    return p;
+  }
+
+  /* Line 6 as open_box(k) sees it: «n=3   open_box(3 - 1)  →  open_box(2)» */
+  function llamada6(k) {
+    return { linea: 5, partes: ["  ", ["n=" + k, "quien"], "   open_box(" + k + " - 1)  →  ", ["open_box(" + (k - 1) + ")", "activa"]] };
+  }
+
+  /* The card that ends and goes back to its caller: the one below */
+  function vuelve(t) {
+    t.vuelve = true;
+    return t;
+  }
+
+  function trazaAbrir() {
+    var A = "open_box";
+    var abiertas = {};
+    var pasos = [
+      { linea: 0, texto: "Python remembers the recipe <strong>open_box</strong>.", estado: { pila: [Pila.programa()], abiertas: {} } },
+      { linea: 8, texto: "The program calls <strong>open_box(3)</strong> and waits for it here, on line 9. Its card goes on the stack.",
+        estado: { pila: [programaD(), tarjeta(A, "n", 3)], abiertas: {} } }
+    ];
+    function espera(k) { return debajo(A, "n", 3, k, cierro, programaD()); }
+    for (var k = 3; k >= 0; k--) {
+      var abajo = espera(k);
+      var actual = abajo.concat([tarjeta(A, "n", k, true)]);
+      pasos.push({ linea: 0, fase: "ida", texto: k === 3 ? "<strong>n = 3</strong> is born: the outer box." : "A new card with <strong>its own n = " + k + "</strong>.",
+        estado: { pila: actual, abiertas: copia(abiertas) } });
+      pasos.push({ linea: 1, texto: "n == 0? " + k + " == 0 is " + chip(k === 0) + (k === 0 ? ": base case!" : "."),
+        estado: { pila: actual, abiertas: copia(abiertas), leer: [abajo.length, "n"] } });
+      if (k > 0) {
+        abiertas[k] = true;
+        pasos.push({ linea: 4, salida: "I open box " + k, fase: "ida", texto: "<strong>On the way in</strong>: it prints “I open box " + k + "”.",
+          estado: { pila: actual, abiertas: copia(abiertas) } });
+        pasos.push({ linea: 5,
+          texto: "With n = " + k + ", <code>open_box(n - 1)</code> is <strong>open_box(" + (k - 1) + ")</strong>. open_box(" + k + ") calls it and <strong>waits for it here</strong>, on line 6: it still needs its “I close”.",
+          estado: { pila: abajo.concat([pausada(tarjeta(A, "n", k, true), cierro(k), true), tarjeta(A, "n", k - 1)]), abiertas: copia(abiertas), valores: llamada6(k) } });
+      } else {
+        pasos.push({ linea: 2, salida: "A candy!", texto: "It prints “A candy!”. The base case calls no one.",
+          estado: { pila: abajo.concat([tarjeta(A, "n", 0, true, true)]), abiertas: copia(abiertas) } });
+      }
+    }
+    // The way back, in two beats: the one on top ends and says who it goes back to; then it leaves and
+    // its caller goes on where it stopped
+    for (var j = 1; j <= 3; j++) {
+      pasos.push({ linea: j === 1 ? 2 : 6, flecha: false,
+        texto: "open_box(" + (j - 1) + ") has no more lines: it ends and <strong>goes back to its caller</strong>. Its caller is <strong>open_box(" + j + ")</strong>, which waits for it on line 6.",
+        estado: { pila: espera(j - 1).concat([vuelve(tarjeta(A, "n", j - 1, true, true))]), abiertas: copia(abiertas) } });
+      var esta = espera(j);
+      pasos.push({ linea: 5, flecha: true, fase: "vuelta",
+        texto: "The card of open_box(" + (j - 1) + ") left. <strong>open_box(" + j + ") goes on where it stopped</strong>: on line 6, with its n = " + j + ". It has one line left.",
+        estado: { pila: esta.concat([retoma(tarjeta(A, "n", j, true), cierro(j), true)]), abiertas: copia(abiertas) } });
+      delete abiertas[j];
+      pasos.push({ linea: 6, salida: "I close box " + j, fase: "vuelta", texto: "<strong>On the way back</strong>: it prints “I close box " + j + "”.",
+        estado: { pila: esta.concat([tarjeta(A, "n", j, true, true)]), abiertas: copia(abiertas), leer: [esta.length, "n"] } });
+    }
+    pasos.push({ linea: 6, flecha: false,
+      texto: "open_box(3) has no more lines: it ends and <strong>goes back to its caller</strong>, the program, which waits for it on line 9.",
+      estado: { pila: [programaD(), vuelve(tarjeta(A, "n", 3, true, true))], abiertas: {} } });
+    pasos.push({ linea: 8, flecha: true, fase: "vuelta", texto: "Back in the program: all the boxes are closed.", estado: { pila: [Pila.programa()], abiertas: {} } });
+    return pasos;
+  }
+
+  function terminarAbrir() {
+    Pasos.feedback($("p4-fb"), "ok", "It is the same thing you saw with the colored boxes, now with a single recipe. When each call ends, it goes back to its caller, " +
+      "which goes on where it stopped. What comes before the call runs on the way in; what comes after waits on its card and runs on the way back.");
+    leccion.desbloquear();
+  }
+
+
+  /* ---------- 5. The student does the way back ----------
+     It starts at the base case: open_box(0) just printed the candy and open_box(1),
+     (2) and (3) wait below. First, does the program end? Then, at each step back, the student taps
+     the card on top (the only one that can go on) and picks what it prints; when right, it closes its box,
+     ends and leaves. At the end the program goes on, and it has nothing else to do.
+     des.k is the n of the card on top (4: only the program is left).
+     programaD, cierro and vuelve come from the previous step. */
+  var pilaD = Pila.crear($("pd-pila"), { codigo: $("pd-codigo"), rotulo: true, alTocar: tocarDeshacer });
+  var regalosD = crearRegalos($("pd-regalos"), 3);
+  var des = null;   // { k, fase: "termina?" | "tocar" | "elegir" | "cierra" | "fin" }
+  var timerD = null;
+
+  function debajoD(k) {
+    var lista = [programaD()];
+    for (var j = 3; j > k; j--) lista.push(pausada(tarjeta("open_box", "n", j, true), cierro(j), true));
+    return lista;
+  }
+
+  var AVISO_SIGUE = "👆 Tap it: it is the only one that can go on";
+
+  function estadoD(k, fase) {
+    if (k === 4) return fase === "fin" ? { pila: [Pila.programa()] } : { pila: [programaD(true)], tocable: "👆 Tap it: the program goes on" };
+    // When it ends it says who it goes back to (before answering “does the program end?”, not yet)
+    if (k === 0 || fase === "cierra") {
+      var arriba = tarjeta("open_box", "n", k, true, true);
+      return { pila: debajoD(k).concat([fase === "termina?" ? arriba : vuelve(arriba)]) };
+    }
+    return { pila: debajoD(k).concat([retoma(tarjeta("open_box", "n", k, true), cierro(k), true)]), tocable: fase === "tocar" ? AVISO_SIGUE : "" };
+  }
+
+  // The boxes that are still open: the one on top and the ones below (the ones above already closed)
+  function abiertasD(k, fase) {
+    var abiertas = {};
+    for (var j = Math.max(1, k + (fase === "cierra" ? 1 : 0)); j <= 3; j++) abiertas[j] = true;
+    return abiertas;
+  }
+
+  function lineaD(k, fase) {
+    if (k === 4) return 8;
+    if (k === 0) return 2;
+    return fase === "cierra" ? 6 : 5;
+  }
+
+  // The answers to each question; the wrong ones, with their hint
+  function opcionesD(k) {
+    if (k === 0) return [
+      { t: "Yes: it reached the base case", pista: "open_box(0) ends, but look at the stack: 3 paused cards are left below, and each one still needs its “I close”. The program goes on with them." },
+      { t: "No: the ones below are still waiting", bien: true },
+      { t: "It starts over with open_box(3)", pista: "Nobody calls open_box(3) again. Each card below goes on where it stopped: on line 6, the line of its call." }
+    ];
+    var otra = k === 3 ? 1 : 3;
+    var lista = [
+      { t: "I open box " + k, pista: "“I open box " + k + "” already came out on the way in, before the call. It still needs what comes after: line 7." },
+      { t: "I close box " + k, bien: true },
+      { t: "I close box " + otra, pista: otra === 3
+        ? "open_box(3) is further down, still paused. The one on top is open_box(" + k + "), with its n = " + k + "."
+        : "open_box(1) already went back and closed its box. The one on top is open_box(" + k + "), with its n = " + k + "." },
+      { t: "Nothing: it ends", pista: "It has one line left: line 7. Look at its card: “still to do: " + cierro(k) + "”." }
+    ];
+    return lista.sort(function (a, b) { return a.t < b.t ? -1 : 1; });
+  }
+
+  function textosD(k, fase) {
+    if (k === 0 && fase === "termina?") return { explica: "open_box(0) reached the <strong>base case</strong>: it printed “A candy!” and calls no one.", pregunta: "Does the program end here?" };
+    if (k === 0) return { explica: "Right! open_box(0) ends and its card leaves, but <strong>the program goes on</strong>: 3 cards are still waiting below.", pregunta: "" };
+    if (k === 4 && fase === "fin") return { explica: "After <code>open_box(3)</code> there is nothing else: <strong>now</strong> the program ends.", pregunta: "Done! Only the program was left, and it ended." };
+    if (k === 4) return { explica: "open_box(3) ended: all the boxes are closed. The program is left, paused on line 9.", pregunta: "👆 Tap the program so it goes on." };
+    if (fase === "tocar") return { explica: "open_box(" + (k - 1) + ") ended and its card left. <strong>open_box(" + k + ")</strong> goes on where it stopped: on line 6.", pregunta: "👆 Tap the card on top of the stack." };
+    if (fase === "elegir") return { explica: "open_box(" + k + ") goes on, with its <strong>n = " + k + "</strong>. It still has line 7.", pregunta: "What does open_box(" + k + ") print now?" };
+    return { explica: "<strong>On the way back</strong>: it prints “I close box " + k + "” and open_box(" + k + ") ends.", pregunta: "" };
+  }
+
+  function pintarOpcionesD(cont, k, fase, alElegir) {
+    cont.textContent = "";
+    var hay = fase === "elegir" || fase === "termina?";
+    cont.classList.toggle("deshacer__opciones--largas", k === 0);
+    if (!hay) return;
+    opcionesD(k).forEach(function (o) {
+      var b = crear("button", "btn btn-secundario", o.t);
+      b.type = "button";
+      if (alElegir) b.addEventListener("click", function () { alElegir(o, b); });
+      cont.appendChild(b);
+    });
+  }
+
+  function pintarDeshacer(desde) {
+    var k = des.k;
+    var fase = des.fase;
+    var linea = lineaD(k, fase);
+    var pre = $("pd-codigo");
+    Codigo.marcar(pre, { activas: fase === "fin" ? [] : [linea] });
+    pilaD.pintar(estadoD(k, fase));
+    regalosD.pintar(abiertasD(k, fase));
+    // When it goes back to the line of the call that waits, the blue arrow of the way back
+    if (desde !== undefined) Codigo.salto(pre, desde, linea, "vuelta");
+    else Codigo.quitarSalto(pre);
+    var t = textosD(k, fase);
+    $("pd-explicacion").innerHTML = t.explica;
+    $("pd-pregunta").innerHTML = t.pregunta;
+    pintarOpcionesD($("pd-opciones"), k, fase, elegirDeshacer);
+  }
+
+  function pararDeshacer() {
+    if (timerD) clearTimeout(timerD);
+    timerD = null;
+  }
+
+  function empezarDeshacer() {
+    pararDeshacer();
+    des = { k: 0, fase: "termina?" };
+    pilaD.vaciar();
+    Codigo.limpiar($("pd-codigo"));
+    var consola = $("pd-consola");
+    Codigo.consola(consola, ["I open box 3", "I open box 2", "I open box 1", "A candy!"]);
+    consola.querySelectorAll(".consola__linea").forEach(function (l, i) { if (i < 3) l.classList.add("consola__linea--ida"); });
+    Pasos.limpiarFeedback($("pd-fb"));
+    $("pd-otra").hidden = true;
+    pintarDeshacer();
+  }
+
+  function pistaD(texto) { return '<span class="deshacer__pista">💡 ' + texto + "</span>"; }
+
+  // level 0 is the program; open_box(3) is on level 1, open_box(2) on level 2…
+  function pistaTocarD(nivel) {
+    var arriba = nivel === 0 ? "open_box(3)" : "open_box(" + (3 - nivel) + ")";
+    return pistaD((nivel === 0 ? "The program is paused" : "open_box(" + (4 - nivel) + ") is paused") + ": it waits for " +
+      arriba + ", the one above, to end. Only the card on <strong>top</strong> can go on.");
+  }
+
+  function tocarDeshacer(nivel, arriba) {
+    if (!des || des.fase === "cierra" || des.fase === "fin") return;
+    if (!arriba) {
+      $("pd-explicacion").innerHTML = pistaTocarD(nivel);
+      return;
+    }
+    if (des.fase !== "tocar") return;
+    if (des.k === 4) { terminarDeshacer(); return; }
+    des.fase = "elegir";
+    pintarDeshacer();
+    var primera = $("pd-opciones").querySelector("button");
+    if (primera) primera.focus();
+  }
+
+  // The one on top leaves and the next one (or the program) becomes the one on top
+  function siguienteD(desde) {
+    timerD = setTimeout(function () {
+      timerD = null;
+      des = { k: des.k + 1, fase: "tocar" };
+      pintarDeshacer(desde);
+      if ($("pd-pila").contains(document.activeElement) || $("pd-opciones").contains(document.activeElement) || document.activeElement === document.body) pilaD.tope().focus();
+    }, Pasos.reducirMovimiento ? 200 : 1100);
+  }
+
+  function elegirDeshacer(o, boton) {
+    if (des.fase !== "elegir" && des.fase !== "termina?") return;
+    if (!o.bien) {
+      boton.classList.add("btn--mal");
+      $("pd-explicacion").innerHTML = pistaD(o.pista);
+      return;
+    }
+    var k = des.k;
+    if (k === 0) {
+      des.fase = "sale";
+      pintarDeshacer();
+      siguienteD(2);
+      return;
+    }
+    des.fase = "cierra";
+    pintarDeshacer();
+    var texto = "I close box " + k;
+    var consola = $("pd-consola");
+    Codigo.agregar(consola, texto);
+    consola.lastElementChild.classList.add("consola__linea--vuelta");
+    Codigo.volarDesdeLinea($("pd-codigo"), consola.lastElementChild, texto, "vuelo--salida");
+    siguienteD(6);
+  }
+
+  function terminarDeshacer() {
+    des.fase = "fin";
+    pintarDeshacer();
+    $("pd-otra").hidden = false;
+    $("pd-otra").focus();
+    Pasos.feedback($("pd-fb"), "ok", "You undid the stack! Reaching the base case does not end the program: it only ends that call. " +
+      "Then each card went on where it stopped, from top to bottom, and did what it had left: box 1 closed first and box 3, last.");
+    leccion.desbloquear();
+  }
+
+  // All the states, to reserve the height of the code, the label, the explanation and the options
+  (function () {
+    var estados = [], textos = [], preguntas = [], opciones = [];
+    [[0, "termina?"], [0, "sale"], [1, "tocar"], [1, "elegir"], [1, "cierra"], [2, "tocar"], [2, "elegir"], [2, "cierra"],
+      [3, "tocar"], [3, "elegir"], [3, "cierra"], [4, "tocar"], [4, "fin"]].forEach(function (e) {
+      estados.push(estadoD(e[0], e[1]));
+      var t = textosD(e[0], e[1]);
+      textos.push(t.explica);
+      preguntas.push(t.pregunta);
+      opciones.push(e);
+      if (e[1] === "elegir" || e[1] === "termina?") opcionesD(e[0]).forEach(function (o) { if (!o.bien) textos.push(pistaD(o.pista)); });
+    });
+    for (var nivel = 0; nivel < 4; nivel++) textos.push(pistaTocarD(nivel));
+    pilaD.reservar(estados);
+    Codigo.reservarAlto($("pd-explicacion"), textos, function (copia, texto) { copia.innerHTML = texto; });
+    Codigo.reservarAlto($("pd-pregunta"), preguntas, function (copia, texto) { copia.innerHTML = texto; });
+    Codigo.reservarAlto($("pd-opciones"), opciones, function (copia, e) { pintarOpcionesD(copia, e[0], e[1]); });
+  })();
+
+  /* ---------- 6. Challenge ---------- */
+  function simular(version, n, prof) {
+    prof = prof || 0;
+    if (prof > 60) throw new Error("RecursionError");
+    var base = version === "base1" ? 1 : 0;
+    if (n === base) return [base];
+    var siguiente = version === "mas" ? n + 1 : n - 1;
+    if (version === "antes") return [n].concat(simular(version, siguiente, prof + 1));
+    return simular(version, siguiente, prof + 1).concat([n]);
+  }
+
+  function salidaDe(version, n) {
+    try { return simular(version, n).join(" "); } catch (e) { return "RecursionError"; }
+  }
+
+  var PISTAS_RETO = {
+    antes: "That print comes before the call: it prints on the way in, going down (3 2 1 0). To count up, print on the way back: after the call.",
+    base1: "The base case is n == 1: it never prints 0. And count_up(0) goes right past it (-1, -2…) until the RecursionError.",
+    mas: "count_up(n + 1) makes the number bigger: it never reaches 0, the base case, and the stack grows until the RecursionError."
+  };
+
+  function pintarPruebas(valor) {
+    var lista = $("reto-pruebas");
+    lista.textContent = "";
+    [3, 1, 0].forEach(function (n) {
+      var sale = salidaDe(valor, n);
+      var ok = sale === salidaDe("bien", n);
+      var li = crear("li", ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", "count_up(" + n + ")"));
+      li.appendChild(crear("span", "prueba__salida", sale));
+      li.appendChild(crear("span", "prueba__marca", ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", "count_up(" + n + "): " + sale + (ok ? ", correct" : ", wrong"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    $("reto-nota").hidden = false;
+  }
+
+  function limpiarReto() {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-pruebas").hidden = true;
+    $("reto-nota").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    pintarPruebas(marcada.value);
+    if (marcada.value === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! It goes down to the base case, which prints 0, and each print(n) waits for the way back: out comes 0, 1, 2, 3, counting up.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", PISTAS_RETO[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  $("p1-abrir").addEventListener("click", abrirCaja);
+  $("p1-otra").addEventListener("click", function () {
+    cerrarCajas();
+    $("p1-abrir").focus();
+  });
+  cerrarCajas();
+
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: trazaCuenta,
+    pila: pila2,
+    intervalo: 900,
+    alReiniciar: function () {
+      pila2.vaciar();
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) { pila2.pintar(paso.estado); },
+    alTerminar: terminarCuenta
+  });
+  $("p2-n").addEventListener("input", function () {
+    nInicio = Number(this.value);
+    $("p2-n-valor").textContent = String(nInicio);
+    $("p2-codigo-n").textContent = String(nInicio);
+    trazaP2.reiniciar();
+  });
+
+  $("pd-otra").addEventListener("click", function () {
+    empezarDeshacer();
+    $("pd-opciones").querySelector("button").focus();
+  });
+  empezarDeshacer();
+
+  $("p3-ejecutar").addEventListener("click", ejecutarSinBase);
+  reiniciarSinBase();
+
+  var trazaP4 = Traza.crear({
+    codigo: $("p4-codigo"),
+    explicacion: $("p4-explicacion"),
+    consola: $("p4-consola"),
+    ejecutar: $("p4-ejecutar"),
+    reproducir: $("p4-reproducir"),
+    reiniciar: $("p4-reiniciar"),
+    generar: trazaAbrir,
+    pila: pila4,
+    intervalo: 1000,
+    alReiniciar: function () {
+      pila4.vaciar();
+      regalos4.pintar({});
+      Pasos.limpiarFeedback($("p4-fb"));
+    },
+    alPaso: function (paso) {
+      pila4.pintar(paso.estado);
+      regalos4.pintar(paso.estado.abiertas);
+    },
+    alTerminar: terminarAbrir
+  });
+  var trazaPc = Traza.crear({
+    codigo: copiasEl,
+    explicacion: $("pc-explicacion"),
+    ejecutar: $("pc-ejecutar"),
+    reproducir: $("pc-reproducir"),
+    reiniciar: $("pc-reiniciar"),
+    generar: trazaCopias,
+    intervalo: 1100,
+    alReiniciar: function () {
+      pintarCopias(null);
+      Codigo.limpiar($("pc-codigo"));
+      Pasos.limpiarFeedback($("pc-fb"));
+      faseCopias();
+      // The explanation keeps the height of all its texts: the ones for opening the calls and the ones for running
+      var textos = [TEXTO_PREDICE, TEXTO_TOCA, TEXTO_EJECUTA];
+      for (var k = 0; k <= 3; k++) textos.push(TEXTOS_ABRIR[k]);
+      trazaCopias().forEach(function (paso) { textos.push(paso.texto); });
+      Codigo.reservarAlto($("pc-explicacion"), textos, function (copia, texto) { copia.innerHTML = texto; });
+    },
+    alPaso: function (paso) {
+      pintarCopias(paso.estado);
+      Codigo.marcar($("pc-codigo"), { activas: [paso.estado.receta] });
+    },
+    alTerminar: terminarCopias
+  });
+  $("pc-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion === null;
+      prediccion = b.getAttribute("data-valor");
+      $("pc-prediccion").querySelectorAll("button").forEach(function (o) {
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      if (nueva) {
+        faseCopias();
+        copias[3].boton.focus();
+      }
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      limpiarReto();
+      leccion.listoParaComprobar(true);
+    });
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // When the step changes, any running execution pauses
+  function pausar() {
+    trazaP2.detener();
+    trazaPc.detener();
+    trazaP4.detener();
+    if (timer3) reiniciarSinBase();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cajas": pausar,
+      "paso-cuenta": pausar,
+      "paso-sin-base": pausar,
+      "paso-copias": pausar,
+      "paso-vuelta": pausar,
+      "paso-deshacer": pausar,
+      "paso-reto": function (paso) { pausar(); entrarReto(paso); },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Digits and bases · Learn to program</title>
+  <meta name="description" content="Interactive lesson: recursion with // and %. count_digits removes one digit in each call; binary prints the remainders of dividing by 2 on the way back, in order; to_base writes a number in any base from 2 to 10.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+
+    /* ---------- Recipe ---------- */
+    .receta__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .receta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); counter-reset: receta; }
+    .receta li { position: relative; padding: var(--esp-2) var(--esp-3) var(--esp-2) 2.6rem; border-radius: var(--radio-sm); border: 2px solid transparent; background: var(--color-superficie-2); counter-increment: receta; transition: background-color var(--dur), border-color var(--dur); }
+    .receta li::before { content: counter(receta); position: absolute; left: var(--esp-3); top: var(--esp-2); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .receta .receta__paso--activo { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .receta .receta__paso--activo::before { background: var(--color-azul); color: #fff; }
+    .receta__mismo { font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Choosing a number ---------- */
+    .chips { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .chips__titulo { font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .chips .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+
+    /* ---------- Number sliders ---------- */
+    .control-slider { margin-bottom: var(--esp-4); }
+    .control-slider label { display: flex; justify-content: space-between; font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+    .control-slider input { width: 100%; accent-color: var(--color-azul); }
+
+    /* ---------- Prediction ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .prediccion--codigo .btn { font-family: var(--fuente-codigo); font-weight: 700; }
+    .prediccion .btn--mal, .prediccion .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+    .prediccion .btn--bien, .prediccion .btn--bien:disabled { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); opacity: 1; }
+    .arreglo { margin-top: var(--esp-5); }
+    .arreglo .prediccion { grid-template-columns: 1fr; }
+
+    /* ---------- 1. Cutting off the last digit ---------- */
+    .expr-corte { min-height: 1.6em; margin: var(--esp-4) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; text-align: center; }
+    .expr-corte__flecha { color: var(--color-texto-suave); font-family: var(--fuente); font-weight: 400; }
+    .cifras__titulo, .caidos__titulo, .tira__titulo, .lectura__titulo { margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .cifras__titulo code, .caidos__titulo code, .tira__titulo code, .lectura__titulo code { letter-spacing: 0; text-transform: none; }
+    .cifras { display: flex; justify-content: center; gap: var(--esp-2); min-height: 4rem; margin: 0 0 var(--esp-4); }
+    .cifra { display: grid; place-items: center; width: 3rem; height: 4rem; border: 2px solid var(--color-acento); border-radius: var(--radio-sm); background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-2xl); font-weight: 700; color: var(--color-acento); box-shadow: var(--sombra); }
+    .cifra--ultima { border-style: dashed; border-color: var(--color-pista); color: var(--color-pista); background: var(--color-pista-suave); }
+    .cifra--sola { border-color: var(--color-azul); color: var(--color-azul); background: var(--color-azul-suave); }
+    .caidos { display: flex; flex-wrap: wrap; gap: var(--esp-2); min-height: 2.6rem; padding: var(--esp-2); border: 2px dashed var(--color-borde); border-radius: var(--radio-sm); }
+    .caido { display: grid; place-items: center; min-width: 2.2rem; height: 2.2rem; padding: 0 0.3em; border-radius: 8px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    .cuenta-unos { margin: var(--esp-4) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+    .cuenta-unos__uno { color: var(--color-acento); }
+    .cuenta-unos__resto { color: var(--color-texto-suave); font-weight: 400; }
+    .cuenta-unos__total { color: var(--color-azul); }
+
+    /* ---------- The calculation that grows on the way in and shrinks on the way back ---------- */
+    .cuenta { margin: 0; padding: var(--esp-3) var(--esp-4); border: 2px dashed var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur); }
+    .cuenta__cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--esp-1) var(--esp-3); margin: 0 0 var(--esp-2); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .cuenta__fase { padding: 0.05em 0.6em; border-radius: 999px; letter-spacing: 0; text-transform: none; }
+    .cuenta__fase:empty { display: none; }
+    .cuenta--ida { border-color: var(--color-pista); }
+    .cuenta--ida .cuenta__fase { background: var(--color-pista-suave); color: var(--color-pista); }
+    .cuenta--base .cuenta__fase { background: var(--color-ok-suave); color: var(--color-ok); }
+    .cuenta--vuelta { border-style: solid; border-color: var(--color-azul); }
+    .cuenta--vuelta .cuenta__fase { background: var(--color-azul-suave); color: var(--color-azul); }
+    .cuenta__expr { margin: 0; font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
+    .cuenta__expr:empty::before { content: "—"; color: var(--color-texto-suave); font-weight: 400; }
+    .cuenta__nueva { padding: 0 0.2em; border-radius: 4px; background: var(--color-acento-suave); color: var(--color-acento); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+    .cuenta--vuelta .cuenta__nueva { background: var(--color-azul-suave); color: var(--color-azul); }
+    .cuenta__nueva--cambio { animation: cuenta-nueva 600ms ease-out; }
+    @keyframes cuenta-nueva { from { background: #fff2c2; } }
+
+    /* ---------- 3. The binary lights ---------- */
+    .focos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--esp-3); max-width: 26rem; margin: 0 auto; }
+    .foco { display: grid; justify-items: center; gap: var(--esp-1); padding: var(--esp-3) var(--esp-1); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); font: inherit; color: var(--color-texto); cursor: pointer; transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .foco:hover { border-color: var(--color-azul); }
+    .foco__luz { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 3px solid #b8c0cb; background: #e8ebef; transition: background-color var(--dur), box-shadow var(--dur), border-color var(--dur); }
+    .foco__digito { font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; line-height: 1.1; }
+    .foco__valor { font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .foco[aria-pressed="true"] { border-color: #d99a00; background: #fffaeb; }
+    .foco[aria-pressed="true"] .foco__luz { border-color: #d99a00; background: #ffd23f; box-shadow: 0 0 18px 4px rgba(255, 196, 0, 0.55); }
+    .foco[aria-pressed="true"] .foco__valor { color: #6b4700; }
+    .focos-suma { margin: var(--esp-5) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; text-align: center; }
+    .focos-suma__binario { color: #6b4700; }
+    .focos-suma__flecha { color: var(--color-texto-suave); font-family: var(--fuente); font-weight: 400; }
+    .meta { margin: var(--esp-4) 0 0; text-align: center; font-weight: 700; }
+    .meta__num { display: inline-block; padding: 0 0.5em; border-radius: 999px; background: var(--color-azul-suave); color: var(--color-azul); font-family: var(--fuente-codigo); }
+
+    /* ---------- The strip of remainders ----------
+       One cell per call (or per division): its n on top, its remainder in large type.
+       espera: calculated but not printed (orange dashes); ida / vuelta: printed, with its
+       order; hecho: a division done by hand. */
+    .tira { margin: 0 0 var(--esp-4); }
+    .tira__celdas { display: flex; justify-content: center; gap: var(--esp-2); min-height: 6rem; padding: var(--esp-3) var(--esp-2) var(--esp-2); border-radius: var(--radio-sm); background: var(--color-superficie); box-shadow: inset 0 0 0 2px var(--color-borde); }
+    .tira__vacia { align-self: center; font-size: var(--texto-xs); font-style: italic; color: var(--color-texto-suave); }
+    .tira__celda { position: relative; flex: 0 1 3.4rem; min-width: 0; display: grid; justify-items: center; align-content: start; gap: 0.1rem; padding: var(--esp-1) 0 var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur); }
+    .tira__celda--nueva { animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .tira__n { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-family: var(--fuente-codigo); font-size: 0.8rem; color: var(--color-texto-suave); }
+    .tira__r { font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; line-height: 1.2; }
+    .tira__orden { position: absolute; top: -0.65rem; right: -0.45rem; min-width: 1.35rem; padding: 0 0.3em; border-radius: 999px; font-size: 0.75rem; font-weight: 700; line-height: 1.35rem; text-align: center; color: #fff; }
+    .tira__orden:empty { display: none; }
+    .tira__celda--espera { border-style: dashed; border-color: var(--color-pista); }
+    .tira__celda--espera .tira__r { color: var(--color-pista); opacity: 0.75; }
+    .tira__celda--ida { border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .tira__celda--ida .tira__r { color: var(--color-pista); }
+    .tira__celda--ida .tira__orden { background: var(--color-pista); }
+    .tira__celda--vuelta { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .tira__celda--vuelta .tira__r { color: var(--color-azul); }
+    .tira__celda--vuelta .tira__orden { background: var(--color-azul); }
+    .tira__celda--hecho { border-color: var(--color-acento); }
+    .tira__celda--hecho .tira__r { color: var(--color-acento); }
+    .tira__celda--leida { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .tira__celda--leida .tira__r { color: var(--color-azul); }
+    .tira__celda--leida .tira__orden { background: var(--color-azul); }
+    .tira__nota { min-height: 1.5em; margin: var(--esp-2) 0 0; font-size: var(--texto-xs); font-weight: 700; text-align: center; color: var(--color-texto-suave); }
+    .tira__nota--ida { color: var(--color-pista); }
+    .tira__nota--vuelta { color: var(--color-azul); }
+
+    /* ---------- The reading: the remainders from back to front, with what each place is worth ---------- */
+    .lectura { margin: 0 0 var(--esp-4); }
+    .lectura__fila { display: flex; justify-content: center; gap: var(--esp-2); min-height: 4.4rem; }
+    .lectura__lugar { display: grid; justify-items: center; gap: 0.1rem; flex: 0 1 3rem; min-width: 0; }
+    .lectura__digito { display: grid; place-items: center; width: 100%; height: 2.8rem; border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; color: var(--color-azul); }
+    .lectura__valor { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave); white-space: nowrap; }
+    .lectura__suma { min-height: 1.6em; margin: var(--esp-2) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+
+    /* ---------- The output of print(..., end=""): all on one line ---------- */
+    .digito--ida { color: var(--color-pista); }
+    .digito--vuelta { color: var(--color-azul); }
+    .consola .consola__linea .digito { display: inline-block; min-width: 0.65em; text-align: center; }
+
+    /* ---------- 8. Any base ---------- */
+    .resultado-base { margin: 0 0 var(--esp-4); text-align: center; }
+    .resultado-base__llamada { display: block; font-family: var(--fuente-codigo); font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .resultado-base__valor { display: inline-block; margin-top: var(--esp-1); padding: 0.1em 0.6em; border-radius: var(--radio-sm); background: var(--color-superficie); box-shadow: inset 0 0 0 2px var(--color-azul); font-family: var(--fuente-codigo); font-size: var(--texto-xl); font-weight: 700; color: var(--color-azul); overflow-wrap: anywhere; }
+    .resultado-base__valor--pulso { animation: valor-pulso 300ms ease-out; }
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); align-items: start; gap: var(--esp-2); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); }
+    .misiones li::before { content: "○"; font-weight: 700; color: var(--color-texto-suave); text-align: center; }
+    .misiones .mision--hecha { background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones .mision--hecha::before { content: "✓"; color: var(--color-ok); }
+    .misiones .mision--hecha code { color: var(--color-ok); }
+
+    /* ---------- Blanks inside the code ---------- */
+    .codigo__elegir { font: inherit; font-weight: 700; max-width: 100%; padding: 0 0.3em; border: 2px dashed var(--tk-numero); border-radius: 6px; background: #232a33; color: var(--tk-numero); cursor: pointer; }
+    .codigo__elegir:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: 2px; }
+    .codigo__elegir--lleno { border-style: solid; }
+
+    /* ---------- Tests ---------- */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 150ms; }
+    .pruebas li:nth-child(3) { animation-delay: 300ms; }
+    .pruebas li:nth-child(4) { animation-delay: 450ms; }
+    .prueba__salida { font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      .cifra { width: 2.5rem; height: 3.4rem; font-size: var(--texto-xl); }
+      .cifras { min-height: 3.4rem; }
+      .cuenta { padding: var(--esp-2) var(--esp-3); }
+      .cuenta__expr { font-size: var(--texto-sm); }
+      .focos { gap: var(--esp-2); }
+      .foco__luz { width: 2rem; height: 2rem; }
+      .tira__celdas { gap: var(--esp-1); padding: var(--esp-2) var(--esp-1); }
+      .tira__r { font-size: var(--texto-lg); }
+      .lectura__fila { gap: var(--esp-1); }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      /* Long lines (return binary(n // 2) + str(n % 2)) fit without scrolling */
+      .codigo--largo { font-size: 0.72rem; }
+      .codigo--largo .linea { padding-left: 2.25rem; padding-right: var(--esp-2); }
+      .codigo--largo .linea::before { width: 1.6rem; }
+      /* The challenge: the code takes the whole width of the card so the long blank fits */
+      #reto-codigo { margin-inline: calc(-1 * var(--esp-4)); border-radius: 0; }
+      #reto-codigo .codigo__elegir { padding: 0 0.15em; }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual { margin-top: var(--esp-5); }
+    }
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-visual-fija data-leccion="recursion-bases">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: cutting off the last digit with // 10 -->
+    <section class="paso" id="paso-cortar" data-requiere aria-labelledby="t-cortar">
+      <span class="paso__etiqueta">Recursion 3/7 · Digits and bases</span>
+      <h1 class="paso__titulo" id="t-cortar">How many digits does it have?</h1>
+      <p>You can see at a glance that <strong>4071</strong> has 4 digits. Python can't see them: to Python, it's just a number. But it can divide: <code>4071 // 10</code> gives <strong>407</strong>, the number <strong>without its last digit</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="chips" id="p1-chips" role="group" aria-label="Choose a number">
+            <span class="chips__titulo">Number:</span>
+            <button type="button" class="btn btn-secundario" data-n="4071" aria-pressed="true">4071</button>
+            <button type="button" class="btn btn-secundario" data-n="58" aria-pressed="false">58</button>
+            <button type="button" class="btn btn-secundario" data-n="90210" aria-pressed="false">90210</button>
+          </div>
+          <p class="receta__titulo">📜 How to count the digits of n</p>
+          <ol class="receta" id="p1-receta">
+            <li data-r="base">If it has a single digit (<code>n &lt; 10</code>): it has <strong>1</strong>.</li>
+            <li data-r="corta">If not: cut off the last one (<code>n // 10</code>), count <span class="receta__mismo">the digits of what's left</span> and add 1.</li>
+          </ol>
+          <p class="expr-corte" id="p1-expr" aria-live="polite"></p>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-otra" hidden>↺ Again</button>
+            <button type="button" class="btn btn-secundario" id="p1-cortar">✂ Remove the last: n // 10</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="cifras__titulo">The number <code>n</code></p>
+          <div class="cifras" id="p1-cifras" aria-hidden="true"></div>
+          <p class="caidos__titulo">The ones that dropped off (<code>n % 10</code>)</p>
+          <div class="caidos" id="p1-caidos" aria-hidden="true"></div>
+          <p class="cuenta-unos" id="p1-cuenta" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. count_digits(n) on the stack -->
+    <section class="paso" id="paso-contar" data-requiere aria-labelledby="t-contar">
+      <h2 class="paso__titulo" id="t-contar">One digit fewer in each call</h2>
+      <p>The recipe, in Python. Each call gets the number <strong>with one digit fewer</strong>, until only one is left: the base case.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="chips" id="p2-chips" role="group" aria-label="Choose the number">
+            <span class="chips__titulo">Number:</span>
+            <button type="button" class="btn btn-secundario" data-n="4071" aria-pressed="true">4071</button>
+            <button type="button" class="btn btn-secundario" data-n="58" aria-pressed="false">58</button>
+            <button type="button" class="btn btn-secundario" data-n="7" aria-pressed="false">7</button>
+            <button type="button" class="btn btn-secundario" data-n="90210" aria-pressed="false">90210</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">count_digits</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt; <span class="tk-numero">10</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">1</span> + <span class="tk-funcion">count_digits</span>(<span class="tk-variable">n</span> // <span class="tk-numero">10</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">count_digits</span>(<span class="tk-numero" id="p2-codigo-n">4071</span>))</span></code></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cuenta" id="p2-cuenta" aria-live="polite">
+            <p class="cuenta__cabecera"><span>The calculation</span><span class="cuenta__fase"></span></p>
+            <p class="cuenta__expr"></p>
+          </div>
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota">Look at each card's title: the number loses its last digit in each call. Each card that waits keeps <code>1 + ▢</code>: it adds 1 to whatever the card above returns.</p>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Binary: lights worth 8, 4, 2 and 1 -->
+    <section class="paso" id="paso-focos" data-requiere aria-labelledby="t-focos">
+      <h2 class="paso__titulo" id="t-focos">Only zeros and ones</h2>
+      <p>The computer stores numbers in <strong>binary</strong>: only with <strong>0</strong> and <strong>1</strong>. Each place is worth <strong>double</strong> the one to its right: 1, 2, 4, 8… (in the usual system, each place is worth 10 times more: 1, 10, 100…).</p>
+
+      <div class="tarjeta">
+        <div class="focos" id="p3-focos" role="group" aria-label="Lights of the binary number">
+          <button type="button" class="foco" data-valor="8" aria-pressed="false" aria-label="Light worth 8"><span class="foco__luz"></span><span class="foco__digito">0</span><span class="foco__valor">worth 8</span></button>
+          <button type="button" class="foco" data-valor="4" aria-pressed="false" aria-label="Light worth 4"><span class="foco__luz"></span><span class="foco__digito">0</span><span class="foco__valor">worth 4</span></button>
+          <button type="button" class="foco" data-valor="2" aria-pressed="false" aria-label="Light worth 2"><span class="foco__luz"></span><span class="foco__digito">0</span><span class="foco__valor">worth 2</span></button>
+          <button type="button" class="foco" data-valor="1" aria-pressed="false" aria-label="Light worth 1"><span class="foco__luz"></span><span class="foco__digito">0</span><span class="foco__valor">worth 1</span></button>
+        </div>
+        <p class="focos-suma" id="p3-suma" aria-live="polite"></p>
+        <p class="meta" id="p3-meta" aria-live="polite"></p>
+        <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 4. Dividing by 2 by hand: the remainders come out backward -->
+    <section class="paso" id="paso-dividir" data-requiere aria-labelledby="t-dividir">
+      <h2 class="paso__titulo" id="t-dividir">The remainders of dividing by 2</h2>
+      <p>How does Python turn a number into binary? Just like <code>% 10</code> gave the last digit in the usual system, <code>% 2</code> gives the <strong>last digit in binary</strong>. Divide by 2 until you reach 0 and look at the remainders.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="chips" id="p4-chips" role="group" aria-label="Choose the number">
+            <span class="chips__titulo">Number:</span>
+            <button type="button" class="btn btn-secundario" data-n="13" aria-pressed="true">13</button>
+            <button type="button" class="btn btn-secundario" data-n="6" aria-pressed="false">6</button>
+            <button type="button" class="btn btn-secundario" data-n="10" aria-pressed="false">10</button>
+            <button type="button" class="btn btn-secundario" data-n="25" aria-pressed="false">25</button>
+          </div>
+          <p class="cifras__titulo">The number <code>n</code></p>
+          <div class="cifras" id="p4-n" aria-hidden="true"></div>
+          <p class="expr-corte" id="p4-expr" aria-live="polite"></p>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-otra" hidden>↺ Again</button>
+            <button type="button" class="btn btn-secundario" id="p4-dividir">÷ Divide by 2</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="tira" id="p4-tira">
+            <p class="tira__titulo">Remainders (<code>n % 2</code>), in the order they come out</p>
+            <div class="tira__celdas"></div>
+            <p class="tira__nota"></p>
+          </div>
+          <div class="lectura" id="p4-lectura" hidden>
+            <p class="lectura__titulo">In binary</p>
+            <div class="lectura__fila"></div>
+            <p class="lectura__suma"></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. The print before the call: it comes out backward -->
+    <section class="paso" id="paso-antes" data-requiere aria-labelledby="t-antes">
+      <h2 class="paso__titulo" id="t-antes">Printing each remainder</h2>
+      <p>A function that divides by 2 again and again, like you did, and prints each remainder. With <code>end=""</code> it doesn't start a new line: the remainders stay side by side.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">Before you run it: what does it print?</p>
+          <div class="prediccion prediccion--codigo" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="1101" aria-pressed="false">1101</button>
+            <button type="button" class="btn btn-secundario" data-valor="1011" aria-pressed="false">1011</button>
+            <button type="button" class="btn btn-secundario" data-valor="13" aria-pressed="false">13</button>
+          </div>
+          <pre class="codigo" id="p5-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">binary</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span> % <span class="tk-numero">2</span>, <span class="tk-variable">end</span>=<span class="tk-texto">""</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &gt;= <span class="tk-numero">2</span>:</span><span class="linea">        <span class="tk-funcion">binary</span>(<span class="tk-variable">n</span> // <span class="tk-numero">2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">binary</span>(<span class="tk-numero">13</span>)</span></code></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="tira" id="p5-tira">
+            <p class="tira__titulo">Remainders (<code>n % 2</code>) of each call</p>
+            <div class="tira__celdas"></div>
+            <p class="tira__nota"></p>
+          </div>
+          <div class="pila" id="p5-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="leyenda-fases"><span class="leyenda-fases__ida">on the way in (when calling)</span><span class="leyenda-fases__vuelta">on the way back (when returning)</span></p>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+          <div class="arreglo" id="p5-arreglo" hidden>
+            <p class="prediccion__pregunta" id="p5-arreglo-pregunta">13 in binary is 1101. What would you change so it comes out in order?</p>
+            <div class="prediccion" id="p5-arreglo-opciones" role="group" aria-labelledby="p5-arreglo-pregunta">
+              <button type="button" class="btn btn-secundario" data-valor="diez">Divide by 10 instead of by 2</button>
+              <button type="button" class="btn btn-secundario" data-valor="bien">Print the remainder after the call</button>
+              <button type="button" class="btn btn-secundario" data-valor="cociente">Print <code>n // 2</code> instead of <code>n % 2</code></button>
+            </div>
+            <div class="feedback" id="p5-arreglo-fb" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. The print after the call: on the way back, in order -->
+    <section class="paso" id="paso-despues" data-requiere aria-labelledby="t-despues">
+      <h2 class="paso__titulo" id="t-despues">Printing on the way back</h2>
+      <p>The <code>print</code> moved <strong>below the call</strong>. Now each card calls first and waits; it prints its remainder <strong>when the card above returns</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p6-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">binary</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &gt;= <span class="tk-numero">2</span>:</span><span class="linea">        <span class="tk-funcion">binary</span>(<span class="tk-variable">n</span> // <span class="tk-numero">2</span>)</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">n</span> % <span class="tk-numero">2</span>, <span class="tk-variable">end</span>=<span class="tk-texto">""</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">binary</span>(<span class="tk-numero">13</span>)</span></code></pre>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p6-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p6-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p6-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="tira" id="p6-tira">
+            <p class="tira__titulo">Remainders (<code>n % 2</code>) of each call</p>
+            <div class="tira__celdas"></div>
+            <p class="tira__nota"></p>
+          </div>
+          <div class="pila" id="p6-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="leyenda-fases"><span class="leyenda-fases__ida">on the way in (when calling)</span><span class="leyenda-fases__vuelta">on the way back (when returning)</span></p>
+          <p class="nota">The strip fills up <strong>on the way in</strong>, from left to right. On the way back it prints <strong>from right to left</strong>: the last card to be called is the first to return.</p>
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Returning a text instead of printing -->
+    <section class="paso" id="paso-texto" data-requiere aria-labelledby="t-texto">
+      <h2 class="paso__titulo" id="t-texto">Returning the binary as text</h2>
+      <p>Printing is good for looking, but sometimes we want to <strong>keep</strong> the result. This version <strong>returns</strong> a text: each call joins the text from the card above with its remainder, <strong>on the right</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p7-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">binary</span>(<span class="tk-variable">n</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt; <span class="tk-numero">2</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">str</span>(<span class="tk-variable">n</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">binary</span>(<span class="tk-variable">n</span> // <span class="tk-numero">2</span>) + <span class="tk-funcion">str</span>(<span class="tk-variable">n</span> % <span class="tk-numero">2</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">binary</span>(<span class="tk-numero">13</span>))</span></code></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p7-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p7-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cuenta" id="p7-cuenta" aria-live="polite">
+            <p class="cuenta__cabecera"><span>The calculation</span><span class="cuenta__fase"></span></p>
+            <p class="cuenta__expr"></p>
+          </div>
+          <div class="pila" id="p7-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <p class="nota">The remainders are joined as texts: <code>"110" + "1"</code> is <code>"1101"</code>, not 111. That's why each remainder goes through <code>str()</code>.</p>
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Any base from 2 to 10 -->
+    <section class="paso" id="paso-base" data-requiere aria-labelledby="t-base">
+      <h2 class="paso__titulo" id="t-base">Any base</h2>
+      <p>If you divide by 3 instead of 2, you get the digits in <strong>base 3</strong>, where each place is worth triple: 1, 3, 9, 27… The function gets the base <code>b</code> as a second parameter.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="control-slider">
+            <label for="p8-n">The number n <output id="p8-n-valor" for="p8-n">13</output></label>
+            <input type="range" id="p8-n" min="1" max="100" step="1" value="13">
+          </div>
+          <div class="control-slider">
+            <label for="p8-b">The base b <output id="p8-b-valor" for="p8-b">2</output></label>
+            <input type="range" id="p8-b" min="2" max="10" step="1" value="2">
+          </div>
+          <pre class="codigo codigo--largo" id="p8-codigo" aria-label="Code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">to_base</span>(<span class="tk-variable">n</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt; <span class="tk-variable">b</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">str</span>(<span class="tk-variable">n</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">to_base</span>(<span class="tk-variable">n</span> // <span class="tk-variable">b</span>, <span class="tk-variable">b</span>) + <span class="tk-funcion">str</span>(<span class="tk-variable">n</span> % <span class="tk-variable">b</span>)</span><span class="linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-funcion">to_base</span>(<span class="tk-numero" id="p8-codigo-n">13</span>, <span class="tk-numero" id="p8-codigo-b">2</span>))</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <p class="resultado-base" aria-live="polite"><span class="resultado-base__llamada" id="p8-llamada">to_base(13, 2) returns</span><span class="resultado-base__valor" id="p8-valor">"1101"</span></p>
+          <div class="tira" id="p8-tira">
+            <p class="tira__titulo" id="p8-tira-titulo">Remainders (<code>n % 2</code>) of each call</p>
+            <div class="tira__celdas"></div>
+          </div>
+          <div class="lectura" id="p8-lectura">
+            <p class="lectura__titulo">Read from back to front</p>
+            <div class="lectura__fila"></div>
+            <p class="lectura__suma"></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <p class="prediccion__pregunta">Move the sliders and find:</p>
+          <ol class="misiones" id="p8-misiones">
+            <li data-mision="0"><span>In which base is <strong>13</strong> written <code>111</code>?</span></li>
+            <li data-mision="1"><span>In which base is <strong>13</strong> written <code>15</code>?</span></li>
+          </ol>
+          <div class="feedback" id="p8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Challenge: complete to_base -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Complete to_base</h2>
+      <p>Choose what goes in each blank. We'll test it with four numbers in different bases.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--largo" id="reto-codigo" aria-label="Code with two blanks"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">to_base</span>(<span class="tk-variable">n</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt; <select class="codigo__elegir" id="reto-base" aria-label="Blank 1: what n is compared with in the base case"><option value="">?</option><option value="0">0</option><option value="2">2</option><option value="10">10</option><option value="b">b</option></select>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">str</span>(<span class="tk-variable">n</span>)</span><span class="linea">    <span class="tk-palabra">return</span> <select class="codigo__elegir" id="reto-rec" aria-label="Blank 2: what it returns when n is not the base case"><option value="">?</option><option value="reves">str(n % b) + to_base(n // b, b)</option><option value="bien">to_base(n // b, b) + str(n % b)</option><option value="sinstr">to_base(n // b, b) + n % b</option><option value="cambiado">to_base(n % b, b) + str(n // b)</option></select></span></code></pre>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 10. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea"><code>% b</code> gives the last digit and <code>// b</code> the rest of the number: the digits come out back to front, and recursion puts them in order <strong>on the way back</strong>.</p>
+        <pre class="codigo resumen-codigo codigo--largo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">to_base</span>(<span class="tk-variable">n</span>, <span class="tk-variable">b</span>):</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">n</span> &lt; <span class="tk-variable">b</span>:</span><span class="linea">        <span class="tk-palabra">return</span> <span class="tk-funcion">str</span>(<span class="tk-variable">n</span>)  <span class="tk-comentario"># a single digit</span></span><span class="linea">    <span class="tk-comentario"># first the digits in front,</span></span><span class="linea">    <span class="tk-comentario"># then the last one, on the right</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-funcion">to_base</span>(<span class="tk-variable">n</span> // <span class="tk-variable">b</span>, <span class="tk-variable">b</span>) + <span class="tk-funcion">str</span>(<span class="tk-variable">n</span> % <span class="tk-variable">b</span>)</span></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../tree/index.html">Next: Call tree →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/pila.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function div(a, b) { return Math.floor(a / b); }
+
+  // The digits of n in base b, from first to last (what to_base returns)
+  function enBase(n, b) {
+    if (n < b) return String(n);
+    return enBase(div(n, b), b) + String(n % b);
+  }
+
+  // The n of each call of to_base(n, b), from the first to the base case
+  function cadenaBase(n, b) {
+    var lista = [n];
+    while (n >= b) {
+      n = div(n, b);
+      lista.push(n);
+    }
+    return lista;
+  }
+
+  var leccion; // set at the end, with Pasos.iniciar
+  var lento = function (ms) { return Pasos.reducirMovimiento ? 0 : ms; };
+
+  // Option buttons with aria-pressed: mark the chosen one
+  function marcarChips(grupo, boton) {
+    grupo.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === boton)); });
+  }
+
+  /* ---------- The strip of remainders ----------
+     celdas: [{ n: 13, r: 1, est: "espera" | "ida" | "vuelta" | "hecho" | "leida", orden: 1 }] */
+  function pintarTira(tira, celdas, nota) {
+    var cont = tira.querySelector(".tira__celdas");
+    var vacia = cont.querySelector(".tira__vacia");
+    if (celdas.length && vacia) vacia.remove();
+    var hay = cont.querySelectorAll(".tira__celda");
+    for (var k = hay.length - 1; k >= celdas.length; k--) hay[k].remove();
+    celdas.forEach(function (c, i) {
+      var celda = cont.querySelectorAll(".tira__celda")[i];
+      if (!celda) {
+        celda = crear("div", "tira__celda" + (Pasos.reducirMovimiento ? "" : " tira__celda--nueva"));
+        celda.appendChild(crear("span", "tira__n"));
+        celda.appendChild(crear("span", "tira__r"));
+        celda.appendChild(crear("span", "tira__orden"));
+        cont.appendChild(celda);
+      }
+      celda.querySelector(".tira__n").textContent = String(c.n);
+      celda.querySelector(".tira__r").textContent = String(c.r);
+      celda.querySelector(".tira__orden").textContent = c.orden ? String(c.orden) : "";
+      ["espera", "ida", "vuelta", "hecho", "leida"].forEach(function (e) {
+        celda.classList.toggle("tira__celda--" + e, c.est === e);
+      });
+    });
+    if (!celdas.length && !vacia) cont.appendChild(crear("span", "tira__vacia", "(none yet)"));
+    var notaEl = tira.querySelector(".tira__nota");
+    if (notaEl) {
+      notaEl.textContent = nota ? nota.texto : "";
+      notaEl.className = "tira__nota" + (nota && nota.fase ? " tira__nota--" + nota.fase : "");
+    }
+    tira.setAttribute("aria-label", celdas.length ? "Remainders: " + celdas.map(function (c) { return c.r; }).join(", ") : "No remainders yet");
+  }
+
+  function celdaTira(tira, i) { return tira.querySelectorAll(".tira__celda")[i]; }
+
+  /* ---------- The reading: the digits, with what each place is worth ---------- */
+  function lugaresLectura(lectura, cifras, b) {
+    var fila = lectura.querySelector(".lectura__fila");
+    fila.textContent = "";
+    var lugares = [];
+    for (var i = 0; i < cifras.length; i++) {
+      var lugar = crear("div", "lectura__lugar");
+      var d = crear("span", "lectura__digito", cifras[i]);
+      lugar.appendChild(d);
+      lugar.appendChild(crear("span", "lectura__valor", "worth " + Math.pow(b, cifras.length - 1 - i)));
+      fila.appendChild(lugar);
+      lugares.push(d);
+    }
+    return lugares;
+  }
+
+  function sumaLectura(cifras, b) {
+    var partes = [];
+    var total = 0;
+    for (var i = 0; i < cifras.length; i++) {
+      var v = Math.pow(b, cifras.length - 1 - i);
+      partes.push(cifras[i] + "×" + v);
+      total += Number(cifras[i]) * v;
+    }
+    return partes.join(" + ") + " = " + total;
+  }
+
+  /* ---------- 1. Cutting off the last digit ---------- */
+  var corte = {};
+  var timer1 = null;
+
+  function marcarReceta(cual) {
+    $("p1-receta").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("receta__paso--activo", li.getAttribute("data-r") === cual);
+    });
+  }
+
+  function pintarCifras() {
+    var cont = $("p1-cifras");
+    cont.textContent = "";
+    var texto = String(corte.n);
+    for (var i = 0; i < texto.length; i++) {
+      var clase = "cifra";
+      if (texto.length === 1) clase += " cifra--sola";
+      else if (i === texto.length - 1) clase += " cifra--ultima";
+      cont.appendChild(crear("span", clase, texto[i]));
+    }
+  }
+
+  // “1 + 1 + the digits of 40” while cutting; “1 + 1 + 1 + 1 = 4 digits” at the end
+  function pintarUnos() {
+    var el = $("p1-cuenta");
+    el.textContent = "";
+    for (var i = 0; i < corte.cortes; i++) {
+      el.appendChild(crear("span", "cuenta-unos__uno", "1"));
+      el.appendChild(document.createTextNode(" + "));
+    }
+    if (corte.n < 10) {
+      el.appendChild(crear("span", "cuenta-unos__uno", "1"));
+      el.appendChild(crear("span", "cuenta-unos__total", " = " + (corte.cortes + 1) + " digits"));
+    } else {
+      el.appendChild(crear("span", "cuenta-unos__resto", "the digits of " + corte.n));
+    }
+  }
+
+  function empezarCorte(n) {
+    if (timer1) clearTimeout(timer1);
+    timer1 = null;
+    corte = { n0: n, n: n, cortes: 0 };
+    $("p1-caidos").textContent = "";
+    pintarCifras();
+    pintarUnos();
+    marcarReceta("corta");
+    $("p1-expr").textContent = "";
+    $("p1-explicacion").innerHTML = "<strong>" + n + "</strong> has more than one digit. Follow the recipe: tap <strong>Remove the last</strong>.";
+    $("p1-cortar").hidden = false;
+    $("p1-cortar").disabled = false;
+    $("p1-otra").hidden = true;
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  function cortar() {
+    if (corte.n < 10) return;
+    var n = corte.n;
+    var q = div(n, 10);
+    var r = n % 10;
+    var tiles = $("p1-cifras").querySelectorAll(".cifra");
+    var ultima = tiles[tiles.length - 1];
+    var desde = ultima.getBoundingClientRect();
+    var caido = crear("span", "caido", String(r));
+    $("p1-caidos").appendChild(caido);
+    Codigo.volar(desde, caido, String(r), "vuelo--salida");
+    corte.n = q;
+    corte.cortes++;
+    pintarCifras();
+    pintarUnos();
+    $("p1-expr").innerHTML = n + " // 10 <span class=\"expr-corte__flecha\">→</span> " + q + "&nbsp;&nbsp; <span class=\"expr-corte__flecha\">(dropped:</span> " + n + " % 10 = " + r + "<span class=\"expr-corte__flecha\">)</span>";
+    if (q >= 10) {
+      $("p1-explicacion").innerHTML = "The last digit dropped off and <strong>counts 1</strong>. <strong>" + q + "</strong> is left: the same question with a shorter number.";
+      return;
+    }
+    marcarReceta("base");
+    $("p1-cortar").hidden = true;
+    $("p1-otra").hidden = false;
+    $("p1-otra").focus();
+    $("p1-explicacion").innerHTML = "<strong>" + q + "</strong> is left: a single digit (<code>" + q + " &lt; 10</code>). That one counts 1 and there's nothing more to cut: it's the <strong>base case</strong>.";
+    Pasos.feedback($("p1-fb"), "ok", corte.n0 + " has " + (corte.cortes + 1) + " digits: each cut counted 1, and the one left, another 1. " +
+      "It's the same question with a shorter and shorter number: a recursive recipe.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- Traces of the functions that return a value ----------
+     count_digits and binary (text) have the same shape:
+       line 1  if <base case>:
+       line 2      return <value>
+       line 3  return <envolver(n, f(smaller))>
+       line 5  print(f(n))
+     f brings: nombre, n, esBase(k), siguiente(k), base(k), junta(k, v), mostrar(v),
+     imprime(v), falta(k) (with ▢), envolver(k, x) (for the calculation), condicion(k),
+     textoBase(k, v), textoLlamada(k, sig) and textoJunta(k, v, total). */
+  function programaPrint(recibe) {
+    var p = Pila.programa();
+    p.linea = 5;
+    p.ficha = "program";
+    p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+    if (recibe !== undefined) {
+      p.sigue = true;
+      p.recibe = recibe;
+    }
+    return p;
+  }
+
+  function trazaDevuelve(f) {
+    var cadena = [];
+    for (var k = f.n; ; k = f.siguiente(k)) {
+      cadena.push(k);
+      if (f.esBase(k)) break;
+    }
+    var valores = [];
+    for (var i = cadena.length - 1; i >= 0; i--) {
+      valores[i] = f.esBase(cadena[i]) ? f.base(cadena[i]) : f.junta(cadena[i], valores[i + 1]);
+    }
+
+    function titulo(k) { return f.nombre + "(" + k + ")"; }
+    // The whole calculation: cards 0 … hasta - 1 wait and the top one goes inside (highlighted)
+    function cuenta(hasta, adentro, suelto) {
+      var html = '<span class="cuenta__nueva">' + adentro + "</span>";
+      for (var j = hasta - 1; j >= 0; j--) {
+        html = f.envolver(cadena[j], suelto ? html : "(" + html + ")");
+        suelto = false;
+      }
+      return html;
+    }
+    function tarjeta(i, extra) {
+      var t = Pila.llamada(titulo(cadena[i]), [["n", cadena[i]]]);
+      for (var c in extra) t[c] = extra[c];
+      return t;
+    }
+    function espera(i) { return tarjeta(i, { linea: 3, falta: "return " + f.falta(cadena[i]) }); }
+    function debajo(i) {
+      var lista = [programaPrint()];
+      for (var j = 0; j < i; j++) lista.push(espera(j));
+      return lista;
+    }
+
+    var pasos = [
+      { linea: 0, texto: "Python remembers the recipe <strong>" + f.nombre + "</strong>. It doesn't run it yet.", estado: { pila: [Pila.programa()], cuenta: "" } },
+      { linea: 5, texto: "The <code>print</code> needs <strong>" + titulo(f.n) + "</strong>: Python calls it and the program waits for its result.",
+        estado: { pila: [programaPrint(), Pila.llamada(titulo(f.n), [])], cuenta: cuenta(0, titulo(f.n), true), fase: "ida" } }
+    ];
+    cadena.forEach(function (k, i) {
+      var abajo = debajo(i);
+      var base = f.esBase(k);
+      pasos.push({ linea: 1, fase: "ida",
+        texto: (i === 0 ? "<strong>n = " + k + "</strong> is born. " : "Another card, with <strong>its own n = " + k + "</strong>. ") +
+          f.condicion(k) + " is " + chip(base) + (base ? ": it reached the <strong>base case</strong>!" : ": not yet."),
+        estado: { pila: abajo.concat([tarjeta(i)]), leer: [abajo.length, "n"], cuenta: cuenta(i, titulo(k), true), fase: "ida" } });
+      if (base) {
+        pasos.push({ linea: 2, texto: f.textoBase(k, valores[i]),
+          estado: { pila: abajo.concat([tarjeta(i, { devuelve: f.mostrar(valores[i]) })]), cuenta: cuenta(i, f.mostrar(valores[i]), true), fase: "base" } });
+      } else {
+        pasos.push({ linea: 3, texto: f.textoLlamada(k, cadena[i + 1]),
+          estado: { pila: abajo.concat([espera(i), Pila.llamada(titulo(cadena[i + 1]), [])]), leer: [abajo.length, "n"],
+            cuenta: cuenta(i, f.envolver(k, titulo(cadena[i + 1]))), fase: "ida" } });
+      }
+    });
+    // The way back: each value goes down to the card below, which completes its calculation and returns its own
+    for (i = cadena.length - 2; i >= 0; i--) {
+      var v = f.mostrar(valores[i + 1]);
+      var c = f.envolver(cadena[i], v);
+      pasos.push({ linea: 3, flecha: true, fase: "vuelta",
+        texto: titulo(cadena[i + 1]) + " returned <strong>" + v + "</strong> and its card left. The value goes down to <strong>" + titulo(cadena[i]) +
+          "</strong>, which continues where it stopped.",
+        estado: { pila: debajo(i).concat([tarjeta(i, { linea: 3, sigue: true, falta: "return " + f.falta(cadena[i]), recibe: v })]), cuenta: cuenta(i, c), fase: "vuelta" } });
+      pasos.push({ linea: 3, texto: f.textoJunta(cadena[i], v, valores[i]),
+        estado: { pila: debajo(i).concat([tarjeta(i, { devuelve: f.mostrar(valores[i]) })]), cuenta: cuenta(i, f.mostrar(valores[i]), true), fase: "vuelta" } });
+    }
+    var total = f.mostrar(valores[0]);
+    pasos.push({ linea: 5, flecha: true, fase: "vuelta", salida: f.imprime(valores[0]),
+      texto: titulo(f.n) + " returned <strong>" + total + "</strong> to the program: <code>print(" + total + ")</code> shows <strong>" + f.imprime(valores[0]) + "</strong>.",
+      estado: { pila: [programaPrint(total)], cuenta: cuenta(0, total, true), fase: "vuelta" } });
+    return { pasos: pasos, cadena: cadena, valores: valores };
+  }
+
+  /* ---------- The calculation ---------- */
+  var FASES = { ida: "on the way in: it grows", base: "base case", vuelta: "on the way back: it shrinks" };
+
+  function llenarCuenta(caja, e) {
+    caja.className = "cuenta" + (e.fase ? " cuenta--" + e.fase : "");
+    caja.querySelector(".cuenta__fase").textContent = e.fase ? FASES[e.fase] : "";
+    caja.querySelector(".cuenta__expr").innerHTML = e.cuenta || "";
+  }
+
+  function pintarCuenta(caja, e) {
+    var expr = caja.querySelector(".cuenta__expr");
+    var cambia = expr.innerHTML !== (e.cuenta || "");
+    llenarCuenta(caja, e);
+    var nueva = expr.querySelector(".cuenta__nueva");
+    if (cambia && nueva) nueva.classList.add("cuenta__nueva--cambio");
+  }
+
+  function reservarCuenta(pasos, caja) {
+    Codigo.reservarAlto(caja, pasos.map(function (p) { return p.estado; }), llenarCuenta);
+  }
+
+  /* ---------- 2. count_digits ---------- */
+  var pila2 = Pila.crear($("p2-pila"), { codigo: $("p2-codigo"), rotulo: true });
+  var nContar = 4071;
+
+  var CONTAR = {
+    nombre: "count_digits",
+    esBase: function (k) { return k < 10; },
+    siguiente: function (k) { return div(k, 10); },
+    base: function () { return 1; },
+    junta: function (k, v) { return 1 + v; },
+    mostrar: function (v) { return String(v); },
+    imprime: function (v) { return String(v); },
+    falta: function () { return "1 + ▢"; },
+    envolver: function (k, x) { return "1 + " + x; },
+    condicion: function (k) { return "n &lt; 10? " + k + " &lt; 10"; },
+    textoBase: function (k) { return "<strong>" + k + "</strong> has a single digit: <strong>return 1</strong>, without calling anyone."; },
+    textoLlamada: function (k, sig) {
+      return "<code>" + k + " // 10</code> is <strong>" + sig + "</strong>: the number without its last digit. To calculate <code>1 + count_digits(" + sig + ")</code> " +
+        "it first needs that call. This card waits with <code>1 + ▢</code>.";
+    },
+    textoJunta: function (k, v, total) {
+      return "<code>1 + " + v + "</code> is <strong>" + total + "</strong>: count_digits(" + k + ") returns " + total + ".";
+    }
+  };
+
+  function terminarContar() {
+    var t = trazaDevuelve(Object.assign({}, CONTAR, { n: nContar }));
+    var d = t.cadena.length;
+    var texto = d === 1
+      ? "7 has a single digit: it's the base case and returns 1 without calling itself. Choose a longer number and watch the cards pile up."
+      : "count_digits(" + nContar + ") returned " + d + ": " + Array(d).fill("1").join(" + ") + ". Each call removed a digit with // 10 " +
+        "and added 1 to what the card above returned. Choose another number and try it.";
+    Pasos.feedback($("p2-fb"), "ok", texto);
+    leccion.desbloquear();
+  }
+
+  /* ---------- 3. The lights ---------- */
+  var METAS_FOCOS = [13, 6];
+  var metaFocos = 0;
+
+  function valorFocos() {
+    var total = 0;
+    $("p3-focos").querySelectorAll(".foco").forEach(function (f) {
+      if (f.getAttribute("aria-pressed") === "true") total += Number(f.getAttribute("data-valor"));
+    });
+    return total;
+  }
+
+  function pintarFocos() {
+    var bits = "";
+    var partes = [];
+    $("p3-focos").querySelectorAll(".foco").forEach(function (f) {
+      var on = f.getAttribute("aria-pressed") === "true";
+      var v = f.getAttribute("data-valor");
+      f.querySelector(".foco__digito").textContent = on ? "1" : "0";
+      f.setAttribute("aria-label", "Light worth " + v + ": " + (on ? "on, 1" : "off, 0"));
+      bits += on ? "1" : "0";
+      if (on) partes.push(v);
+    });
+    var total = valorFocos();
+    $("p3-suma").innerHTML = '<span class="focos-suma__binario">' + bits + '</span> <span class="focos-suma__flecha">→</span> ' +
+      (partes.length ? partes.join(" + ") + " = " + total : "0");
+    if (metaFocos < METAS_FOCOS.length) {
+      $("p3-meta").innerHTML = (metaFocos === 0 ? "Tap the lights to make " : "Nice! Now make ") + '<span class="meta__num">' + METAS_FOCOS[metaFocos] + "</span>";
+    }
+  }
+
+  function tocarFoco(f) {
+    if (metaFocos >= METAS_FOCOS.length) return;
+    f.setAttribute("aria-pressed", String(f.getAttribute("aria-pressed") !== "true"));
+    pintarFocos();
+    if (valorFocos() !== METAS_FOCOS[metaFocos]) return;
+    metaFocos++;
+    if (metaFocos < METAS_FOCOS.length) {
+      Pasos.feedback($("p3-fb"), "ok", "13 in binary is 1101: 8 + 4 + 1. The light worth 2 stays off, with a 0.");
+      pintarFocos();
+      return;
+    }
+    $("p3-meta").innerHTML = "Done! " + '<span class="meta__num">6</span> in binary is <span class="meta__num">0110</span>, that is, <strong>110</strong>.';
+    Pasos.feedback($("p3-fb"), "ok", "6 is 4 + 2: in binary, 110 (the 0 in front isn't needed). Each light is a digit: 1 if it's on, 0 if it's off.");
+    $("p3-focos").querySelectorAll(".foco").forEach(function (b) { b.disabled = true; });
+    leccion.desbloquear();
+  }
+
+  function empezarFocos() {
+    metaFocos = 0;
+    $("p3-focos").querySelectorAll(".foco").forEach(function (b) {
+      b.setAttribute("aria-pressed", "false");
+      b.disabled = false;
+    });
+    Pasos.limpiarFeedback($("p3-fb"));
+    pintarFocos();
+  }
+
+  /* ---------- 4. Dividing by 2 by hand ---------- */
+  var mano = {};
+  var timers4 = [];
+
+  function pararMano() {
+    timers4.forEach(clearTimeout);
+    timers4 = [];
+  }
+
+  function pintarNumeroMano() {
+    var cont = $("p4-n");
+    cont.textContent = "";
+    String(mano.n).split("").forEach(function (d) { cont.appendChild(crear("span", "cifra" + (mano.n < 1 ? " cifra--sola" : ""), d)); });
+  }
+
+  function empezarMano(n) {
+    pararMano();
+    mano = { n0: n, n: n, celdas: [] };
+    pintarNumeroMano();
+    pintarTira($("p4-tira"), []);
+    $("p4-lectura").hidden = true;
+    $("p4-expr").textContent = "";
+    $("p4-explicacion").innerHTML = "Tap <strong>Divide by 2</strong>: each division leaves a remainder, 0 or 1.";
+    $("p4-dividir").hidden = false;
+    $("p4-otra").hidden = true;
+    Pasos.limpiarFeedback($("p4-fb"));
+  }
+
+  function dividirMano() {
+    if (mano.n === 0) return;
+    var n = mano.n;
+    var q = div(n, 2);
+    var r = n % 2;
+    mano.celdas.push({ n: n, r: r, est: "hecho" });
+    mano.n = q;
+    pintarNumeroMano();
+    pintarTira($("p4-tira"), mano.celdas);
+    $("p4-expr").innerHTML = n + " // 2 = " + q + '&nbsp;&nbsp; <span class="expr-corte__flecha">leaves</span> ' + n + " % 2 = " + r;
+    if (q > 0) {
+      $("p4-explicacion").innerHTML = "The remainder, <strong>" + r + "</strong>, goes on the strip. Keep going with <strong>" + q + "</strong>.";
+      return;
+    }
+    $("p4-dividir").hidden = true;
+    var restos = mano.celdas.map(function (c) { return c.r; }).join(" ");
+    var bin = enBase(mano.n0, 2);
+    $("p4-explicacion").innerHTML = "You reached 0! The remainders came out like this: <strong>" + restos + "</strong>. But " + mano.n0 + " in binary is <strong>" + bin + "</strong>…";
+    leerAlReves();
+  }
+
+  var NOTA_LEER = { texto: "← read them from right to left", fase: "vuelta" };
+
+  // The remainders, from the last cell to the first, fly to their place in the binary number
+  function leerAlReves() {
+    var celdas = mano.celdas;
+    var cifras = enBase(mano.n0, 2).split("");
+    var lectura = $("p4-lectura");
+    lectura.hidden = false;
+    var lugares = lugaresLectura(lectura, cifras, 2);
+    lugares.forEach(function (d) { d.style.visibility = "hidden"; });
+    lectura.querySelector(".lectura__suma").textContent = "";
+    var paso = lento(450);
+    lugares.forEach(function (d, j) {
+      var i = celdas.length - 1 - j;   // digit j comes from cell i (backward)
+      timers4.push(setTimeout(function () {
+        celdas[i].est = "leida";
+        celdas[i].orden = j + 1;
+        pintarTira($("p4-tira"), celdas, NOTA_LEER);
+        d.style.visibility = "";
+        Codigo.volar(celdaTira($("p4-tira"), i).querySelector(".tira__r"), d, d.textContent, "vuelo--salida");
+      }, paso * (j + 1)));
+    });
+    timers4.push(setTimeout(function () {
+      lectura.querySelector(".lectura__suma").textContent = sumaLectura(cifras, 2);
+      $("p4-otra").hidden = false;
+      $("p4-otra").focus();
+      Pasos.feedback($("p4-fb"), "ok", "They come out backward! The first remainder is the last digit of the binary number, and the last remainder is the first. " +
+        "To write " + mano.n0 + " in binary, you read the remainders from back to front: " + enBase(mano.n0, 2) + ".");
+      leccion.desbloquear();
+    }, paso * (cifras.length + 1) + lento(300)));
+  }
+
+  /* ---------- 5 and 6. binary(13) with print: before or after the call ----------
+     before: line 1 print, line 2 if, line 3 call
+     after:  line 1 if, line 2 call, line 3 print
+     The state brings the stack, the strip of remainders and the output (digits with their phase). */
+  var N_BIN = 13;
+
+  function trazaImprime(antes) {
+    var L = antes ? { print: 1, si: 2, llama: 3 } : { si: 1, llama: 2, print: 3 };
+    var cadena = cadenaBase(N_BIN, 2);
+    var tira = [];
+    var salida = [];
+    function titulo(k) { return "binary(" + k + ")"; }
+    function faltaPrint(k) { return antes ? "" : "print(" + k + ' % 2, end="")'; }
+    function tarjeta(i, extra) {
+      var t = Pila.llamada(titulo(cadena[i]), [["n", cadena[i]]]);
+      for (var c in extra) t[c] = extra[c];
+      return t;
+    }
+    function espera(i) { return tarjeta(i, { linea: L.llama, falta: faltaPrint(cadena[i]) }); }
+    function programa() {
+      var p = Pila.programa();
+      p.linea = 5;
+      p.ficha = "program";
+      p.falta = "";
+      return p;
+    }
+    function debajo(i) {
+      var lista = [programa()];
+      for (var j = 0; j < i; j++) lista.push(espera(j));
+      return lista;
+    }
+    function imprimir(i, fase) {
+      salida.push({ d: String(tira[i].r), fase: fase });
+      tira[i].est = fase;
+      tira[i].orden = salida.length;
+    }
+    function E(pila, leer, nota) {
+      return { pila: pila, leer: leer, tira: JSON.parse(JSON.stringify(tira)), salida: salida.slice(), nota: nota };
+    }
+    var IDA = { texto: "on the way in: each remainder is calculated", fase: "ida" };
+    var VUELTA = { texto: "on the way back: ← printed from right to left", fase: "vuelta" };
+
+    var pasos = [
+      { linea: 0, texto: "Python remembers the recipe <strong>binary</strong>. It doesn't run it yet.", estado: E([Pila.programa()]) },
+      { linea: 5, texto: "It calls <strong>binary(" + N_BIN + ")</strong>: its card goes on the stack.", estado: E([programa(), Pila.llamada(titulo(N_BIN), [])]) }
+    ];
+    cadena.forEach(function (k, i) {
+      var abajo = debajo(i);
+      var r = k % 2;
+      var llama = k >= 2;
+      var sig = div(k, 2);
+      var nace = i === 0 ? "<strong>n = " + k + "</strong> is born. " : "Another card, with <strong>its own n = " + k + "</strong>. ";
+      var si = "n &gt;= 2? " + k + " &gt;= 2 is " + chip(llama);
+      tira.push({ n: k, r: r, est: "espera" });
+      if (antes) {
+        imprimir(i, "ida");
+        pasos.push({ linea: L.print, fase: "ida",
+          texto: nace + "First comes the <code>print</code>: <code>" + k + " % 2</code> is <strong>" + r + "</strong>. It prints it <strong>on the way in</strong>.",
+          estado: E(abajo.concat([tarjeta(i)]), [abajo.length, "n"], IDA) });
+        pasos.push({ linea: L.si, texto: si + (llama ? ": it will call itself." : ": it calls no one, and binary(" + k + ") ends."),
+          estado: E(abajo.concat([tarjeta(i, llama ? {} : { termina: true })]), [abajo.length, "n"], IDA) });
+        if (llama) {
+          pasos.push({ linea: L.llama,
+            texto: "<code>" + k + " // 2</code> is <strong>" + sig + "</strong>: it calls binary(" + sig + "). This card already printed its remainder: nothing is left to do.",
+            estado: E(abajo.concat([espera(i), Pila.llamada(titulo(sig), [])]), [abajo.length, "n"], IDA) });
+        }
+        return;
+      }
+      pasos.push({ linea: L.si, fase: "ida", texto: nace + si + (llama ? ": first, the call." : ": it calls no one."),
+        estado: E(abajo.concat([tarjeta(i)]), [abajo.length, "n"], IDA) });
+      if (llama) {
+        pasos.push({ linea: L.llama,
+          texto: "<code>" + k + " // 2</code> is <strong>" + sig + "</strong>: it calls binary(" + sig + "). Its remainder, <code>" + k + " % 2</code> = " + r +
+            ", is <strong>not</strong> printed yet: the <code>print</code> is still missing.",
+          estado: E(abajo.concat([espera(i), Pila.llamada(titulo(sig), [])]), [abajo.length, "n"], IDA) });
+      } else {
+        imprimir(i, "vuelta");
+        pasos.push({ linea: L.print, fase: "vuelta",
+          texto: "It goes on to the <code>print</code>: <code>" + k + " % 2</code> is <strong>" + r + "</strong>. It's the <strong>first</strong> thing printed: the <strong>last</strong> remainder.",
+          estado: E(abajo.concat([tarjeta(i)]), [abajo.length, "n"], VUELTA) });
+      }
+    });
+    // The way back
+    for (var i = cadena.length - 2; i >= 0; i--) {
+      var k = cadena[i];
+      var hijo = titulo(cadena[i + 1]);
+      if (antes) {
+        pasos.push({ linea: L.llama, flecha: true, fase: "vuelta",
+          texto: hijo + " ended and its card left. <strong>" + titulo(k) + "</strong> continues on line " + (L.llama + 1) + ": nothing is left to do, so it ends.",
+          estado: E(debajo(i).concat([tarjeta(i, { linea: L.llama, sigue: true, falta: "" })]), undefined, { texto: "on the way back: nothing is left to print", fase: "vuelta" }) });
+        continue;
+      }
+      pasos.push({ linea: L.llama, flecha: true, fase: "vuelta",
+        texto: hijo + " ended and its card left. <strong>" + titulo(k) + "</strong> continues where it stopped: the <code>print</code> is still missing.",
+        estado: E(debajo(i).concat([tarjeta(i, { linea: L.llama, sigue: true, falta: faltaPrint(k) })]), undefined, VUELTA) });
+      imprimir(i, "vuelta");
+      pasos.push({ linea: L.print, fase: "vuelta",
+        texto: "<strong>On the way back</strong>: <code>" + k + " % 2</code> is <strong>" + (k % 2) + "</strong> and it prints it next to the others, on the same line.",
+        estado: E(debajo(i).concat([tarjeta(i)]), [debajo(i).length, "n"], VUELTA) });
+    }
+    var todo = salida.map(function (s) { return s.d; }).join("");
+    pasos.push({ linea: 5, flecha: true, fase: "vuelta",
+      texto: "Back in the program. The console shows <strong>" + todo + "</strong>" + (antes ? ": the remainders in the order they were calculated." : ": " + N_BIN + " in binary!"),
+      estado: E([programa()], undefined, antes ? IDA : VUELTA) });
+    return pasos;
+  }
+
+  // The output of print(..., end=""): one digit next to the other, on a single line
+  function pintarSalida(consola, pre, salida) {
+    var linea = consola.querySelector(".consola__linea");
+    var hay = linea ? linea.querySelectorAll(".digito").length : 0;
+    if (!salida.length) return;
+    if (!linea) {
+      Codigo.agregar(consola, "");
+      linea = consola.querySelector(".consola__linea");
+    }
+    if (salida.length < hay) {
+      linea.textContent = "";
+      hay = 0;
+    }
+    for (var i = hay; i < salida.length; i++) {
+      var d = crear("span", "digito digito--" + salida[i].fase, salida[i].d);
+      linea.appendChild(d);
+      if (i === salida.length - 1) Codigo.volarDesdeLinea(pre, d, salida[i].d, "vuelo--salida");
+    }
+  }
+
+  function reservarTira(pasos, tira) {
+    Codigo.reservarAlto(tira, pasos.map(function (p) { return p.estado; }), function (copia, e) {
+      pintarTira(copia, e.tira, e.nota);
+    });
+  }
+
+  function crearTrazaBinario(antes, id, alTerminar, alReiniciar) {
+    var pila = Pila.crear($(id + "-pila"), { codigo: $(id + "-codigo"), rotulo: true });
+    var traza = Traza.crear({
+      codigo: $(id + "-codigo"),
+      explicacion: $(id + "-explicacion"),
+      consola: $(id + "-consola"),
+      ejecutar: $(id + "-ejecutar"),
+      reproducir: $(id + "-reproducir"),
+      reiniciar: $(id + "-reiniciar"),
+      generar: function () {
+        var pasos = trazaImprime(antes);
+        reservarTira(pasos, $(id + "-tira"));
+        return pasos;
+      },
+      pila: pila,
+      intervalo: 1000,
+      alReiniciar: function () {
+        pila.vaciar();
+        pintarTira($(id + "-tira"), []);
+        if (alReiniciar) alReiniciar();
+      },
+      alPaso: function (paso) {
+        pila.pintar(paso.estado);
+        pintarTira($(id + "-tira"), paso.estado.tira, paso.estado.nota);
+        pintarSalida($(id + "-consola"), $(id + "-codigo"), paso.estado.salida);
+      },
+      alTerminar: alTerminar
+    });
+    return traza;
+  }
+
+  /* ---------- 5. print before the call ---------- */
+  var prediccion5 = null;
+
+  function habilitarTraza5() {
+    var listo = prediccion5 !== null;
+    $("p5-ejecutar").disabled = !listo;
+    $("p5-reproducir").disabled = !listo;
+    if (!listo) $("p5-explicacion").textContent = "Choose your prediction so you can run it.";
+  }
+
+  function limpiarArreglo() {
+    $("p5-arreglo").hidden = true;
+    $("p5-arreglo-opciones").querySelectorAll("button").forEach(function (b) {
+      b.disabled = false;
+      b.classList.remove("btn--mal", "btn--bien");
+    });
+    Pasos.limpiarFeedback($("p5-arreglo-fb"));
+  }
+
+  function terminarAntes() {
+    var explica = "Each card prints its remainder as soon as it's born, on the way in: 13 % 2, then 6 % 2, 3 % 2 and 1 % 2. They come out in the order they're calculated: 1011, the reverse of 1101.";
+    Pasos.feedback($("p5-fb"), prediccion5 === "1011" ? "ok" : "pista", (prediccion5 === "1011" ? "Good prediction! " : "It prints 1011, not " + prediccion5 + ". ") + explica);
+    if (!$("p5-arreglo").hidden) return;
+    limpiarArreglo();
+    $("p5-arreglo").hidden = false;
+  }
+
+  var PISTAS_ARREGLO = {
+    diez: "With // 10 and % 10 you'd get the usual digits, not binary. The remainders are right; what's wrong is the order they're printed in.",
+    cociente: "n // 2 is the next number (6, 3, 1), not the remainder. The remainders are right; what's wrong is when they're printed."
+  };
+
+  function elegirArreglo(boton) {
+    var valor = boton.getAttribute("data-valor");
+    if (valor !== "bien") {
+      boton.classList.add("btn--mal");
+      Pasos.feedback($("p5-arreglo-fb"), "pista", PISTAS_ARREGLO[valor]);
+      return;
+    }
+    $("p5-arreglo-opciones").querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    boton.classList.add("btn--bien");
+    Pasos.feedback($("p5-arreglo-fb"), "ok", "That's it! If the print goes after the call, each card prints on the way back. The last one to be called returns first, " +
+      "so its remainder comes out first. See it in the next step.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 7. binary that returns a text ---------- */
+  var pila7 = Pila.crear($("p7-pila"), { codigo: $("p7-codigo"), rotulo: true });
+
+  function comillas(v) { return '"' + v + '"'; }
+
+  var TEXTO = {
+    nombre: "binary",
+    n: N_BIN,
+    esBase: function (k) { return k < 2; },
+    siguiente: function (k) { return div(k, 2); },
+    base: function (k) { return String(k); },
+    junta: function (k, v) { return v + String(k % 2); },
+    mostrar: comillas,
+    imprime: function (v) { return v; },
+    falta: function (k) { return "▢ + str(" + k + " % 2)"; },
+    envolver: function (k, x) { return x + " + " + comillas(k % 2); },
+    condicion: function (k) { return "n &lt; 2? " + k + " &lt; 2"; },
+    textoBase: function (k) { return "<strong>return str(" + k + ")</strong>: it returns the text <strong>\"" + k + "\"</strong>, without calling anyone."; },
+    textoLlamada: function (k, sig) {
+      return "<code>" + k + " // 2</code> is <strong>" + sig + "</strong>. Before joining anything, it needs what <strong>binary(" + sig + ")</strong> returns. " +
+        "Its remainder will go <strong>on the right</strong>.";
+    },
+    textoJunta: function (k, v, total) {
+      return "<code>str(" + k + " % 2)</code> is <code>\"" + (k % 2) + "\"</code>, and <code>" + v + " + \"" + (k % 2) + "\"</code> is <strong>\"" + total + "\"</strong>: " +
+        "it joins the texts, with the remainder on the right.";
+    }
+  };
+
+  function terminarTexto() {
+    Pasos.feedback($("p7-fb"), "ok", "binary(13) returned the text \"1101\" and the print showed it. On the way in, nothing was joined; on the way back, each card " +
+      "put its remainder on the right: \"1\", \"11\", \"110\", \"1101\". Like the print in the previous step, but now you can store the result in a variable.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 8. Any base ---------- */
+  var MISIONES = [{ n: 13, texto: "111", base: 3 }, { n: 13, texto: "15", base: 8 }];
+  var misionesHechas = {};
+
+  function pintarBase(animar) {
+    var n = Number($("p8-n").value);
+    var b = Number($("p8-b").value);
+    $("p8-n-valor").textContent = String(n);
+    $("p8-b-valor").textContent = String(b);
+    $("p8-codigo-n").textContent = String(n);
+    $("p8-codigo-b").textContent = String(b);
+    var texto = enBase(n, b);
+    var valor = $("p8-valor");
+    $("p8-llamada").textContent = "to_base(" + n + ", " + b + ") returns";
+    if (valor.textContent !== comillas(texto)) {
+      valor.textContent = comillas(texto);
+      if (animar) {
+        valor.classList.remove("resultado-base__valor--pulso");
+        void valor.offsetWidth;
+        valor.classList.add("resultado-base__valor--pulso");
+      }
+    }
+    var cadena = cadenaBase(n, b);
+    $("p8-tira-titulo").innerHTML = "Remainders (<code>n % " + b + "</code>) of each call";
+    pintarTira($("p8-tira"), cadena.map(function (k) { return { n: k, r: k % b, est: "hecho" }; }));
+    var cifras = texto.split("");
+    lugaresLectura($("p8-lectura"), cifras, b);
+    $("p8-lectura").querySelector(".lectura__suma").textContent = sumaLectura(cifras, b);
+    revisarMisiones(n, texto, b);
+  }
+
+  function revisarMisiones(n, texto, b) {
+    var nueva = null;
+    MISIONES.forEach(function (m, i) {
+      if (!misionesHechas[i] && n === m.n && texto === m.texto) {
+        misionesHechas[i] = true;
+        nueva = m;
+      }
+    });
+    $("p8-misiones").querySelectorAll("li").forEach(function (li) {
+      li.classList.toggle("mision--hecha", !!misionesHechas[li.getAttribute("data-mision")]);
+    });
+    if (!nueva) return;
+    var todas = MISIONES.every(function (m, i) { return misionesHechas[i]; });
+    var porque = nueva.base === 3 ? "In base 3: 1×9 + 1×3 + 1×1 = 13." : "In base 8: 1×8 + 5×1 = 13.";
+    if (!todas) {
+      Pasos.feedback($("p8-fb"), "ok", "Base " + b + "! " + porque + " One more to go.");
+      return;
+    }
+    Pasos.feedback($("p8-fb"), "ok", "Both of them! " + porque + " With b = 10, to_base returns the usual number: dividing by 10 gives the digits you already know.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 9. Challenge ---------- */
+  // What to_base gives with the chosen blanks (throws Python's errors)
+  function aBaseCon(lim, rec, n, b, prof) {
+    if (prof > 60) throw new Error("RecursionError");
+    var tope = lim === "b" ? b : Number(lim);
+    if (n < tope) return String(n);
+    if (rec === "bien") return aBaseCon(lim, rec, div(n, b), b, prof + 1) + String(n % b);
+    if (rec === "reves") return String(n % b) + aBaseCon(lim, rec, div(n, b), b, prof + 1);
+    if (rec === "cambiado") return aBaseCon(lim, rec, n % b, b, prof + 1) + String(div(n, b));
+    aBaseCon(lim, rec, div(n, b), b, prof + 1);
+    throw new Error("TypeError");   // sinstr: a text + a number
+  }
+
+  function salidaReto(lim, rec, n, b) {
+    try { return aBaseCon(lim, rec, n, b, 0); } catch (err) { return err.message; }
+  }
+
+  var PRUEBAS_RETO = [[13, 2], [20, 3], [100, 8], [5, 7]];
+
+  function pintarPruebas(lista, filas) {
+    lista.textContent = "";
+    filas.forEach(function (f) {
+      var li = crear("li", f.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", f.llamada));
+      li.appendChild(crear("span", "prueba__salida", f.sale));
+      li.appendChild(crear("span", "prueba__marca", f.ok ? "✓" : "✗"));
+      li.setAttribute("aria-label", f.llamada + ": " + f.sale + (f.ok ? ", correct" : ", incorrect"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  function elegidosReto() { return { lim: $("reto-base").value, rec: $("reto-rec").value }; }
+
+  function cambioReto() {
+    var e = elegidosReto();
+    $("reto-base").classList.toggle("codigo__elegir--lleno", !!e.lim);
+    $("reto-rec").classList.toggle("codigo__elegir--lleno", !!e.rec);
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(!!(e.lim && e.rec));
+  }
+
+  function comprobarReto() {
+    var e = elegidosReto();
+    if (!e.lim || !e.rec) return false;
+    pintarPruebas($("reto-pruebas"), PRUEBAS_RETO.map(function (p) {
+      var sale = salidaReto(e.lim, e.rec, p[0], p[1]);
+      var bien = enBase(p[0], p[1]);
+      return { llamada: "to_base(" + p[0] + ", " + p[1] + ")", sale: /Error$/.test(sale) ? sale : comillas(sale), ok: sale === bien };
+    }));
+    if (e.lim === "b" && e.rec === "bien") {
+      Pasos.feedback($("reto-fb"), "ok", "It works! A single digit when n < b; otherwise, first the digits in front (to_base(n // b, b)) and then the last one, n % b, on the right.");
+      return true;
+    }
+    var pista;
+    if (e.lim === "0") pista = "n < 0 is never True: the base case never comes and the stack grows until RecursionError. A number has a single digit if it's less than the base.";
+    else if (e.rec === "sinstr") pista = "TypeError: Python can't join a text and a number. n % b is a number: it has to go through str().";
+    else if (e.rec === "reves") pista = "They come out backward: str(n % b) is the last digit, and here it goes in front. The call (the digits in front) goes first and the remainder, on the right.";
+    else if (e.rec === "cambiado") pista = "They're swapped: n % b is the last digit and n // b is the number without it. The call gets n // b; str() gets n % b.";
+    else if (e.lim === "2") pista = "With n < 2 it only stops at 0 or 1. In base 3, 2 is already a single digit, but the function keeps going and puts a 0 in front: \"0202\". The base case depends on the base.";
+    else pista = "n < 10 is the base case of the usual system. In base b, a number has a single digit if it's less than b: in base 2, 6 is not a single digit.";
+    Pasos.feedback($("reto-fb"), "pista", pista);
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  // 1
+  $("p1-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      marcarChips($("p1-chips"), b);
+      empezarCorte(Number(b.getAttribute("data-n")));
+    });
+  });
+  $("p1-cortar").addEventListener("click", cortar);
+  $("p1-otra").addEventListener("click", function () {
+    empezarCorte(corte.n0);
+    $("p1-cortar").focus();
+  });
+  empezarCorte(4071);
+
+  // 2
+  var trazaP2 = Traza.crear({
+    codigo: $("p2-codigo"),
+    explicacion: $("p2-explicacion"),
+    consola: $("p2-consola"),
+    ejecutar: $("p2-ejecutar"),
+    reproducir: $("p2-reproducir"),
+    reiniciar: $("p2-reiniciar"),
+    generar: function () {
+      var pasos = trazaDevuelve(Object.assign({}, CONTAR, { n: nContar })).pasos;
+      reservarCuenta(pasos, $("p2-cuenta"));
+      return pasos;
+    },
+    pila: pila2,
+    intervalo: 900,
+    alReiniciar: function () {
+      pila2.vaciar();
+      llenarCuenta($("p2-cuenta"), {});
+      Pasos.limpiarFeedback($("p2-fb"));
+    },
+    alPaso: function (paso) {
+      pila2.pintar(paso.estado);
+      pintarCuenta($("p2-cuenta"), paso.estado);
+    },
+    alTerminar: terminarContar
+  });
+  $("p2-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      marcarChips($("p2-chips"), b);
+      nContar = Number(b.getAttribute("data-n"));
+      $("p2-codigo-n").textContent = String(nContar);
+      trazaP2.reiniciar();
+    });
+  });
+
+  // 3
+  $("p3-focos").querySelectorAll(".foco").forEach(function (f) {
+    f.addEventListener("click", function () { tocarFoco(f); });
+  });
+  empezarFocos();
+
+  // 4
+  $("p4-chips").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      marcarChips($("p4-chips"), b);
+      empezarMano(Number(b.getAttribute("data-n")));
+    });
+  });
+  $("p4-dividir").addEventListener("click", dividirMano);
+  $("p4-otra").addEventListener("click", function () {
+    empezarMano(mano.n0);
+    $("p4-dividir").focus();
+  });
+  empezarMano(13);
+
+  // 5
+  var trazaP5 = crearTrazaBinario(true, "p5", terminarAntes, function () {
+    Pasos.limpiarFeedback($("p5-fb"));
+    habilitarTraza5();
+  });
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion5 === null;
+      prediccion5 = b.getAttribute("data-valor");
+      marcarChips($("p5-prediccion"), b);
+      if (nueva) trazaP5.reiniciar();
+    });
+  });
+  $("p5-arreglo-opciones").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegirArreglo(b); });
+  });
+
+  // 6
+  var trazaP6 = crearTrazaBinario(false, "p6", function () {
+    Pasos.feedback($("p6-fb"), "ok", "1101, in order! On the way in, each card calculated its remainder and waited. On the way back, the last one (binary(1)) printed first " +
+      "and the first one (binary(13)) printed last: the remainders came out from back to front.");
+    leccion.desbloquear();
+  }, function () { Pasos.limpiarFeedback($("p6-fb")); });
+
+  // 7
+  var trazaP7 = Traza.crear({
+    codigo: $("p7-codigo"),
+    explicacion: $("p7-explicacion"),
+    consola: $("p7-consola"),
+    ejecutar: $("p7-ejecutar"),
+    reproducir: $("p7-reproducir"),
+    reiniciar: $("p7-reiniciar"),
+    generar: function () {
+      var pasos = trazaDevuelve(TEXTO).pasos;
+      reservarCuenta(pasos, $("p7-cuenta"));
+      return pasos;
+    },
+    pila: pila7,
+    intervalo: 1000,
+    alReiniciar: function () {
+      pila7.vaciar();
+      llenarCuenta($("p7-cuenta"), {});
+      Pasos.limpiarFeedback($("p7-fb"));
+    },
+    alPaso: function (paso) {
+      pila7.pintar(paso.estado);
+      pintarCuenta($("p7-cuenta"), paso.estado);
+    },
+    alTerminar: terminarTexto
+  });
+
+  // 8
+  $("p8-n").addEventListener("input", function () { pintarBase(true); });
+  $("p8-b").addEventListener("input", function () { pintarBase(true); });
+  pintarBase(false);
+
+  // 9
+  $("reto-base").addEventListener("change", cambioReto);
+  $("reto-rec").addEventListener("change", cambioReto);
+
+  // When the step changes, any running execution pauses
+  function pausar() {
+    trazaP2.detener();
+    trazaP5.detener();
+    trazaP6.detener();
+    trazaP7.detener();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cortar": pausar,
+      "paso-contar": pausar,
+      "paso-focos": pausar,
+      "paso-dividir": pausar,
+      "paso-antes": pausar,
+      "paso-despues": pausar,
+      "paso-texto": pausar,
+      "paso-base": function () { pausar(); pintarBase(false); },
+      "paso-reto": function (paso, l, info) {
+        pausar();
+        var e = elegidosReto();
+        if (!info.desbloqueado) l.listoParaComprobar(!!(e.lim && e.rec));
+      },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
