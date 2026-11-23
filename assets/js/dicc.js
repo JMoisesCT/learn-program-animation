@@ -128,7 +128,7 @@
       var peso = pares.reduce(function (t, p) { return t + pesoPar(p[0], p[1]); }, pesoFuera);
       el.style.setProperty("--dicc-n", String(Math.round(Math.max(peso + 1, opciones.capacidad || 4) * 10) / 10));
       var vacia = fila.querySelector(".dicc__vacia");
-      if (!cs.length && !vacia) fila.insertBefore(span("dicc__vacia", "vacío"), fila.lastChild);
+      if (!cs.length && !vacia) fila.insertBefore(span("dicc__vacia", /^en/i.test(document.documentElement.lang || "") ? "empty" : "vacío"), fila.lastChild);
       if (cs.length && vacia) vacia.remove();
     }
 

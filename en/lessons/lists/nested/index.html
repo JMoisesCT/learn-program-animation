@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lists inside lists · Learn to program</title>
+  <meta name="description" content="Interactive lesson: lists of lists in Python. A board as a grid, board[row] and board[row][column], changing a cell and going through it with two for loops.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .lab__visual .expresion { margin-top: var(--esp-3); }
+    .expresion { flex-wrap: wrap; overflow-wrap: anywhere; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); white-space: pre; }
+    .expresion--columna { flex-direction: column; gap: 0; }
+    .consola .consola__linea { white-space: pre-wrap; }
+    .consola__linea--error { color: var(--color-error); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    * + .rotulo-cinta { margin-top: var(--esp-3); }
+
+    /* ---------- 1. Three rows, one list ---------- */
+    .filas-sueltas { display: grid; gap: var(--esp-1); }
+    .filas-sueltas--se-van { opacity: 0.25; transition: opacity 600ms ease 900ms; }
+    /* When they come together, the board appears in view: on desktop the three rows go side by side
+       (otherwise the board ends up below the screen); on smaller screens, the board goes on top */
+    @media (min-width: 1280px) {
+      .filas-sueltas { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--esp-2); }
+    }
+    @media (max-width: 1279.98px) {
+      #paso-juntar .lab__visual { display: flex; flex-direction: column; }
+      #s1-tablero { order: -1; }
+    }
+    .contador-vars { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador-vars strong { color: var(--color-texto); }
+
+    /* ---------- Controls ---------- */
+    .control-slider { margin: var(--esp-4) 0 0; }
+    .control-slider label { display: flex; justify-content: space-between; gap: var(--esp-3); font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+    .control-slider--columna output { color: var(--color-acento); }
+    .control-slider--columna input[type="range"] { accent-color: var(--color-acento); }
+
+    /* board[i]: the whole row, marked (the cell of board[i][j] also goes in strong blue) */
+    .lista__casilla--fila.lista__casilla--marcada > .lista__interna > .lista__casilla:not(.lista__casilla--marcada):not([data-clase]) > .lista__valor { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .lista--cuadricula .lista__nombres { margin-bottom: var(--esp-3); }
+
+    /* A counted row (len of the board) */
+    .lista__casilla--fila.fila--contada { background: var(--color-acento-suave); }
+    .lista__casilla--fila.fila--contada > .lista__indice--fila { background: var(--color-acento); color: #fff; }
+
+    /* ---------- Predict ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); white-space: pre; }
+    /* The predictions and .tarjeta--predecir come from base.css */
+
+    /* ---------- Go through ---------- */
+    .version-elegir { margin: 0 0 var(--esp-4); }
+    .cajas--uno { padding-top: var(--esp-3); }
+    .consola__trozo { display: inline; }
+    /* On desktop, the board on the left and the row with its cell on the right:
+       that way the output (the drawn board) stays in view */
+    @media (min-width: 1024px) {
+      #paso-recorrer .lab__visual {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas: "rotulo fila" "tablero fila" "tablero cajas";
+        grid-template-rows: auto auto 1fr;
+        column-gap: var(--esp-4);
+        align-items: start;
+      }
+      #paso-recorrer .lab__visual > .rotulo-cinta { grid-area: rotulo; }
+      #s6-tablero { grid-area: tablero; }
+      #s6-fila { grid-area: fila; }
+      #s6-cajas { grid-area: cajas; }
+    }
+
+    /* On mobile everything goes above the output: both versions (two for loops, .join())
+       take the same space, the longer one's, and the output doesn't move when you switch */
+    @media (max-width: 1023.98px) {
+      #s6-codigo { min-height: calc(4 * 1.7em + 2 * var(--esp-4)); }
+      #s6-cajas[hidden] { display: flex !important; visibility: hidden; }
+    }
+    @media (max-width: 480px) {
+      #s6-explicacion { min-height: 4.9em !important; }
+    }
+
+    /* ---------- Challenge ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+    }
+    /* RETO-LAB */
+    /* Challenge: the visual panel doesn't stretch down to the end of the code (pasos.js does that so the
+       output lands at the bottom): here what shows up when you answer goes below it and would end up under the
+       footer. On mobile, when right, only the chosen option stays (the others come back with “Try another option”) */
+    @media (min-width: 1024px) { #paso-reto .lab__visual { min-height: 0 !important; } }
+    @media (max-width: 1023px) { #reto-opciones:has(.opcion--correcta) .opcion:not(.opcion--correcta) { display: none; } }
+    /* /RETO-LAB */
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-anidadas">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: three rows in one list -->
+    <section class="paso" id="paso-juntar" data-requiere aria-labelledby="t-juntar">
+      <span class="paso__etiqueta">Lists 7/8 · Lists inside lists</span>
+      <h1 class="paso__titulo" id="t-juntar">A board in three rows</h1>
+      <p>A tic-tac-toe board has 3 rows, and each row is a list of 3 cells. What if we put the three rows together in <strong>one single list</strong>? Tap the button.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-juntar">Put them in one list ▸</button>
+            <button type="button" class="btn btn-secundario" id="s1-separar" hidden>↺ Split them again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="filas-sueltas" id="s1-filas"></div>
+          <div id="s1-tablero" hidden></div>
+          <p class="contador-vars" id="s1-contador" aria-live="polite"><strong>3</strong> separate lists</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. board[i] is a whole row -->
+    <section class="paso" id="paso-fila" data-requiere aria-labelledby="t-fila">
+      <h2 class="paso__titulo" id="t-fila">Each slot is a row</h2>
+      <p><code>board</code> is a list of 3 slots, and each slot holds <strong>another list</strong>. Move the slider and see what <code>board[i]</code> gives for the other two rows.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Code"></pre>
+          <div class="control-slider">
+            <label for="s2-i">Row <output id="s2-i-valor" for="s2-i">1</output></label>
+            <input type="range" id="s2-i" min="0" max="2" step="1" value="1">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-tablero"></div>
+          <div class="expresion expresion--columna" aria-live="polite">
+            <span id="s2-expr">board[1]</span>
+            <span class="expresion__flecha" aria-hidden="true">↓</span>
+            <span class="expresion__final" id="s2-valor"></span>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. board[r][c]: row first, then column -->
+    <section class="paso" id="paso-celda" data-requiere aria-labelledby="t-celda">
+      <h2 class="paso__titulo" id="t-celda">Row first, then column</h2>
+      <p>With two indexes you reach a cell: <code>board[r]</code> gives the row and <code>[c]</code> picks inside it. Move the sliders and find the <strong>three X’s</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <div class="control-slider">
+            <label for="s3-f">Row <output id="s3-f-valor" for="s3-f">0</output></label>
+            <input type="range" id="s3-f" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="control-slider control-slider--columna">
+            <label for="s3-c">Column <output id="s3-c-valor" for="s3-c">1</output></label>
+            <input type="range" id="s3-c" min="0" max="2" step="1" value="1">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-tablero"></div>
+          <div class="expresion expresion--columna" aria-live="polite" id="s3-expresion"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Predict without numbers -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="t-predecir">
+      <h2 class="paso__titulo" id="t-predecir">What does each one give?</h2>
+      <p>Now the numbers are hidden. Count the rows and the columns yourself, from 0.</p>
+
+      <div class="tarjeta tarjeta--predecir">
+        <p class="rotulo-cinta">board</p>
+        <div id="s4-tablero"></div>
+        <ol class="predicciones" id="s4-predicciones">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">len(board)</code>
+              <div class="elegir" role="group" aria-label="Answer for len(board)">
+                <button type="button" class="btn btn-secundario" data-valor="9" aria-pressed="false">9</button>
+                <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+                <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">board[2][0]</code>
+              <div class="elegir" role="group" aria-label="Answer for board[2][0]">
+                <button type="button" class="btn btn-secundario" data-valor="espacio" aria-pressed="false">" "</button>
+                <button type="button" class="btn btn-secundario" data-valor="X" aria-pressed="false">"X"</button>
+                <button type="button" class="btn btn-secundario" data-valor="O" aria-pressed="false">"O"</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <code class="prediccion__expr">board[3][0]</code>
+              <div class="elegir" role="group" aria-label="Answer for board[3][0]">
+                <button type="button" class="btn btn-secundario" data-valor="O" aria-pressed="false">"O"</button>
+                <button type="button" class="btn btn-secundario" data-valor="espacio" aria-pressed="false">" "</button>
+                <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">💥 Error</button>
+              </div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="consola" id="s4-consola" aria-live="polite" hidden><span class="consola__titulo">Output</span></div>
+        <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. Change a cell -->
+    <section class="paso" id="paso-cambiar" data-requiere aria-labelledby="t-cambiar">
+      <h2 class="paso__titulo" id="t-cambiar">Your move</h2>
+      <p>It’s your turn with the <strong>O</strong>. Like any list, a row can be changed: <code>board[r][c] = "O"</code>. Pick an <strong>empty</strong> cell and run.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__visual">
+          <div id="s5-tablero"></div>
+        </div>
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Code"></pre>
+          <div class="control-slider">
+            <label for="s5-f">Row <output id="s5-f-valor" for="s5-f">0</output></label>
+            <input type="range" id="s5-f" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="control-slider control-slider--columna">
+            <label for="s5-c">Column <output id="s5-c-valor" for="s5-c">0</output></label>
+            <input type="range" id="s5-c" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-limpiar">↺ New board</button>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Go through it with two for loops and draw it -->
+    <section class="paso" id="paso-recorrer" data-requiere aria-labelledby="t-recorrer">
+      <h2 class="paso__titulo" id="t-recorrer">Row by row, cell by cell</h2>
+      <p>Like in Nested loops: the outer <code>for</code> takes each <strong>row</strong>, and the inner one takes each <strong>cell</strong> of that row. That’s how the board gets drawn. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir version-elegir" id="s6-elegir" role="group" aria-label="Which version to run?">
+            <button type="button" class="btn btn-secundario" data-valor="dos" aria-pressed="true">Nested for</button>
+            <button type="button" class="btn btn-secundario" data-valor="join" aria-pressed="false">With .join()</button>
+          </div>
+          <pre class="codigo" id="s6-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s6-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">board</p>
+          <div id="s6-tablero"></div>
+          <div id="s6-fila"></div>
+          <div class="cajas cajas--uno" id="s6-cajas">
+            <div class="caja caja--acento" id="s6-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">cell</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Challenge: where are the empty cells? -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Where can I play?</h2>
+      <p>This program goes through the board by <strong>positions</strong> (<code>range(len(…))</code>) and prints the row and the column of each empty cell. What goes in the blank?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Code"></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">What goes in the blank?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="cf"><span>board[c][r]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="fc"><span>board[r][c]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="f"><span>board[r]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="0c"><span>board[0][c]</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">board</p>
+          <div id="reto-tablero"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite" hidden><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A list of lists is a grid: <code>board[r]</code> gives a whole row and <code>board[r][c]</code>, one cell. You go through it with two <code>for</code> loops.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../project/index.html">Next: Project: tic-tac-toe →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* ---------- Colored Python code ---------- */
+  var PALABRAS = /^(for|in|if|else|def|return|True|False|None)$/;
+  var PIEZA = /("[^"\n]*")|(#.*)|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?/g;
+
+  function escapar(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function tk(clase, t) { return '<span class="tk-' + clase + '">' + escapar(t) + "</span>"; }
+
+  function py(linea) {
+    var html = "";
+    var desde = 0;
+    linea.replace(PIEZA, function (todo, texto, comentario, numero, nombre, parentesis, pos) {
+      html += escapar(linea.slice(desde, pos));
+      desde = pos + todo.length;
+      if (texto) html += tk("texto", texto);
+      else if (comentario) html += tk("comentario", comentario);
+      else if (numero) html += tk("numero", numero);
+      else if (PALABRAS.test(nombre)) html += tk("palabra", nombre) + escapar(parentesis || "");
+      else if (parentesis) html += tk("funcion", nombre) + escapar(parentesis);
+      else html += tk("variable", nombre);
+      return todo;
+    });
+    html += escapar(linea.slice(desde));
+    return html.replace("▢", '<span class="hueco" id="reto-hueco">?</span>');
+  }
+
+  function codigo(pre, lineas) {
+    pre.innerHTML = "<code>" + lineas.map(function (l) { return '<span class="linea">' + py(l) + "</span>"; }).join("") + "</code>";
+  }
+
+  /* How a row is written in the code: ["X", "O", " "] */
+  function fila(f) { return Lista.texto(f); }
+
+  /* The board written on three lines, with the first row next to the name */
+  function lineasTablero(t) {
+    return t.map(function (f, k) {
+      return (k === 0 ? "board = [" : "         ") + fila(f) + (k === t.length - 1 ? "]" : ",");
+    });
+  }
+
+  function copia(t) { return t.map(function (f) { return f.slice(); }); }
+
+  /* What print prints: the line flies out from wherever it is told */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      cuantos: function (claves) { return claves.filter(function (k) { return s[k]; }).length; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* A new list in el, even if another one was already drawn there */
+  function nuevaLista(el, valores, opciones) {
+    el.textContent = "";
+    return Lista.crear(el, valores, opciones);
+  }
+
+  // The slots of one row of the grid (to make the whole row fly)
+  function interna(l, f) {
+    var c = l.casilla(f);
+    return c ? c.querySelector(".lista__interna") : null;
+  }
+
+  var TABLERO = [["X", "O", " "], [" ", "X", " "], ["O", " ", "X"]];
+
+  /* ---------- 1. Three rows, one list ---------- */
+  var filas1 = [];
+  var tablero1 = null;
+  var juntando = false;
+
+  function separar() {
+    juntando = false;
+    codigo($("s1-codigo"), TABLERO.map(function (f, k) { return "row" + k + " = " + fila(f); }));
+    var zona = $("s1-filas");
+    zona.textContent = "";
+    zona.hidden = false;
+    zona.classList.remove("filas-sueltas--se-van");
+    filas1 = TABLERO.map(function (f, k) {
+      var el = document.createElement("div");
+      zona.appendChild(el);
+      return Lista.crear(el, f.slice(), { nombres: ["row" + k] });
+    });
+    $("s1-tablero").hidden = true;
+    $("s1-contador").innerHTML = "<strong>3</strong> separate lists";
+    $("s1-juntar").hidden = false;
+    $("s1-separar").hidden = true;
+  }
+
+  function juntar(leccion) {
+    if (juntando) return;
+    juntando = true;
+    $("s1-juntar").hidden = true;
+    codigo($("s1-codigo"), lineasTablero(TABLERO));
+    Codigo.marcar($("s1-codigo"), { activas: [0, 1, 2] });
+    var zona = $("s1-tablero");
+    zona.hidden = false;
+    tablero1 = nuevaLista(zona, copia(TABLERO), { nombres: ["board"] });
+    $("s1-contador").innerHTML = "<strong>1</strong> variable: a list of 3 lists";
+    // The cells stay hidden until their value arrives
+    TABLERO.forEach(function (f, k) {
+      f.forEach(function (v, c) { tablero1.valor([k, c]).classList.add("vuelo-destino"); });
+    });
+    var k = 0;
+    function siguienteFila() {
+      TABLERO[k].forEach(function (v, c) {
+        var origen = filas1[k].valor(c);
+        var destino = tablero1.valor([k, c]);
+        var rect = origen.getBoundingClientRect();
+        origen.style.visibility = "hidden";
+        Codigo.volar(rect, destino, Lista.texto(v), "lista__valor lista__vuelo", function () {
+          destino.classList.add("lista__valor--pulso");
+        });
+      });
+      k++;
+      if (k < TABLERO.length) { setTimeout(siguienteFila, espera(450)); return; }
+      $("s1-filas").classList.add("filas-sueltas--se-van");
+      setTimeout(function () {
+        $("s1-filas").hidden = true;
+        $("s1-separar").hidden = false;
+        juntando = false;
+        Pasos.feedback($("s1-fb"), "ok", "board is a list of 3 slots, and each slot holds a list: a row. On the left, the index of each row; on top, the index of each column.");
+        leccion.desbloquear();
+      }, espera(1500));
+    }
+    siguienteFila();
+  }
+
+  /* ---------- 2. board[i] is a whole row ---------- */
+  var tablero2 = Lista.crear($("s2-tablero"), copia(TABLERO), { nombres: ["board"] });
+  var s2 = vistos();
+  s2.marcar(1);   // the row shown on entering
+
+  function mostrarFila(i, leccion, conVuelo) {
+    codigo($("s2-codigo"), lineasTablero(TABLERO).concat(["print(board[" + i + "])"]));
+    Codigo.marcar($("s2-codigo"), { activas: [3] });
+    $("s2-i-valor").textContent = String(i);
+    $("s2-expr").textContent = "board[" + i + "]";
+    $("s2-valor").textContent = fila(TABLERO[i]);
+    tablero2.marcar(i);
+    Codigo.consola($("s2-consola"), []);
+    imprimir($("s2-consola"), Lista.python(TABLERO[i]), conVuelo ? interna(tablero2, i) : null);
+    if (!leccion) return;
+
+    s2.marcar(i);
+    var fb = $("s2-fb");
+    var faltan = 3 - s2.cuantos([0, 1, 2]);
+    if (!faltan) {
+      Pasos.feedback(fb, "ok", "board[i] is not a letter or a number: it is a whole list, row i. And len(board) is 3, because it has 3 rows.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, "pista", "board[" + i + "] is row " + i + ": a list with its 3 cells. " +
+        (faltan === 1 ? "One more row to see." : faltan + " more rows to see."));
+    }
+  }
+
+  /* ---------- 3. board[r][c] ---------- */
+  var tablero3 = Lista.crear($("s3-tablero"), copia(TABLERO));
+  var s3 = vistos();
+
+  function expresion(el, partes) {
+    el.innerHTML = "";
+    partes.forEach(function (p, k) {
+      if (k > 0) {
+        var flecha = document.createElement("span");
+        flecha.className = "expresion__flecha";
+        flecha.setAttribute("aria-hidden", "true");
+        flecha.textContent = el.classList.contains("expresion--columna") ? "↓" : "→";
+        el.appendChild(flecha);
+      }
+      var s = document.createElement("span");
+      if (k === partes.length - 1) s.className = "expresion__final";
+      s.textContent = p;
+      el.appendChild(s);
+    });
+  }
+
+  function mostrarCelda(leccion) {
+    var f = Number($("s3-f").value);
+    var c = Number($("s3-c").value);
+    var v = TABLERO[f][c];
+    $("s3-f-valor").textContent = String(f);
+    $("s3-c-valor").textContent = String(c);
+    codigo($("s3-codigo"), lineasTablero(TABLERO).concat(["print(board[" + f + "][" + c + "])"]));
+    Codigo.marcar($("s3-codigo"), { activas: [3] });
+    tablero3.marcar([f, c]);
+    expresion($("s3-expresion"), ["board[" + f + "][" + c + "]", fila(TABLERO[f]) + "[" + c + "]", Lista.texto(v)]);
+    if (!leccion) return;
+
+    var fb = $("s3-fb");
+    if (v === "X") s3.marcar(f + "," + c);
+    var claves = ["0,0", "1,1", "2,2"];
+    var halladas = s3.cuantos(claves);
+    if (halladas === 3) {
+      Pasos.feedback(fb, "ok", "All three! board[0][0], board[1][1] and board[2][2]: the diagonal. First the row number, then the column number.");
+      leccion.desbloquear();
+    } else if (v === "X") {
+      Pasos.feedback(fb, "pista", "An X! It’s in row " + f + ", column " + c + ": board[" + f + "][" + c + "]. " +
+        (halladas === 2 ? "One more to go." : (3 - halladas) + " more to go."));
+    } else {
+      Pasos.feedback(fb, "pista", "board[" + f + "] is row " + f + ", and its cell " + c + " holds " +
+        (v === " " ? "a space: it’s empty." : "an " + v + ".") + " Look for the X’s.");
+    }
+  }
+
+  /* ---------- 4. Predict without numbers ---------- */
+  var tablero4 = Lista.crear($("s4-tablero"), copia(TABLERO), { indices: false });
+  var datos4 = [
+    {
+      correcta: "3",
+      ok: "len(board) counts the slots of the outer list: 3 rows.",
+      pistas: {
+        "9": "9 is all the cells. But board has 3 slots: each one is a row.",
+        "2": "2 is the index of the last row. There are 3 rows: from 0 to 2."
+      },
+      marcar: function () {
+        [0, 1, 2].forEach(function (k) { tablero4.casilla(k).classList.add("fila--contada"); });
+      }
+    },
+    {
+      correcta: "O",
+      ok: "board[2] is the last row, [\"O\", \" \", \"X\"], and its cell 0 holds the \"O\".",
+      pistas: {
+        espacio: "That’s board[0][2]: you swapped the order. The row (2) goes first, then the column (0).",
+        X: "The X in row 2 is in column 2. What is in column 0?"
+      },
+      marcar: function () { tablero4.marcar([2, 0]); }
+    },
+    {
+      correcta: "error",
+      ok: "There is no row 3: the rows go from 0 to 2. Python stops with IndexError before it looks at the column.",
+      pistas: {
+        O: "Count the rows from 0: the last one is 2. Is there a row 3?",
+        espacio: "Python doesn’t make up an empty row. The rows go up to 2: what happens with 3?"
+      },
+      marcar: function () {
+        tablero4.marcar(null);
+        var consola = $("s4-consola");
+        consola.hidden = false;
+        Codigo.consola(consola, []);
+        imprimir(consola, "IndexError: list index out of range", null, true);
+      }
+    }
+  ];
+
+  function predicciones(filas, datos, alTerminar) {
+    var aciertos = datos.map(function () { return false; });
+    filas.forEach(function (fila, k) {
+      var botones = fila.querySelectorAll("button[data-valor]");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var p = datos[k];
+          var valor = btn.getAttribute("data-valor");
+          var acierta = valor === p.correcta;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+          if (!acierta) return;
+          p.marcar();
+          fila.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) alTerminar();
+        });
+      });
+    });
+  }
+
+  /* ---------- 5. Change a cell ---------- */
+  var tablero5 = Lista.crear($("s5-tablero"), copia(TABLERO), { nombres: ["board"] });
+  var corriendo5 = [];
+
+  function posicion5() { return [Number($("s5-f").value), Number($("s5-c").value)]; }
+
+  function escribir5() {
+    var p = posicion5();
+    $("s5-f-valor").textContent = String(p[0]);
+    $("s5-c-valor").textContent = String(p[1]);
+    codigo($("s5-codigo"), ["board[" + p[0] + "][" + p[1] + "] = \"O\"", "print(board[" + p[0] + "])"]);
+  }
+
+  function cancelar5() {
+    corriendo5.forEach(clearTimeout);
+    corriendo5 = [];
+    $("s5-ejecutar").disabled = false;
+  }
+
+  function limpiar5() {
+    cancelar5();
+    tablero5.valores(copia(TABLERO));
+    escribir5();
+    Codigo.consola($("s5-consola"), []);
+    Pasos.limpiarFeedback($("s5-fb"));
+  }
+
+  function elegir5() {
+    cancelar5();
+    escribir5();
+    tablero5.clases(null);
+    tablero5.marcar(posicion5());
+  }
+
+  function ejecutar5(leccion) {
+    cancelar5();
+    escribir5();
+    var p = posicion5();
+    var antes = tablero5.lista[p[0]][p[1]];
+    var pre = $("s5-codigo");
+    var lineas = pre.querySelectorAll(".linea");
+    $("s5-ejecutar").disabled = true;
+    Codigo.marcar(pre, { activas: [0] });
+    tablero5.marcar(p);
+    corriendo5.push(setTimeout(function () {
+      tablero5.cambiar(p, "O", Codigo.piezaEnLinea(lineas[0], '"O"'));
+      tablero5.clases(function (fc) {
+        return fc[0] === p[0] && fc[1] === p[1] ? (antes === " " ? "lista__casilla--igual" : "lista__casilla--distinta") : "";
+      });
+    }, espera(350)));
+    corriendo5.push(setTimeout(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      tablero5.marcar(p[0]);
+      imprimir($("s5-consola"), Lista.python(tablero5.lista[p[0]]), interna(tablero5, p[0]));
+      $("s5-ejecutar").disabled = false;
+      var fb = $("s5-fb");
+      if (antes === " ") {
+        Pasos.feedback(fb, "ok", "Only the cell in row " + p[0] + ", column " + p[1] + " changed: board[" + p[0] + "] is a list, and a list can be changed inside.");
+        leccion.desbloquear();
+      } else if (antes === "O") {
+        Pasos.feedback(fb, "pista", "There was already an O there: nothing you can see changed. Look for an empty cell.");
+      } else {
+        Pasos.feedback(fb, "pista", "Python doesn’t complain: it covered the X with an O. In the game that would be cheating; in the project you’ll first check if the cell is \" \". Tap “New board” and pick an empty one.");
+      }
+    }, espera(1200)));
+  }
+
+  /* ---------- 6. Go through it with two for loops ---------- */
+  var VERSIONES6 = {
+    dos: ["for row in board:", "    for cell in row:", "        print(\"[\" + cell + \"]\", end=\"\")", "    print()"],
+    join: ["for row in board:", "    print(\" | \".join(row))"]
+  };
+  var version6 = "dos";
+  var tablero6 = Lista.crear($("s6-tablero"), copia(TABLERO));
+  var fila6 = Lista.crear($("s6-fila"), [], { nombres: ["row"] });
+  var renglon6 = null;   // the console line being written (end="")
+
+  function trazaRecorrer() {
+    var pasos = [];
+    TABLERO.forEach(function (f, k) {
+      pasos.push({
+        linea: 0, f: k,
+        texto: k === 0
+          ? "The outer <code>for</code> takes the first row: <code>row</code> is <code>" + escapar(fila(f)) + "</code>."
+          : "Another round of the outer loop: <code>row</code> is now row " + k + "."
+      });
+      if (version6 === "join") {
+        pasos.push({ linea: 1, f: k, linea6: f.join(" | "), texto: "<code>\" | \".join(row)</code> joins the 3 cells with <code>\" | \"</code> between them, and <code>print</code> prints them on one line." });
+        return;
+      }
+      f.forEach(function (v, c) {
+        pasos.push({
+          linea: 1, f: k, c: c,
+          texto: c === 0
+            ? "The inner <code>for</code> starts at cell 0: <code>cell</code> is <code>\"" + v + "\"</code>."
+            : "Next cell in the same row: <code>cell</code> is <code>\"" + v + "\"</code>."
+        });
+        pasos.push({ linea: 2, f: k, c: c, trozo: "[" + v + "]", texto: "Prints <code>[" + v + "]</code> without moving to a new line (<code>end=\"\"</code>)." });
+      });
+      pasos.push({ linea: 3, f: k, salto: true, texto: "Row " + k + " is done: <code>print()</code> moves to the next line." });
+    });
+    pasos.push({ linea: 0, fin: true, texto: "No rows left: the board is drawn." });
+    return pasos;
+  }
+
+  function escribirTrozo(texto) {
+    var consola = $("s6-consola");
+    if (!renglon6) {
+      Codigo.agregar(consola, "");
+      renglon6 = consola.lastElementChild;
+    }
+    var trozo = document.createElement("span");
+    trozo.className = "consola__trozo";
+    trozo.textContent = texto;
+    renglon6.appendChild(trozo);
+    Codigo.volarDesdeLinea($("s6-codigo"), trozo, texto, "vuelo--salida");
+  }
+
+  function prepararVersion6(version) {
+    version6 = version;
+    $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === version));
+    });
+    codigo($("s6-codigo"), VERSIONES6[version]);
+    $("s6-cajas").hidden = version === "join";
+  }
+
+  /* ---------- 7. Challenge: where are the empty cells? ---------- */
+  var RETO = [["X", "O", " "], ["O", " ", " "], ["X", "X", "O"]];
+  var tableroReto = Lista.crear($("reto-tablero"), copia(RETO));
+  var condiciones = {
+    fc: function (f, c) { return RETO[f][c] === " "; },
+    cf: function (f, c) { return RETO[c][f] === " "; },
+    f: function () { return false; },        // a whole row is never " "
+    "0c": function (f, c) { return RETO[0][c] === " "; }
+  };
+  var pistasReto = {
+    cf: "You swapped row and column: board[c][r] looks at the mirror cell. It printed positions where there are marks (in orange).",
+    f: "board[r] is a whole row, a list: it is never equal to \" \". It printed nothing.",
+    "0c": "board[0][c] always looks at row 0, whatever r is. That’s why it repeats column 2 in every row."
+  };
+
+  function vacias(cond) {
+    var r = [];
+    for (var f = 0; f < RETO.length; f++) {
+      for (var c = 0; c < RETO[f].length; c++) if (cond(f, c)) r.push([f, c]);
+    }
+    return r;
+  }
+
+  function limpiarReto() {
+    tableroReto.marcar(null);
+    tableroReto.clases(null);
+    $("reto-consola").hidden = true;
+    Codigo.consola($("reto-consola"), []);
+    Codigo.limpiar($("reto-codigo"));
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function escribirReto() {
+    codigo($("reto-codigo"), lineasTablero(RETO).concat([
+      "for r in range(len(board)):",
+      "    for c in range(len(board[r])):",
+      "        if ▢ == \" \":",
+      "            print(r, c)"
+    ]));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto();
+    Codigo.marcar($("reto-codigo"), { activas: [6] });
+    var impresas = vacias(condiciones[marcada.value]);
+    var consola = $("reto-consola");
+    consola.hidden = false;
+    Codigo.consola(consola, impresas.map(function (p) { return p[0] + " " + p[1]; }));
+    tableroReto.clases(function (fc) {
+      var impresa = impresas.some(function (p) { return p[0] === fc[0] && p[1] === fc[1]; });
+      if (!impresa) return "";
+      return RETO[fc[0]][fc[1]] === " " ? "lista__casilla--igual" : "lista__casilla--distinta";
+    });
+    if (marcada.value === "fc") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! r goes through the rows and c through the columns of each row: board[r][c] is the cell. The three empty ones, in green.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  codigo($("resumen-codigo"), lineasTablero(TABLERO).concat([
+    "board[1]           # [' ', 'X', ' '], row 1",
+    "board[1][2]        # \" \": row 1, column 2",
+    "board[0][2] = \"O\"  # changes one cell",
+    "for row in board:",
+    "    for cell in row:",
+    "        print(cell)"
+  ]));
+
+  /* ---------- Wiring ---------- */
+  $("s1-juntar").addEventListener("click", function () { juntar(leccion); });
+  $("s1-separar").addEventListener("click", function () {
+    separar();
+    $("s1-juntar").focus();
+  });
+
+  $("s2-i").addEventListener("input", function () { mostrarFila(Number(this.value), leccion, true); });
+  $("s3-f").addEventListener("input", function () { mostrarCelda(leccion); });
+  $("s3-c").addEventListener("input", function () { mostrarCelda(leccion); });
+
+  predicciones(Array.prototype.slice.call(document.querySelectorAll("#s4-predicciones .prediccion")), datos4, function () {
+    tablero4.mostrar({ indices: true });
+    Pasos.feedback($("s4-fb"), "ok", "All three right! Here are the numbers: the rows on the left and the columns on top.");
+    leccion.desbloquear();
+  });
+
+  $("s5-f").addEventListener("input", elegir5);
+  $("s5-c").addEventListener("input", elegir5);
+  $("s5-ejecutar").addEventListener("click", function () { ejecutar5(leccion); });
+  $("s5-limpiar").addEventListener("click", limpiar5);
+
+  var traza6 = Traza.crear({
+    codigo: $("s6-codigo"),
+    explicacion: $("s6-explicacion"),
+    ejecutar: $("s6-ejecutar"),
+    reproducir: $("s6-reproducir"),
+    reiniciar: $("s6-reiniciar"),
+    generar: trazaRecorrer,
+    intervalo: 650,
+    alReiniciar: function () {
+      Caja.vaciar($("s6-caja"));
+      tablero6.marcar(null);
+      fila6.valores([]);
+      renglon6 = null;
+      Codigo.consola($("s6-consola"), []);
+      Pasos.limpiarFeedback($("s6-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) {
+        tablero6.marcar(null);
+        fila6.marcar(null);
+        return;
+      }
+      var f = paso.f;
+      if (paso.linea === 0) {
+        tablero6.marcar(f);
+        fila6.valores(TABLERO[f].slice());
+        TABLERO[f].forEach(function (v, c) {
+          Codigo.volar(tablero6.valor([f, c]), fila6.valor(c), Lista.texto(v), "lista__valor lista__vuelo");
+        });
+        return;
+      }
+      if (paso.linea6 !== undefined) {
+        Codigo.agregar($("s6-consola"), paso.linea6);
+        Codigo.volarDesdeLinea($("s6-codigo"), $("s6-consola").lastElementChild, paso.linea6, "vuelo--salida");
+        return;
+      }
+      if (paso.salto) { renglon6 = null; fila6.marcar(null); return; }
+      if (paso.linea === 1) {
+        tablero6.marcar([f, paso.c]);
+        fila6.marcar(paso.c);
+        Caja.poner($("s6-caja"), Lista.texto(TABLERO[f][paso.c]), fila6.valor(paso.c));
+        return;
+      }
+      if (paso.trozo) escribirTrozo(paso.trozo);
+    },
+    alTerminar: function () {
+      if (version6 === "dos") {
+        Pasos.feedback($("s6-fb"), "ok", "For each row, the inner for went through its 3 cells: 9 cells in all, row by row. Also look at the short version with .join().");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s6-fb"), "ok", "With .join(), one for is enough: each row is already a list of texts, and join puts them together on one line.");
+      }
+    }
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prepararVersion6(b.getAttribute("data-valor"));
+      traza6.reiniciar();
+    });
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Starting state of each step
+  separar();
+  mostrarFila(1, null, false);
+  mostrarCelda(null);
+  escribir5();
+  prepararVersion6("dos");
+  traza6.reiniciar();
+  escribirReto();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-cambiar": function () { cancelar5(); },
+      "paso-recorrer": function () { traza6.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

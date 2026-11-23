@@ -76,7 +76,7 @@
       var leyenda = document.createElement("p");
       leyenda.className = "op-leyenda";
       leyenda.innerHTML = /^en/i.test(document.documentElement.lang || "")
-        ? "In gray, what is the same in every option. Look at the lines with a <b>bar</b>: that is where they differ."
+        ? "In gray, what every option shares. Look at the lines with a <b>bar</b>: that is what changes."
         : "En gris, lo que es igual en todas las opciones. Fíjate en las líneas con <b>raya</b>: ahí cambian.";
       grupo.parentNode.insertBefore(leyenda, grupo);
     }
