@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project: the padlock · Learn to program</title>
+  <meta name="description" content="Recursion project in Python: open a padlock with 3 wheels. try_code(n, code) builds every code, stops as soon as it finds the right one (the True goes down the call stack) and a hint cuts off whole branches.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); padding: 0; font-weight: 700; }
+
+    /* ---------- Console: one code per line; if there are many, it scrolls ---------- */
+    .consola--claves { max-height: 12.5rem; overflow-y: auto; overscroll-behavior: contain; }
+    .consola--claves .consola__titulo { position: sticky; top: calc(-1 * var(--esp-3)); z-index: 1; margin: calc(-1 * var(--esp-3)) 0 0; padding: var(--esp-3) 0 var(--esp-1); background: var(--color-superficie); }
+    .consola__linea:empty::before { content: "\00a0"; }
+    .consola .consola__linea--error { color: var(--color-error); }
+    .consola .consola__linea--abierto { color: var(--color-ok); }
+
+    /* ---------- The padlock ----------
+       A metal shackle and a brass body with the wheels. Each wheel shows its digit
+       in the middle and its neighbors above and below, like a turning cylinder. */
+    .candado { position: relative; width: max-content; max-width: 100%; margin: 0 auto; padding-top: 3.1rem; }
+    .candado__arco { position: absolute; top: 0.3rem; left: 22%; right: 22%; height: 4.6rem; border: 0.8rem solid #9aa4b2; border-bottom: 0; border-radius: 999px 999px 0 0; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35); transition: transform 420ms var(--curva-rebote); }
+    .candado--abierto .candado__arco { transform: translateY(-1.35rem); }
+    .candado__cuerpo { position: relative; padding: var(--esp-3) var(--esp-4); border-radius: 1.1rem; background: linear-gradient(180deg, #f7cd62, #e3a92c); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.14), var(--sombra); text-align: center; transition: box-shadow var(--dur); }
+    .candado--abierto .candado__cuerpo { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.14), 0 0 0 4px var(--color-ok), var(--sombra); }
+    .candado--bloqueado .candado__cuerpo { background: linear-gradient(180deg, #d7dbe0, #b5bcc6); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.14), 0 0 0 4px var(--color-pista); }
+    .candado--error .candado__cuerpo { animation: sacudir 360ms ease; }
+    .candado__pista { margin: 0 0 var(--esp-2); padding: 0.15em 0.7em; display: inline-block; border-radius: 999px; background: #fff8de; color: #6b4700; font-size: var(--texto-xs); font-weight: 700; }
+    .candado__ruedas { display: flex; justify-content: center; gap: var(--esp-2); }
+    .rueda { display: grid; justify-items: center; gap: 4px; }
+    .rueda__ventana { position: relative; width: 2.7rem; height: 4.2rem; overflow: hidden; border-radius: 0.6rem; background: linear-gradient(180deg, #c9cfd8, #fff 32%, #fff 68%, #c9cfd8); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.35); }
+    .rueda__ventana::after { content: ""; position: absolute; left: 0; right: 0; top: 1.4rem; height: 1.4rem; border-block: 1px solid rgba(0, 0, 0, 0.12); pointer-events: none; }
+    .rueda__tira { display: grid; grid-template-rows: repeat(3, 1.4rem); }
+    .rueda__tira span { display: grid; place-items: center; font-family: var(--fuente-codigo); font-weight: 700; line-height: 1; }
+    .rueda__digito { font-size: 1.4rem; color: var(--color-texto); }
+    .rueda__vecino { font-size: 0.95rem; color: #7d8794; }
+    .rueda--libre .rueda__digito { color: #8a929c; }
+    .rueda--libre .rueda__ventana { opacity: 0.75; }
+    .rueda__btn { display: grid; place-items: center; width: 2.9rem; min-height: 2.6rem; padding: 0; border: 2px solid rgba(107, 71, 0, 0.35); border-radius: 0.7rem; background: #fff8de; color: #6b4700; font: inherit; font-size: 0.95rem; cursor: pointer; }
+    .rueda__btn:hover:not(:disabled) { background: #fff; }
+    .rueda__btn:disabled { opacity: 0.45; cursor: default; }
+    .candado__estado { margin: var(--esp-2) 0 0; font-size: var(--texto-sm); font-weight: 700; color: #5b3d00; }
+    .marcador { margin: var(--esp-3) 0 0; text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .marcador strong { font-family: var(--fuente-codigo); color: var(--color-texto); }
+    .marcador--cambio strong { display: inline-block; animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- The possible codes ----------
+       Each group is a branch: with 3 wheels, the first digit; inside, the row is the second
+       and the column the third. With 4 wheels, the groups are the first two digits. */
+    .claves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-2); margin-top: var(--esp-4); }
+    .claves__grupo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; align-content: start; }
+    .claves__rama { grid-column: 1 / -1; font-family: var(--fuente-codigo); font-size: 0.75rem; font-weight: 700; text-align: center; color: var(--color-texto-suave); }
+    .claves__celda { display: grid; place-items: center; min-height: 1.85rem; border: 1.5px solid var(--color-borde); border-radius: 6px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: 0.75rem; font-weight: 700; color: #8a929c; transition: background-color var(--dur-rapida), border-color var(--dur-rapida), color var(--dur-rapida); }
+    .claves--4 { gap: 6px; }
+    .claves--4 .claves__grupo { gap: 2px; }
+    .claves--4 .claves__celda { min-height: 0.95rem; font-size: 0; border-radius: 3px; }
+    .claves--4 .claves__rama { font-size: 0.68rem; }
+    .claves__celda--mano { border-color: #9aa4b2; background: #e9ecf0; color: var(--color-texto); }
+    .claves__celda--probada { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .claves__celda--cortada { border-style: dashed; background: repeating-linear-gradient(-45deg, #eceff3 0 3px, #fff 3px 7px); color: #b0b7c1; text-decoration: line-through; }
+    .claves__celda--secreta { border-color: var(--color-ok); background: var(--color-ok); color: #fff; }
+    .claves__celda--actual { box-shadow: 0 0 0 2px var(--color-texto); }
+    .claves__grupo--foco .claves__celda:not(.claves__celda--cortada) { border-color: #d99a00; background: #fff8de; color: #6b4700; }
+    .claves__leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-3); margin: var(--esp-2) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .claves__leyenda span::before { content: ""; display: inline-block; width: 0.85em; height: 0.85em; margin-right: 0.35em; vertical-align: -0.05em; border: 1.5px solid; border-radius: 3px; }
+    .claves__leyenda .ley-probada::before { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .claves__leyenda .ley-mano::before { border-color: #9aa4b2; background: #e9ecf0; }
+    .claves__leyenda .ley-cortada::before { border-style: dashed; border-color: #9aa4b2; background: repeating-linear-gradient(-45deg, #eceff3 0 2px, #fff 2px 4px); }
+    .claves__leyenda .ley-secreta::before { border-color: var(--color-ok); background: var(--color-ok); }
+
+    /* ---------- Options ---------- */
+    .opciones--codigo { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+    .opciones--codigo .opcion span { padding: var(--esp-3) var(--esp-2); font-size: var(--texto-sm); overflow-wrap: anywhere; }
+    .opciones--texto { grid-template-columns: minmax(0, 1fr); }
+    .opciones--texto .opcion span { font-family: var(--fuente); font-size: var(--texto-sm); text-align: left; }
+
+    /* ---------- Blanks chosen below the code (challenge) ---------- */
+    .codigo .hueco--lleno { border-bottom-style: solid; color: var(--tk-variable); }
+    .elegir { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-2) var(--esp-3); margin-top: var(--esp-4); }
+    .elegir label { font-weight: 700; }
+    .elegir label span { font-weight: 400; color: var(--color-texto-suave); }
+    .elegir select { min-width: 0; min-height: 2.75rem; padding: var(--esp-1) var(--esp-2); border: 2px dashed var(--color-azul); border-radius: var(--radio-sm); background: var(--color-azul-suave); font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto); }
+    .elegir select.elegir--lleno { border-style: solid; background: var(--color-superficie); }
+
+    /* ---------- With and without the hint ---------- */
+    .comparar { width: 100%; margin-top: var(--esp-4); border-collapse: collapse; text-align: center; }
+    .comparar th, .comparar td { padding: var(--esp-2); border-bottom: 2px solid var(--color-borde); }
+    .comparar thead th { font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .comparar tbody th { text-align: left; font-size: var(--texto-sm); }
+    .comparar td { font-family: var(--fuente-codigo); font-size: var(--texto-md); font-weight: 700; }
+    .comparar tr:last-child th, .comparar tr:last-child td { border-bottom: 0; }
+    .comparar .comparar--activa th, .comparar .comparar--activa td { background: var(--color-azul-suave); }
+    .comparar--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Challenge missions ---------- */
+    .misiones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .mision { display: flex; align-items: center; gap: var(--esp-3); width: 100%; min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); font: inherit; font-size: var(--texto-sm); font-weight: 600; text-align: left; color: var(--color-texto); cursor: pointer; transition: border-color var(--dur), background-color var(--dur); }
+    .mision::before { content: ""; flex: none; display: grid; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); font-size: var(--texto-xs); }
+    .mision[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .mision--hecha { border-color: var(--color-ok); color: var(--color-ok); }
+    .mision--hecha[aria-pressed="true"] { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); }
+    .mision--fallo::before { content: "✗"; color: var(--color-pista); border-color: var(--color-pista); }
+    .mision small { margin-left: auto; font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    @media (max-width: 480px) {
+      /* The programs have long lines: a bit smaller and almost edge to edge */
+      .lab .codigo, .resumen-codigo { margin-inline: calc(-1 * var(--esp-2)); font-size: 0.72rem; }
+      .lab .codigo .linea, .resumen-codigo .linea { padding: 0 var(--esp-2) 0 2.1rem; }
+      .lab .codigo .linea::before, .resumen-codigo .linea::before { width: 1.4rem; }
+      .rotulo { font-size: 0.8rem; }
+      .claves__celda { min-height: 1.6rem; font-size: 0.68rem; }
+      .claves--4 .claves__celda { min-height: 0.8rem; }
+      .elegir { grid-template-columns: minmax(0, 1fr); gap: var(--esp-1); }
+      .elegir select { margin-bottom: var(--esp-2); }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual { margin-top: var(--esp-5); }
+    }
+    @media (min-width: 1024px) {
+      .lab .codigo { font-size: 1rem; }
+    }
+    /* Desktop: the button and the tries, side by side under the padlock, so the step fits */
+    @media (min-width: 1024px) {
+      #paso-mano .lab__principal { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; column-gap: var(--esp-5); }
+      #paso-mano .candado { grid-column: 1 / -1; }
+      #paso-mano .lab__principal > .fila-botones, #paso-mano .lab__principal > .marcador { margin-top: var(--esp-4); }
+    }
+    /* Parts 1 and 2, when right: the answer can already be read in the code's blank, so the options
+       (and the note in part 2) hide and the message, which goes under the code, takes their place:
+       it doesn't end up below the screen, under the padlock and the output */
+    #p2-opciones:has(.opcion--correcta), #p4-opciones:has(.opcion--correcta),
+    #paso-parar .lab__principal:has(.opcion--correcta) > .nota { display: none; }
+  </style>
+</head>
+<body>
+<div class="leccion" data-visual-fija data-leccion="recursion-candado">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. The padlock, by hand -->
+    <section class="paso" id="paso-mano" data-requiere aria-labelledby="t-mano">
+      <span class="paso__etiqueta">Recursion 7/7 · Project</span>
+      <h1 class="paso__titulo" id="t-mano">Project: the padlock</h1>
+      <p>This padlock has <strong>3 wheels</strong>, and each one shows <strong>0</strong>, <strong>1</strong> or <strong>2</strong>. The code is secret. Turn the wheels and try.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="candado" id="p1-candado"></div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-abrir">🔓 Try this code</button>
+          </div>
+          <p class="marcador" id="p1-marcador">Tries: <strong>0</strong></p>
+        </div>
+        <div class="lab__visual">
+          <p class="prediccion__pregunta">All the possible codes</p>
+          <div id="p1-claves"></div>
+          <p class="claves__leyenda"><span class="ley-mano">already tried</span> <span class="ley-secreta">the one that opens</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="p1-otro" hidden>
+            <button type="button" class="btn btn-secundario" id="p1-otro-btn">↺ Another padlock</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Part 1: build all the codes -->
+    <section class="paso" id="paso-todas" data-comprobar aria-labelledby="t-todas">
+      <span class="paso__etiqueta">Part 1 of 3</span>
+      <h2 class="paso__titulo" id="t-todas">All the codes</h2>
+      <p>It's like <code>flip(n, tosses)</code>, but each wheel has <strong>3</strong> options: a <code>for</code> with <code>range(3)</code> makes the three calls. <code>n</code> says how many wheels are left. What goes in the blank?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p2-codigo" aria-label="Code with a blank"><code>def try_code(n, code):
+    if n == 0:
+        print(code)
+    else:
+        for d in range(3):
+            try_code(n - 1, ⟦p2-hueco|▢⟧)
+
+try_code(3, "")</code></pre>
+          <fieldset class="opciones opciones--codigo" id="p2-opciones">
+            <legend class="visualmente-oculto">What goes in the blank?</legend>
+            <label class="opcion"><input type="radio" name="p2" value="num"><span>code + d</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="bien"><span>code + str(d)</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="solo"><span>str(d)</span></label>
+            <label class="opcion"><input type="radio" name="p2" value="igual"><span>code</span></label>
+          </fieldset>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p2-candado"></div>
+          <div id="p2-claves"></div>
+          <p class="claves__leyenda"><span class="ley-probada">printed</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--claves" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Code by code, with the call stack -->
+    <section class="paso" id="paso-pila" data-requiere aria-labelledby="t-pila">
+      <h2 class="paso__titulo" id="t-pila">Code by code</h2>
+      <p>Run it and watch the cards: each call <strong>sets one wheel</strong> and leaves the rest to the next call. The top card tries 0, 1 and 2; the ones below wait.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p3-codigo" aria-label="Code"><code>def try_code(n, code):
+    if n == 0:
+        print(code)
+    else:
+        for d in range(3):
+            try_code(n - 1, code + str(d))
+
+try_code(3, "")</code></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Run line ▸</button>
+            <button type="button" class="btn btn-secundario" id="p3-saltar">Next code ▸▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p3-candado"></div>
+          <div class="pila" id="p3-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--claves" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Part 2: stop when you find it -->
+    <section class="paso" id="paso-parar" data-comprobar aria-labelledby="t-parar">
+      <span class="paso__etiqueta">Part 2 of 3</span>
+      <h2 class="paso__titulo" id="t-parar">Stop when you find it</h2>
+      <p>Now <code>try_code</code> <strong>returns</strong> <code>True</code> if the code opens the padlock and <code>False</code> if not. When a call returns <code>True</code>, what does the card that was waiting for it do?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p4-codigo" aria-label="Code with a blank"><code>secret = ⟨p4-secreta|"120"⟩
+
+def try_code(n, code):
+    if n == 0:
+        print(code)
+        return code == secret
+    for d in range(3):
+        if try_code(n - 1, code + str(d)):
+            ⟦p4-hueco|▢⟧
+    return False
+
+if try_code(3, ""):
+    print("Open!")</code></pre>
+          <p class="nota">The base case now ends with <code>return</code>: you don't need <code>else</code> anymore.</p>
+          <fieldset class="opciones opciones--codigo" id="p4-opciones">
+            <legend class="visualmente-oculto">What goes in the blank?</legend>
+            <label class="opcion"><input type="radio" name="p4" value="break"><span>break</span></label>
+            <label class="opcion"><input type="radio" name="p4" value="print"><span>print("Open!")</span></label>
+            <label class="opcion"><input type="radio" name="p4" value="return"><span>return True</span></label>
+          </fieldset>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p4-candado"></div>
+          <p class="marcador" id="p4-marcador">Codes tried: <strong>0</strong> of 27</p>
+          <div id="p4-claves"></div>
+          <p class="claves__leyenda"><span class="ley-probada">tried</span> <span class="ley-secreta">the one that opens</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--claves" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. The True goes down the stack -->
+    <section class="paso" id="paso-baja" data-requiere aria-labelledby="t-baja">
+      <h2 class="paso__titulo" id="t-baja">The True goes down the stack</h2>
+      <p>Go code by code until you reach the one that opens. Then watch what each card below does with that <code>True</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p5-codigo" aria-label="Code"><code>secret = ⟨p5-secreta|"120"⟩
+
+def try_code(n, code):
+    if n == 0:
+        print(code)
+        return code == secret
+    for d in range(3):
+        if try_code(n - 1, code + str(d)):
+            return True
+    return False
+
+if try_code(3, ""):
+    print("Open!")</code></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Run line ▸</button>
+            <button type="button" class="btn btn-secundario" id="p5-saltar">Next code ▸▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p5-candado"></div>
+          <p class="marcador" id="p5-marcador">Codes tried: <strong>0</strong> of 27</p>
+          <div class="pila" id="p5-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--claves" id="p5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Part 3: a hint -->
+    <section class="paso" id="paso-pista" data-comprobar aria-labelledby="t-pista">
+      <span class="paso__etiqueta">Part 3 of 3</span>
+      <h2 class="paso__titulo" id="t-pista">A hint</h2>
+      <p>Another padlock comes with a hint stuck on it: <strong>the digits of the code add up to 5</strong>. The first wheel shows <strong>0</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--texto" id="p6-opciones">
+            <legend class="prediccion__pregunta">Do you need to try the codes that start with 0?</legend>
+            <label class="opcion"><input type="radio" name="p6" value="todas"><span>Yes: you have to try all 9 to be sure.</span></label>
+            <label class="opcion"><input type="radio" name="p6" value="dos"><span>Only the ones that end in 2.</span></label>
+            <label class="opcion"><input type="radio" name="p6" value="ninguna"><span>No: the two wheels left add up to 4 at most.</span></label>
+          </fieldset>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p6-candado"></div>
+          <div id="p6-claves"></div>
+          <p class="claves__leyenda"><span class="ley-cortada">no need to try it</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Cut off branches: with and without the hint -->
+    <section class="paso" id="paso-cortar" data-requiere aria-labelledby="t-cortar">
+      <h2 class="paso__titulo" id="t-cortar">Cut off branches</h2>
+      <p>The hint comes in as one more parameter: <code>left</code> is what the remaining wheels still have to add up to. If that can't happen anymore, the call returns <code>False</code> without trying anything. Run it <strong>without the hint</strong> and <strong>with the hint</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p7-codigo" aria-label="Code"><code>secret = ⟨p7-secreta|"212"⟩
+
+def try_code(n, code, left):
+    if left &lt; 0 or left &gt; 2 * n:
+        return False
+    if n == 0:
+        print(code)
+        return code == secret
+    for d in range(3):
+        new = code + str(d)
+        if try_code(n - 1, new, left - d):
+            return True
+    return False
+
+if try_code(3, "", 5):
+    print("Open!")</code></pre>
+          <p class="nota"><code>left &lt; 0</code>: it already went over. <code>left &gt; 2 * n</code>: even if the <code>n</code> wheels left all show 2, they can't reach it.</p>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite">Tap “Without hint” or “With hint”.</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-sin">▶ Without hint</button>
+            <button type="button" class="btn btn-secundario" id="p7-con">▶ With hint</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p7-candado"></div>
+          <div id="p7-claves"></div>
+          <p class="claves__leyenda"><span class="ley-probada">tried</span> <span class="ley-cortada">branch cut off</span> <span class="ley-secreta">the one that opens</span></p>
+          <table class="comparar" id="p7-tabla">
+            <thead><tr><th scope="col"><span class="visualmente-oculto">Program</span></th><th scope="col">Codes tried</th><th scope="col">Calls</th></tr></thead>
+            <tbody>
+              <tr data-modo="sin"><th scope="row">Without hint</th><td>–</td><td>–</td></tr>
+              <tr data-modo="con"><th scope="row">With hint</th><td>–</td><td>–</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--claves" id="p7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Challenge: the 4-wheel padlock -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">The 4-wheel padlock</h2>
+      <p>With 4 wheels there are <strong>81 codes</strong>, and these padlocks lock up on try <strong>11</strong>. Complete the program so it opens both padlocks in 10 tries or fewer.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p8-codigo" aria-label="Code with two blanks"><code>secret = ⟨p8-secreta|"0000"⟩
+
+def try_code(n, code, left):
+    if ⟦p8-hueco-poda|▢ 1⟧:
+        return False
+    if n == 0:
+        print(code)
+        return code == secret
+    for d in range(3):
+        new = code + str(d)
+        if try_code(n - 1, new, left - d):
+            ⟦p8-hueco-vuelta|▢ 2⟧
+    return False
+
+if try_code(4, "", ⟨p8-suma|2⟩):
+    print("Open!")</code></pre>
+          <div class="elegir">
+            <label for="p8-poda">Blank 1 <span>(line 4)</span></label>
+            <select id="p8-poda">
+              <option value="">Choose…</option>
+              <option value="b">left &lt; 0</option>
+              <option value="e">left &gt; 2 * n</option>
+              <option value="a">left &lt; 0 or left &gt; 2 * n</option>
+              <option value="c">left &lt; 0 or left &gt; 2 * 4</option>
+              <option value="d">left &lt; 0 or left &gt; n</option>
+            </select>
+            <label for="p8-vuelta">Blank 2 <span>(line 12)</span></label>
+            <select id="p8-vuelta">
+              <option value="">Choose…</option>
+              <option value="print">print("Open!")</option>
+              <option value="return">return True</option>
+              <option value="break">break</option>
+            </select>
+          </div>
+          <ul class="misiones" id="p8-misiones" aria-label="Missions: choose a padlock">
+            <li><button type="button" class="mision" data-m="0" aria-pressed="true">Padlock 1: the digits add up to 2 <small></small></button></li>
+            <li><button type="button" class="mision" data-m="1" aria-pressed="false">Padlock 2: the digits add up to 6 <small></small></button></li>
+          </ul>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p8-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="candado" id="p8-candado"></div>
+          <p class="marcador" id="p8-marcador">Tries: <strong>0</strong> of 10</p>
+          <div id="p8-claves"></div>
+          <p class="claves__leyenda"><span class="ley-probada">tried</span> <span class="ley-cortada">branch cut off</span> <span class="ley-secreta">the one that opens</span></p>
+        </div>
+        <div class="lab__resultado">
+          <p class="explicacion" id="p8-explicacion" aria-live="polite">Choose both blanks and tap “Run”.</p>
+          <div class="consola consola--claves" id="p8-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🔓</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Project complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Each call sets <strong>one wheel</strong> and leaves the rest to the next call. <code>return True</code> passes the news down, and a hint <strong>cuts off</strong> whole branches.</p>
+        <pre class="codigo resumen-codigo" id="p9-codigo" aria-label="Summary in code"><code>secret = "212"
+
+def try_code(n, code, left):
+    # the hint: this branch can't work anymore
+    if left &lt; 0 or left &gt; 2 * n:
+        return False
+    # base case: the code is complete
+    if n == 0:
+        print(code)
+        return code == secret
+    # this wheel tries 0, 1 and 2
+    for d in range(3):
+        new = code + str(d)
+        if try_code(n - 1, new, left - d):
+            # found it! pass the news down
+            return True
+    # none of them worked
+    return False
+
+# 3 wheels, and the digits add up to 5
+if try_code(3, "", 5):
+    print("Open!")</code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the project</button>
+        <a class="btn btn-secundario" href="../../../index.html">Back to the course →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/pila.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function pulso(el, clase) {
+    el.classList.remove(clase);
+    void el.offsetWidth;
+    el.classList.add(clase);
+  }
+
+  function q(texto) { return '"' + texto + '"'; }
+  function reducir() { return Pasos.reducirMovimiento; }
+  var leccion; // set at the end, with Pasos.iniciar
+
+  /* ---------- Color the code ----------
+     Each block holds the Python as text. ⟦id|text⟧ is a blank and ⟨id|text⟩
+     a value the program changes (the secret code, the hint). */
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not)$/;
+  var PIEZA = /("[^"]*")|(#.*$)|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?/g;
+  var MARCA = /⟦([\w-]+)\|([^⟧]*)⟧|⟨([\w-]+)\|([^⟩]*)⟩/g;
+
+  function escapar(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function tk(clase, texto) { return '<span class="tk-' + clase + '">' + escapar(texto) + "</span>"; }
+
+  function colorear(texto) {
+    var html = "", desde = 0;
+    texto.replace(PIEZA, function (todo, cadena, comentario, numero, nombre, parentesis, pos) {
+      html += escapar(texto.slice(desde, pos));
+      desde = pos + todo.length;
+      if (cadena) html += tk("texto", cadena);
+      else if (comentario) html += tk("comentario", comentario);
+      else if (numero) html += tk("numero", numero);
+      else if (PALABRAS.test(nombre)) html += tk("palabra", nombre) + escapar(parentesis || "");
+      else if (parentesis) html += tk("funcion", nombre) + escapar(parentesis);
+      else html += tk("variable", nombre);
+      return todo;
+    });
+    return html + escapar(texto.slice(desde));
+  }
+
+  function lineaHtml(linea) {
+    var html = "", desde = 0, m;
+    MARCA.lastIndex = 0;
+    while ((m = MARCA.exec(linea))) {
+      html += colorear(linea.slice(desde, m.index));
+      desde = m.index + m[0].length;
+      if (m[1]) html += '<span class="hueco" id="' + m[1] + '">' + escapar(m[2]) + "</span>";
+      else html += '<span class="tk-' + (/^"/.test(m[4]) ? "texto" : "numero") + '" id="' + m[3] + '">' + escapar(m[4]) + "</span>";
+    }
+    return '<span class="linea">' + html + colorear(linea.slice(desde)) + "</span>";
+  }
+
+  document.querySelectorAll("pre.codigo").forEach(function (pre) {
+    var code = pre.querySelector("code");
+    code.innerHTML = code.textContent.split("\n").map(lineaHtml).join("");
+  });
+
+  /* ---------- Codes ---------- */
+  function todas(ruedas) {
+    var lista = [""];
+    for (var i = 0; i < ruedas; i++) {
+      var nueva = [];
+      lista.forEach(function (c) { for (var d = 0; d < 3; d++) nueva.push(c + d); });
+      lista = nueva;
+    }
+    return lista;
+  }
+  function suma(clave) {
+    var s = 0;
+    for (var i = 0; i < clave.length; i++) s += Number(clave.charAt(i));
+    return s;
+  }
+  function alAzar(lista) { return lista[Math.floor(Math.random() * lista.length)]; }
+  // "0··": the half-built code, with a dot for each wheel still to set
+  function aMedias(clave, ruedas) {
+    var t = clave;
+    while (t.length < ruedas) t += "·";
+    return t;
+  }
+  function plural(k, uno, varios) { return k + " " + (k === 1 ? uno : varios); }
+
+  var TODAS3 = todas(3);
+  // Your padlock's code: random, but not one of the first or the last ones
+  function nuevaSecreta() { return alAzar(TODAS3.slice(4, 23)); }
+  var secreta = nuevaSecreta();
+
+  /* ---------- The padlock ----------
+     crearCandado(cont, { ruedas, manual, pista, alCambiar })
+     poner("12") turns the wheels to that code; the ones still to set stay loose (lighter).
+     If it was open and a wheel moves, it closes again. */
+  function crearCandado(cont, o) {
+    var n = o.ruedas;
+    var dig = [];
+    var ruedas = [];
+    var estado = "cerrado";
+    cont.textContent = "";
+    cont.setAttribute("role", "group");
+    cont.setAttribute("aria-label", "Padlock with " + n + " wheels");
+    var arco = crear("div", "candado__arco");
+    arco.setAttribute("aria-hidden", "true");
+    var cuerpo = crear("div", "candado__cuerpo");
+    var pista = crear("p", "candado__pista", o.pista || "");
+    pista.hidden = !o.pista;
+    var fila = crear("div", "candado__ruedas");
+    var texto = crear("p", "candado__estado");
+    texto.setAttribute("aria-live", "polite");
+    var anuncio = crear("span", "visualmente-oculto");
+    anuncio.setAttribute("aria-live", "polite");
+    cuerpo.appendChild(pista);
+    cuerpo.appendChild(fila);
+    cuerpo.appendChild(texto);
+    cuerpo.appendChild(anuncio);
+    cont.appendChild(arco);
+    cont.appendChild(cuerpo);
+
+    for (var i = 0; i < n; i++) {
+      var r = { raiz: crear("div", "rueda rueda--libre") };
+      var ventana = crear("div", "rueda__ventana");
+      ventana.setAttribute("aria-hidden", "true");
+      r.tira = crear("div", "rueda__tira");
+      r.arriba = crear("span", "rueda__vecino");
+      r.centro = crear("span", "rueda__digito");
+      r.abajo = crear("span", "rueda__vecino");
+      r.tira.appendChild(r.arriba);
+      r.tira.appendChild(r.centro);
+      r.tira.appendChild(r.abajo);
+      ventana.appendChild(r.tira);
+      if (o.manual) {
+        r.sube = crear("button", "rueda__btn", "▲");
+        r.baja = crear("button", "rueda__btn", "▼");
+        r.sube.type = r.baja.type = "button";
+        r.sube.addEventListener("click", girarAMano(i, 1));
+        r.baja.addEventListener("click", girarAMano(i, -1));
+        r.raiz.appendChild(r.sube);
+        r.raiz.appendChild(ventana);
+        r.raiz.appendChild(r.baja);
+      } else {
+        r.raiz.appendChild(ventana);
+      }
+      fila.appendChild(r.raiz);
+      ruedas.push(r);
+      dig.push(0);
+      pintarRueda(i);
+    }
+
+    function pintarRueda(i) {
+      var r = ruedas[i], d = dig[i];
+      r.centro.textContent = String(d);
+      r.arriba.textContent = String((d + 2) % 3);
+      r.abajo.textContent = String((d + 1) % 3);
+      if (r.sube) {
+        r.sube.setAttribute("aria-label", "Wheel " + (i + 1) + " (shows " + d + "): up");
+        r.baja.setAttribute("aria-label", "Wheel " + (i + 1) + " (shows " + d + "): down");
+      }
+    }
+
+    // Going up, the new digit comes in from below; going down, from above
+    function girar(i, d) {
+      var r = ruedas[i];
+      var dir = d === (dig[i] + 1) % 3 ? 1 : -1;
+      dig[i] = d;
+      pintarRueda(i);
+      if (reducir() || !r.tira.animate) return;
+      if (r.giro) r.giro.cancel();
+      r.giro = r.tira.animate([{ transform: "translateY(" + (dir * 1.4) + "rem)" }, { transform: "none" }],
+        { duration: 200, easing: "ease-out" });
+    }
+
+    function girarAMano(i, dir) {
+      return function () {
+        ruedas[i].raiz.classList.remove("rueda--libre");
+        girar(i, (dig[i] + dir + 3) % 3);
+        anuncio.textContent = "Code: " + dig.join(" ");
+        if (o.alCambiar) o.alCambiar(valor());
+      };
+    }
+
+    function poner(clave) {
+      var cambio = false;
+      for (var i = 0; i < n; i++) {
+        var libre = i >= clave.length;
+        if (!libre && Number(clave.charAt(i)) !== dig[i]) {
+          girar(i, Number(clave.charAt(i)));
+          cambio = true;
+        }
+        ruedas[i].raiz.classList.toggle("rueda--libre", libre);
+      }
+      if (cambio && estado === "abierto") ponerEstado("cerrado");
+    }
+
+    function ponerEstado(e) {
+      estado = e;
+      cont.classList.toggle("candado--abierto", e === "abierto");
+      cont.classList.toggle("candado--bloqueado", e === "bloqueado");
+      texto.textContent = e === "abierto" ? "🔓 Open!" : e === "bloqueado" ? "⛔ Locked up" : "🔒 Closed";
+    }
+
+    function sacudir() { pulso(cont, "candado--error"); }
+
+    function activar(si) {
+      ruedas.forEach(function (r) {
+        if (r.sube) r.sube.disabled = r.baja.disabled = !si;
+      });
+    }
+
+    function valor() { return dig.join(""); }
+
+    // All wheels to 0, loose and closed
+    function reiniciar(conPista) {
+      for (var i = 0; i < n; i++) {
+        dig[i] = 0;
+        pintarRueda(i);
+        ruedas[i].raiz.classList.toggle("rueda--libre", !o.manual);
+      }
+      if (conPista !== undefined) {
+        pista.textContent = conPista || "";
+        pista.hidden = !conPista;
+      }
+      ponerEstado("cerrado");
+    }
+
+    ponerEstado("cerrado");
+    return {
+      poner: poner, valor: valor, sacudir: sacudir, activar: activar, reiniciar: reiniciar,
+      abrir: function () { ponerEstado("abierto"); },
+      cerrar: function () { ponerEstado("cerrado"); },
+      bloquear: function () { ponerEstado("bloqueado"); },
+      abierto: function () { return estado === "abierto"; }
+    };
+  }
+
+  /* ---------- The possible codes, by branch ---------- */
+  function crearClaves(cont, ruedas) {
+    cont.className = "claves claves--" + ruedas;
+    cont.setAttribute("aria-hidden", "true");
+    cont.textContent = "";
+    var celdas = {};
+    var grupos = {};
+    var actual = null;
+    var prefijo = ruedas === 3 ? 1 : 2; // how many digits the group shows
+    todas(prefijo).forEach(function (rama) {
+      var g = crear("div", "claves__grupo");
+      g.appendChild(crear("span", "claves__rama", aMedias(rama, ruedas)));
+      todas(ruedas - prefijo).forEach(function (resto) {
+        var clave = rama + resto;
+        var c = crear("span", "claves__celda", clave);
+        g.appendChild(c);
+        celdas[clave] = c;
+      });
+      grupos[rama] = g;
+      cont.appendChild(g);
+    });
+    var CLASES = ["mano", "probada", "cortada", "secreta"];
+
+    function marcar(clave, tipo) {
+      var c = celdas[clave];
+      if (!c) return;
+      CLASES.forEach(function (k) { c.classList.toggle("claves__celda--" + k, k === tipo); });
+    }
+    function cortar(rama) {
+      Object.keys(celdas).forEach(function (clave) {
+        if (clave.indexOf(rama) === 0 && !celdas[clave].classList.contains("claves__celda--probada")) marcar(clave, "cortada");
+      });
+    }
+    function senalar(clave) {
+      if (actual) actual.classList.remove("claves__celda--actual");
+      actual = clave ? celdas[clave] : null;
+      if (actual) actual.classList.add("claves__celda--actual");
+    }
+    function foco(rama) {
+      Object.keys(grupos).forEach(function (k) { grupos[k].classList.toggle("claves__grupo--foco", k === rama); });
+    }
+    function limpiar() {
+      Object.keys(celdas).forEach(function (clave) { marcar(clave, null); });
+      senalar(null);
+      foco(null);
+    }
+    function cuantas(tipo) { return cont.querySelectorAll(".claves__celda--" + tipo).length; }
+    return { marcar: marcar, cortar: cortar, senalar: senalar, foco: foco, limpiar: limpiar, cuantas: cuantas };
+  }
+
+  /* ---------- Simulate try_code(n, code, left) ----------
+     o: { ruedas, secreta, falta, poda(falta, n), unir(clave, d), parar, alEncontrar, tope }
+     parar: the base case returns code == secret (without parar, it returns nothing).
+     alEncontrar: what the card does when its call returns True: "return", "break" or "print".
+     tope: on the next try, the padlock locks up and everything stops.
+     Returns the events (llamada, corte, prueba, print, bloqueo, error) and the result. */
+  function simular(o) {
+    var ev = [], probadas = 0, llamadas = 0, bloqueado = false, abierto = false, error = false;
+    var unir = o.unir || function (c, d) { return c + d; };
+    function probar(n, clave, falta) {
+      llamadas++;
+      ev.push({ t: "llamada", clave: clave, n: n });
+      if (o.poda && o.poda(falta, n)) {
+        ev.push({ t: "corte", clave: clave, n: n, falta: falta });
+        return false;
+      }
+      if (n === 0) {
+        if (o.tope && probadas >= o.tope) {
+          bloqueado = true;
+          ev.push({ t: "bloqueo", clave: clave });
+          return false;
+        }
+        probadas++;
+        var ok = clave === o.secreta;
+        if (ok) abierto = true;
+        ev.push({ t: "prueba", clave: clave, ok: ok, k: probadas });
+        return o.parar ? ok : false;
+      }
+      for (var d = 0; d < 3; d++) {
+        var nueva = unir(clave, d);
+        if (nueva === null) {
+          error = true;
+          ev.push({ t: "error", texto: 'TypeError: can only concatenate str (not "int") to str' });
+          return false;
+        }
+        var r = probar(n - 1, nueva, falta - d);
+        if (bloqueado || error) return false;
+        if (r) {
+          if (o.alEncontrar === "return") return true;
+          if (o.alEncontrar === "break") break;
+          if (o.alEncontrar === "print") ev.push({ t: "print" });
+        }
+      }
+      return false;
+    }
+    var resultado = probar(o.ruedas, "", o.falta);
+    return { eventos: ev, resultado: resultado, probadas: probadas, llamadas: llamadas, bloqueado: bloqueado, abierto: abierto, error: error };
+  }
+
+  /* Plays events one after another: alEvento returns how long to wait. Returns a function to stop it. */
+  function reproducir(eventos, alEvento, alTerminar) {
+    var i = 0, timer = null, vivo = true;
+    function tic() {
+      if (!vivo) return;
+      if (i >= eventos.length) { timer = null; vivo = false; if (alTerminar) alTerminar(); return; }
+      var ms = alEvento(eventos[i], i);
+      i++;
+      timer = setTimeout(tic, reducir() ? Math.min(ms, 120) : ms);
+    }
+    tic();
+    return function () { vivo = false; if (timer) clearTimeout(timer); timer = null; };
+  }
+
+  // One line of output, and the console scrolls down to it
+  function imprimir(consola, texto, clase) {
+    Codigo.agregar(consola, texto);
+    if (clase) consola.lastElementChild.classList.add(clase);
+    consola.scrollTop = consola.scrollHeight;
+  }
+
+  function contarEn(el, k) {
+    var s = el.querySelector("strong");
+    if (s.textContent === String(k)) return;
+    s.textContent = String(k);
+    if (k) pulso(el, "marcador--cambio");
+  }
+
+  /* Paints one event of the simulation on the padlock, the codes, the console and the code.
+     v: { candado, claves, consola, codigo, lineas: { corte, prueba }, ruedas, alPrueba(ev) } */
+  function pintarEvento(v, ev) {
+    if (ev.t === "llamada") {
+      v.candado.poner(ev.clave);
+      if (v.codigo) Codigo.limpiar(v.codigo);
+      return 70;
+    }
+    if (ev.t === "corte") {
+      v.candado.poner(ev.clave);
+      if (v.claves) v.claves.cortar(ev.clave);
+      if (v.codigo && v.lineas) Codigo.marcar(v.codigo, { activas: v.lineas.corte });
+      if (v.alCorte) v.alCorte(ev);
+      return 330;
+    }
+    if (ev.t === "prueba") {
+      v.candado.poner(ev.clave);
+      if (v.codigo && v.lineas) Codigo.marcar(v.codigo, { activas: v.lineas.prueba });
+      imprimir(v.consola, ev.clave);
+      if (v.claves && ev.clave.length === v.ruedas) {
+        v.claves.marcar(ev.clave, ev.ok ? "secreta" : "probada");
+        v.claves.senalar(ev.clave);
+      }
+      if (ev.ok) v.candado.abrir();
+      if (v.alPrueba) v.alPrueba(ev);
+      return ev.ok ? 650 : 190;
+    }
+    if (ev.t === "print") {
+      imprimir(v.consola, "Open!", "consola__linea--abierto");
+      return 450;
+    }
+    if (ev.t === "bloqueo") {
+      v.candado.poner(ev.clave);
+      v.candado.bloquear();
+      return 0;
+    }
+    if (ev.t === "error") {
+      if (v.codigo && v.lineas) Codigo.marcar(v.codigo, { activas: v.lineas.error });
+      imprimir(v.consola, ev.texto, "consola__linea--error");
+      return 0;
+    }
+    return 0;
+  }
+
+  /* ---------- 1. The padlock, by hand ---------- */
+  var mano = { intentos: 0, abierto: false, listo: false, probadas: {} };
+  var candado1 = crearCandado($("p1-candado"), {
+    ruedas: 3, manual: true,
+    alCambiar: function () { Pasos.limpiarFeedback($("p1-fb")); }
+  });
+  var claves1 = crearClaves($("p1-claves"), 3);
+
+  function empezarMano() {
+    mano = { intentos: 0, abierto: false, listo: mano.listo, probadas: {} };
+    candado1.reiniciar();
+    candado1.activar(true);
+    claves1.limpiar();
+    contarEn($("p1-marcador"), 0);
+    $("p1-abrir").disabled = false;
+    $("p1-otro").hidden = true;
+    Pasos.limpiarFeedback($("p1-fb"));
+  }
+
+  function probarAMano() {
+    if (mano.abierto) return;
+    var clave = candado1.valor();
+    mano.intentos++;
+    contarEn($("p1-marcador"), mano.intentos);
+    var repetida = mano.probadas[clave];
+    mano.probadas[clave] = true;
+    var distintas = Object.keys(mano.probadas).length;
+    claves1.senalar(clave);
+    if (clave === secreta) {
+      mano.abierto = true;
+      candado1.abrir();
+      candado1.activar(false);
+      claves1.marcar(clave, "secreta");
+      $("p1-abrir").disabled = true;
+      $("p1-otro").hidden = false;
+      Pasos.feedback($("p1-fb"), "ok", "Open in " + plural(mano.intentos, "try", "tries") + "! The code was " + clave +
+        ". There are 27 codes: trying them by hand is tiring. Let's make the computer try them for you.");
+      mano.listo = true;
+      leccion.desbloquear();
+      return;
+    }
+    candado1.sacudir();
+    claves1.marcar(clave, "mano");
+    var texto = repetida
+      ? "You already tried " + clave + ". You have " + (27 - distintas) + " left to try."
+      : clave + " doesn't open it. You've tried " + distintas + " of 27 codes.";
+    if (mano.intentos >= 8 && !mano.listo) {
+      mano.listo = true;
+      texto += " Tiring, right? The computer can try them all without getting tired: tap “Continue” whenever you want, or keep trying.";
+      leccion.desbloquear();
+    }
+    Pasos.feedback($("p1-fb"), "pista", texto);
+  }
+
+  function otroCandado() {
+    secreta = nuevaSecreta();
+    empezarMano();
+    candado1.activar(true);
+    $("p1-abrir").focus();
+  }
+
+  /* ---------- 2. Part 1: all the codes ---------- */
+  var candado2 = crearCandado($("p2-candado"), { ruedas: 3 });
+  var claves2 = crearClaves($("p2-claves"), 3);
+  var cortar2 = null;
+  var UNIR = {
+    bien: function (c, d) { return c + d; },
+    num: function () { return null; },
+    solo: function (c, d) { return String(d); },
+    igual: function (c) { return c; }
+  };
+  var PISTAS2 = {
+    num: "d is a number and code is a text: you can't join them with +. First you have to turn d into a text with str(d).",
+    solo: "You get 27 codes with a single digit: str(d) only has the new digit. You have to join it to what code already had.",
+    igual: "It prints 27 empty lines: code never grows. You have to add the digit d to it in each call."
+  };
+
+  function limpiar2() {
+    if (cortar2) cortar2();
+    cortar2 = null;
+    candado2.reiniciar();
+    claves2.limpiar();
+    Codigo.limpiar($("p2-codigo"));
+    Codigo.consola($("p2-consola"), []);
+  }
+
+  function elegido2() {
+    var m = document.querySelector('input[name="p2"]:checked');
+    return m ? m.value : "";
+  }
+
+  function pintarHueco(hueco, opcion, vacio) {
+    hueco.textContent = opcion ? opcion.closest(".opcion").querySelector("span").textContent : vacio;
+    hueco.classList.toggle("hueco--lleno", !!opcion);
+  }
+
+  function comprobarTodas(paso) {
+    var v = elegido2();
+    if (!v) return false;
+    var opcion = paso.querySelector('input[name="p2"]:checked').closest(".opcion");
+    paso.querySelectorAll("#p2-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    limpiar2();
+    var r = simular({ ruedas: 3, secreta: secreta, falta: 0, unir: UNIR[v] });
+    var vista = { candado: candado2, claves: claves2, consola: $("p2-consola"), codigo: $("p2-codigo"), ruedas: 3,
+      lineas: { prueba: [2], error: [5] } };
+    cortar2 = reproducir(r.eventos, function (ev) {
+      var ms = pintarEvento(vista, ev);
+      return ev.t === "prueba" ? (ev.ok ? 500 : 110) : Math.min(ms, 40);
+    }, function () {
+      cortar2 = null;
+      if (!r.error) Codigo.limpiar($("p2-codigo"));
+      claves2.senalar(null);
+    });
+    if (v === "bien") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("p2-fb"), "ok", "That's it! code + str(d) adds this wheel's digit to the code. Watch all 27 come out: 3 × 3 × 3. " +
+        "When it reaches yours (" + secreta + "), the padlock opens… but the program doesn't check and keeps going.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("p2-fb"), "pista", PISTAS2[v]);
+    return false;
+  }
+
+  /* ---------- 3. Code by code, with the call stack ---------- */
+  var candado3 = crearCandado($("p3-candado"), { ruedas: 3 });
+  var pila3 = Pila.crear($("p3-pila"), { codigo: $("p3-codigo"), rotulo: true });
+  var impresas3 = 0;
+
+  function titulo(n, clave, falta) { return "try_code(" + n + ", " + q(clave) + (falta !== undefined ? ", " + falta : "") + ")"; }
+
+  function tarjeta(n, clave, d, extra) {
+    var vars = [["n", n], ["code", q(clave)]];
+    if (d !== undefined) vars.push(["d", d]);
+    var t = Pila.llamada(titulo(n, clave), vars);
+    t.ficha = "n=" + n;
+    for (var c in extra) t[c] = extra[c];
+    return t;
+  }
+
+  function rueda(n) { return 4 - n; } // the wheel that the call with that n sets (out of 3 wheels)
+
+  function traza3() {
+    var cuenta = 0;
+    function prog(extra) {
+      var p = Pila.programa();
+      p.linea = 7;
+      p.ficha = "program";
+      p.falta = "";
+      for (var c in extra) p[c] = extra[c];
+      return p;
+    }
+    var pasos = [
+      { linea: 0, clave: "", texto: "Python remembers the function <strong>try_code</strong>. It doesn't run it yet.", estado: { pila: [Pila.programa()] } },
+      { linea: 7, texto: 'The program calls <strong>try_code(3, "")</strong>: 3 wheels are left and the code is empty.',
+        estado: { pila: [prog(), tarjeta(3, "")] } }
+    ];
+
+    function visitar(n, clave, abajo) {
+      var nivel = abajo.length;
+      var t = function (d, extra) { return tarjeta(n, clave, d, extra); };
+      pasos.push({ linea: 1, fase: "ida", clave: clave,
+        texto: "n == 0? " + n + " == 0 is " + chip(n === 0) + (n === 0 ? ": the code is complete." : ": " + (n === 1 ? "1 wheel is left." : n + " wheels are left.")),
+        estado: { pila: abajo.concat([t()]), leer: [nivel, "n"] } });
+      if (n === 0) {
+        cuenta++;
+        var abre = clave === secreta;
+        pasos.push({ linea: 2, salida: clave, clave: clave, impresa: clave, abre: abre, parada: true,
+          texto: "It prints <strong>" + clave + "</strong>, code " + cuenta + " of 27. And it ends." +
+            (abre ? " The padlock opens! But the program doesn't check…" : ""),
+          estado: { pila: abajo.concat([t(undefined, { termina: true })]) } });
+        return;
+      }
+      for (var d = 0; d < 3; d++) {
+        var hija = clave + d;
+        var falta = d === 0 ? "the for with d = 1 and d = 2" : d === 1 ? "the for with d = 2" : "";
+        pasos.push({ linea: 4,
+          texto: (d === 0 ? "The for starts" : "Another round of the for") + ": <strong>d = " + d + "</strong>.",
+          estado: { pila: abajo.concat([t(d)]), leer: [nivel, "d"] } });
+        var espera = t(d, { linea: 5, falta: falta });
+        pasos.push({ linea: 5,
+          texto: "It calls <strong>" + titulo(n - 1, hija) + "</strong>: wheel " + rueda(n) + " shows " + d + ".",
+          estado: { pila: abajo.concat([espera, tarjeta(n - 1, hija)]) } });
+        visitar(n - 1, hija, abajo.concat([espera]));
+        pasos.push({ linea: 5, flecha: true, fase: "vuelta", clave: clave,
+          texto: titulo(n - 1, hija) + " ended. This card continues where it left off.",
+          estado: { pila: abajo.concat([t(d, { linea: 5, sigue: true, falta: falta })]) } });
+      }
+      pasos.push({ linea: 4,
+        texto: "The for already tried d = 0, 1 and 2. <strong>" + titulo(n, clave) + "</strong> ends.",
+        estado: { pila: abajo.concat([t(2, { termina: true })]) } });
+    }
+
+    visitar(3, "", [prog()]);
+    pasos.push({ linea: 7, flecha: true, fase: "vuelta", clave: "",
+      texto: 'try_code(3, "") ended: it printed all 27 codes, from 000 to 222.',
+      estado: { pila: [prog({ sigue: true })] } });
+    return pasos;
+  }
+
+  /* ---------- 4. Part 2: stop when you find it ---------- */
+  var candado4 = crearCandado($("p4-candado"), { ruedas: 3 });
+  var claves4 = crearClaves($("p4-claves"), 3);
+  var cortar4 = null;
+  var PISTAS4 = {
+    break: "break only ends the for of that card: then it reaches return False, and the card below gets False and keeps trying. You have to tell it with True.",
+    print: "print prints, but it doesn't tell anyone: the card goes on with its for, returns False and the ones below keep trying."
+  };
+
+  function limpiar4() {
+    if (cortar4) cortar4();
+    cortar4 = null;
+    candado4.reiniciar();
+    claves4.limpiar();
+    contarEn($("p4-marcador"), 0);
+    Codigo.limpiar($("p4-codigo"));
+    Codigo.consola($("p4-consola"), []);
+  }
+
+  function elegido4() {
+    var m = document.querySelector('input[name="p4"]:checked');
+    return m ? m.value : "";
+  }
+
+  function comprobarParar(paso) {
+    var v = elegido4();
+    if (!v) return false;
+    var opcion = paso.querySelector('input[name="p4"]:checked').closest(".opcion");
+    paso.querySelectorAll("#p4-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    limpiar4();
+    var r = simular({ ruedas: 3, secreta: secreta, falta: 0, parar: true, alEncontrar: v });
+    var vista = { candado: candado4, claves: claves4, consola: $("p4-consola"), codigo: $("p4-codigo"), ruedas: 3,
+      lineas: { prueba: [4] },
+      alPrueba: function (ev) { contarEn($("p4-marcador"), ev.k); } };
+    cortar4 = reproducir(r.eventos, function (ev) {
+      var ms = pintarEvento(vista, ev);
+      if (ev.t === "print") Codigo.marcar($("p4-codigo"), { activas: [8] });
+      return ev.t === "prueba" ? (ev.ok ? 650 : 130) : Math.min(ms, 40);
+    }, function () {
+      cortar4 = null;
+      claves4.senalar(null);
+      if (r.resultado) {
+        Codigo.marcar($("p4-codigo"), { activas: [12] });
+        imprimir($("p4-consola"), "Open!", "consola__linea--abierto");
+      } else {
+        Codigo.limpiar($("p4-codigo"));
+      }
+    });
+    if (v === "return") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("p4-fb"), "ok", "That's it! return True tells the card below, which returns True too, and so on down to the program. " +
+        "It tries " + plural(r.probadas, "code", "codes") + " of 27 and skips the rest.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("p4-fb"), "pista", PISTAS4[v] + " Look: it tries " + r.probadas + " codes and never reaches the print on the last line.");
+    return false;
+  }
+
+  /* ---------- 5. The True goes down the stack ---------- */
+  var candado5 = crearCandado($("p5-candado"), { ruedas: 3 });
+  var pila5 = Pila.crear($("p5-pila"), { codigo: $("p5-codigo"), rotulo: true });
+  var probadas5 = 0;
+
+  function traza5() {
+    var cuenta = 0;
+    var vars = [["secret", q(secreta)]];
+    function prog(extra) {
+      var p = Pila.programa(vars);
+      p.linea = 11;
+      p.ficha = "program";
+      p.falta = 'if try_code(3, ""):';
+      p.espera = 'try_code(3, "")';
+      for (var c in extra) p[c] = extra[c];
+      return p;
+    }
+    var pasos = [
+      { linea: 0, clave: "", texto: "<strong>secret</strong> stores the code of your padlock: " + q(secreta) + ".", estado: { pila: [Pila.programa(vars)] } },
+      { linea: 2, texto: "Python remembers the function <strong>try_code</strong>.", estado: { pila: [Pila.programa(vars)] } },
+      { linea: 11, texto: 'The program calls <strong>try_code(3, "")</strong> and waits for its answer: <code>True</code> or <code>False</code>.',
+        estado: { pila: [prog(), tarjeta(3, "")] } }
+    ];
+
+    function visitar(n, clave, abajo) {
+      var nivel = abajo.length;
+      var t = function (d, extra) { return tarjeta(n, clave, d, extra); };
+      pasos.push({ linea: 3, fase: "ida", clave: clave,
+        texto: "n == 0? " + n + " == 0 is " + chip(n === 0) + (n === 0 ? ": the code is complete." : ": " + (n === 1 ? "1 wheel is left." : n + " wheels are left.")),
+        estado: { pila: abajo.concat([t()]), leer: [nivel, "n"] } });
+      if (n === 0) {
+        cuenta++;
+        var ok = clave === secreta;
+        pasos.push({ linea: 4, salida: clave, clave: clave, prueba: true, parada: true,
+          texto: "It tries <strong>" + clave + "</strong>: code " + cuenta + " of 27.",
+          estado: { pila: abajo.concat([t()]) } });
+        pasos.push({ linea: 5, abre: ok, parada: ok,
+          texto: q(clave) + " == " + q(secreta) + " is " + chip(ok) + (ok ? ": the padlock opens! It returns <strong>True</strong>." : ": it doesn't open. It returns False."),
+          estado: { pila: abajo.concat([t(undefined, { devuelve: ok ? "True" : "False" })]) } });
+        return ok;
+      }
+      for (var d = 0; d < 3; d++) {
+        var hija = clave + d;
+        var llamada = titulo(n - 1, hija);
+        pasos.push({ linea: 6,
+          texto: (d === 0 ? "The for starts" : "Another round of the for") + ": <strong>d = " + d + "</strong>.",
+          estado: { pila: abajo.concat([t(d)]), leer: [nivel, "d"] } });
+        var espera = t(d, { linea: 7, falta: "if " + llamada + ":", espera: llamada });
+        pasos.push({ linea: 7,
+          texto: "It calls <strong>" + llamada + "</strong> and waits: did it find the code?",
+          estado: { pila: abajo.concat([espera, tarjeta(n - 1, hija)]) } });
+        var r = visitar(n - 1, hija, abajo.concat([espera]));
+        pasos.push({ linea: 7, flecha: true, fase: "vuelta", clave: clave, parada: r,
+          texto: r ? "It got <strong>True</strong> back: the if condition is true." : "It got False back: the if condition is false. The for goes on.",
+          estado: { pila: abajo.concat([t(d, { linea: 7, sigue: true, falta: "if " + llamada + ":", espera: llamada, recibe: r ? "True" : "False" })]) } });
+        if (r) {
+          pasos.push({ linea: 8, parada: true,
+            texto: "<strong>return True</strong>: this card also returns True, without trying the digits it had left.",
+            estado: { pila: abajo.concat([t(d, { devuelve: "True" })]) } });
+          return true;
+        }
+      }
+      pasos.push({ linea: 9,
+        texto: "No digit on this wheel opened the padlock: <strong>return False</strong>.",
+        estado: { pila: abajo.concat([t(2, { devuelve: "False" })]) } });
+      return false;
+    }
+
+    visitar(3, "", [prog()]);
+    pasos.push({ linea: 11, flecha: true, fase: "vuelta", parada: true,
+      texto: 'try_code(3, "") gave <strong>True</strong> back to the program: the if condition is true.',
+      estado: { pila: [prog({ sigue: true, recibe: "True" })] } });
+    pasos.push({ linea: 12, salida: "Open!", fin: cuenta,
+      texto: "It prints Open!. It tried " + cuenta + " of the 27 codes; it didn't even look at the other " + (27 - cuenta) + ".",
+      estado: { pila: [Pila.programa(vars)] } });
+    return pasos;
+  }
+
+  /* ---------- 6. Part 3: a hint ---------- */
+  var candado6 = crearCandado($("p6-candado"), { ruedas: 3, pista: "Hint: the digits add up to 5" });
+  var claves6 = crearClaves($("p6-claves"), 3);
+  var PISTAS6 = {
+    todas: "Do the math with the biggest one that starts with 0: 0 + 2 + 2 = 4. Not even that one reaches 5.",
+    dos: "Even if it ends in 2: 0 + 2 + 2 = 4. None of the ones that start with 0 reach 5."
+  };
+
+  function preparar6(resuelto) {
+    candado6.reiniciar();
+    candado6.poner("0");
+    claves6.limpiar();
+    claves6.foco("0");
+    if (resuelto) {
+      claves6.foco(null);
+      claves6.cortar("0");
+    }
+  }
+
+  function comprobarPista(paso) {
+    var m = paso.querySelector('input[name="p6"]:checked');
+    if (!m) return false;
+    var opcion = m.closest(".opcion");
+    paso.querySelectorAll("#p6-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    if (m.value === "ninguna") {
+      opcion.classList.add("opcion--correcta");
+      preparar6(true);
+      $("p6-explicacion").innerHTML = "<strong>5</strong> is left and the <strong>2</strong> remaining wheels give at most <strong>2 * 2 = 4</strong>: ✂ the branch is cut off.";
+      Pasos.feedback($("p6-fb"), "ok", "Exactly! Without trying any of them, we know the 9 codes that start with 0 don't work. " +
+        "In Python: if what's left is more than 2 * n (n, the wheels that remain), that branch is cut off.");
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("p6-fb"), "pista", PISTAS6[m.value]);
+    return false;
+  }
+
+  /* ---------- 7. Cut off branches: with and without the hint ---------- */
+  var candado7 = crearCandado($("p7-candado"), { ruedas: 3, pista: "Hint: the digits add up to 5" });
+  var claves7 = crearClaves($("p7-claves"), 3);
+  var secreta7 = alAzar(["122", "212", "221"]);
+  var cortar7 = null;
+  var hechos7 = {};
+  var PODA_BIEN = function (falta, n) { return falta < 0 || falta > 2 * n; };
+
+  function limpiar7() {
+    if (cortar7) cortar7();
+    cortar7 = null;
+    candado7.reiniciar();
+    claves7.limpiar();
+    Codigo.limpiar($("p7-codigo"));
+    Codigo.consola($("p7-consola"), []);
+  }
+
+  function filaTabla(modo) { return document.querySelector('#p7-tabla tr[data-modo="' + modo + '"]'); }
+
+  function motivoCorte(ev) {
+    if (ev.falta < 0) return "✂ " + aMedias(ev.clave, 3) + ": it already adds up to " + suma(ev.clave) + ", more than 5.";
+    return "✂ " + aMedias(ev.clave, 3) + ": " + ev.falta + " is left and " + plural(ev.n, "wheel gives", "wheels give") + " at most " + 2 * ev.n + ".";
+  }
+
+  function correr7(modo) {
+    limpiar7();
+    var con = modo === "con";
+    $("p7-sin").disabled = $("p7-con").disabled = true;
+    Pasos.limpiarFeedback($("p7-fb"));
+    document.querySelectorAll("#p7-tabla tbody tr").forEach(function (tr) { tr.classList.toggle("comparar--activa", tr === filaTabla(modo)); });
+    // Without the hint, lines 4 and 5 are not there
+    var saltadas = con ? [] : [3, 4];
+    var r = simular({ ruedas: 3, secreta: secreta7, falta: 5, parar: true, alEncontrar: "return", poda: con ? PODA_BIEN : null });
+    var celdas = filaTabla(modo).querySelectorAll("td");
+    var probadas = 0, llamadas = 0;
+    function marcarCodigo(activas) { Codigo.marcar($("p7-codigo"), { activas: activas || [], saltadas: saltadas }); }
+    marcarCodigo([]);
+    $("p7-explicacion").textContent = con ? "With the hint: each call first checks if its branch can still add up to 5." : "Without the hint: lines 4 and 5 are not there. It tries in order.";
+    var vista = { candado: candado7, claves: claves7, consola: $("p7-consola"), ruedas: 3,
+      alCorte: function (ev) {
+        marcarCodigo([3, 4]);
+        $("p7-explicacion").textContent = motivoCorte(ev);
+      },
+      alPrueba: function (ev) {
+        probadas = ev.k;
+        marcarCodigo([6]);
+        celdas[0].textContent = String(probadas);
+        $("p7-explicacion").textContent = ev.ok ? ev.clave + " opens the padlock!" : ev.clave + " doesn't open it.";
+      } };
+    cortar7 = reproducir(r.eventos, function (ev) {
+      if (ev.t === "llamada") {
+        llamadas++;
+        celdas[1].textContent = String(llamadas);
+        marcarCodigo([]);
+      }
+      var ms = pintarEvento(vista, ev);
+      if (ev.t === "corte") return 600;
+      if (ev.t === "prueba") return ev.ok ? 650 : (con ? 500 : 170);
+      return con ? 160 : 40;
+    }, function () {
+      cortar7 = null;
+      claves7.senalar(null);
+      marcarCodigo([15]);
+      imprimir($("p7-consola"), "Open!", "consola__linea--abierto");
+      pulso(celdas[0], "comparar--cambio");
+      $("p7-sin").disabled = $("p7-con").disabled = false;
+      hechos7[modo] = { probadas: r.probadas, llamadas: r.llamadas };
+      $("p7-explicacion").textContent = (con ? "With the hint: " : "Without the hint: ") + plural(r.probadas, "code tried", "codes tried") + " and " + r.llamadas + " calls.";
+      if (hechos7.sin && hechos7.con) {
+        Pasos.feedback($("p7-fb"), "ok", "Without the hint it tried " + hechos7.sin.probadas + " codes; with the hint, " + plural(hechos7.con.probadas, "code", "codes") +
+          ". The hint doesn't tell you the code: it tells you which branches aren't worth opening. Each branch cut off skips every code that hangs from it.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("p7-fb"), "pista", con ? "Now run it without the hint, to compare." : "Now run it with the hint, to compare.");
+      }
+    });
+  }
+
+  /* ---------- 8. Challenge: the 4-wheel padlock ---------- */
+  var candado8 = crearCandado($("p8-candado"), { ruedas: 4, pista: "Hint: the digits add up to 2" });
+  var claves8 = crearClaves($("p8-claves"), 4);
+  var cortar8 = null;
+  var TOPE = 10;
+  var PODAS = {
+    a: function (f, n) { return f < 0 || f > 2 * n; },
+    b: function (f) { return f < 0; },
+    c: function (f) { return f < 0 || f > 2 * 4; },
+    d: function (f, n) { return f < 0 || f > n; },
+    e: function (f, n) { return f > 2 * n; }
+  };
+  var PISTAS_PODA = {
+    b: "It only cuts when it already went over. It must also cut when it can't get there: if what's left is more than 2 * n, the remaining wheels can't reach it.",
+    c: "2 * 4 is what the 4 wheels give at the start, but each card has fewer wheels left to set: you have to use n.",
+    d: "Each wheel goes up to 2, not 1: n wheels give at most 2 * n. This way it cuts branches that did work.",
+    e: "It only cuts when it can't get there. It must also cut when it goes over: if left is less than 0, the code already adds up to too much."
+  };
+  var PISTAS_VUELTA = {
+    break: "break only ends the for of that card: then it returns False, and the one below keeps trying. You have to pass the news down with return True.",
+    print: "print doesn't tell anyone: the card goes on with its for and returns False at the end. You have to return True."
+  };
+  // Two padlocks. The first one has a code that makes each mistake show (see the simulation)
+  var MISIONES = [
+    { suma: 2, secreta: alAzar(["0200", "1001", "1010", "1100", "2000"]) },
+    { suma: 6, secreta: alAzar(todas(4).filter(function (c) { return suma(c) === 6; })) }
+  ];
+  var mision8 = 0;
+  var hechas8 = [false, false];
+
+  function elegidos8() { return { poda: $("p8-poda").value, vuelta: $("p8-vuelta").value }; }
+
+  function pintarHuecos8() {
+    [["poda", "▢ 1"], ["vuelta", "▢ 2"]].forEach(function (par) {
+      var sel = $("p8-" + par[0]);
+      var hueco = $("p8-hueco-" + par[0]);
+      sel.classList.toggle("elegir--lleno", !!sel.value);
+      hueco.classList.toggle("hueco--lleno", !!sel.value);
+      hueco.textContent = sel.value ? sel.options[sel.selectedIndex].textContent : par[1];
+    });
+    var e = elegidos8();
+    $("p8-ejecutar").disabled = !(e.poda && e.vuelta) || !!cortar8;
+  }
+
+  function pintarMisiones() {
+    document.querySelectorAll("#p8-misiones .mision").forEach(function (b, i) {
+      b.setAttribute("aria-pressed", String(i === mision8));
+      b.classList.toggle("mision--hecha", hechas8[i] === true);
+      b.classList.toggle("mision--fallo", hechas8[i] === "fallo");
+      b.querySelector("small").textContent = hechas8[i] === true ? "open" : hechas8[i] === "fallo" ? "not open" : "";
+    });
+  }
+
+  function limpiar8() {
+    if (cortar8) cortar8();
+    cortar8 = null;
+    var m = MISIONES[mision8];
+    candado8.reiniciar("Hint: the digits add up to " + m.suma);
+    claves8.limpiar();
+    contarEn($("p8-marcador"), 0);
+    $("p8-secreta").textContent = q(m.secreta);
+    $("p8-suma").textContent = String(m.suma);
+    Codigo.limpiar($("p8-codigo"));
+    Codigo.consola($("p8-consola"), []);
+    pintarHuecos8();
+  }
+
+  function elegirMision(i) {
+    if (cortar8) return;
+    mision8 = i;
+    pintarMisiones();
+    limpiar8();
+    $("p8-explicacion").textContent = "Padlock " + (i + 1) + ": the digits add up to " + MISIONES[i].suma + ". Tap “Run”.";
+    Pasos.limpiarFeedback($("p8-fb"));
+  }
+
+  function cambioReto() {
+    hechas8 = [false, false];
+    pintarMisiones();
+    if (mision8 !== 0) elegirMision(0);
+    else limpiar8();
+    $("p8-explicacion").textContent = "Tap “Run” to test the program with padlock 1.";
+    Pasos.limpiarFeedback($("p8-fb"));
+  }
+
+  function ejecutarReto() {
+    var e = elegidos8();
+    if (!e.poda || !e.vuelta || cortar8) return;
+    limpiar8();
+    Pasos.limpiarFeedback($("p8-fb"));
+    var m = MISIONES[mision8];
+    var r = simular({ ruedas: 4, secreta: m.secreta, falta: m.suma, parar: true, alEncontrar: e.vuelta, poda: PODAS[e.poda], tope: TOPE });
+    var vista = { candado: candado8, claves: claves8, consola: $("p8-consola"), codigo: $("p8-codigo"), ruedas: 4,
+      lineas: { corte: [3, 4], prueba: [6] },
+      alCorte: function (ev) { $("p8-explicacion").textContent = "✂ Cuts off the branch " + aMedias(ev.clave, 4) + " (left = " + ev.falta + ", n = " + ev.n + ")."; },
+      alPrueba: function (ev) {
+        contarEn($("p8-marcador"), ev.k);
+        $("p8-explicacion").textContent = "Try " + ev.k + ": " + ev.clave + (ev.ok ? " opens it!" : " doesn't open it.");
+      } };
+    $("p8-ejecutar").disabled = true;
+    document.querySelectorAll("#p8-misiones .mision, #p8-poda, #p8-vuelta").forEach(function (b) { b.disabled = true; });
+    cortar8 = reproducir(r.eventos, function (ev) {
+      var ms = pintarEvento(vista, ev);
+      if (ev.t === "print") Codigo.marcar($("p8-codigo"), { activas: [11] });
+      if (ev.t === "corte") return 260;
+      if (ev.t === "prueba") return ev.ok ? 650 : 300;
+      return Math.min(ms, 60);
+    }, function () {
+      cortar8 = null;
+      document.querySelectorAll("#p8-misiones .mision, #p8-poda, #p8-vuelta").forEach(function (b) { b.disabled = false; });
+      claves8.senalar(null);
+      terminarReto(r, e, m);
+      pintarHuecos8();
+    });
+  }
+
+  function terminarReto(r, e, m) {
+    var bien = r.resultado && r.abierto && !r.bloqueado;
+    if (r.resultado) {
+      Codigo.marcar($("p8-codigo"), { activas: [15] });
+      imprimir($("p8-consola"), "Open!", "consola__linea--abierto");
+    } else {
+      Codigo.limpiar($("p8-codigo"));
+    }
+    var n = mision8 + 1;
+    if (bien) {
+      hechas8[mision8] = true;
+      pintarMisiones();
+      $("p8-explicacion").textContent = "Padlock " + n + " open in " + plural(r.probadas, "try", "tries") + ".";
+      var falta = hechas8.indexOf(false) !== -1 ? hechas8.indexOf(false) : hechas8.indexOf("fallo");
+      if (falta === -1) {
+        Pasos.feedback($("p8-fb"), "ok", "Both padlocks open! Your program only tries codes that fit the hint, and as soon as one opens, the True goes down the stack. " +
+          "Without the hint it could have tried up to 81.");
+        leccion.desbloquear();
+        return;
+      }
+      Pasos.feedback($("p8-fb"), "ok", "Open in " + plural(r.probadas, "try", "tries") + "! Now padlock " + (falta + 1) + ", with the same program.");
+      setTimeout(function () { if (!cortar8) elegirMision(falta); Pasos.feedback($("p8-fb"), "ok", "Padlock " + n + " is done! Now padlock " + (falta + 1) + ": tap “Run”."); }, reducir() ? 0 : 900);
+      return;
+    }
+    hechas8[mision8] = "fallo";
+    pintarMisiones();
+    var texto;
+    if (r.bloqueado) {
+      texto = "It locked up: it had already used its " + TOPE + " tries. Look at the codes it tried: do they add up to " + m.suma + "? " + (PISTAS_PODA[e.poda] || "");
+      $("p8-explicacion").textContent = "⛔ Try 11 locks up the padlock.";
+    } else if (!r.abierto) {
+      texto = (r.probadas ? "It tried " + plural(r.probadas, "code", "codes") + " and none of them opened it" : "It didn't try any code: it cut off the branch from the start") +
+        ". " + (PISTAS_PODA[e.poda] || "");
+      $("p8-explicacion").textContent = "It didn't find the code.";
+    } else {
+      texto = "The padlock opened with " + m.secreta + ", but the program didn't notice: it kept trying and didn't print the last “Open!”. " + PISTAS_VUELTA[e.vuelta];
+      $("p8-explicacion").textContent = "It opened and kept turning the wheels.";
+    }
+    Pasos.feedback($("p8-fb"), "pista", texto);
+  }
+
+  /* ---------- Connections ---------- */
+  $("p1-abrir").addEventListener("click", probarAMano);
+  $("p1-otro-btn").addEventListener("click", otroCandado);
+  empezarMano();
+
+  document.querySelectorAll('#p2-opciones input[name="p2"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      document.querySelectorAll("#p2-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      pintarHueco($("p2-hueco"), radio, "▢");
+      limpiar2();
+      Pasos.limpiarFeedback($("p2-fb"));
+      leccion.listoParaComprobar(true);
+    });
+  });
+  limpiar2();
+
+  var secreta3 = secreta;
+  var trazaP3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    saltar: $("p3-saltar"),
+    reiniciar: $("p3-reiniciar"),
+    generar: function () { secreta3 = secreta; return traza3(); },
+    pila: pila3,
+    intervalo: 260,
+    intervaloSaltar: 110,
+    alReiniciar: function () {
+      impresas3 = 0;
+      candado3.reiniciar();
+      pila3.vaciar();
+      Pasos.limpiarFeedback($("p3-fb"));
+    },
+    alPaso: function (paso) {
+      pila3.pintar(paso.estado);
+      if (paso.clave !== undefined) candado3.poner(paso.clave);
+      if (paso.abre) candado3.abrir();
+      if (paso.impresa) {
+        impresas3++;
+        $("p3-consola").scrollTop = $("p3-consola").scrollHeight;
+        if (impresas3 === 4) {
+          Pasos.feedback($("p3-fb"), "ok", "See the pattern? The last wheel turns fastest, like an odometer: the top card tries 0, 1 and 2, " +
+            "and when it ends, the one below changes its wheel. You can keep going up to 27 or continue.");
+          leccion.desbloquear();
+        }
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p3-fb"), "ok", "All 27 codes, in order: 3 cards with n = 1 for each one with n = 2… and 3 digits in each. " +
+        "It went past yours (" + secreta3 + ") and kept going: this program doesn't check if the padlock opened.");
+      leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('#p4-opciones input[name="p4"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      document.querySelectorAll("#p4-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      pintarHueco($("p4-hueco"), radio, "▢");
+      limpiar4();
+      Pasos.limpiarFeedback($("p4-fb"));
+      leccion.listoParaComprobar(true);
+    });
+  });
+  limpiar4();
+
+  var secreta5 = secreta;
+  var trazaP5 = Traza.crear({
+    codigo: $("p5-codigo"),
+    explicacion: $("p5-explicacion"),
+    consola: $("p5-consola"),
+    ejecutar: $("p5-ejecutar"),
+    reproducir: $("p5-reproducir"),
+    saltar: $("p5-saltar"),
+    reiniciar: $("p5-reiniciar"),
+    generar: function () { secreta5 = secreta; $("p5-secreta").textContent = q(secreta); return traza5(); },
+    pila: pila5,
+    intervalo: 260,
+    intervaloSaltar: 110,
+    alReiniciar: function () {
+      probadas5 = 0;
+      contarEn($("p5-marcador"), 0);
+      $("p5-saltar").textContent = "Next code ▸▸";
+      candado5.reiniciar();
+      pila5.vaciar();
+      Pasos.limpiarFeedback($("p5-fb"));
+    },
+    alPaso: function (paso) {
+      pila5.pintar(paso.estado);
+      if (paso.clave !== undefined && !candado5.abierto()) candado5.poner(paso.clave);
+      if (paso.prueba) {
+        probadas5++;
+        contarEn($("p5-marcador"), probadas5);
+        $("p5-consola").scrollTop = $("p5-consola").scrollHeight;
+      }
+      if (paso.abre) {
+        candado5.abrir();
+        $("p5-saltar").textContent = "Next step ▸▸";
+      }
+      if (paso.salida === "Open!") {
+        $("p5-consola").lastElementChild.classList.add("consola__linea--abierto");
+        $("p5-consola").scrollTop = $("p5-consola").scrollHeight;
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p5-fb"), "ok", "The one that opened returned True, and each card below, when it got it, returned True without trying more: the True went down the stack to the program. " +
+        "It tried " + plural(probadas5, "code", "codes") + " of 27.");
+      leccion.desbloquear();
+    }
+  });
+
+  preparar6(false);
+  document.querySelectorAll('#p6-opciones input[name="p6"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      document.querySelectorAll("#p6-opciones .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback($("p6-fb"));
+      $("p6-explicacion").textContent = "";
+      preparar6(false);
+      leccion.listoParaComprobar(true);
+    });
+  });
+
+  $("p7-secreta").textContent = q(secreta7);
+  $("p7-sin").addEventListener("click", function () { correr7("sin"); });
+  $("p7-con").addEventListener("click", function () { correr7("con"); });
+  limpiar7();
+
+  $("p8-poda").addEventListener("change", function () { pintarHuecos8(); cambioReto(); });
+  $("p8-vuelta").addEventListener("change", function () { pintarHuecos8(); cambioReto(); });
+  document.querySelectorAll("#p8-misiones .mision").forEach(function (b, i) {
+    b.addEventListener("click", function () { elegirMision(i); });
+  });
+  $("p8-ejecutar").addEventListener("click", ejecutarReto);
+  pintarMisiones();
+  limpiar8();
+
+  // When the step changes, any running animation stops
+  function pausar() {
+    trazaP3.detener();
+    trazaP5.detener();
+    if (cortar2) { cortar2(); cortar2 = null; }
+    if (cortar4) { cortar4(); cortar4 = null; }
+    if (cortar7) {
+      cortar7();
+      cortar7 = null;
+      $("p7-sin").disabled = $("p7-con").disabled = false;
+    }
+    if (cortar8) {
+      cortar8();
+      cortar8 = null;
+      document.querySelectorAll("#p8-misiones .mision, #p8-poda, #p8-vuelta").forEach(function (b) { b.disabled = false; });
+      pintarHuecos8();
+    }
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-mano": pausar,
+      "paso-todas": function (paso, l, info) {
+        pausar();
+        limpiar2();
+        if (!info.desbloqueado) l.listoParaComprobar(!!elegido2());
+      },
+      "paso-pila": function () {
+        pausar();
+        if (secreta3 !== secreta) trazaP3.reiniciar();
+      },
+      "paso-parar": function (paso, l, info) {
+        pausar();
+        $("p4-secreta").textContent = q(secreta);
+        limpiar4();
+        if (!info.desbloqueado) l.listoParaComprobar(!!elegido4());
+      },
+      "paso-baja": function () {
+        pausar();
+        if (secreta5 !== secreta) trazaP5.reiniciar();
+      },
+      "paso-pista": function (paso, l, info) {
+        pausar();
+        preparar6(!!info.desbloqueado && !!paso.querySelector('input[value="ninguna"]:checked'));
+        if (!info.desbloqueado) l.listoParaComprobar(!!paso.querySelector('input[name="p6"]:checked'));
+      },
+      "paso-cortar": pausar,
+      "paso-reto": pausar,
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-todas": comprobarTodas, "paso-parar": comprobarParar, "paso-pista": comprobarPista }
+  });
+})();
+</script>
+</body>
+</html>

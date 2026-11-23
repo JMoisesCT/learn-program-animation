@@ -104,7 +104,7 @@
     var izq = opciones.pisos ? ROTULO : 0;
     var ancho = izq + 2 * (MARGEN + R) + (raiz.hojas - 1) * HOJA;
     var alto = 2 * MARGEN + 2 * R + PILDORA + 4 + (raiz.pisos - 1) * PISO;
-    var dibujo = svg("svg", { viewBox: "0 0 " + ancho + " " + alto, role: "img", "aria-label": opciones.etiqueta || "Árbol de llamadas" },
+    var dibujo = svg("svg", { viewBox: "0 0 " + ancho + " " + alto, role: "img", "aria-label": opciones.etiqueta || (/^en/i.test(document.documentElement.lang || "") ? "Call tree" : "Árbol de llamadas") },
       "arbol-llamadas" + (opciones.clase ? " " + opciones.clase : ""));
     dibujo.style.maxWidth = Math.round(ancho * 1.3) + "px";
     var aristas = dibujo.appendChild(svg("g"));
