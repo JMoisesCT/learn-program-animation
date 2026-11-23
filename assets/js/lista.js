@@ -208,7 +208,7 @@
         c.children[2].textContent = String(i - n);
       });
       var vacia = fila.querySelector(".lista__vacia");
-      if (!n && !vacia) fila.insertBefore(span("lista__vacia", "vacía"), fila.lastChild);
+      if (!n && !vacia) fila.insertBefore(span("lista__vacia", /^en/i.test(document.documentElement.lang || "") ? "empty" : "vacía"), fila.lastChild);
       if (n && vacia) vacia.remove();
     }
 

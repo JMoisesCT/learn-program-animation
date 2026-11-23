@@ -198,7 +198,7 @@
 
     function vacia() {
       var aviso = dentro.querySelector(".conjunto__vacio");
-      if (!valores.length && !aviso) dentro.appendChild(span("conjunto__vacio", "vacío"));
+      if (!valores.length && !aviso) dentro.appendChild(span("conjunto__vacio", /^en/i.test(document.documentElement.lang || "") ? "empty" : "vacío"));
       if (valores.length && aviso) aviso.remove();
     }
 
