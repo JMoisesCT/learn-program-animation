@@ -138,7 +138,7 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ### 2026-11-23 · Listas dentro de listas: la franja verde del tablero
 
-El autor notó que en «¿Qué da cada una?» (paso 4, con los números escondidos) la franja verde de las filas contadas no quedaba encuadrada: los números de fila y de columna, escondidos, guardan su lugar, y la franja pintaba la fila entera (corrida a la izquierda y más alta en la primera fila). Ahora pinta solo los casilleros de cada fila, con un `::before` que no ocupa lugar (así tampoco salta nada cuando aparecen los números al acertar las tres). En español e inglés.
+El autor notó que en «¿Qué da cada una?» (paso 4, con los números escondidos) la franja verde de las filas contadas no quedaba encuadrada: los números de fila y de columna, escondidos, guardan su lugar, y la franja pintaba la fila entera (corrida a la izquierda y más alta en la primera fila). Ahora pinta solo los casilleros de cada fila, con un `::before` que no ocupa lugar (así tampoco salta nada cuando aparecen los números al acertar las tres). En español e inglés. Segundo arreglo (el autor aún veía los casilleros cortados): la franja de una fila tapaba el borde de abajo de la de arriba y subía más de lo que bajaba. Ahora todas las franjas van detrás de todos los casilleros (`isolation` en la fila de filas), su alto es el de un casillero (`--alto-casillero`, que mide la lección con un `ResizeObserver`) y las filas de ese tablero se separan 0.8rem: el mismo margen arriba, abajo y a los lados.
 
 ### 2026-11-23 · Curso en inglés: Listas
 
