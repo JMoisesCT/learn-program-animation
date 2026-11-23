@@ -79,7 +79,7 @@
       el.style.setProperty("--cinta-n", String(Math.max(caracteres.length + 1, 4)));
       fila = span("cinta__fila");
       var n = caracteres.length;
-      if (!n) fila.appendChild(span("cinta__vacia", '"" (vacío)'));
+      if (!n) fila.appendChild(span("cinta__vacia", /^en/i.test(document.documentElement.lang || "") ? '"" (empty)' : '"" (vacío)'));
       caracteres.forEach(function (c, i) { fila.appendChild(nuevaCasilla(c, i, n)); });
       el.appendChild(fila);
       aplicarVista();

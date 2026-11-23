@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project: hangman · Learn to program</title>
+  <meta name="description" content="Text in depth project: build the hangman game in Python, part by part, with the hidden word built with for and in, the guessed letters kept in a string, .strip().lower(), lives, and a win when no underscore is left.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    /* The game console does not grow forever: after a few rounds it scrolls and shows the latest */
+    #d-registro, #t-registro { max-height: 13rem; margin-top: 1.1rem; overflow-y: auto; overscroll-behavior: contain; }
+    :root { --tipo-str: #a8480a; --color-vida: #c92a5c; }
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .tk-prefijo, .tk-llave { color: var(--tk-palabra); font-weight: 700; }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--sin-numeros .linea { padding-left: var(--esp-5); }
+    .codigo--sin-numeros .linea::before { content: none; }
+    .lab .codigo { margin-top: var(--esp-4); }
+
+    /* ---------- Console that waits for answers ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 4.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: var(--tipo-str); }
+    .consola .consola__linea { white-space: pre; }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- The board: lives, the word and the guessed letters ---------- */
+    .vidas { display: flex; justify-content: center; gap: var(--esp-1); margin: 0 0 var(--esp-3); font-size: 1.9rem; line-height: 1; }
+    .vida { color: var(--color-vida); transition: color var(--dur), transform var(--dur) var(--curva-rebote), opacity var(--dur); }
+    .vida--perdida { color: var(--color-borde); transform: scale(0.8); }
+    .vida--cae { animation: vida-cae 600ms ease both; }
+    @keyframes vida-cae {
+      0% { color: var(--color-vida); transform: scale(1.3); }
+      40% { color: var(--color-vida); transform: scale(1.3) rotate(-12deg); }
+      100% { color: var(--color-borde); transform: scale(0.8); }
+    }
+    .rotulo-cinta { margin: var(--esp-3) 0 var(--esp-1); text-align: center; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .tablero .cinta__casilla--cambio .cinta__letra { animation: valor-pulso 360ms ease-out; }
+
+    /* ---------- Missions ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Options and tests ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .pruebas li:nth-child(4) { animation-delay: 600ms; }
+    .prueba__etiqueta { font-family: var(--fuente-codigo); white-space: pre-wrap; }
+    .prueba__salida { font-family: var(--fuente-codigo); font-weight: 700; text-align: right; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    /* How the hidden word is built (after getting part 1 right) */
+    .armado { margin-top: var(--esp-5); padding: var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); animation: aparecer var(--dur) ease both; }
+    .armado__titulo { margin: 0; text-align: center; font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+    .armado .expresion { margin-top: var(--esp-4); font-size: var(--texto-md); white-space: pre; }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo--sin-numeros .linea { padding-left: var(--esp-3); }
+      .armado .expresion { font-size: var(--texto-sm); }
+    }
+    /* On mobile, the board and the missions go before the program, which is long:
+       that way the lives stay in view while you play */
+    @media (max-width: 1023.98px) {
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { display: contents; }
+      #paso-jugar .lab__visual { order: 1; margin-top: var(--esp-4); }
+      #paso-jugar .lab__resultado { order: 2; margin-top: var(--esp-4); }
+      #paso-jugar .reto-codigo { order: 3; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .vida--cae { animation: none; }
+    }
+    /* Parts 1 to 4, when right: only the chosen option stays (the others come back with “Try another
+       option”) (if the program has a blank, the answer can already be read there and the option hides too);
+       on desktop, the program on the left (with how it's built below it) and the tests, the message
+       and the button to its right */
+    :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) .op-leyenda,
+    :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .opciones:has(.opcion--correcta) .opcion:not(.opcion--correcta) { display: none; }
+    :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.hueco) .opciones:has(.opcion--correcta) { display: none; }
+    @media (min-width: 1024px) {
+      :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--esp-5); align-items: start; }
+      :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) > * { grid-column: 1; margin-top: 0; }
+      :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) > .armado { margin-top: var(--esp-4); }
+      :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) > .respuesta { grid-column: 2; grid-row: 1 / span 2; }
+      :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) .pruebas { margin-top: 0; }
+      :is(#paso-oculta, #paso-leer, #paso-esta, #paso-ganar) .tarjeta:has(.opcion--correcta) .opciones { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="texto-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. What we are going to build -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="t-demo">
+      <span class="paso__etiqueta">Text in depth 5/5 · Project</span>
+      <h1 class="paso__titulo" id="t-demo">Project: hangman</h1>
+      <p>You are going to program a game: the computer thinks of a <strong>fruit</strong> and you guess it letter by letter. Each letter that is not in it costs you one of your <strong>6 lives</strong>. First, play a game.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="d-registro" aria-live="polite"></div>
+            <div class="entrada" id="d-fila">
+              <label for="d-campo">Letter:</label>
+              <input type="text" id="d-campo" maxlength="3" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="d-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="d-otra" hidden>↺ Play again</button>
+          </div>
+        </div>
+        <div class="lab__visual tablero">
+          <p class="vuelta-actual" id="d-vuelta" aria-live="polite"></p>
+          <div class="vidas" id="d-vidas" role="img"></div>
+          <p class="rotulo-cinta">the word</p>
+          <div id="d-palabra"></div>
+          <p class="rotulo-cinta">guessed</p>
+          <div id="d-dichas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Part 1: the hidden word -->
+    <section class="paso" id="paso-oculta" data-comprobar aria-labelledby="t-oculta">
+      <span class="paso__etiqueta">Part 1 of 4</span>
+      <h2 class="paso__titulo" id="t-oculta">The hidden word</h2>
+      <p>No lists: the letters you already guessed are kept together in one text, <code>guessed</code>. With <code>guessed = "ap"</code>, the word must look like <code>p a p a _ a</code>. Which code builds it?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Your program"><code><span class="linea"><span class="tk-variable">secret</span> = <span class="tk-texto">"papaya"</span></span><span class="linea"><span class="tk-variable">guessed</span> = <span class="tk-texto">"ap"</span></span><span class="linea"><span class="hueco" id="p1-hueco">?</span></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">hidden</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p1-opciones">
+          <legend class="visualmente-oculto">Which code builds the hidden word?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="dentro"><span>for letter in secret:
+    hidden = ""
+    if letter in guessed:
+        hidden += letter + " "
+    else:
+        hidden += "_ "</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="secreta"><span>hidden = ""
+for letter in secret:
+    if letter in secret:
+        hidden += letter + " "
+    else:
+        hidden += "_ "</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>hidden = ""
+for letter in secret:
+    if letter in guessed:
+        hidden += letter + " "
+    else:
+        hidden += "_ "</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="reves"><span>hidden = ""
+for letter in secret:
+    if guessed in letter:
+        hidden += letter + " "
+    else:
+        hidden += "_ "</span></label>
+        </fieldset>
+        <div class="respuesta">
+          <ul class="pruebas" hidden aria-label="Tests"></ul>
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+          </div>
+        </div>
+        <div class="armado" id="p1-armado" hidden>
+          <p class="armado__titulo">Built with <code>guessed = "ap"</code>:</p>
+          <p class="rotulo-cinta">secret</p>
+          <div id="p1-secreta"></div>
+          <p class="rotulo-cinta">guessed</p>
+          <div id="p1-dichas"></div>
+          <div class="expresion" id="p1-oculta" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Part 2: reading a letter -->
+    <section class="paso" id="paso-leer" data-comprobar aria-labelledby="t-leer">
+      <span class="paso__etiqueta">Part 2 of 4</span>
+      <h2 class="paso__titulo" id="t-leer">Reading a letter</h2>
+      <p>The player may type <code>A</code> in uppercase, or with an extra space. The word is in lowercase, so the game must always understand <code>"a"</code>. Which line reads the letter right?</p>
+
+      <div class="tarjeta">
+        <fieldset class="opciones opciones--codigo" id="p2-opciones">
+          <legend class="visualmente-oculto">Which line reads the letter right?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="sola"><span>guess = input("Letter: ")</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="lower"><span>guess = input("Letter: ").lower()</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="upper"><span>guess = input("Letter: ").strip().upper()</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>guess = input("Letter: ").strip().lower()</span></label>
+        </fieldset>
+        <div class="respuesta">
+          <ul class="pruebas" hidden aria-label="Tests"></ul>
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Part 3: is it there or not? -->
+    <section class="paso" id="paso-esta" data-comprobar aria-labelledby="t-esta">
+      <span class="paso__etiqueta">Part 3 of 4</span>
+      <h2 class="paso__titulo" id="t-esta">Is it there or not?</h2>
+      <p>If the letter is in the word, “Good!”; if not, you lose a life. With <code>secret = "papaya"</code> and 6 lives, we try <strong>a</strong>, <strong>p</strong>, <strong>y</strong> and <strong>x</strong>. Which condition goes in the blank?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" aria-label="Your program"><code><span class="linea"><span class="tk-variable">guess</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Letter: "</span>).<span class="tk-funcion">strip</span>().<span class="tk-funcion">lower</span>()</span><span class="linea"><span class="tk-variable">guessed</span> += <span class="tk-variable">guess</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="hueco" id="p3-hueco">?</span>:</span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-texto">"Good!"</span>)</span><span class="linea"><span class="tk-palabra">else</span>:</span><span class="linea">    <span class="tk-variable">lives</span> -= <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-prefijo">f</span><span class="tk-texto">"Not there. Lives: <span class="tk-llave">{</span><span class="tk-variable">lives</span><span class="tk-llave">}</span>"</span>)</span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p3-opciones">
+          <legend class="visualmente-oculto">Which condition goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="p3" value="find"><span>secret.find(guess) &gt; 0</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="bien"><span>guess in secret</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="count"><span>secret.count(guess) == 1</span></label>
+          <label class="opcion"><input type="radio" name="p3" value="igual"><span>guess == secret</span></label>
+        </fieldset>
+        <div class="respuesta">
+          <ul class="pruebas" hidden aria-label="Tests"></ul>
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Part 4: did you win? -->
+    <section class="paso" id="paso-ganar" data-comprobar aria-labelledby="t-ganar">
+      <span class="paso__etiqueta">Part 4 of 4</span>
+      <h2 class="paso__titulo" id="t-ganar">Did you win?</h2>
+      <p>The loop goes on while there are lives left. After showing the word, you must check if it is complete. With “papaya” and the letters <strong>a</strong>, <strong>p</strong> and <strong>y</strong>, the game must end right after the <strong>y</strong>. What goes in the blank?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--sin-numeros" aria-label="Your program"><code><span class="linea"><span class="tk-palabra">while</span> <span class="tk-variable">lives</span> &gt; <span class="tk-numero">0</span>:</span><span class="linea linea--hecha">    <span class="tk-comentario"># Part 1: build hidden ✓</span></span><span class="linea">    <span class="tk-funcion">print</span>(<span class="tk-variable">hidden</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="hueco" id="p4-hueco">?</span>:</span><span class="linea">        <span class="tk-funcion">print</span>(<span class="tk-texto">"You win!"</span>)</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea linea--hecha">    <span class="tk-comentario"># Parts 2 and 3: the new letter ✓</span></span></code></pre>
+        <fieldset class="opciones opciones--codigo" id="p4-opciones">
+          <legend class="visualmente-oculto">Which condition goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="con"><span>"_" in hidden</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="igual"><span>hidden == secret</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>"_" not in hidden</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="largo"><span>len(guessed) == len(secret)</span></label>
+        </fieldset>
+        <div class="respuesta">
+          <ul class="pruebas" hidden aria-label="Tests"></ul>
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Challenge: the full game -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="t-jugar">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-jugar">Your game works!</h2>
+      <p>This is your full program: <code>pick_word()</code> picks a fruit at random. Play as many games as you need to complete the <strong>three missions</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo">Letter:</label>
+              <input type="text" id="t-campo" maxlength="3" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Play again</button>
+          </div>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="reto-codigo">
+            <pre class="codigo" id="t-codigo" aria-label="Your full program"><code id="t-codigo-lineas"></code></pre>
+          </div>
+        </div>
+        <div class="lab__visual tablero">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div class="vidas" id="t-vidas" role="img"></div>
+          <p class="rotulo-cinta">the word</p>
+          <div id="t-palabra"></div>
+          <p class="rotulo-cinta">guessed</p>
+          <div id="t-dichas"></div>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Missions">
+            <li data-mision="bien">Get a “Good!”</li>
+            <li data-mision="fallo">Lose a life</li>
+            <li data-mision="gana">Win a game</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🍓</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Project complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A text can keep track of what happens (<code>guessed</code>), and with <code>for</code> and <code>in</code> you build another one from it.</p>
+        <ul class="usado" aria-label="What you used">
+          <li>for letter in secret</li><li>in / not in</li><li>guessed += guess</li><li>.strip().lower()</li><li>while lives &gt; 0</li><li>break</li><li>random.randint()</li>
+        </ul>
+        <pre class="codigo resumen-codigo" aria-label="Your full program"><code id="r-codigo-lineas"></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../../../index.html">Back to the course →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/cinta.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script src="../../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  // A string the way Python writes it, with its quotes and the spaces in view
+  function comillas(s) { return '"' + s.replace(/ /g, "␣") + '"'; }
+
+  var VIDAS = 6;
+  var PALABRAS = ["papaya", "orange", "mango"];
+
+  /* The word with underscores, the way the program builds it: "p a p a _ a " */
+  function armarOculta(secreta, dichas) {
+    return Array.from(secreta).map(function (c) { return dichas.indexOf(c) !== -1 ? c + " " : "_ "; }).join("");
+  }
+
+  /* ---------- The full program, line by line ---------- */
+  function kw(t) { return '<span class="tk-palabra">' + t + "</span>"; }
+  function v(t) { return '<span class="tk-variable">' + t + "</span>"; }
+  function n(t) { return '<span class="tk-numero">' + t + "</span>"; }
+  function s(t) { return '<span class="tk-texto">' + t + "</span>"; }
+  function f(t) { return '<span class="tk-funcion">' + t + "</span>"; }
+  function llave(t) { return '<span class="tk-llave">{</span>' + v(t) + '<span class="tk-llave">}</span>'; }
+
+  var L = [
+    kw("import") + " " + v("random"),                                                         // 0
+    kw("def") + " " + f("pick_word") + "():",                                                 // 1
+    "    " + v("n") + " = " + v("random") + "." + f("randint") + "(" + n("1") + ", " + n("3") + ")",
+    "    " + kw("if") + " " + v("n") + " == " + n("1") + ":",
+    "        " + kw("return") + " " + s('"papaya"'),
+    "    " + kw("elif") + " " + v("n") + " == " + n("2") + ":",                               // 5
+    "        " + kw("return") + " " + s('"orange"'),
+    "    " + kw("return") + " " + s('"mango"'),
+    v("secret") + " = " + f("pick_word") + "()",                                              // 8
+    v("guessed") + " = " + s('""'),
+    v("lives") + " = " + n("6"),                                                              // 10
+    kw("while") + " " + v("lives") + " &gt; " + n("0") + ":",                                 // 11
+    "    " + v("hidden") + " = " + s('""'),
+    "    " + kw("for") + " " + v("letter") + " " + kw("in") + " " + v("secret") + ":",
+    "        " + kw("if") + " " + v("letter") + " " + kw("in") + " " + v("guessed") + ":",
+    "            " + v("hidden") + " += " + v("letter") + " + " + s('" "'),                   // 15
+    "        " + kw("else") + ":",
+    "            " + v("hidden") + " += " + s('"_ "'),
+    "    " + f("print") + "(" + v("hidden") + ")",                                            // 18
+    "    " + kw("if") + " " + s('"_"') + " " + kw("not") + " " + kw("in") + " " + v("hidden") + ":",
+    "        " + f("print") + "(" + s('"You win!"') + ")",                                    // 20
+    "        " + kw("break"),
+    "    " + v("guess") + " = " + f("input") + "(" + s('"Letter: "') + ")." + f("strip") + "()." + f("lower") + "()",  // 22
+    "    " + v("guessed") + " += " + v("guess"),
+    "    " + kw("if") + " " + v("guess") + " " + kw("in") + " " + v("secret") + ":",
+    "        " + f("print") + "(" + s('"Good!"') + ")",                                       // 25
+    "    " + kw("else") + ":",
+    "        " + v("lives") + " -= " + n("1"),
+    "        " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"Not there. Lives: ' + llave("lives") + '"') + ")",
+    kw("if") + " " + v("lives") + " == " + n("0") + ":",                                      // 29
+    "    " + f("print") + '(<span class="tk-prefijo">f</span>' + s('"You lose. It was ' + llave("secret") + '"') + ")"
+  ];
+  var LINEA_INPUT = 22;
+
+  function pintarLineas(code, lineas) {
+    code.innerHTML = lineas.map(function (h) { return '<span class="linea">' + h + "</span>"; }).join("");
+  }
+
+  function rango(a, b) {
+    var r = [];
+    for (var k = a; k <= b; k++) r.push(k);
+    return r;
+  }
+
+  /* Paints a list of tests: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = p.etiqueta;
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correct" : ", incorrect"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* ---------- Pick-an-option steps (the four parts) ----------
+     cfg: { id, nombre, correcta, hueco (optional), probar(valor) → filas, ok, pistas,
+            alAcertar (optional), alLimpiar (optional) } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".respuesta > .feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiarMarcas() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    }
+
+    function limpiar() {
+      limpiarMarcas();
+      lista.hidden = true;
+      Pasos.limpiarFeedback(fb);
+      if (cfg.alLimpiar) cfg.alLimpiar();
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiar();
+      if (cfg.hueco) $(cfg.hueco).textContent = "?";
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      pintarPruebas(lista, cfg.probar(marcada.value));
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        Pasos.feedback(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        if (cfg.alAcertar) cfg.alAcertar();
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      Pasos.feedback(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        if (cfg.hueco) $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    // After getting it right, you can pick again to see why the others fail (progress is kept)
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- The game running (steps 1 and 6) ----------
+     o: { prefijo, conCodigo, alResultado(mision), alTerminar(partida) } */
+  function crearJuego(o) {
+    var p = o.prefijo;
+    var partida = {};
+    var ultima = -1;
+    var cPalabra = Cinta.crear($(p + "-palabra"), "", { indices: false });
+    var cDichas = Cinta.crear($(p + "-dichas"), "", { indices: false });
+
+    function alAzar() {
+      // Never the same word two games in a row
+      var k = Math.floor(Math.random() * PALABRAS.length);
+      if (k === ultima) k = (k + 1) % PALABRAS.length;
+      ultima = k;
+      return PALABRAS[k];
+    }
+
+    function sabe(c) { return partida.dichas.indexOf(c) !== -1; }
+
+    /* The word: the guessed letters in view; final: "gano" or "perdio" */
+    function pintarPalabra(nueva, final) {
+      var sec = partida.secreta;
+      cPalabra.texto(Array.from(sec).map(function (c) { return sabe(c) || final ? c : "_"; }).join(""));
+      cPalabra.clases(function (i) {
+        var c = sec[i];
+        if (final === "gano") return "cinta__casilla--igual";
+        if (final === "perdio") return sabe(c) ? "" : "cinta__casilla--distinta";
+        if (!sabe(c)) return "cinta__casilla--apagada";
+        return c === nueva ? "cinta__casilla--cambio" : "";
+      });
+    }
+
+    function pintarDichas(nueva) {
+      cDichas.texto(partida.dichas);
+      cDichas.clases(function (i, c) { return partida.secreta.indexOf(c) !== -1 ? "cinta__casilla--igual" : "cinta__casilla--distinta"; });
+      if (!nueva) return;
+      // The new letter flies from the console to the end of guessed (guessed += guess)
+      var respuestas = $(p + "-registro").querySelectorAll(".registro__respuesta");
+      var desde = respuestas[respuestas.length - 1];
+      if (desde) Codigo.volar(desde, cDichas.letra(-1), nueva, "vuelo--salida");
+    }
+
+    function pintarVidas(pierde) {
+      var caja = $(p + "-vidas");
+      caja.textContent = "";
+      for (var k = 0; k < VIDAS; k++) {
+        var c = document.createElement("span");
+        c.className = "vida" + (k >= partida.vidas ? " vida--perdida" : "") + (pierde && k === partida.vidas ? " vida--cae" : "");
+        c.textContent = "♥";
+        caja.appendChild(c);
+      }
+      caja.setAttribute("aria-label", "Lives: " + partida.vidas + " of " + VIDAS);
+    }
+
+    BucleInput.crear({
+      prefijo: p,
+      vueltas: null,
+      rotulo: "Try",
+      pregunta: "Letter:",
+      lineaInput: LINEA_INPUT,
+      siguiente: "Type another letter.",
+      validar: function (texto) {
+        return /^\p{L}$/u.test(texto) ? null : "Type a single letter.";
+      },
+      alEmpezar: function () {
+        partida = { secreta: alAzar(), dichas: "", vidas: VIDAS, intentos: 0, gano: false };
+        pintarPalabra(null);
+        pintarDichas(null);
+        pintarVidas(false);
+        Codigo.agregar($(p + "-registro"), armarOculta(partida.secreta, ""));
+        return (o.conCodigo ? "<code>pick_word()</code> picked" : "The computer picked") +
+          " a fruit with <strong>" + partida.secreta.length + " letters</strong>. <code>guessed</code> starts empty and you have " + VIDAS + " lives.";
+      },
+      alDato: function (texto) {
+        var nueva = texto.toLowerCase();
+        partida.intentos++;
+        partida.dichas += nueva;
+        var esta = partida.secreta.indexOf(nueva) !== -1;
+        var activas = [LINEA_INPUT, 23, 24];
+        var saltadas = [];
+        var salida = [];
+        var dice;
+        if (esta) {
+          salida.push("Good!");
+          activas.push(25);
+          saltadas.push(26, 27, 28);
+          dice = "“" + nueva + "” is in the word: Good!";
+          if (o.alResultado) o.alResultado("bien");
+        } else {
+          partida.vidas--;
+          salida.push("Not there. Lives: " + partida.vidas);
+          activas.push(26, 27, 28);
+          saltadas.push(25);
+          dice = "“" + nueva + "” is not there: you lose a life.";
+          if (o.alResultado) o.alResultado("fallo");
+        }
+        pintarDichas(nueva);
+        pintarVidas(!esta);
+        activas.push(11);
+        if (partida.vidas === 0) {
+          pintarPalabra(null, "perdio");
+          return {
+            texto: dice + " No lives left: the <code>while</code> ends.",
+            camino: { activas: activas.concat([29, 30]), saltadas: saltadas.concat(rango(12, 21)) },
+            salida: salida,
+            fin: true
+          };
+        }
+        var oculta = armarOculta(partida.secreta, partida.dichas);
+        salida.push(oculta);
+        activas = activas.concat([12, 13, 14, 18, 19]);
+        if (oculta.indexOf("_") !== -1) activas.push(16, 17);
+        if (oculta.replace(/_ /g, "").length) activas.push(15);
+        if (oculta.indexOf("_") === -1) {
+          partida.gano = true;
+          salida.push("You win!");
+          pintarPalabra(nueva, "gano");
+          return {
+            texto: dice + " No <code>_</code> left: you win! <code>break</code> ends the game.",
+            camino: { activas: activas.concat([20, 21]), saltadas: saltadas.concat([16, 17]) },
+            salida: salida,
+            fin: true
+          };
+        }
+        pintarPalabra(nueva);
+        return {
+          texto: dice + " Another round: the word is built again and there are still <code>_</code>.",
+          camino: { activas: activas, saltadas: saltadas.concat([20, 21]) },
+          salida: salida
+        };
+      },
+      alFinal: function () {
+        if (partida.gano) return {};
+        return { linea: 30, texto: "", salida: "You lose. It was " + partida.secreta };
+      },
+      alTerminar: function () { o.alTerminar(partida); }
+    });
+  }
+
+  /* ---------- 1. Demo ---------- */
+  crearJuego({
+    prefijo: "d",
+    conCodigo: false,
+    alTerminar: function (partida) {
+      Pasos.feedback($("d-fb"), "ok", (partida.gano
+        ? "You guessed it in " + partida.intentos + (partida.intentos === 1 ? " try" : " tries") + "!"
+        : "Not this time: it was “" + partida.secreta + "”.") +
+        " That is how your game will work. Play more if you like; then we build it in four parts.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 2. Part 1: the hidden word ---------- */
+  var PROGRAMAS_OCULTA = {
+    bien: armarOculta,
+    secreta: function (sec) { return armarOculta(sec, sec); },
+    // guessed in letter: only True if guessed is that letter, or if it is empty
+    reves: function (sec, dichas) {
+      return Array.from(sec).map(function (c) { return c.indexOf(dichas) !== -1 ? c + " " : "_ "; }).join("");
+    },
+    // hidden goes back to "" in every round: only the last letter is left
+    dentro: function (sec, dichas) { return armarOculta(sec.slice(-1), dichas); }
+  };
+  var cSecreta1 = Cinta.crear($("p1-secreta"), "papaya", { indices: false });
+  var cDichas1 = Cinta.crear($("p1-dichas"), "ap", { indices: false });
+  var armado = [];
+
+  function cortarArmado() {
+    armado.forEach(clearTimeout);
+    armado = [];
+  }
+
+  /* The for, letter by letter: the cell of secret, its match in guessed and what is added */
+  function animarArmado() {
+    var sec = "papaya";
+    var dichas = "ap";
+    var caja = $("p1-armado");
+    cortarArmado();
+    caja.hidden = false;
+    cSecreta1.marcar(null);
+    cDichas1.marcar(null);
+    cDichas1.clases(null);
+    $("p1-oculta").textContent = 'hidden = ""';
+    var acumulado = "";
+    function paso(k) {
+      if (k === sec.length) {
+        cSecreta1.marcar(null);
+        cDichas1.marcar(null);
+        return;
+      }
+      var c = sec[k];
+      var j = dichas.indexOf(c);
+      cSecreta1.marcar(k);
+      cDichas1.marcar(j === -1 ? null : j);
+      cDichas1.clases(function (i) { return i === j ? "cinta__casilla--igual" : ""; });
+      acumulado += j === -1 ? "_ " : c + " ";
+      $("p1-oculta").textContent = "hidden = " + JSON.stringify(acumulado);
+      if (Pasos.reducirMovimiento) paso(k + 1);
+      else armado.push(setTimeout(function () { paso(k + 1); }, 750));
+    }
+    if (Pasos.reducirMovimiento) paso(0);
+    else armado.push(setTimeout(function () { paso(0); }, 400));
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-oculta",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) {
+      return ["", "a", "ap"].map(function (d) {
+        var sale = PROGRAMAS_OCULTA[valor]("papaya", d);
+        return { etiqueta: "guessed = " + JSON.stringify(d), salida: sale, ok: sale === armarOculta("papaya", d) };
+      });
+    },
+    ok: "That’s it! hidden starts empty before the for; each letter of secret adds itself (if it is in guessed) or an underscore.",
+    pistas: {
+      dentro: "hidden = \"\" is inside the for: it is emptied again in every round, and at the end only the last letter is left.",
+      secreta: "letter in secret is always True: each letter is in its own word. So you see everything from the start.",
+      reves: "guessed in letter looks for \"ap\" inside a single letter: it is never there. And with guessed empty, \"\" is in any text. It is the other way around: letter in guessed."
+    },
+    alAcertar: animarArmado,
+    alLimpiar: function () {
+      cortarArmado();
+      $("p1-armado").hidden = true;
+    }
+  });
+
+  /* ---------- 3. Part 2: reading a letter ---------- */
+  var LECTURAS = {
+    sola: function (t) { return t; },
+    lower: function (t) { return t.toLowerCase(); },
+    upper: function (t) { return t.trim().toUpperCase(); },
+    bien: function (t) { return t.trim().toLowerCase(); }
+  };
+  var parte2 = crearEleccion({
+    id: "paso-leer",
+    nombre: "p2",
+    correcta: "bien",
+    probar: function (valor) {
+      return ["a", " A", "P "].map(function (t) {
+        var sale = LECTURAS[valor](t);
+        return { etiqueta: "Type " + comillas(t), salida: "guess = " + comillas(sale), ok: sale === LECTURAS.bien(t) };
+      });
+    },
+    ok: "Good! .strip() removes the spaces and .lower() makes it lowercase: you always get a clean letter, ready to look for in the word.",
+    pistas: {
+      sola: "The letter arrives as typed: “␣A”, with a space and uppercase, is not in \"papaya\".",
+      lower: ".lower() makes the “A” lowercase, but the space stays: \"␣a\" is not in \"papaya\". .strip() is missing.",
+      upper: "It removes the spaces, but leaves the letter uppercase: \"A\" is not in \"papaya\", which is in lowercase."
+    }
+  });
+
+  /* ---------- 4. Part 3: is it there or not? ---------- */
+  var CONDICIONES_ESTA = {
+    bien: function (sec, l) { return sec.indexOf(l) !== -1; },
+    find: function (sec, l) { return sec.indexOf(l) > 0; },
+    count: function (sec, l) { return sec.split(l).length - 1 === 1; },
+    igual: function (sec, l) { return l === sec; }
+  };
+
+  function jugarLetras(condicion) {
+    var vidas = VIDAS;
+    return ["a", "p", "y", "x"].map(function (l) {
+      if (condicion("papaya", l)) return "Good!";
+      vidas--;
+      return "Not there. Lives: " + vidas;
+    });
+  }
+
+  var parte3 = crearEleccion({
+    id: "paso-esta",
+    nombre: "p3",
+    correcta: "bien",
+    hueco: "p3-hueco",
+    probar: function (valor) {
+      var esperado = jugarLetras(CONDICIONES_ESTA.bien);
+      var sale = jugarLetras(CONDICIONES_ESTA[valor]);
+      return ["a", "p", "y", "x"].map(function (l, k) {
+        return { etiqueta: "Letter: " + l, salida: sale[k], ok: sale[k] === esperado[k] };
+      });
+    },
+    ok: "Exactly! guess in secret is True if the letter is anywhere in the word, once or many times.",
+    pistas: {
+      find: "With “p” it says it is not there: secret.find(\"p\") is 0, because it is in cell 0, and 0 > 0 is False. With in you don’t need to think about indexes.",
+      count: "With “a” it says it is not there: it appears 3 times, and 3 == 1 is False. It only works for letters that appear once.",
+      igual: "It compares the letter with the whole word: \"a\" == \"papaya\" is False. in looks for the letter inside the word."
+    }
+  });
+
+  /* ---------- 5. Part 4: did you win? ---------- */
+  var GANA = {
+    bien: function (oculta) { return oculta.indexOf("_") === -1; },
+    con: function (oculta) { return oculta.indexOf("_") !== -1; },
+    igual: function (oculta) { return oculta === "papaya"; },
+    largo: function (oculta, dichas) { return dichas.length === 6; }
+  };
+
+  var parte4 = crearEleccion({
+    id: "paso-ganar",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      var filas = [];
+      var termino = false;
+      ["", "a", "ap", "apy"].forEach(function (dichas, k) {
+        var oculta = armarOculta("papaya", dichas);
+        var etiqueta = (k === 0 ? "At the start" : "After " + dichas.slice(-1)) + ": " + oculta.trim();
+        var debe = k === 3;
+        if (termino) {
+          filas.push({ etiqueta: etiqueta, salida: "(the game already ended)", ok: false });
+          return;
+        }
+        var gana = GANA[valor](oculta, dichas);
+        if (gana) termino = true;
+        filas.push({ etiqueta: etiqueta, salida: gana ? "You win!" : (debe ? "Letter: … it keeps asking!" : "Letter: …"), ok: gana === debe });
+      });
+      return filas;
+    },
+    ok: "That’s it! While there is a _ left, some letter is missing. When there is none, the word is complete: you win.",
+    pistas: {
+      con: "At the start it is all underscores, and \"_\" in hidden is already True: you win without guessing a single letter! It is the other way around: you win when no underscore is left.",
+      igual: "hidden has spaces: \"p a p a y a \" is never equal to \"papaya\". The game never ends.",
+      largo: "guessed has 3 letters (a, p, y) and “papaya” has 6: repeated letters are guessed only once. It does not end even though the word is already complete."
+    }
+  });
+
+  /* ---------- 6. The full game ---------- */
+  var misiones = {};
+  pintarLineas($("t-codigo-lineas"), L);
+  pintarLineas($("r-codigo-lineas"), L);
+
+  function cumplir(m) {
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+
+  crearJuego({
+    prefijo: "t",
+    conCodigo: true,
+    alResultado: cumplir,
+    alTerminar: function (partida) {
+      if (partida.gano) cumplir("gana");
+      var faltan = ["bien", "fallo", "gana"].filter(function (m) { return !misiones[m]; });
+      if (!faltan.length) {
+        Pasos.feedback($("t-fb"), "ok", "Missions complete! Your game hides the word, counts the lives and knows when you win.");
+        leccion.desbloquear();
+        return;
+      }
+      var pistas = {
+        bien: "To get a “Good!”, try a vowel: almost every fruit has an “a”.",
+        fallo: "To lose a life, try a rare letter, like “w”.",
+        gana: "To win, start with the vowels and think which fruit it could be."
+      };
+      Pasos.feedback($("t-fb"), "pista", (partida.gano ? "You win! " : "It was “" + partida.secreta + "”. ") + pistas[faltan[0]] + " Tap “Play again”.");
+    }
+  });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-oculta": parte1.entrar,
+      "paso-leer": parte2.entrar,
+      "paso-esta": parte3.entrar,
+      "paso-ganar": parte4.entrar
+    },
+    comprobar: {
+      "paso-oculta": parte1.comprobar,
+      "paso-leer": parte2.comprobar,
+      "paso-esta": parte3.comprobar,
+      "paso-ganar": parte4.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
