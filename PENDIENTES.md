@@ -136,6 +136,10 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 ## Registro de cambios
 
+### 2026-11-23 · Listas dentro de listas: la franja verde del tablero
+
+El autor notó que en «¿Qué da cada una?» (paso 4, con los números escondidos) la franja verde de las filas contadas no quedaba encuadrada: los números de fila y de columna, escondidos, guardan su lugar, y la franja pintaba la fila entera (corrida a la izquierda y más alta en la primera fila). Ahora pinta solo los casilleros de cada fila, con un `::before` que no ocupa lugar (así tampoco salta nada cuando aparecen los números al acertar las tres). En español e inglés.
+
 ### 2026-11-23 · Curso en inglés: Listas
 
 - **Las 8 lecciones de Listas en inglés** (`en/lessons/lists/`, `change/`, `loop/`, `sort/`, `text/`, `references/`, `nested/`, `project/`), con su tarjeta en `en/index.html` (el aviso ahora dice «Other structures, searching, sorting and the rest…»); el ahorcado termina en «Next: Lists →» y el tres en raya en «Back to the course →». Mismas claves de progreso y mismos pasos.
