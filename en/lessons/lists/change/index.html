@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adding and removing · Learn to program</title>
+  <meta name="description" content="Interactive lesson: changing the size of a list in Python. The empty list, append, insert, pop, remove, the ValueError, why grades = grades.append(15) loses the list, and filling a list with input().">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .nota { margin: var(--esp-4) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .consola__linea--error { color: var(--color-error); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+    * + .rotulo-cinta { margin-top: var(--esp-3); }
+    .cajas--uno { padding-top: var(--esp-3); }
+
+    /* ---------- Buttons that are code ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .elegir--arriba { margin: 0 0 var(--esp-4); }
+    .elegir .btn-agregar::before { content: "+ "; color: var(--color-acento); font-weight: 700; }
+
+    /* ---------- Index control ---------- */
+    .control-slider { margin: var(--esp-4) 0 0; }
+    .control-slider label { display: flex; justify-content: space-between; gap: var(--esp-3); font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- Console that waits for answers (input in a loop) ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 4.5rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: #a8480a; }
+    .vuelta-actual { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+    .lab .codigo + .consola, .consola + .fila-botones { margin-top: var(--esp-4); }
+    /* The console goes with the visual (on mobile, under the list). On desktop it keeps
+       only the last lines: that way the input field doesn't sink until it's hidden */
+    @media (min-width: 1024px) {
+      #s6-registro { max-height: 5.6rem; overflow-y: auto; overscroll-behavior: contain; }
+    }
+
+    /* Lists of text: smaller slots, so a row of 4 names fits on one line */
+
+    /* ---------- The list that lost its name ---------- */
+    .lista--perdida { opacity: 0.35; transition: opacity 600ms ease; }
+
+    /* ---------- Challenge ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3); }
+    .objetivo { margin-top: var(--esp-3); padding-top: var(--esp-2); border-top: 2px dashed var(--color-borde); }
+
+    @media (max-width: 480px) {
+      .elegir .btn { font-size: var(--texto-xs); padding: var(--esp-2) var(--esp-3); }
+    }
+
+    /* ---------- The output does not move: whatever appears above it already has its place ---------- */
+    /* Buttons that appear later: they keep their place from the start */
+    #s1-vaciar[hidden] { display: inline-flex !important; visibility: hidden; }
+    #s5-arreglo[hidden] { display: flex !important; visibility: hidden; }
+    @media (max-width: 1023.98px) {
+      /* On mobile the code goes above the output: it keeps the height of the longest version (the one with if) */
+      #s4-codigo { min-height: calc(2 * 1.7em + 2 * var(--esp-4)); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="listas-cambiar">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: the list grows with append -->
+    <section class="paso" id="paso-append" data-requiere aria-labelledby="t-append">
+      <span class="paso__etiqueta">Lists 2/8 · Adding and removing</span>
+      <h1 class="paso__titulo" id="t-append">A list that grows</h1>
+      <p>A list can start <strong>empty</strong>, <code>[]</code>, and grow. <code>.append()</code> puts a new value at the end. Make your shopping list: add at least <strong>3</strong> things.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"><code id="s1-lineas"></code></pre>
+          <div class="elegir" id="s1-productos" role="group" aria-label="What do you add?">
+            <button type="button" class="btn btn-secundario btn-agregar" data-valor="bread">"bread"</button>
+            <button type="button" class="btn btn-secundario btn-agregar" data-valor="milk">"milk"</button>
+            <button type="button" class="btn btn-secundario btn-agregar" data-valor="rice">"rice"</button>
+            <button type="button" class="btn btn-secundario btn-agregar" data-valor="eggs">"eggs"</button>
+            <button type="button" class="btn btn-secundario btn-agregar" data-valor="cheese">"cheese"</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-vaciar" hidden>↺ Start empty</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. insert: cutting in line -->
+    <section class="paso" id="paso-insert" data-requiere aria-labelledby="t-insert">
+      <h2 class="paso__titulo" id="t-insert">Cutting in line</h2>
+      <p>In the line at the movies, Iván doesn't want to go to the end. <code>.insert(i, value)</code> puts him in slot <code>i</code>. Put him <strong>at the start</strong> and also <strong>in the middle</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">line</span> = [<span class="tk-texto">"Ana"</span>, <span class="tk-texto">"Luis"</span>, <span class="tk-texto">"Sofía"</span>]</span><span class="linea"><span class="tk-variable">line</span>.<span class="tk-funcion">insert</span>(<span class="tk-numero" id="s2-codigo-i">1</span>, <span class="tk-texto">"Iván"</span>)</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">line</span>)</span></code></pre>
+          <div class="control-slider">
+            <label for="s2-i">Position <output id="s2-i-valor" for="s2-i">1</output></label>
+            <input type="range" id="s2-i" min="0" max="3" step="1" value="1">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">line</p>
+          <div id="s2-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. pop: take out and keep what comes out -->
+    <section class="paso" id="paso-pop" data-requiere aria-labelledby="t-pop">
+      <h2 class="paso__titulo" id="t-pop">Taking someone out of the line</h2>
+      <p><code>.pop()</code> takes a value out of the list and <strong>returns</strong> it: you can save it in a variable. Try it with no number and with <code>0</code>. Who does each one take out?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--arriba" id="s3-elegir" role="group" aria-label="How do you take them out?">
+            <button type="button" class="btn btn-secundario" data-valor="ultimo" aria-pressed="false">line.pop()</button>
+            <button type="button" class="btn btn-secundario" data-valor="primero" aria-pressed="false">line.pop(0)</button>
+          </div>
+          <pre class="codigo" id="s3-codigo" aria-label="Code"><code id="s3-lineas"></code></pre>
+          <p class="explicacion" id="s3-explicacion" aria-live="polite">Tap one of the two to run it.</p>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">line</p>
+          <div id="s3-lista"></div>
+          <div class="cajas cajas--uno">
+            <div class="caja caja--acento" id="s3-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">served</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. remove: remove by value -->
+    <section class="paso" id="paso-remove" data-requiere aria-labelledby="t-remove">
+      <h2 class="paso__titulo" id="t-remove">Removing by what it is</h2>
+      <p>With <code>.remove(value)</code> you don't say the slot, but <strong>what</strong> to remove. There are two <code>"bread"</code> in the list. Try the three buttons.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--arriba" id="s4-elegir" role="group" aria-label="What do you run?">
+            <button type="button" class="btn btn-secundario" data-valor="pan">shopping.remove("bread")</button>
+            <button type="button" class="btn btn-secundario" data-valor="queso">shopping.remove("cheese")</button>
+            <button type="button" class="btn btn-secundario" data-valor="seguro">if "cheese" in shopping: …</button>
+          </div>
+          <pre class="codigo" id="s4-codigo" aria-label="Code"><code id="s4-lineas"></code></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s4-reiniciar">↺ Back to the starting list</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta">shopping</p>
+          <div id="s4-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. append returns None -->
+    <section class="paso" id="paso-none" data-requiere data-salida="arriba" aria-labelledby="t-none">
+      <h2 class="paso__titulo" id="t-none">Do you have to save it?</h2>
+      <p>With text, you learned to save the result: <code>name = name.upper()</code>. Is it the same with lists? What does this program print?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">grades</span> = [<span class="tk-numero">14</span>, <span class="tk-numero">9</span>]</span><span class="linea" id="s5-linea"></span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">grades</span>)</span></code></pre>
+          <div class="elegir" id="s5-elegir" role="group" aria-label="What does it print?">
+            <button type="button" class="btn btn-secundario" data-valor="lista" aria-pressed="false">[14, 9, 15]</button>
+            <button type="button" class="btn btn-secundario" data-valor="quince" aria-pressed="false">[15]</button>
+            <button type="button" class="btn btn-secundario" data-valor="none" aria-pressed="false">None</button>
+          </div>
+          <div class="fila-botones" id="s5-arreglo" hidden>
+            <button type="button" class="btn btn-secundario" id="s5-arreglar">Remove <code>grades =</code> and run ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-lista"></div>
+          <div class="cajas cajas--uno" id="s5-cajas" hidden>
+            <div class="caja" id="s5-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">grades</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Fill a list with input -->
+    <section class="paso" id="paso-llenar" data-requiere aria-labelledby="t-llenar">
+      <h2 class="paso__titulo" id="t-llenar">Fill the list yourself</h2>
+      <p>This is how you save every grade the user types, without knowing how many there will be: the list starts empty and each grade goes in with <code>.append()</code>. Type at least <strong>2</strong> grades and then <code>done</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Code"><code><span class="linea"><span class="tk-variable">grades</span> = []</span><span class="linea"><span class="tk-palabra">while</span> <span class="tk-palabra">True</span>:</span><span class="linea">    <span class="tk-variable">entry</span> = <span class="tk-funcion">input</span>(<span class="tk-texto">"Grade: "</span>)</span><span class="linea">    <span class="tk-palabra">if</span> <span class="tk-variable">entry</span> == <span class="tk-texto">"done"</span>:</span><span class="linea">        <span class="tk-palabra">break</span></span><span class="linea">    <span class="tk-variable">grades</span>.<span class="tk-funcion">append</span>(<span class="tk-funcion">int</span>(<span class="tk-variable">entry</span>))</span><span class="linea"><span class="tk-funcion">print</span>(<span class="tk-variable">grades</span>)</span></code></pre>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="s6-vuelta" aria-live="polite"></p>
+          <div id="s6-lista"></div>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola">
+            <span class="consola__titulo">Console</span>
+            <div id="s6-registro" aria-live="polite"></div>
+            <div class="entrada" id="s6-fila">
+              <label for="s6-campo">Grade:</label>
+              <input type="text" id="s6-campo" maxlength="4" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="s6-enviar">Send ⏎</button>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-otra" hidden>↺ Again</button>
+          </div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Challenge: the line at the movies -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">The line at the movies</h2>
+      <p>Doors open: <strong>Ana</strong>, first in line, goes in and leaves the line. <strong>Iván</strong> arrives and joins the end. <strong>Eva</strong> has a VIP ticket and goes first. Which code does this?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Code"><code id="reto-lineas"></code></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">Which code leaves the line as asked?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="b"><span>line.pop()
+line.append("Iván")
+line.insert(0, "Eva")</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="a"><span>line.pop(0)
+line.append("Iván")
+line.insert(0, "Eva")</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="c"><span>line.insert(0, "Eva")
+line.pop(0)
+line.append("Iván")</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="d"><span>line.pop(0)
+line = line.append("Iván")
+line.insert(0, "Eva")</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta" id="reto-rotulo">line</p>
+          <div id="reto-lista"></div>
+          <div class="cajas cajas--uno" id="reto-cajas" hidden>
+            <div class="caja" id="reto-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">line</code>
+            </div>
+          </div>
+          <div class="objetivo">
+            <p class="rotulo-cinta">It should end up like this</p>
+            <div id="reto-objetivo"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite" hidden><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A list grows and shrinks: <code>append</code> and <code>insert</code> add, <code>pop</code> and <code>remove</code> remove. They change the list itself: you don't have to save the result.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-variable">line</span> = []</span><span class="linea"><span class="tk-variable">line</span>.<span class="tk-funcion">append</span>(<span class="tk-texto">"Ana"</span>)  <span class="tk-comentario"># at the end</span></span><span class="linea"><span class="tk-variable">line</span>.<span class="tk-funcion">insert</span>(<span class="tk-numero">0</span>, <span class="tk-texto">"Eva"</span>)  <span class="tk-comentario"># at 0</span></span><span class="linea"><span class="tk-variable">last</span> = <span class="tk-variable">line</span>.<span class="tk-funcion">pop</span>()   <span class="tk-comentario"># the last one</span></span><span class="linea"><span class="tk-variable">first</span> = <span class="tk-variable">line</span>.<span class="tk-funcion">pop</span>(<span class="tk-numero">0</span>) <span class="tk-comentario"># the 1st</span></span><span class="linea"><span class="tk-palabra">if</span> <span class="tk-texto">"bread"</span> <span class="tk-palabra">in</span> <span class="tk-variable">line</span>:</span><span class="linea">    <span class="tk-variable">line</span>.<span class="tk-funcion">remove</span>(<span class="tk-texto">"bread"</span>)</span><span class="linea"><span class="tk-variable">line</span>.<span class="tk-funcion">append</span>(<span class="tk-texto">"Iván"</span>)  <span class="tk-comentario"># no =</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../loop/index.html">Next: Looping and adding up →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/bucle-input.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* What print prints: the line flies out from wherever it is told */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  /* Remembers which cases the student saw in each step */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* Timers of an animation, so it can be cut short if the student taps something else */
+  function animacion() {
+    var t = [];
+    return {
+      luego: function (ms, fn) { t.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { t.forEach(clearTimeout); t = []; }
+    };
+  }
+
+  /* Colors a line of Python like in the code blocks */
+  function escapar(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  var PALABRAS = /^(if|in|not|while|True|False|None|break|for|def|return|and|or|else)$/;
+  function colorear(linea) {
+    var html = "";
+    var desde = 0;
+    linea.replace(/("[^"]*")|(\b\d+\b)|([A-Za-z_áéíóúñ]\w*)(\s*\()?/g, function (todo, texto, numero, nombre, parentesis, pos) {
+      html += escapar(linea.slice(desde, pos));
+      desde = pos + todo.length;
+      if (texto) html += '<span class="tk-texto">' + escapar(texto) + "</span>";
+      else if (numero) html += '<span class="tk-numero">' + numero + "</span>";
+      else if (PALABRAS.test(nombre)) html += '<span class="tk-palabra">' + nombre + "</span>" + (parentesis || "");
+      else if (parentesis) html += '<span class="tk-funcion">' + nombre + "</span>" + parentesis;
+      else html += '<span class="tk-variable">' + nombre + "</span>";
+      return todo;
+    });
+    return html + escapar(linea.slice(desde));
+  }
+
+  function pintarLineas(code, lineas) {
+    code.innerHTML = lineas.map(function (l) {
+      return '<span class="linea">' + (l === null ? '<span class="hueco">?</span>' : colorear(l)) + "</span>";
+    }).join("");
+  }
+
+  function lineaEn(pre, k) { return pre.querySelectorAll(".linea")[k]; }
+
+  /* The list keeps the height of the tallest state it will go through (the slots
+     shrink or wrap to two rows depending on how many values there are): so the output doesn't move */
+  function reservarLista(lista, estados, opciones) {
+    Codigo.reservarAlto(lista.el, estados, function (copia, valores) {
+      copia.textContent = "";
+      Lista.crear(copia, valores, opciones);
+    });
+  }
+  function repetir(valor, veces) {
+    var r = [];
+    for (var k = 0; k < veces; k++) r.push(valor);
+    return r;
+  }
+  function hasta(valor, maximo) {
+    var r = [];
+    for (var k = 0; k <= maximo; k++) r.push(repetir(valor, k));
+    return r;
+  }
+
+  /* ---------- 1. The list grows with append ---------- */
+  var lista1 = Lista.crear($("s1-lista"), [], { nombres: ["shopping"] });
+  var compras1 = [];
+  var MAX1 = 6;
+  reservarLista(lista1, hasta("eggs", MAX1).concat(hasta("cheese", MAX1)), { nombres: ["shopping"] });
+
+  function lineas1() {
+    return ["shopping = []"].concat(compras1.map(function (c) { return 'shopping.append("' + c + '")'; }), ["print(shopping)"]);
+  }
+
+  function vaciar1() {
+    compras1 = [];
+    pintarLineas($("s1-lineas"), lineas1());
+    lista1.valores([]);
+    Codigo.consola($("s1-consola"), []);
+    $("s1-vaciar").hidden = true;
+    $("s1-productos").querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+  }
+
+  function agregar1(producto, leccion) {
+    if (compras1.length >= MAX1) return;
+    compras1.push(producto);
+    var codigo = $("s1-codigo");
+    pintarLineas($("s1-lineas"), lineas1());
+    var k = compras1.length;
+    Codigo.marcar(codigo, { activas: [k] });
+    lista1.agregar(producto, Codigo.piezaEnLinea(lineaEn(codigo, k), '"' + producto + '"'));
+    // print(shopping): the console shows the list as it is now
+    Codigo.consola($("s1-consola"), [Lista.python(compras1)]);
+    $("s1-vaciar").hidden = false;
+    if (compras1.length >= MAX1) {
+      $("s1-productos").querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    }
+    var fb = $("s1-fb");
+    var n = compras1.length;
+    if (n >= 3) {
+      Pasos.feedback(fb, "ok", "The list started empty, [], and each append put a new value at the end: " + n + " things, in the order you added them. You can repeat the same thing.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, "pista", "\"" + producto + "\" went into slot " + (n - 1) + ", the last one. Add " + (3 - n === 1 ? "one more thing" : "two more things") + ".");
+    }
+  }
+
+  /* ---------- 2. insert ---------- */
+  var FILA = ["Ana", "Luis", "Sofía"];
+  var lista2 = Lista.crear($("s2-lista"), FILA);
+  var s2 = vistos();
+  var anim2 = animacion();
+  reservarLista(lista2, [FILA, FILA.concat(["Iván"])]);
+
+  function prepararInsert() {
+    anim2.cortar();
+    lista2.valores(FILA);
+    Codigo.limpiar($("s2-codigo"));
+    Codigo.consola($("s2-consola"), []);
+    $("s2-ejecutar").disabled = false;
+  }
+
+  function cambiarPosicion(i) {
+    $("s2-i-valor").textContent = String(i);
+    $("s2-codigo-i").textContent = String(i);
+    prepararInsert();
+  }
+
+  function insertar(leccion) {
+    var i = Number($("s2-i").value);
+    prepararInsert();
+    var codigo = $("s2-codigo");
+    $("s2-ejecutar").disabled = true;
+    Codigo.marcar(codigo, { activas: [1] });
+    anim2.luego(250, function () {
+      lista2.insertar(i, "Iván", Codigo.piezaEnLinea(lineaEn(codigo, 1), '"Iván"'));
+      // The ones that moved over: their index went up by 1
+      lista2.clases(function (k) { return k > i ? "lista__casilla--cambio" : ""; });
+    });
+    anim2.luego(1100, function () {
+      var nueva = FILA.slice();
+      nueva.splice(i, 0, "Iván");
+      Codigo.marcar(codigo, { activas: [2] });
+      imprimir($("s2-consola"), Lista.python(nueva), lista2.el);
+      $("s2-ejecutar").disabled = false;
+      if (i === 0) s2.marcar("principio");
+      else if (i === FILA.length) s2.marcar("final");
+      else s2.marcar("medio");
+      var texto;
+      if (i === 0) texto = "Iván is now first, in slot 0. Everyone else moved one place to the right: their index went up by 1.";
+      else if (i === FILA.length) texto = "With position 3 (the length of the list), Iván ended up at the end: the same as line.append(\"Iván\"). Nobody moved.";
+      else texto = "Iván is now in slot " + i + ". The ones from there to the right moved over one place (in blue); the ones on the left didn't move.";
+      var fb = $("s2-fb");
+      if (s2.todos(["principio", "medio"])) {
+        Pasos.feedback(fb, "ok", texto + " With insert you choose where he goes in: nobody leaves the line, they just move over.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", texto + (s2.tiene("principio") ? " Now put him in the middle." : " Now put him at the start."));
+      }
+    });
+  }
+
+  /* ---------- 3. pop ---------- */
+  var FILA3 = ["Ana", "Luis", "Sofía", "Iván"];
+  var lista3 = Lista.crear($("s3-lista"), FILA3);
+  var s3 = vistos();
+  var anim3 = animacion();
+  reservarLista(lista3, [FILA3, FILA3.slice(1), FILA3.slice(0, 3)]);
+
+  function lineas3(version) {
+    return [
+      'line = ["Ana", "Luis", "Sofía", "Iván"]',
+      version === "primero" ? "served = line.pop(0)" : "served = line.pop()",
+      "print(served)",
+      "print(line)"
+    ];
+  }
+
+  function prepararPop(version) {
+    anim3.cortar();
+    pintarLineas($("s3-lineas"), lineas3(version));
+    lista3.valores(FILA3);
+    Caja.vaciar($("s3-caja"));
+    Codigo.consola($("s3-consola"), []);
+  }
+
+  function sacar(version, leccion) {
+    prepararPop(version);
+    $("s3-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === version));
+      b.disabled = true;
+    });
+    var codigo = $("s3-codigo");
+    var i = version === "primero" ? 0 : FILA3.length - 1;
+    var sale = FILA3[i];
+    var quedan = FILA3.filter(function (x, k) { return k !== i; });
+    Codigo.marcar(codigo, { activas: [1] });
+    $("s3-explicacion").innerHTML = version === "primero"
+      ? "<code>pop(0)</code> takes out slot 0 and returns it: it lands in <code>served</code>."
+      : "<code>pop()</code> with no number takes out the <strong>last</strong> one: it lands in <code>served</code>.";
+    lista3.marcar(i);
+    anim3.luego(450, function () {
+      var rect = lista3.quitar(i);
+      Caja.poner($("s3-caja"), '"' + sale + '"', rect);
+    });
+    anim3.luego(1300, function () {
+      Codigo.marcar(codigo, { activas: [2] });
+      imprimir($("s3-consola"), sale, $("s3-caja").querySelector(".caja__valor:not(.caja__valor--saliendo)"));
+    });
+    anim3.luego(2000, function () {
+      Codigo.marcar(codigo, { activas: [3] });
+      imprimir($("s3-consola"), Lista.python(quedan), lista3.el);
+      $("s3-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+      s3.marcar(version);
+      var texto = version === "primero"
+        ? "pop(0) took out Ana, the first one: the others moved over to the left. That's how a line is served: whoever came first goes first."
+        : "pop() took out Iván, the last one. With no number, pop always takes out the one at the end.";
+      var fb = $("s3-fb");
+      if (s3.todos(["ultimo", "primero"])) {
+        Pasos.feedback(fb, "ok", texto + " In both cases, pop returns what it took out, and you can save it in a variable.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, "pista", texto + " Now try " + (version === "primero" ? "line.pop()" : "line.pop(0)") + ".");
+      }
+    });
+  }
+
+  /* ---------- 4. remove ---------- */
+  var COMPRAS4 = ["bread", "milk", "bread", "rice"];
+  var compras4 = COMPRAS4.slice();
+  var lista4 = Lista.crear($("s4-lista"), COMPRAS4);
+  var s4 = vistos();
+  var anim4 = animacion();
+  reservarLista(lista4, [COMPRAS4, ["milk", "bread", "rice"], ["milk", "rice"]]);
+
+  function reiniciar4() {
+    anim4.cortar();
+    compras4 = COMPRAS4.slice();
+    lista4.valores(compras4);
+    pintarLineas($("s4-lineas"), ['shopping = ["bread", "milk", "bread", "rice"]']);
+    Codigo.consola($("s4-consola"), []);
+    $("s4-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+  }
+
+  function quitarValor(caso, leccion) {
+    anim4.cortar();
+    lista4.valores(compras4);
+    Codigo.consola($("s4-consola"), []);
+    var codigo = $("s4-codigo");
+    var x = caso === "pan" ? "bread" : "cheese";
+    var lineas = caso === "seguro"
+      ? ['if "cheese" in shopping:', '    shopping.remove("cheese")']
+      : ["shopping.remove(\"" + x + "\")"];
+    pintarLineas($("s4-lineas"), lineas);
+    Codigo.marcar(codigo, { activas: [0] });
+    var k = compras4.indexOf(x);
+    var fb = $("s4-fb");
+    var texto;
+
+    if (caso === "seguro") {
+      // in gives False: the line inside is skipped
+      lista4.clases(function () { return "lista__casilla--apagada"; });
+      anim4.luego(700, function () {
+        lista4.clases(null);
+        Codigo.marcar(codigo, { activas: [0], saltadas: [1] });
+      });
+      texto = "\"cheese\" in shopping gave False, so remove didn't run: the list stayed the same and there was no error.";
+      s4.marcar("seguro");
+    } else if (k === -1) {
+      lista4.clases(function () { return "lista__casilla--distinta"; });
+      imprimir($("s4-consola"), "ValueError: list.remove(x): x not in list", null, true);
+      anim4.luego(900, function () { lista4.clases(null); });
+      texto = "There's no \"" + x + "\" in the list: Python stops with a ValueError (“x is not in the list”). Check first with in.";
+      s4.marcar("error");
+    } else {
+      lista4.marcar(k);
+      anim4.luego(500, function () { lista4.quitar(k); });
+      compras4.splice(k, 1);
+      texto = k === 0 && compras4.indexOf("bread") !== -1
+        ? "remove searched from the start and removed only the first \"bread\". The other one is still in the list."
+        : "remove removed the first \"bread\" it found.";
+      s4.marcar("pan");
+    }
+
+    if (s4.todos(["pan", "error", "seguro"])) {
+      Pasos.feedback(fb, "ok", texto + " remove takes out by value (the first match) and gives an error if it isn't there; with if … in you make sure first.");
+      leccion.desbloquear();
+    } else {
+      var falta = !s4.tiene("pan") ? "shopping.remove(\"bread\")" : !s4.tiene("error") ? "shopping.remove(\"cheese\")" : "the version with if";
+      Pasos.feedback(fb, caso === "queso" || (caso === "pan" && k === -1) ? "pista" : "ok", texto + " Now try " + falta + ".");
+    }
+  }
+
+  /* ---------- 5. append returns None ---------- */
+  var lista5 = Lista.crear($("s5-lista"), [14, 9], { nombres: ["grades"] });
+  var anim5 = animacion();
+  var LINEA_MAL = colorear("grades = grades.append(15)");
+  var LINEA_BIEN = colorear("grades.append(15)");
+  $("s5-arreglar").disabled = true;   // keeps its place, but isn't visible yet
+
+  function prepararNone(bien) {
+    anim5.cortar();
+    $("s5-linea").innerHTML = bien ? LINEA_BIEN : LINEA_MAL;
+    lista5.valores([14, 9]);
+    lista5.nombres(["grades"]);
+    lista5.el.classList.remove("lista--perdida");
+    $("s5-cajas").hidden = true;
+    Caja.vaciar($("s5-caja"));
+    Codigo.limpiar($("s5-codigo"));
+    Codigo.consola($("s5-consola"), []);
+  }
+
+  function ejecutarNone(bien, alTerminar) {
+    prepararNone(bien);
+    var codigo = $("s5-codigo");
+    Codigo.marcar(codigo, { activas: [1] });
+    anim5.luego(200, function () {
+      lista5.agregar(15, Codigo.piezaEnLinea(lineaEn(codigo, 1), "15"));
+    });
+    if (!bien) {
+      // append returns None, and the = sticks the label grades on that None
+      anim5.luego(1100, function () {
+        lista5.nombres([]);
+        lista5.el.classList.add("lista--perdida");
+        $("s5-cajas").hidden = false;
+        Caja.poner($("s5-caja"), "None", Codigo.piezaEnLinea(lineaEn(codigo, 1), "append"));
+      });
+    }
+    anim5.luego(bien ? 1100 : 2000, function () {
+      Codigo.marcar(codigo, { activas: [2] });
+      if (bien) imprimir($("s5-consola"), "[14, 9, 15]", lista5.el);
+      else imprimir($("s5-consola"), "None", $("s5-caja").querySelector(".caja__valor:not(.caja__valor--saliendo)"));
+      alTerminar();
+    });
+  }
+
+  function predecirNone(valor) {
+    $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+      b.disabled = true;
+    });
+    Pasos.limpiarFeedback($("s5-fb"));
+    ejecutarNone(false, function () {
+      $("s5-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+      var texto = "The 15 did go into the list, but append returns nothing: it returns None. With grades = …, the name grades got stuck on that None and the list was lost.";
+      if (valor === "none") texto = "Good thinking! " + texto;
+      else if (valor === "lista") texto = "Almost: " + texto;
+      else texto = "No: append doesn't make a new list. " + texto;
+      Pasos.feedback($("s5-fb"), valor === "none" ? "ok" : "pista", texto + " How do you fix it? Tap the button.");
+      $("s5-arreglo").hidden = false;
+      $("s5-arreglar").disabled = false;
+    });
+  }
+
+  function arreglarNone(leccion) {
+    $("s5-arreglar").disabled = true;
+    ejecutarNone(true, function () {
+      $("s5-arreglar").disabled = false;
+      Pasos.feedback($("s5-fb"), "ok", "That works: grades.append(15) changes the list itself, with no =. The opposite of text: list methods change the list, and there's nothing to save.");
+      leccion.desbloquear();
+    });
+  }
+
+  /* ---------- 6. Fill a list with input ---------- */
+  var lista6 = Lista.crear($("s6-lista"), [], { nombres: ["grades"] });
+  // The last thing that goes into the console (the list printed at the end) stays in view
+  if (window.MutationObserver) {
+    new MutationObserver(function () { var r = $("s6-registro"); r.scrollTop = r.scrollHeight; })
+      .observe($("s6-registro"), { childList: true });
+  }
+  var notas6 = [];
+  var MAX6 = 8;
+  reservarLista(lista6, hasta(20, MAX6), { nombres: ["grades"] });
+  // The explanation keeps the height of its longest text (on mobile it reaches three lines)
+  Codigo.reservarAlto($("s6-explicacion"), [
+    "<code>grades</code> starts empty. <code>input()</code> waits for the first value.",
+    "It isn't “done”: <code>append</code> puts 20 at the end. The list has 8 grades. Type another grade, or <code>done</code>.",
+    "<code>entry == \"done\"</code> is True: <code>break</code> leaves the loop."
+  ], function (copia, html) { copia.innerHTML = html; });
+
+  function crearLlenar(leccion) {
+    BucleInput.crear({
+      prefijo: "s6",
+      vueltas: null,
+      pregunta: "Grade:",
+      lineaInput: 2,
+      siguiente: "Type another grade, or <code>done</code>.",
+      validar: function (texto) {
+        if (texto.toLowerCase() === "done") return null;
+        if (!texto) return "Type a grade or done.";
+        if (!/^\d+$/.test(texto) || Number(texto) > 20) return "Type a grade from 0 to 20 (digits only), or done to finish.";
+        if (notas6.length >= MAX6) return "There are already " + MAX6 + " grades: type done to finish.";
+        return null;
+      },
+      alEmpezar: function () {
+        notas6 = [];
+        lista6.valores([]);
+        return "<code>grades</code> starts empty.";
+      },
+      alDato: function (texto) {
+        if (texto.toLowerCase() === "done") {
+          return {
+            fin: true,
+            camino: { activas: [2, 3, 4] },
+            texto: "<code>entry == \"done\"</code> is True: <code>break</code> leaves the loop."
+          };
+        }
+        var n = Number(texto);
+        notas6.push(n);
+        var registro = $("s6-registro");
+        registro.scrollTop = registro.scrollHeight;   // the answer, in view: the flight starts there
+        var respuestas = registro.querySelectorAll(".registro__respuesta");
+        lista6.agregar(n, respuestas[respuestas.length - 1]);
+        return {
+          camino: { activas: [2, 3, 5] },
+          texto: "It isn't “done”: <code>append</code> puts " + n + " at the end. The list has " + notas6.length + (notas6.length === 1 ? " grade." : " grades.")
+        };
+      },
+      alFinal: function () {
+        return { linea: 6, salida: Lista.python(notas6), texto: "The whole list is printed." };
+      },
+      alTerminar: function () {
+        var fb = $("s6-fb");
+        if (notas6.length >= 2) {
+          Pasos.feedback(fb, "ok", "You saved " + notas6.length + " grades without knowing ahead of time how many there would be. This is the pattern to fill a list: start with [] and each value goes in with append.");
+          leccion.desbloquear();
+        } else {
+          Pasos.feedback(fb, "pista", (notas6.length ? "Only one grade went in." : "The list ended up empty: [].") + " Tap “Again” and type at least 2 grades before done.");
+        }
+      }
+    });
+  }
+
+  /* ---------- 7. Challenge: the line at the movies ---------- */
+  var FILA7 = ["Ana", "Luis", "Sofía"];
+  var OBJETIVO = ["Eva", "Luis", "Sofía", "Iván"];
+  var retoLista = Lista.crear($("reto-lista"), FILA7);
+  Lista.crear($("reto-objetivo"), OBJETIVO);
+  var animReto = animacion();
+  var OPS = {
+    a: [["pop", 0], ["append", "Iván"], ["insert", 0, "Eva"]],
+    b: [["pop", -1], ["append", "Iván"], ["insert", 0, "Eva"]],
+    c: [["insert", 0, "Eva"], ["pop", 0], ["append", "Iván"]],
+    d: [["pop", 0], ["perder", "Iván"], ["insert", 0, "Eva"]]
+  };
+  var pistasReto = {
+    b: "pop() with no number takes out the last one, Sofía, who was still waiting. The one going in is Ana, the first: pop(0).",
+    c: "Order matters: Eva got into the line first, and then pop(0) took her out. Ana has to leave first.",
+    d: "line.append(\"Iván\") changes the list and returns None: with line = …, line is no longer the list, and None has no insert. Just line.append(\"Iván\") is enough."
+  };
+
+  function lineasReto(valor) {
+    var base = ['line = ["Ana", "Luis", "Sofía"]'];
+    if (!valor) return base.concat([null]);
+    var span = document.querySelector('#reto-opciones input[value="' + valor + '"]').nextElementSibling;
+    return base.concat(span.textContent.split("\n"));
+  }
+
+  function limpiarReto(valor) {
+    animReto.cortar();
+    pintarLineas($("reto-lineas"), lineasReto(valor));
+    retoLista.valores(FILA7);
+    retoLista.nombres([]);
+    retoLista.el.classList.remove("lista--perdida");
+    $("reto-rotulo").textContent = "line";
+    $("reto-cajas").hidden = true;
+    Caja.vaciar($("reto-caja"));
+    $("reto-consola").hidden = true;
+    Codigo.consola($("reto-consola"), []);
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto(e.target.value);
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto(null);
+  }
+
+  /* Runs the three lines one after another on the line; at the end it compares it with the goal */
+  function ejecutarReto(valor) {
+    var codigo = $("reto-codigo");
+    var fila = FILA7.slice();
+    var perdida = false;
+    OPS[valor].forEach(function (op, k) {
+      animReto.luego(300 + k * 1100, function () {
+        if (perdida) {
+          Codigo.marcar(codigo, { activas: [k + 1] });
+          var consola = $("reto-consola");
+          consola.hidden = false;
+          imprimir(consola, "AttributeError: 'NoneType' object has no attribute 'insert'", null, true);
+          return;
+        }
+        Codigo.marcar(codigo, { activas: [k + 1] });
+        var linea = lineaEn(codigo, k + 1);
+        if (op[0] === "pop") {
+          var i = op[1] < 0 ? fila.length - 1 : op[1];
+          fila.splice(i, 1);
+          retoLista.quitar(i);
+        } else if (op[0] === "append" || op[0] === "perder") {
+          fila.push(op[1]);
+          retoLista.agregar(op[1], Codigo.piezaEnLinea(linea, '"' + op[1] + '"'));
+          if (op[0] === "perder") {
+            perdida = true;
+            animReto.luego(700, function () {
+              retoLista.el.classList.add("lista--perdida");
+              $("reto-rotulo").textContent = "(the list, with no name)";
+              $("reto-cajas").hidden = false;
+              Caja.poner($("reto-caja"), "None", Codigo.piezaEnLinea(linea, "append"));
+            });
+          }
+        } else {
+          fila.splice(op[1], 0, op[2]);
+          retoLista.insertar(op[1], op[2], Codigo.piezaEnLinea(linea, '"' + op[2] + '"'));
+        }
+      });
+    });
+    animReto.luego(300 + OPS[valor].length * 1100, function () {
+      Codigo.marcar(codigo, {});
+      if (perdida) return;
+      retoLista.clases(function (k, v) { return OBJETIVO[k] === v ? "lista__casilla--igual" : "lista__casilla--distinta"; });
+    });
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    limpiarReto(marcada.value);
+    ejecutarReto(marcada.value);
+    if (marcada.value === "a") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! pop(0) takes out Ana, append puts Iván at the end and insert(0, …) puts Eva first. Watch how the line moves.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[marcada.value]);
+    return false;
+  }
+
+  /* ---------- Wiring ---------- */
+  $("s1-productos").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { agregar1(b.getAttribute("data-valor"), leccion); });
+  });
+  $("s1-vaciar").addEventListener("click", function () {
+    vaciar1();
+    Pasos.limpiarFeedback($("s1-fb"));
+    $("s1-productos").querySelector("button").focus();
+  });
+
+  $("s2-i").addEventListener("input", function () { cambiarPosicion(Number(this.value)); });
+  $("s2-ejecutar").addEventListener("click", function () { insertar(leccion); });
+
+  $("s3-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { sacar(b.getAttribute("data-valor"), leccion); });
+  });
+
+  $("s4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { quitarValor(b.getAttribute("data-valor"), leccion); });
+  });
+  $("s4-reiniciar").addEventListener("click", reiniciar4);
+
+  $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { predecirNone(b.getAttribute("data-valor")); });
+  });
+  $("s5-arreglar").addEventListener("click", function () { arreglarNone(leccion); });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Initial state of each step
+  vaciar1();
+  prepararInsert();
+  prepararPop("ultimo");
+  reiniciar4();
+  prepararNone(false);
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-insert": prepararInsert,
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+  crearLlenar(leccion);
+})();
+</script>
+</body>
+</html>
