@@ -1,6 +1,6 @@
 # Traducir una lección al inglés (instrucciones para un agente)
 
-Cómo se tradujeron Recursión, Texto a fondo, Listas y Otras estructuras (ver «Curso en inglés» en `CLAUDE.md`):
+Cómo se tradujeron Recursión, Texto a fondo, Listas, Otras estructuras y Búsquedas (ver «Curso en inglés» en `CLAUDE.md`):
 
 1. Rama `mejora/ingles-<tema>` desde `main`.
 2. Medir los retos del tema en español: `node herramientas/responder-retos.js <tema>/<lección>` para cada lección (en segundo plano; tarda).

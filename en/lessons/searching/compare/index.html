@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Which one is faster? · Learn to program</title>
+  <meta name="description" content="Interactive lesson: linear search versus binary search in Python. A race that counts comparisons, lists of a million values, twice as many versus one more, and when it pays to sort the list first.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .nota-pie { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .codigo--compacto { font-size: 0.95rem; line-height: 1.55; }
+    .codigo--compacto .linea { min-height: 1.55em; }
+    @media (min-width: 1024px) { .lab .codigo--compacto { font-size: 1rem; } }
+
+    /* ---------- Choose (values, versions, sizes) ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .elegir--arriba { margin: 0 0 var(--esp-3); }
+    .grupo-titulo { margin: var(--esp-3) 0 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); text-align: center; }
+    .grupo-titulo + .elegir { margin-top: var(--esp-2); }
+
+    /* ---------- Lanes of the race ---------- */
+    .carril { padding: var(--esp-2) 0; }
+    .carril + .carril { margin-top: var(--esp-2); border-top: 2px dashed var(--color-borde); padding-top: var(--esp-3); }
+    .carril__cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--esp-1) var(--esp-3); margin-bottom: var(--esp-1); }
+    .carril__nombre { font-family: var(--fuente-codigo); font-weight: 700; }
+    .carril__nombre--lineal { color: var(--color-pista); }
+    .carril__nombre--binaria { color: var(--color-azul); }
+    .cuenta { font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .cuenta strong { display: inline-block; min-width: 1.4em; text-align: right; font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-texto); }
+    .cuenta--pulso strong { animation: valor-pulso 260ms ease-out; }
+    .cuenta--gana strong { color: var(--color-ok); }
+    .carril__dice { min-height: 1.5em; margin: var(--esp-1) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .carril__dice code { color: var(--color-texto); }
+    .carril__dice strong { color: var(--color-texto); }
+
+    /* ---------- Strips: lists that do not fit in slots ---------- */
+    .tira { display: flex; height: 2rem; margin-top: var(--esp-1); border: 1px solid #b8c0ca; border-radius: 6px; overflow: hidden; background: var(--color-superficie); }
+    .tira__celda { flex: 1 1 0; min-width: 0; }
+    .tira--separadas .tira__celda + .tira__celda { box-shadow: inset 1px 0 0 var(--color-borde); }
+    .tira__celda--apagada { background: repeating-linear-gradient(135deg, #e3e7ec 0 4px, #d3d9e0 4px 8px); }
+    .tira__celda--mirada { background: var(--color-pista); }
+    .tira--binaria .tira__celda--mirada { background: var(--color-azul); }
+    .tira__celda--medio { animation: celda-mira 420ms ease-out; }
+    @keyframes celda-mira { 0% { transform: scaleY(1.5); } }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-4); margin: var(--esp-3) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.35em; vertical-align: -0.1em; border-radius: 3px; }
+    .leyenda .ley-lineal::before { background: var(--color-pista); }
+    .leyenda .ley-binaria::before { background: var(--color-azul); }
+    .leyenda .ley-apagada::before { background: repeating-linear-gradient(135deg, #e3e7ec 0 3px, #c5ccd5 3px 6px); }
+
+    .tabla { width: 100%; border-collapse: collapse; font-family: var(--fuente-codigo); text-align: center; font-size: var(--texto-sm); }
+    .tabla caption { margin-bottom: var(--esp-2); font-family: var(--fuente); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tabla th { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); text-align: left; white-space: nowrap; border-bottom: 1px solid var(--color-borde); }
+    .tabla td { padding: var(--esp-1) 0.15rem; border-bottom: 1px solid var(--color-borde); vertical-align: top; line-height: 1.25; }
+    .tabla tr:first-child td { font-weight: 700; }
+    .tabla td.tabla__nueva { animation: aparecer var(--dur) ease both; background: var(--color-azul-suave); }
+    .tabla small { display: block; font-size: 0.75rem; font-weight: 700; }
+    @media (max-width: 480px) { .tabla { font-size: var(--texto-xs); } }
+    .tabla .doble { color: var(--color-pista); }
+    .tabla .mas-uno { color: var(--color-azul); }
+
+    /* ---------- Cutting in half ---------- */
+    .cadena { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: var(--esp-2) 0.2rem; min-height: 3rem; margin-top: var(--esp-3); }
+    .cadena__paso { display: flex; flex-direction: column; align-items: center; animation: aparecer var(--dur) ease both; }
+    .cadena__num { padding: 0.1em 0.5em; font-size: var(--texto-sm); border-radius: 999px; background: var(--color-azul-suave); color: var(--color-azul); font-family: var(--fuente-codigo); font-weight: 700; }
+    .cadena__num--cero { background: var(--color-superficie); color: var(--color-texto-suave); box-shadow: inset 0 0 0 2px var(--color-borde); }
+    .cadena__resto { margin-top: 0.05rem; font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .cadena__flecha { align-self: flex-start; margin-top: 0.1rem; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .cadena-binario { margin: var(--esp-4) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); min-height: 3em; }
+    .cadena-binario code { color: var(--color-texto); font-weight: 700; overflow-wrap: anywhere; }
+
+    /* ---------- Comparison bars ---------- */
+    .barra { margin-top: var(--esp-3); }
+    .barra__cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 var(--esp-3); }
+    .barra__nombre { font-family: var(--fuente-codigo); font-weight: 700; }
+    .barra__num { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); }
+    .barra__pista { display: flex; height: 1.4rem; margin-top: var(--esp-1); border-radius: 999px; overflow: hidden; background: var(--color-superficie); box-shadow: inset 0 0 0 1px #b8c0ca; }
+    .barra__relleno { height: 100%; min-width: 3px; background: var(--color-pista); transition: width 600ms var(--curva-rebote, ease); }
+    .barra--binaria .barra__relleno { background: var(--color-azul); }
+    .barra__relleno--ordenar { background: #7a3fb0; }
+    .barra__tiempo { margin: var(--esp-1) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .barra--gana .barra__num { color: var(--color-ok); }
+    .barra--gana .barra__nombre::after { content: " 🏆"; }
+    .control { margin-top: var(--esp-4); }
+    .control label { display: flex; justify-content: space-between; gap: var(--esp-3); font-weight: 700; }
+    .control output { font-family: var(--fuente-codigo); color: var(--color-azul); }
+    .sugerencias { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .sugerencias .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-size: var(--texto-sm); }
+    .veredicto { margin: 0; text-align: center; font-weight: 700; min-height: 1.5em; }
+
+    /* ---------- Challenge: the cases ---------- */
+    .casos { display: grid; gap: var(--esp-3); margin: 0; padding: 0; list-style: none; }
+    .caso { padding: var(--esp-2) var(--esp-4); border: 2px solid transparent; border-radius: var(--radio-sm); background: var(--color-superficie-2); }
+    .caso--bien { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .caso--mal { border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .caso__texto { margin: 0 0 var(--esp-2); font-weight: 600; }
+    .caso__fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2) var(--esp-4); }
+    .caso fieldset { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+    .chip { position: relative; }
+    .chip input { position: absolute; opacity: 0; pointer-events: none; }
+    .chip span { display: inline-block; padding: 0.3em 0.75em; border: 2px solid var(--color-borde); border-radius: 999px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; cursor: pointer; }
+    .chip span:hover { border-color: #b8c0ca; }
+    .chip input:checked + span { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .chip input:focus-visible + span { box-shadow: var(--foco); }
+    .chip input:disabled + span { cursor: default; }
+    .caso__num { display: flex; align-items: center; gap: var(--esp-2); font-size: var(--texto-sm); }
+    .caso__num input { width: 6rem; font: inherit; font-family: var(--fuente-codigo); font-weight: 700; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); text-align: center; }
+    .caso__num input:focus-visible { border-color: var(--color-azul); }
+    .caso__pista { margin: var(--esp-2) 0 0; font-size: var(--texto-sm); }
+    .caso__pista:empty { display: none; }
+    .caso--bien .caso__pista { color: var(--color-ok); }
+    .caso--mal .caso__pista { color: var(--color-pista); }
+
+    @media (max-width: 480px) {
+      .codigo--compacto { font-size: 0.85rem; }
+      .elegir .btn { padding: var(--esp-2) var(--esp-3); }
+      .caso { padding: var(--esp-3); }
+    }
+    @media (min-width: 1024px) {
+      /* What you see is tall (two lanes): the message goes under the code */
+      .paso.paso--salida-izq {
+        grid-template-rows: auto auto 1fr;
+        grid-template-areas: "intro visual" "principal visual" "resultado visual";
+      }
+      .paso--salida-izq .lab__visual ~ .lab__resultado { margin-top: var(--esp-3); }
+      .caso__texto { margin-bottom: var(--esp-1); }
+      /* CHALLENGE: what appears on “Check” (the hints, the message) does not push the step off the screen.
+         Everything tighter, and the number field fits in the row of the chips also at 1024 px */
+      #paso-reto .tarjeta { padding-block: var(--esp-4); }
+      #paso-reto .casos { gap: var(--esp-2); }
+      #paso-reto .caso { padding-block: var(--esp-1) var(--esp-2); }
+      #paso-reto .caso__fila { gap: var(--esp-2) var(--esp-3); }
+      /* Without room, the label of the number breaks into two lines instead of going down to another row */
+      #paso-reto .caso__fila { flex-wrap: nowrap; }
+      #paso-reto .caso fieldset { flex: none; }
+      #paso-reto .caso__num { line-height: 1.2; }
+      #paso-reto .chip span { padding: 0.25em 0.65em; }
+      #paso-reto .caso__num input { width: 5rem; padding-block: 0.15rem; }
+      #paso-reto .caso__pista { margin-top: var(--esp-1); }
+      #reto-fb { margin-top: var(--esp-3); padding: var(--esp-2) var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas-comparar">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. The race -->
+    <section class="paso paso--salida-izq" id="paso-carrera" data-requiere aria-labelledby="t-carrera">
+      <span class="paso__etiqueta">Searching 6/7 · Which one is faster?</span>
+      <h1 class="paso__titulo" id="t-carrera">A race</h1>
+      <p>Linear and binary search look for the same value in the same sorted list. Each slot they look at is a <strong>comparison</strong>. Who looks at fewer?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <p class="grupo-titulo" id="s1-t-elegir">Tap what to search for</p>
+          <div class="elegir" id="s1-elegir" role="group" aria-labelledby="s1-t-elegir">
+            <button type="button" class="btn btn-secundario" data-valor="19" aria-pressed="false">🏁 19</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">🏁 3</button>
+            <button type="button" class="btn btn-secundario" data-valor="11" aria-pressed="false">🏁 11</button>
+            <button type="button" class="btn btn-secundario" data-valor="10" aria-pressed="false">🏁 10</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="carril">
+            <div class="carril__cab">
+              <span class="carril__nombre carril__nombre--lineal">linear</span>
+              <span class="cuenta" id="s1-cuenta-lineal"><strong>0</strong> <span>comparisons</span></span>
+            </div>
+            <div id="s1-lineal"></div>
+            <p class="carril__dice" id="s1-dice-lineal" aria-live="polite"></p>
+          </div>
+          <div class="carril">
+            <div class="carril__cab">
+              <span class="carril__nombre carril__nombre--binaria">binary</span>
+              <span class="cuenta" id="s1-cuenta-binaria"><strong>0</strong> <span>comparisons</span></span>
+            </div>
+            <div id="s1-binaria"></div>
+            <p class="carril__dice" id="s1-dice-binaria" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The worst case, line by line -->
+    <section class="paso" id="paso-peor" data-requiere aria-labelledby="t-peor">
+      <h2 class="paso__titulo" id="t-peor">What if it isn't there?</h2>
+      <p>Nobody got a 20. Run both functions: how many times does each one go through the line that looks at a slot?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s2-codigo" aria-label="Code"></pre>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir elegir--arriba" id="s2-elegir" role="group" aria-label="Which function do you run?">
+            <button type="button" class="btn btn-secundario" data-valor="lineal" aria-pressed="true">▶ linear</button>
+            <button type="button" class="btn btn-secundario" data-valor="binaria" aria-pressed="false">▶ binary</button>
+          </div>
+          <p class="rotulo" id="s2-llamada"></p>
+          <div id="s2-lista"></div>
+          <p class="carril__dice" id="s2-dice" aria-live="polite"></p>
+          <p class="carril__dice"><span class="cuenta" id="s2-cuenta"><strong>0</strong> <span>comparisons</span></span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Twice as long -->
+    <section class="paso" id="paso-doble" data-requiere aria-labelledby="t-doble">
+      <h2 class="paso__titulo" id="t-doble">Twice as long</h2>
+      <p>Now the list grows and the slots no longer fit: each little line is one. Search for a number that isn't there, then <strong>double</strong> the list several times.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-volver" hidden>↺ Back to 8</button>
+            <button type="button" class="btn btn-secundario" id="s3-buscar">▶ Search</button>
+            <button type="button" class="btn btn-secundario" id="s3-duplicar" disabled>×2 Double the list</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s3-rotulo">8 slots</p>
+          <div class="carril">
+            <div class="carril__cab">
+              <span class="carril__nombre carril__nombre--lineal">linear</span>
+              <span class="cuenta" id="s3-cuenta-lineal"><strong>0</strong> <span>comparisons</span></span>
+            </div>
+            <div class="tira tira--lineal" id="s3-tira-lineal" aria-hidden="true"></div>
+          </div>
+          <div class="carril">
+            <div class="carril__cab">
+              <span class="carril__nombre carril__nombre--binaria">binary</span>
+              <span class="cuenta" id="s3-cuenta-binaria"><strong>0</strong> <span>comparisons</span></span>
+            </div>
+            <div class="tira tira--binaria" id="s3-tira-binaria" aria-hidden="true"></div>
+          </div>
+          <p class="leyenda"><span class="ley-lineal">looked at (linear)</span><span class="ley-binaria">looked at (binary)</span><span class="ley-apagada">discarded without looking</span></p>
+        </div>
+        <div class="lab__resultado">
+          <table class="tabla" id="s3-tabla" hidden>
+            <caption>Comparisons if it isn't there</caption>
+            <tbody>
+              <tr><th scope="row">slots</th></tr>
+              <tr><th scope="row">linear</th></tr>
+              <tr><th scope="row">binary</th></tr>
+            </tbody>
+          </table>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. How many times can it be cut in half? -->
+    <section class="paso" id="paso-mitades" data-requiere aria-labelledby="t-mitades">
+      <h2 class="paso__titulo" id="t-mitades">Why just one more?</h2>
+      <p>Binary search cuts the list in half with each comparison. How many times can you cut a number in half until you reach 0? Try two numbers.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Code"></pre>
+          <p class="grupo-titulo" id="s4-t-elegir">Tap a number</p>
+          <div class="elegir" id="s4-elegir" role="group" aria-labelledby="s4-t-elegir">
+            <button type="button" class="btn btn-secundario" data-valor="8" aria-pressed="false">8</button>
+            <button type="button" class="btn btn-secundario" data-valor="16" aria-pressed="false">16</button>
+            <button type="button" class="btn btn-secundario" data-valor="100" aria-pressed="false">100</button>
+            <button type="button" class="btn btn-secundario" data-valor="200" aria-pressed="false">200</button>
+            <button type="button" class="btn btn-secundario" data-valor="1000" aria-pressed="false">1,000</button>
+            <button type="button" class="btn btn-secundario" data-valor="1000000" aria-pressed="false">1,000,000</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo">each → is <code>n // 2</code></p>
+          <div class="cadena" id="s4-cadena" aria-live="polite"></div>
+          <p class="cadena-binario" id="s4-binario" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. A million -->
+    <section class="paso" id="paso-millon" data-requiere aria-labelledby="t-millon">
+      <h2 class="paso__titulo" id="t-millon">A million slots</h2>
+      <p>Choose the size and what to search for: the page really counts the comparisons. Go up to <strong>a million</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s5-codigo" aria-label="Code"></pre>
+          <div class="elegir" id="s5-tamano" role="group" aria-label="Size of the list">
+            <button type="button" class="btn btn-secundario" data-valor="100" aria-pressed="true">100</button>
+            <button type="button" class="btn btn-secundario" data-valor="1000" aria-pressed="false">1,000</button>
+            <button type="button" class="btn btn-secundario" data-valor="1000000" aria-pressed="false">1,000,000</button>
+          </div>
+          <div class="control">
+            <label for="s5-x">Number you search for <output id="s5-x-valor" for="s5-x">75</output></label>
+            <input type="range" id="s5-x" min="1" max="101" value="75">
+          </div>
+          <div class="sugerencias" id="s5-sugerencias" role="group" aria-label="Numbers to try">
+            <button type="button" class="btn btn-secundario" data-donde="primero">the first one</button>
+            <button type="button" class="btn btn-secundario" data-donde="ultimo">the last one</button>
+            <button type="button" class="btn btn-secundario" data-donde="no">one that isn't there</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s5-rotulo"></p>
+          <div class="barra barra--lineal" id="s5-barra-lineal">
+            <div class="barra__cab"><span class="barra__nombre">linear</span><span class="barra__num" id="s5-num-lineal">0</span></div>
+            <div class="barra__pista" aria-hidden="true"><span class="barra__relleno" id="s5-relleno-lineal"></span></div>
+            <p class="barra__tiempo" id="s5-tiempo-lineal"></p>
+          </div>
+          <div class="barra barra--binaria" id="s5-barra-binaria">
+            <div class="barra__cab"><span class="barra__nombre">binary</span><span class="barra__num" id="s5-num-binaria">0</span></div>
+            <div class="barra__pista" aria-hidden="true"><span class="barra__relleno" id="s5-relleno-binaria"></span></div>
+            <p class="barra__tiempo" id="s5-tiempo-binaria"></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Binary search needs a sorted list -->
+    <section class="paso" id="paso-desordenada" data-requiere aria-labelledby="t-desordenada">
+      <h2 class="paso__titulo" id="t-desordenada">What if it isn't sorted?</h2>
+      <p>These grades came in unsorted. Try binary search like this, and also sorting first with <code>sorted</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--arriba" id="s6-elegir" role="group" aria-label="Which version do you run?">
+            <button type="button" class="btn btn-secundario" data-valor="sin" aria-pressed="true">▶ Without sorting</button>
+            <button type="button" class="btn btn-secundario" data-valor="con" aria-pressed="false">▶ Sort first</button>
+          </div>
+          <pre class="codigo" id="s6-codigo" aria-label="Code"></pre>
+        </div>
+        <div class="lab__visual">
+          <div id="s6-lista"></div>
+          <p class="carril__dice" id="s6-dice" aria-live="polite"></p>
+          <p class="carril__dice">
+            <span class="cuenta" id="s6-cuenta-sorted" hidden>sorted: <strong>0</strong> <span>comparisons</span> ·</span>
+            <span class="cuenta" id="s6-cuenta-binaria">binary: <strong>0</strong> <span>comparisons</span></span>
+          </p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Many searches: sort once -->
+    <section class="paso" id="paso-muchas" data-requiere aria-labelledby="t-muchas">
+      <h2 class="paso__titulo" id="t-muchas">What if you search many times?</h2>
+      <p>An unsorted list and many searches. Is it worth sorting it first? Move the searches: from how many does plan B win?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="s7-codigo" aria-label="Code"></pre>
+          <div class="elegir" id="s7-tamano" role="group" aria-label="Size of the list">
+            <button type="button" class="btn btn-secundario" data-valor="1000" aria-pressed="true">1,000</button>
+            <button type="button" class="btn btn-secundario" data-valor="1000000" aria-pressed="false">1,000,000</button>
+          </div>
+          <div class="control">
+            <label for="s7-k">Searches <output id="s7-k-valor" for="s7-k">1</output></label>
+            <input type="range" id="s7-k" min="1" max="40" value="1">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo" id="s7-rotulo"></p>
+          <div class="barra" id="s7-barra-a">
+            <div class="barra__cab"><span class="barra__nombre">Plan A</span><span class="barra__num" id="s7-num-a">0</span></div>
+            <div class="barra__pista" aria-hidden="true"><span class="barra__relleno" id="s7-relleno-a"></span></div>
+            <p class="barra__tiempo" id="s7-detalle-a"></p>
+          </div>
+          <div class="barra barra--binaria" id="s7-barra-b">
+            <div class="barra__cab"><span class="barra__nombre">Plan B</span><span class="barra__num" id="s7-num-b">0</span></div>
+            <div class="barra__pista" aria-hidden="true"><span class="barra__relleno barra__relleno--ordenar" id="s7-relleno-orden"></span><span class="barra__relleno" id="s7-relleno-b"></span></div>
+            <p class="barra__tiempo" id="s7-detalle-b"></p>
+          </div>
+          <p class="nota-pie">Each search, in its worst case. The page counted <code>sorted</code> by really sorting.</p>
+        </div>
+        <div class="lab__resultado">
+          <p class="veredicto" id="s7-veredicto" aria-live="polite"></p>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Challenge -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Which one fits?</h2>
+      <p>For each case, choose what fits best and write how many comparisons it makes <strong>at most</strong> (in the worst case).</p>
+
+      <div class="tarjeta">
+        <ol class="casos" id="reto-casos"></ol>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 9. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">When the list doubles, linear search makes twice as many comparisons and binary search just one more; but binary search needs a sorted list.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../project/index.html">Next: Project: the PC guesses your number →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Timers of an animation, so it can be cut short */
+  function relojes() {
+    var lista = [];
+    return {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+  }
+
+  /* Remembers which cases the student saw in each step */
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      cuantos: function () { return Object.keys(s).length; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* 1000000 → "1,000,000" (commas as thousands separators) */
+  function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+  function plural(n, uno, varios) { return miles(n) + " " + (n === 1 ? uno : varios); }
+
+  /* If the PC looked at one slot per second, how long would it take? */
+  function duracion(seg) {
+    if (seg < 120) return plural(seg, "second", "seconds");
+    if (seg < 7200) return "about " + miles(Math.round(seg / 60)) + " minutes";
+    if (seg < 172800) return "about " + miles(Math.round(seg / 3600)) + " hours";
+    return "about " + miles(Math.round(seg / 86400)) + " days";
+  }
+
+  /* ---------- Color Python ---------- */
+  var PALABRAS = ["def", "for", "in", "if", "elif", "else", "return", "while", "not", "and", "or", "True", "False", "None"];
+
+  function escapar(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function py(linea) {
+    var re = /(#.*$)|("[^"]*")|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?|([^#"\w]+|.)/g;
+    var html = "";
+    var m;
+    while ((m = re.exec(linea))) {
+      if (m[0] === "") { re.lastIndex++; continue; }
+      if (m[1]) html += '<span class="tk-comentario">' + escapar(m[1]) + "</span>";
+      else if (m[2]) html += '<span class="tk-texto">' + escapar(m[2]) + "</span>";
+      else if (m[3]) html += '<span class="tk-numero">' + m[3] + "</span>";
+      else if (m[4]) {
+        var clase = PALABRAS.indexOf(m[4]) !== -1 ? "tk-palabra" : m[5] ? "tk-funcion" : "tk-variable";
+        html += '<span class="' + clase + '">' + m[4] + "</span>" + (m[5] ? escapar(m[5]) : "");
+      } else html += escapar(m[0]);
+    }
+    return html;
+  }
+
+  function pintarCodigo(pre, lineas) {
+    pre.innerHTML = "<code>" + lineas.map(function (l) {
+      return '<span class="linea">' + py(l) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function imprimir(consola, texto, desde) {
+    Codigo.agregar(consola, texto);
+    if (desde) Codigo.volar(desde, consola.lastElementChild, texto, "vuelo--salida");
+  }
+
+  function contar(el, n) {
+    el.querySelector("strong").textContent = miles(n);
+    var etiqueta = el.querySelector("span");
+    if (etiqueta) etiqueta.textContent = n === 1 ? "comparison" : "comparisons";
+    el.classList.remove("cuenta--pulso");
+    void el.offsetWidth;
+    if (n > 0) el.classList.add("cuenta--pulso");
+  }
+
+  function presionar(grupo, valor) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === String(valor)));
+    });
+  }
+
+  /* ---------- The two searches ---------- */
+  var LINEAL = [
+    "def linear_search(items, x):",
+    "    for i in range(len(items)):",
+    "        if items[i] == x:",
+    "            return i",
+    "    return -1"
+  ];
+  var BINARIA = [
+    "def binary_search(items, x):",
+    "    low = 0",
+    "    high = len(items) - 1",
+    "    while low <= high:",
+    "        mid = (low + high) // 2",
+    "        if items[mid] == x:",
+    "            return mid",
+    "        elif items[mid] < x:",
+    "            low = mid + 1",
+    "        else:",
+    "            high = mid - 1",
+    "    return -1"
+  ];
+
+  /* What each one looks at: one step per comparison */
+  function pasosLineal(lista, x) {
+    var pasos = [];
+    for (var i = 0; i < lista.length; i++) {
+      pasos.push({ i: i, v: lista[i], igual: lista[i] === x });
+      if (lista[i] === x) return { pasos: pasos, resultado: i };
+    }
+    return { pasos: pasos, resultado: -1 };
+  }
+
+  function pasosBinaria(lista, x) {
+    var pasos = [];
+    var inicio = 0;
+    var fin = lista.length - 1;
+    while (inicio <= fin) {
+      var medio = Math.floor((inicio + fin) / 2);
+      var v = lista[medio];
+      var p = { inicio: inicio, fin: fin, medio: medio, v: v, rel: v === x ? "==" : v < x ? "<" : ">" };
+      pasos.push(p);
+      if (v === x) return { pasos: pasos, resultado: medio };
+      if (v < x) inicio = medio + 1; else fin = medio - 1;
+      p.nInicio = inicio;
+      p.nFin = fin;
+    }
+    return { pasos: pasos, resultado: -1 };
+  }
+
+  /* Without building the list: for [1, 2, …, n], linear and binary only count */
+  function cuentaLineal(n, x) { return x >= 1 && x <= n ? x : n; }
+  function cuentaBinaria(n, x) {
+    var inicio = 0, fin = n - 1, c = 0;
+    while (inicio <= fin) {
+      var medio = Math.floor((inicio + fin) / 2);
+      c++;
+      var v = medio + 1;
+      if (v === x) return c;
+      if (v < x) inicio = medio + 1; else fin = medio - 1;
+    }
+    return c;
+  }
+  function mitades(n) { var c = 0; while (n > 0) { n = Math.floor(n / 2); c++; } return c; }
+
+  /* How many comparisons it takes to sort an unsorted list of n values: they are really
+     counted, sorting with a method like the one sorted uses (always the same shuffle) */
+  function azar(semilla) {
+    var a = semilla;
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  var costos = {};
+  function costoOrdenar(valores) {
+    var c = 0;
+    valores.slice().sort(function (a, b) { c++; return a - b; });
+    return c;
+  }
+  function costoOrdenarN(n) {
+    if (costos[n] === undefined) {
+      var r = azar(n);
+      var a = new Array(n);
+      for (var i = 0; i < n; i++) a[i] = i + 1;
+      for (i = n - 1; i > 0; i--) {
+        var j = Math.floor(r() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      costos[n] = costoOrdenar(a);
+    }
+    return costos[n];
+  }
+
+  /* ---------- 1. The race ---------- */
+  var NOTAS = [3, 6, 8, 11, 12, 14, 17, 19];
+  var lin1 = Lista.crear($("s1-lineal"), NOTAS);
+  var bin1 = Lista.crear($("s1-binaria"), NOTAS);
+  var x1 = null;
+  var reloj1 = relojes();
+  var s1 = vistos();
+
+  function codigo1() {
+    pintarCodigo($("s1-codigo"), [
+      "grades = [" + NOTAS.join(", ") + "]",
+      "x = " + (x1 === null ? "?" : x1),
+      "print(linear_search(grades, x))",
+      "print(binary_search(grades, x))"
+    ]);
+  }
+
+  function preparar1() {
+    reloj1.cortar();
+    [lin1, bin1].forEach(function (l) {
+      l.tapar(true);
+      l.clases(null);
+      l.marcar(null);
+      l.punteros(null);
+    });
+    ["lineal", "binaria"].forEach(function (k) {
+      contar($("s1-cuenta-" + k), 0);
+      $("s1-cuenta-" + k).classList.remove("cuenta--gana");
+      $("s1-dice-" + k).textContent = "";
+    });
+    presionar($("s1-elegir"), x1);
+    codigo1();
+  }
+
+  function apagarFuera(l, a, b, extra) {
+    l.clases(function (j) {
+      if (extra && extra[j]) return extra[j];
+      return j < a || j > b ? "lista__casilla--apagada" : "";
+    });
+  }
+
+  function carrera() {
+    preparar1();
+    Pasos.limpiarFeedback($("s1-fb"));
+    var x = x1;
+    var pl = pasosLineal(NOTAS, x);
+    var pb = pasosBinaria(NOTAS, x);
+    var TICK = 800;
+    Codigo.marcar($("s1-codigo"), { activas: [2, 3] });
+    bin1.punteros({ low: 0, high: NOTAS.length - 1 });
+
+    // Linear: one slot per round, from left to right
+    pl.pasos.forEach(function (p, k) {
+      reloj1.luego(function () {
+        lin1.destapar(p.i);
+        lin1.clases(function (j) {
+          if (j < p.i) return "lista__casilla--apagada";
+          if (j === p.i) return p.igual ? "lista__casilla--igual" : "lista__casilla--distinta";
+          return "";
+        });
+        contar($("s1-cuenta-lineal"), k + 1);
+        $("s1-dice-lineal").innerHTML = "<code>grades[" + p.i + "]</code> is " + p.v + (p.igual ? ": <strong>found it!</strong> Returns " + p.i : ": it isn't " + x);
+      }, 300 + k * TICK);
+    });
+    var finLineal = 300 + pl.pasos.length * TICK;
+    if (pl.resultado < 0) {
+      reloj1.luego(function () {
+        lin1.clases(function () { return "lista__casilla--apagada"; });
+        $("s1-dice-lineal").innerHTML = "It looked at all " + NOTAS.length + ": <strong>not there</strong>. Returns -1";
+      }, finLineal - TICK / 2);
+    }
+
+    // Binary: looks at the middle one and, half a second later, discards one half
+    pb.pasos.forEach(function (p, k) {
+      reloj1.luego(function () {
+        bin1.destapar(p.medio);
+        // When it finds it, only mid stays: so the chips do not pile up
+        bin1.punteros(p.rel === "==" ? { low: null, mid: p.medio, high: null } : { low: p.inicio, mid: p.medio, high: p.fin });
+        var extra = {};
+        extra[p.medio] = p.rel === "==" ? "lista__casilla--igual" : "lista__casilla--distinta";
+        apagarFuera(bin1, p.inicio, p.fin, extra);
+        contar($("s1-cuenta-binaria"), k + 1);
+        $("s1-dice-binaria").innerHTML = "<code>grades[" + p.medio + "]</code> is " + p.v +
+          (p.rel === "==" ? ": <strong>found it!</strong> Returns " + p.medio : p.rel === "<" ? " &lt; " + x + ": it's to the right" : " &gt; " + x + ": it's to the left");
+      }, 300 + k * TICK);
+      if (p.rel === "==") return;
+      reloj1.luego(function () {
+        bin1.punteros({ low: p.nInicio, mid: null, high: p.nFin });
+        apagarFuera(bin1, p.nInicio, p.nFin);
+        $("s1-dice-binaria").innerHTML = p.rel === "<"
+          ? "<code>low = " + p.nInicio + "</code>: turns off the left half"
+          : "<code>high = " + p.nFin + "</code>: turns off the right half";
+      }, 300 + k * TICK + TICK / 2);
+    });
+    var finBinaria = 300 + pb.pasos.length * TICK;
+    if (pb.resultado < 0) {
+      reloj1.luego(function () {
+        $("s1-dice-binaria").innerHTML = "<code>low &gt; high</code>: <strong>not there</strong>. Returns -1";
+      }, finBinaria);
+    }
+
+    reloj1.luego(function () {
+      Codigo.limpiar($("s1-codigo"));
+      var cl = pl.pasos.length;
+      var cb = pb.pasos.length;
+      if (cl <= cb) $("s1-cuenta-lineal").classList.add("cuenta--gana");
+      if (cb <= cl) $("s1-cuenta-binaria").classList.add("cuenta--gana");
+      s1.marcar(x);
+      var texto;
+      if (cl < cb) texto = "Linear won! The " + x + " was at the start: " + cl + " vs " + cb + ". But linear may have to look at all 8.";
+      else if (cb < cl) texto = "Binary won: " + cb + (cb === 1 ? " comparison" : " comparisons") + " vs " + cl + (pb.resultado < 0 ? ". And the " + x + " wasn't even there." : ".");
+      else texto = "A tie: " + cl + " and " + cb + ".";
+      if (s1.cuantos() >= 2) {
+        Pasos.feedback($("s1-fb"), "ok", texto + " Binary never needs more than 4.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s1-fb"), "ok", texto + " Now search for another number.");
+      }
+    }, Math.max(finLineal, finBinaria) + 400);
+  }
+
+  /* ---------- 2. The worst case, line by line ---------- */
+  var X2 = 20;
+  var NOMBRE = { lineal: "linear_search", binaria: "binary_search" };
+  // The pointers appear while it runs: their place is saved from the start (the console does not move down)
+  var lista2 = Lista.crear($("s2-lista"), NOTAS, { reservarPunteros: 1 });
+  var fn2 = "lineal";
+  var reloj2 = relojes();
+  var s2 = vistos();
+
+  function preparar2(fn) {
+    reloj2.cortar();
+    fn2 = fn;
+    presionar($("s2-elegir"), fn);
+    pintarCodigo($("s2-codigo"), fn === "lineal" ? LINEAL : BINARIA);
+    $("s2-llamada").textContent = NOMBRE[fn] + "(grades, " + X2 + ")";
+    lista2.tapar(true);
+    lista2.clases(null);
+    lista2.marcar(null);
+    lista2.punteros(null);
+    contar($("s2-cuenta"), 0);
+    $("s2-dice").textContent = "";
+    Codigo.consola($("s2-consola"), []);
+  }
+
+  /* Each step: the line that runs and what happens */
+  function traza2(fn) {
+    var t = [];
+    var n = NOTAS.length;
+    if (fn === "lineal") {
+      for (var i = 0; i < n; i++) {
+        t.push({ linea: 1, i: i, dice: "<code>i = " + i + "</code>" });
+        t.push({ linea: 2, mira: i, dice: "<code>items[" + i + "]</code> is " + NOTAS[i] + ": it isn't " + X2 });
+      }
+      t.push({ linea: 1, fin: true, dice: "The <code>range</code> ran out: the loop ends" });
+      t.push({ linea: 4, devuelve: -1, dice: "It wasn't there: <code>return -1</code>" });
+      return t;
+    }
+    var inicio = 0, fin = n - 1;
+    t.push({ linea: 1, punteros: { low: 0 }, dice: "<code>low = 0</code>" });
+    t.push({ linea: 2, punteros: { high: fin }, dice: "<code>high = " + fin + "</code>" });
+    while (inicio <= fin) {
+      t.push({ linea: 3, dice: "<code>" + inicio + " &lt;= " + fin + "</code>: keeps searching" });
+      var medio = Math.floor((inicio + fin) / 2);
+      t.push({ linea: 4, punteros: { mid: medio }, dice: "<code>mid = (" + inicio + " + " + fin + ") // 2 = " + medio + "</code>" });
+      t.push({ linea: 5, mira: medio, dice: "<code>items[" + medio + "]</code> is " + NOTAS[medio] + ": it isn't " + X2 });
+      if (NOTAS[medio] < X2) {
+        t.push({ linea: 7, dice: "<code>" + NOTAS[medio] + " &lt; " + X2 + "</code>: it's further to the right" });
+        inicio = medio + 1;
+        t.push({ linea: 8, punteros: { low: inicio, mid: null }, rango: [inicio, fin], dice: "<code>low = " + inicio + "</code>" });
+      } else {
+        t.push({ linea: 7, dice: "<code>" + NOTAS[medio] + " &gt; " + X2 + "</code>" });
+        t.push({ linea: 9 });
+        fin = medio - 1;
+        t.push({ linea: 10, punteros: { high: fin, mid: null }, rango: [inicio, fin], dice: "<code>high = " + fin + "</code>" });
+      }
+    }
+    t.push({ linea: 3, dice: "<code>" + inicio + " &lt;= " + fin + "</code> is False: the loop ends" });
+    t.push({ linea: 11, devuelve: -1, dice: "It wasn't there: <code>return -1</code>" });
+    return t;
+  }
+
+  function ejecutar2() {
+    var fn = fn2;
+    preparar2(fn);
+    Pasos.limpiarFeedback($("s2-fb"));
+    var pasos = traza2(fn);
+    var cuenta = 0;
+    var pre = $("s2-codigo");
+    // What can still have the 20: in linear, from i on; in binary, from low to high
+    var vivo = [0, NOTAS.length - 1];
+    function pintar2(mira) {
+      lista2.clases(function (j) {
+        if (j === mira) return "lista__casilla--distinta";
+        return j < vivo[0] || j > vivo[1] ? "lista__casilla--apagada" : "";
+      });
+    }
+    pasos.forEach(function (p, k) {
+      reloj2.luego(function () {
+        Codigo.marcar(pre, { activas: [p.linea] });
+        if (p.dice) $("s2-dice").innerHTML = p.dice;
+        if (p.i !== undefined) { lista2.punteros({ i: p.i }); vivo = [p.i, NOTAS.length - 1]; pintar2(-1); }
+        if (p.fin) lista2.punteros({ i: NOTAS.length });
+        if (p.punteros) lista2.punteros(p.punteros);
+        if (p.mira !== undefined) {
+          cuenta++;
+          contar($("s2-cuenta"), cuenta);
+          lista2.destapar(p.mira);
+          pintar2(p.mira);
+        }
+        if (p.rango) { vivo = p.rango; pintar2(-1); }
+        if (p.devuelve !== undefined) {
+          lista2.punteros(null);
+          lista2.clases(function () { return "lista__casilla--apagada"; });
+          imprimir($("s2-consola"), String(p.devuelve), pre.querySelectorAll(".linea")[p.linea]);
+        }
+      }, 200 + k * 420);
+    });
+    reloj2.luego(function () {
+      s2.marcar(fn);
+      var texto = fn === "lineal"
+        ? "Line 3 ran 8 times: if it isn't there, linear looks at all of them. That's its worst case."
+        : "Line 6 ran only " + cuenta + " times: each round looks at the middle one and discards half.";
+      if (s2.todos(["lineal", "binaria"])) {
+        Pasos.feedback($("s2-fb"), "ok", texto + " Worst case with 8: linear 8, binary 4.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s2-fb"), "ok", texto + " Now tap " + (fn === "lineal" ? "▶ binary." : "▶ linear."));
+      }
+    }, 200 + pasos.length * 420 + 200);
+  }
+
+  /* ---------- 3. Twice as long ---------- */
+  var MAX3 = 256;
+  var n3 = 8;
+  var filas3 = {};
+  var reloj3 = relojes();
+
+  function codigo3() {
+    pintarCodigo($("s3-codigo"), [
+      "items = []",
+      "for k in range(" + n3 + "):",
+      "    items.append(k)",
+      "print(linear_search(items, " + n3 + "))",
+      "print(binary_search(items, " + n3 + "))"
+    ]);
+  }
+
+  function armarTira(el, n) {
+    el.textContent = "";
+    for (var i = 0; i < n; i++) {
+      var c = document.createElement("span");
+      c.className = "tira__celda";
+      el.appendChild(c);
+    }
+    el.classList.toggle("tira--separadas", n <= 64);
+  }
+
+  function preparar3() {
+    reloj3.cortar();
+    codigo3();
+    $("s3-rotulo").textContent = miles(n3) + " slots: 0, 1, 2, …, " + (n3 - 1) + ". It searches for " + n3 + ", which isn't there.";
+    armarTira($("s3-tira-lineal"), n3);
+    armarTira($("s3-tira-binaria"), n3);
+    contar($("s3-cuenta-lineal"), 0);
+    contar($("s3-cuenta-binaria"), 0);
+    $("s3-buscar").disabled = false;
+    $("s3-duplicar").disabled = !filas3[n3] || n3 >= MAX3;
+    $("s3-volver").hidden = n3 === 8;
+  }
+
+  function pintarTabla3(nueva) {
+    // One column per size: slots, linear and binary, with ×2 and +1 compared with the one before
+    var filas = $("s3-tabla").querySelectorAll("tr");
+    filas.forEach(function (tr) {
+      while (tr.cells.length > 1) tr.deleteCell(1);
+    });
+    Object.keys(filas3).map(Number).sort(function (a, b) { return a - b; }).forEach(function (n) {
+      var f = filas3[n];
+      var antes = filas3[n / 2];
+      var celdas = [
+        miles(n),
+        miles(f.lineal) + (antes ? '<small class="doble">×2</small>' : ""),
+        f.binaria + (antes ? '<small class="mas-uno">+' + (f.binaria - antes.binaria) + "</small>" : "")
+      ];
+      celdas.forEach(function (html, k) {
+        var td = filas[k].insertCell(-1);
+        td.innerHTML = html;
+        if (n === nueva) td.className = "tabla__nueva";
+      });
+    });
+    $("s3-tabla").hidden = false;
+  }
+
+  function buscar3() {
+    preparar3();
+    $("s3-buscar").disabled = true;
+    $("s3-duplicar").disabled = true;
+    Pasos.limpiarFeedback($("s3-fb"));
+    var n = n3;
+    var lista = [];
+    for (var k = 0; k < n; k++) lista.push(k);
+    var pb = pasosBinaria(lista, n);
+    var celdasL = $("s3-tira-lineal").children;
+    var celdasB = $("s3-tira-binaria").children;
+    Codigo.marcar($("s3-codigo"), { activas: [3, 4] });
+
+    // Linear: they all light up, one after another (less than 2 seconds in total)
+    var DUR = 1700;
+    var cada = Math.max(1, Math.ceil(n / 60));
+    for (var i = 0; i < n; i += cada) {
+      (function (desde) {
+        reloj3.luego(function () {
+          for (var j = desde; j < Math.min(n, desde + cada); j++) celdasL[j].classList.add("tira__celda--mirada");
+          contar($("s3-cuenta-lineal"), Math.min(n, desde + cada));
+        }, 200 + (desde / n) * DUR);
+      })(i);
+    }
+
+    // Binary: looks at the middle one and discards half (everything left outside)
+    var PASO = 420;
+    pb.pasos.forEach(function (p, k) {
+      reloj3.luego(function () {
+        var c = celdasB[p.medio];
+        c.classList.add("tira__celda--mirada", "tira__celda--medio");
+        contar($("s3-cuenta-binaria"), k + 1);
+        for (var j = 0; j < n; j++) {
+          if ((j < p.nInicio || j > p.nFin) && !celdasB[j].classList.contains("tira__celda--mirada")) {
+            celdasB[j].classList.add("tira__celda--apagada");
+          }
+        }
+      }, 200 + k * PASO);
+    });
+
+    var fin = 200 + Math.max(DUR, pb.pasos.length * PASO) + 300;
+    reloj3.luego(function () {
+      Codigo.limpiar($("s3-codigo"));
+      var antes = filas3[n / 2];
+      filas3[n] = { lineal: n, binaria: pb.pasos.length };
+      pintarTabla3(n);
+      $("s3-buscar").disabled = false;
+      $("s3-duplicar").disabled = n >= MAX3;
+      var cuantas = Object.keys(filas3).length;
+      var texto;
+      if (antes) {
+        texto = "From " + miles(n / 2) + " to " + miles(n) + " slots: linear went from " + antes.lineal + " to " + n +
+          " (twice as many) and binary, from " + antes.binaria + " to " + pb.pasos.length + " (one more).";
+      } else {
+        texto = "With " + n + " slots, linear looked at " + n + " and binary, at " + pb.pasos.length + ".";
+      }
+      if (filas3[8] && filas3[16] && filas3[32] && filas3[64]) {
+        Pasos.feedback($("s3-fb"), "ok", texto + " Each time the list doubles, linear makes twice as many; binary, just one more comparison: the first one cuts the list in half and brings it back to the size it had before.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s3-fb"), "ok", texto + (cuantas === 1 ? " Now double the list." : " Double it again."));
+      }
+    }, fin);
+  }
+
+  /* ---------- 4. How many times can it be cut in half? ---------- */
+  var n4 = null;
+  var reloj4 = relojes();
+  var s4 = vistos();
+
+  function codigo4() {
+    pintarCodigo($("s4-codigo"), [
+      "def halves(n):",
+      "    times = 0",
+      "    while n > 0:",
+      "        n = n // 2",
+      "        times = times + 1",
+      "    return times",
+      "",
+      "print(halves(" + (n4 === null ? "?" : n4) + "))"
+    ]);
+  }
+
+  function preparar4() {
+    reloj4.cortar();
+    presionar($("s4-elegir"), n4);
+    codigo4();
+    $("s4-cadena").textContent = "";
+    $("s4-binario").textContent = "";
+    Codigo.consola($("s4-consola"), []);
+  }
+
+  function chip4(n, resto, conResto) {
+    var paso = document.createElement("span");
+    paso.className = "cadena__paso";
+    var num = document.createElement("span");
+    num.className = "cadena__num" + (n === 0 ? " cadena__num--cero" : "");
+    num.textContent = miles(n);
+    paso.appendChild(num);
+    if (n > 0 && conResto) {
+      var r = document.createElement("span");
+      r.className = "cadena__resto";
+      r.textContent = "remainder " + resto;
+      paso.appendChild(r);
+    }
+    return paso;
+  }
+
+  function ejecutar4() {
+    var n = n4;
+    preparar4();
+    Pasos.limpiarFeedback($("s4-fb"));
+    var pre = $("s4-codigo");
+    var cadena = $("s4-cadena");
+    Codigo.marcar(pre, { activas: [7] });
+    var valores = [];
+    for (var m = n; m > 0; m = Math.floor(m / 2)) valores.push(m);
+    var PASO = valores.length > 12 ? 260 : 420;
+    var conResto = valores.length <= 12;
+    reloj4.luego(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      cadena.appendChild(chip4(n, n % 2, conResto));
+    }, 300);
+    valores.forEach(function (v, k) {
+      reloj4.luego(function () {
+        Codigo.marcar(pre, { activas: [3, 4] });
+        var flecha = document.createElement("span");
+        flecha.className = "cadena__flecha";
+        flecha.setAttribute("aria-hidden", "true");
+        flecha.textContent = "→";
+        cadena.appendChild(flecha);
+        var sig = Math.floor(v / 2);
+        cadena.appendChild(chip4(sig, sig % 2, conResto));
+      }, 300 + (k + 1) * PASO);
+    });
+    var fin = 300 + (valores.length + 1) * PASO;
+    reloj4.luego(function () {
+      Codigo.marcar(pre, { activas: [5] });
+      imprimir($("s4-consola"), String(valores.length), pre.querySelectorAll(".linea")[5]);
+      var bin = n.toString(2);
+      $("s4-binario").innerHTML = "These are the divisions that <code>binary(" + n + ")</code> did in Recursion: each remainder is a digit. " +
+        miles(n) + " in binary is <code>" + bin + "</code>: " + bin.length + " digits.";
+      s4.marcar(n);
+      var par = (s4.tiene(8) && s4.tiene(16)) || (s4.tiene(100) && s4.tiene(200));
+      var texto = "With " + miles(n) + " slots, binary makes at most " + valores.length + " comparisons.";
+      if (s4.cuantos() >= 2) {
+        Pasos.feedback($("s4-fb"), "ok", texto + (par
+          ? " Twice the number is cut just one more time: the first division brings it back to the one before."
+          : " Try a number and its double (8 and 16, or 100 and 200)."));
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback($("s4-fb"), "ok", texto + " Try another number.");
+      }
+    }, fin);
+  }
+
+  /* ---------- 5. A million ---------- */
+  var n5 = 100;
+  var x5 = 75;
+  var s5 = vistos();
+
+  function rangoTexto(n) { return "range(1, " + (n + 1) + ")"; }
+
+  function actualizar5(leccion) {
+    var n = n5;
+    var x = x5;
+    var esta = x >= 1 && x <= n;
+    presionar($("s5-tamano"), n);
+    $("s5-x").max = String(n + 1);
+    $("s5-x").value = String(x);
+    $("s5-x-valor").textContent = miles(x) + (esta ? "" : " (not there)");
+    pintarCodigo($("s5-codigo"), [
+      "numbers = []",
+      "for k in " + rangoTexto(n) + ":",
+      "    numbers.append(k)",
+      "x = " + x,
+      "print(linear_search(numbers, x))",
+      "print(binary_search(numbers, x))"
+    ]);
+    $("s5-rotulo").textContent = "numbers = [1, 2, 3, …, " + n + "]";
+    var cl = cuentaLineal(n, x);
+    var cb = cuentaBinaria(n, x);
+    $("s5-num-lineal").textContent = plural(cl, "comparison", "comparisons");
+    $("s5-num-binaria").textContent = plural(cb, "comparison", "comparisons");
+    $("s5-relleno-lineal").style.width = (cl / n * 100) + "%";
+    $("s5-relleno-binaria").style.width = (cb / n * 100) + "%";
+    $("s5-tiempo-lineal").textContent = "At one comparison per second: " + duracion(cl);
+    $("s5-tiempo-binaria").textContent = "At one comparison per second: " + duracion(cb);
+    $("s5-barra-lineal").classList.toggle("barra--gana", cl < cb);
+    $("s5-barra-binaria").classList.toggle("barra--gana", cb < cl);
+    var r = esta ? String(x - 1) : "-1";
+    Codigo.consola($("s5-consola"), [r, r]);
+    s5.marcar(n);
+    if (!leccion) return;
+    var fb = $("s5-fb");
+    var peor = "With " + miles(n) + ", binary never goes over " + mitades(n) + ".";
+    if (s5.tiene(1000000) && s5.cuantos() >= 2) {
+      Pasos.feedback(fb, "ok", "A million can be cut in half only 20 times. In the worst case (if it isn't there), at one comparison per second: " + duracion(1000000) + " vs 20 seconds.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, "ok", peor + (s5.tiene(1000000) ? " Try another size." : " Try a million and move the number."));
+    }
+  }
+
+  /* ---------- 6. Binary search needs a sorted list ---------- */
+  var NOTAS6 = [14, 9, 17, 11, 6, 19, 3, 12];
+  var ORDEN6 = NOTAS6.map(function (v, k) { return k; }).sort(function (a, b) { return NOTAS6[a] - NOTAS6[b]; });
+  var ORDENADAS6 = ORDEN6.map(function (k) { return NOTAS6[k]; });
+  var X6 = 17;
+  var COSTO6 = costoOrdenar(NOTAS6);
+  var lista6 = Lista.crear($("s6-lista"), NOTAS6, { nombres: ["grades"], reservarPunteros: 1 });
+  var version6 = "sin";
+  var reloj6 = relojes();
+  var s6 = vistos();
+
+  function codigo6() {
+    var lineas = ["grades = [" + NOTAS6.join(", ") + "]"];
+    if (version6 === "con") lineas.push("grades = sorted(grades)");
+    lineas.push("print(binary_search(grades, " + X6 + "))");
+    pintarCodigo($("s6-codigo"), lineas);
+  }
+
+  function preparar6(version) {
+    reloj6.cortar();
+    version6 = version;
+    presionar($("s6-elegir"), version);
+    codigo6();
+    lista6.valores(NOTAS6);
+    lista6.tapar(true);
+    lista6.clases(null);
+    lista6.marcar(null);
+    lista6.punteros(null);
+    $("s6-dice").textContent = "";
+    $("s6-cuenta-sorted").hidden = version !== "con";
+    contar($("s6-cuenta-sorted"), 0);
+    contar($("s6-cuenta-binaria"), 0);
+    Codigo.consola($("s6-consola"), []);
+  }
+
+  /* Binary search on whatever is in the list, with pointers and halves turned off */
+  function animarBinaria6(valores, desde, alTerminar) {
+    var pb = pasosBinaria(valores, X6);
+    var PASO = 1000;
+    reloj6.luego(function () { lista6.punteros({ low: 0, high: valores.length - 1 }); }, desde);
+    pb.pasos.forEach(function (p, k) {
+      var t = desde + 300 + k * PASO;
+      reloj6.luego(function () {
+        lista6.destapar(p.medio);
+        lista6.punteros({ low: p.inicio, mid: p.medio, high: p.fin });
+        var extra = {};
+        extra[p.medio] = p.rel === "==" ? "lista__casilla--igual" : "lista__casilla--distinta";
+        apagarFuera(lista6, p.inicio, p.fin, extra);
+        contar($("s6-cuenta-binaria"), k + 1);
+        $("s6-dice").innerHTML = "<code>grades[" + p.medio + "]</code> is " + p.v +
+          (p.rel === "==" ? ": <strong>found it!</strong>" : p.rel === "<" ? " &lt; " + X6 + ": looks right" : " &gt; " + X6 + ": looks left");
+      }, t);
+      if (p.rel === "==") return;
+      reloj6.luego(function () {
+        lista6.punteros({ low: p.nInicio, mid: null, high: p.nFin });
+        apagarFuera(lista6, p.nInicio, p.nFin);
+      }, t + PASO / 2);
+    });
+    reloj6.luego(function () { alTerminar(pb); }, desde + 300 + pb.pasos.length * PASO);
+  }
+
+  function ejecutar6() {
+    var version = version6;
+    preparar6(version);
+    Pasos.limpiarFeedback($("s6-fb"));
+    var pre = $("s6-codigo");
+    var ultima = version === "con" ? 2 : 1;
+    var desde = 300;
+    if (version === "con") {
+      // sorted looks at all the grades (several times) and puts them in order
+      reloj6.luego(function () {
+        Codigo.marcar(pre, { activas: [1] });
+        lista6.tapar(false);
+        $("s6-dice").innerHTML = "<code>sorted</code> has to look at <strong>all</strong> the grades to sort them";
+      }, 300);
+      for (var c = 1; c <= COSTO6; c++) {
+        (function (c) {
+          reloj6.luego(function () { contar($("s6-cuenta-sorted"), c); }, 500 + c * 60);
+        })(c);
+      }
+      reloj6.luego(function () { lista6.reordenar(ORDEN6); }, 600 + COSTO6 * 60);
+      reloj6.luego(function () { lista6.tapar(true); }, 1900 + COSTO6 * 60);
+      desde = 2200 + COSTO6 * 60;
+    }
+    reloj6.luego(function () { Codigo.marcar(pre, { activas: [ultima] }); }, desde);
+    animarBinaria6(version === "con" ? ORDENADAS6 : NOTAS6, desde, function (pb) {
+      var fb = $("s6-fb");
+      imprimir($("s6-consola"), String(pb.resultado), pre.querySelectorAll(".linea")[ultima]);
+      lista6.punteros(null);
+      s6.marcar(version);
+      var texto;
+      if (version === "sin") {
+        // Everything is uncovered: the 17 was in the half that was turned off
+        var donde = NOTAS6.indexOf(X6);
+        NOTAS6.forEach(function (v, k) { lista6.destapar(k); });
+        lista6.clases(function (k) { return k === donde ? "lista__casilla--igual" : "lista__casilla--apagada"; });
+        $("s6-dice").innerHTML = "The " + X6 + " was in <code>grades[" + donde + "]</code>, in a half it turned off!";
+        texto = "It returned -1, but the " + X6 + " was there. Binary search turns off a half because it thinks the list is sorted; here, that half could have it.";
+      } else {
+        texto = "Now it works: it returned " + pb.resultado + ". But sorted made " + COSTO6 +
+          " comparisons, and linear would have made " + NOTAS6.length + " at most.";
+      }
+      if (s6.todos(["sin", "con"])) {
+        Pasos.feedback(fb, "ok", texto + " Sorting costs more than looking at everything once: to search just once in an unsorted list, linear wins.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, version === "sin" ? "pista" : "ok", texto + (version === "sin" ? " Tap ▶ Sort first." : " Also tap ▶ Without sorting."));
+      }
+    });
+  }
+
+  /* ---------- 7. Many searches: is sorting worth it? ---------- */
+  var n7 = 1000;
+  var k7 = 1;
+  var s7 = vistos();
+  var calculando7 = false;
+
+  function codigo7() {
+    pintarCodigo($("s7-codigo"), [
+      "# Plan A: linear search each time",
+      "for x in targets:",
+      "    linear_search(items, x)",
+      "# Plan B: sort once",
+      "ordered = sorted(items)",
+      "for x in targets:",
+      "    binary_search(ordered, x)"
+    ]);
+  }
+
+  function actualizar7(leccion) {
+    var n = n7;
+    var k = k7;
+    presionar($("s7-tamano"), n);
+    $("s7-k").value = String(k);
+    $("s7-k-valor").textContent = String(k);
+    $("s7-rotulo").textContent = "items: " + miles(n) + " unsorted values · targets: " + k + (k === 1 ? " value" : " values");
+    if (costos[n] === undefined) {
+      // Sorting a million takes a moment: first it warns, then it counts
+      if (calculando7) return;
+      calculando7 = true;
+      $("s7-veredicto").textContent = "Counting what it costs to sort " + miles(n) + " values…";
+      setTimeout(function () {
+        costoOrdenarN(n);
+        calculando7 = false;
+        actualizar7(leccion);
+      }, 60);
+      return;
+    }
+    var orden = costos[n];
+    var b = mitades(n);
+    var A = k * n;
+    var B = orden + k * b;
+    var max = Math.max(A, B);
+    $("s7-num-a").textContent = miles(A);
+    $("s7-num-b").textContent = miles(B);
+    $("s7-relleno-a").style.width = (A / max * 100) + "%";
+    $("s7-relleno-orden").style.width = (orden / max * 100) + "%";
+    $("s7-relleno-b").style.width = (k * b / max * 100) + "%";
+    $("s7-detalle-a").textContent = k + " × " + miles(n);
+    $("s7-detalle-b").textContent = "sorted: " + miles(orden) + " + " + k + " × " + b;
+    $("s7-barra-a").classList.toggle("barra--gana", A < B);
+    $("s7-barra-b").classList.toggle("barra--gana", B < A);
+    $("s7-veredicto").textContent = A < B ? "Plan A wins: linear search each time." : B < A ? "Plan B wins: sort once." : "A tie.";
+    if (!leccion) return;
+    s7.marcar(A < B ? "A" : "B");
+    var desde = 1;
+    while (desde * n <= orden + desde * b) desde++;
+    var fb = $("s7-fb");
+    if (s7.todos(["A", "B"])) {
+      Pasos.feedback(fb, "ok", "With " + miles(n) + " values, from " + desde + " searches on it pays to sort once. Sorting costs a lot, but you pay only once; after that, each search costs just " + b + ".");
+      leccion.desbloquear();
+    } else if (A < B) {
+      Pasos.feedback(fb, "ok", "With " + (k === 1 ? "one search" : k + " searches") + ", sorting isn't worth it. Raise the searches.");
+    } else {
+      Pasos.feedback(fb, "ok", "With " + k + " searches, sorting already pays off. Go down to a single search: who wins?");
+    }
+  }
+
+  /* ---------- 8. Challenge ---------- */
+  var METODOS = [
+    { valor: "lineal", texto: "linear" },
+    { valor: "binaria", texto: "binary" },
+    { valor: "ordenar", texto: "sort, then binary" }
+  ];
+  var CASOS = [
+    { texto: "64 grades, sorted. You search for a grade nobody got.", bien: "binaria", num: 7,
+      pistas: {
+        lineal: "It's sorted: binary search can cut it in half.",
+        ordenar: "It's already sorted: no need to sort it again.",
+        num: "Remember the table: 8 → 4, 16 → 5, 32 → 6… each time it doubles, one more."
+      } },
+    { texto: "1,000 names, in alphabetical order. You search for one.", bien: "binaria", num: 10,
+      pistas: {
+        lineal: "It's sorted: with linear search you might have to look at all 1,000.",
+        ordenar: "It's already sorted: no need to sort it again.",
+        num: "How many times can you cut 1,000 in half until you reach 0? You saw it with halves(1000)."
+      } },
+    { texto: "500 codes, unsorted. You search for one, just once.", bien: "lineal", num: 500,
+      pistas: {
+        binaria: "It's unsorted: binary search could turn off the half where it was.",
+        ordenar: "For a single search, sorting costs more than looking at the 500 once.",
+        num: "In the worst case (it isn't there, or it's at the end), linear search looks at all of them."
+      } },
+    { texto: "1,000 codes, unsorted. You'll search 300 times.", bien: "ordenar", num: null,
+      pistas: {
+        lineal: "300 searches × 1,000 = 300,000 comparisons. Sorting costs about " + miles(Math.round(costoOrdenarN(1000) / 100) * 100) + ", only once, and then each search, 10.",
+        binaria: "It's unsorted: before using binary search you have to sort it."
+      } }
+  ];
+
+  function armarReto() {
+    var ol = $("reto-casos");
+    ol.textContent = "";
+    CASOS.forEach(function (c, i) {
+      var li = document.createElement("li");
+      li.className = "caso";
+      li.id = "caso-" + i;
+      var html = '<p class="caso__texto" id="caso-' + i + '-texto">' + (i + 1) + ". " + c.texto + "</p>" +
+        '<div class="caso__fila"><fieldset aria-labelledby="caso-' + i + '-texto"><legend class="visualmente-oculto">Which one fits?</legend>';
+      METODOS.forEach(function (m) {
+        html += '<label class="chip"><input type="radio" name="caso-' + i + '" value="' + m.valor + '"><span>' + m.texto + "</span></label>";
+      });
+      html += "</fieldset>";
+      if (c.num !== null) {
+        html += '<label class="caso__num">Comparisons, at most: <input type="text" inputmode="numeric" maxlength="7" autocomplete="off" id="caso-' + i + '-num"></label>';
+      }
+      html += '</div><p class="caso__pista" id="caso-' + i + '-pista" aria-live="polite"></p>';
+      li.innerHTML = html;
+      ol.appendChild(li);
+    });
+    ol.addEventListener("change", cambiarReto);
+    ol.addEventListener("input", cambiarReto);
+  }
+
+  function leerCaso(i) {
+    var marcada = document.querySelector('input[name="caso-' + i + '"]:checked');
+    var campo = $("caso-" + i + "-num");
+    var texto = campo ? campo.value.replace(/[\s.,]/g, "") : "";
+    return {
+      metodo: marcada ? marcada.value : null,
+      num: campo ? (/^\d+$/.test(texto) ? Number(texto) : null) : undefined
+    };
+  }
+
+  function retoCompleto() {
+    return CASOS.every(function (c, i) {
+      var r = leerCaso(i);
+      return r.metodo && (c.num === null || r.num !== null);
+    });
+  }
+
+  function cambiarReto(e) {
+    var li = e.target.closest(".caso");
+    if (li) {
+      li.classList.remove("caso--bien", "caso--mal");
+      li.querySelector(".caso__pista").textContent = "";
+    }
+    Pasos.limpiarFeedback($("reto-fb"));
+    leccion.listoParaComprobar(retoCompleto());
+  }
+
+  function entrarReto(paso, l, info) {
+    if (!info.desbloqueado) l.listoParaComprobar(retoCompleto());
+  }
+
+  function comprobarReto() {
+    var bien = 0;
+    CASOS.forEach(function (c, i) {
+      var r = leerCaso(i);
+      var li = $("caso-" + i);
+      var pista = $("caso-" + i + "-pista");
+      var ok = r.metodo === c.bien && (c.num === null || r.num === c.num);
+      li.classList.toggle("caso--bien", ok);
+      li.classList.toggle("caso--mal", !ok);
+      if (ok) {
+        bien++;
+        pista.textContent = "";
+      } else if (r.metodo !== c.bien) {
+        pista.textContent = "💡 " + c.pistas[r.metodo];
+      } else {
+        pista.textContent = "💡 " + c.pistas.num;
+      }
+    });
+    if (bien === CASOS.length) {
+      Pasos.feedback($("reto-fb"), "ok", "All correct! Sorted list: binary. Unsorted and a single search: linear. Many searches: it pays to sort once.");
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", (bien === 0 ? "None is right yet." : bien + " of " + CASOS.length + (bien === 1 ? " is right." : " are right.")) + " Check the ones with 💡 and try again.");
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  pintarCodigo($("resumen-codigo"), [
+    "linear_search(items, x)   # up to len(items)",
+    "binary_search(items, x)   # 1000000 → 20",
+    "items = sorted(items)",
+    "# sorting costs more than one full look",
+    "# it pays if you search many times"
+  ]);
+
+  /* ---------- Connections ---------- */
+  $("s1-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { x1 = Number(b.getAttribute("data-valor")); carrera(); });
+  });
+
+  $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { fn2 = b.getAttribute("data-valor"); ejecutar2(); });
+  });
+
+  $("s3-buscar").addEventListener("click", buscar3);
+  $("s3-duplicar").addEventListener("click", function () {
+    if (n3 >= MAX3) return;
+    n3 *= 2;
+    buscar3();
+  });
+  $("s3-volver").addEventListener("click", function () { n3 = 8; preparar3(); });
+
+  $("s4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { n4 = Number(b.getAttribute("data-valor")); ejecutar4(); });
+  });
+
+  $("s5-tamano").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nuevo = Number(b.getAttribute("data-valor"));
+      // The number you search for stays in the same relative place in the list
+      x5 = x5 > n5 ? nuevo + 1 : Math.max(1, Math.round(x5 / n5 * nuevo));
+      n5 = nuevo;
+      actualizar5(leccion);
+    });
+  });
+  $("s5-x").addEventListener("input", function () { x5 = Number($("s5-x").value); actualizar5(leccion); });
+  $("s5-sugerencias").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var donde = b.getAttribute("data-donde");
+      x5 = donde === "primero" ? 1 : donde === "ultimo" ? n5 : n5 + 1;
+      actualizar5(leccion);
+    });
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { version6 = b.getAttribute("data-valor"); ejecutar6(); });
+  });
+
+  $("s7-tamano").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { n7 = Number(b.getAttribute("data-valor")); actualizar7(leccion); });
+  });
+  $("s7-k").addEventListener("input", function () { k7 = Number($("s7-k").value); actualizar7(leccion); });
+
+  armarReto();
+
+  // Initial state of each step
+  codigo7();
+  preparar1();
+  preparar2("lineal");
+  preparar3();
+  preparar4();
+  actualizar5(null);
+  preparar6("sin");
+  costoOrdenarN(1000);
+  actualizar7(null);
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-carrera": function () { preparar1(); },
+      "paso-peor": function () { preparar2(fn2); },
+      "paso-doble": function () { preparar3(); },
+      "paso-mitades": function () { preparar4(); },
+      "paso-millon": function (paso, l) { actualizar5(l); },
+      "paso-desordenada": function () { preparar6(version6); },
+      "paso-muchas": function (paso, l) { actualizar7(l); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
