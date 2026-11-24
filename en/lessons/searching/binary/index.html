@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Binary search · Learn to program</title>
+  <meta name="description" content="Interactive lesson: binary search in Python, line by line. low, mid and high, while low <= high, the three cases, the trace table, what happens when the value is not there, the typical mistakes (low = mid and while low < high) and searching a list of names.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-2); justify-content: center; margin-top: var(--esp-3); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) 0.7rem; font-size: 0.95rem; }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-2) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo-cinta { margin: 0; text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* The function code is long: a bit smaller so it fits with the buttons */
+    .codigo--largo { font-size: 0.95rem; line-height: 1.55; padding: var(--esp-3) 0; }
+    .codigo--largo .linea { min-height: 1.55em; }
+    .codigo .pieza-cambio { border-radius: 4px; box-shadow: 0 0 0 2px #ffb86b; }
+
+    /* ---------- Choose (what to search for, which version) ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .lab__visual > .elegir:first-child { margin: 0 0 var(--esp-1); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); }
+    .elegir__titulo { font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+    .btn--bien::after { content: " ✓"; color: var(--color-ok); }
+    .btn--mal::after { content: " ✗"; color: var(--color-error); }
+
+    /* ---------- Comparisons: how many slots were checked ---------- */
+    .contador { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { display: inline-block; min-width: 1.4em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-ok); }
+    .contador--pulso strong { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Boxes for low, mid and high, in the color of their pointer ---------- */
+    .cajas--punteros { gap: var(--esp-3) var(--esp-6); padding: var(--esp-3) 0 var(--esp-1); }
+    .cajas--punteros .caja__cuerpo { width: 5rem; height: 3.6rem; padding-bottom: var(--esp-2); }
+    .cajas--punteros .caja__cuerpo::before { left: -0.7rem; }
+    .cajas--punteros .caja__cuerpo::after { right: -0.7rem; }
+    .cajas--punteros .caja__valor { font-size: var(--texto-lg); min-width: 2.4rem; padding: 0 var(--esp-2); }
+    .cajas--punteros .caja__nombre { font-weight: 700; }
+    /* 1. The counter goes in the row of boxes (on mobile it drops below) and the pointer row,
+       which keeps its three levels, already separates the list from the boxes: the step keeps its height */
+    .cajas--punteros { align-items: center; }
+    .cajas--punteros .contador { margin: 0; }
+    @media (min-width: 1024px) {
+      #paso-codigo .lab .cajas--punteros { padding-top: 0; }
+    }
+    .caja--medio .caja__cuerpo { border-color: #7a3fb0; background: linear-gradient(to bottom, transparent 30%, #f3ebfa 30%); }
+    .caja--medio .caja__cuerpo::before, .caja--medio .caja__cuerpo::after { background: #7a3fb0; }
+    .caja--medio .caja__valor { border-color: #7a3fb0; }
+    .caja--medio .caja__nombre { color: #7a3fb0; }
+    .caja--fin .caja__cuerpo { border-color: var(--color-pista); background: linear-gradient(to bottom, transparent 30%, var(--color-pista-suave) 30%); }
+    .caja--fin .caja__cuerpo::before, .caja--fin .caja__cuerpo::after { background: var(--color-pista); }
+    .caja--fin .caja__valor { border-color: var(--color-pista); }
+    .caja--fin .caja__nombre { color: var(--color-pista); }
+    .caja--inicio .caja__nombre { color: var(--color-azul); }
+
+    /* ---------- The trace table: one row per round ---------- */
+    .seguimiento { width: 100%; margin-top: var(--esp-3); border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
+    .seguimiento caption { margin: 0 0 var(--esp-1); text-align: left; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .seguimiento caption .contador { float: right; margin: 0; letter-spacing: 0; text-transform: none; font-weight: 400; }
+    .seguimiento caption .contador strong { font-size: var(--texto-md); }
+    .seguimiento th { padding: var(--esp-1) var(--esp-2); border-bottom: 3px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .seguimiento th:nth-child(1) { border-bottom-color: var(--color-azul); color: var(--color-azul); }
+    .seguimiento th:nth-child(2) { border-bottom-color: var(--color-pista); color: var(--color-pista); }
+    .seguimiento th:nth-child(3) { border-bottom-color: #7a3fb0; color: #7a3fb0; }
+    .seguimiento th:nth-child(4) { color: var(--color-texto-suave); }
+    .seguimiento td { padding: 0.2rem var(--esp-2); border-bottom: 1px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; white-space: nowrap; }
+    .seguimiento tbody tr { animation: aparecer var(--dur) ease both; }
+    .seguimiento__activa td { background: var(--color-acento-suave); }
+    .seguimiento__activa td:first-child { box-shadow: inset 4px 0 0 var(--color-acento); }
+    .seguimiento__repetida td { background: var(--color-pista-suave); }
+    .seguimiento__igual { color: var(--color-ok); }
+    .seguimiento__nada { font-family: var(--fuente); font-weight: 400; font-style: italic; color: var(--color-texto-suave); white-space: normal; }
+    .celda--nueva { animation: valor-pulso 320ms ease-out; }
+
+    /* ---------- 2. You decide ---------- */
+    .buscas { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-md); font-weight: 600; }
+    .buscas strong { display: inline-block; padding: 0 0.45em; border-radius: var(--radio-sm); background: var(--color-acento-suave); color: var(--color-acento); font-family: var(--fuente-codigo); font-size: var(--texto-lg); }
+    .pregunta { min-height: 3.2em; margin: var(--esp-3) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .pregunta strong, .pregunta code { color: var(--color-texto); }
+    .acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .acciones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); white-space: nowrap; }
+
+    /* ---------- Expression being evaluated (text) ---------- */
+    .lab__visual .expresion { margin-top: var(--esp-2); font-size: var(--texto-md); }
+    .expresion[hidden] { display: none; }
+    /* 7. There is output below: the comparison keeps its line from the start */
+    #p7-expresion[hidden] { display: flex !important; visibility: hidden; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .expresion__final--mal { background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- Challenge ---------- */
+    .grupo-titulo { margin: var(--esp-3) 0 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); text-align: center; }
+    .grupo-titulo + .elegir { margin-top: var(--esp-1); }
+    .pruebas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas[hidden] { display: none; }
+    .pruebas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 150ms; }
+    .pruebas li:nth-child(3) { animation-delay: 300ms; }
+    .pruebas li:nth-child(4) { animation-delay: 450ms; }
+    .pruebas .prueba--mal { background: var(--color-pista-suave); }
+    .prueba__res { font-weight: 700; }
+    .prueba__error { color: var(--color-error); font-weight: 700; }
+    .pruebas + .feedback { margin-top: var(--esp-3); }
+
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.92rem; line-height: 1.45; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .pruebas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .lab__visual .lista { padding: var(--esp-1) 0; }
+    }
+    @media (max-width: 480px) {
+      .codigo--largo { font-size: 0.82rem; }
+      .codigo--largo .linea { padding-right: var(--esp-3); }
+      .cajas--punteros { gap: var(--esp-3) var(--esp-5); }
+      .cajas--punteros .caja__cuerpo { width: 4.4rem; height: 3.3rem; }
+      .seguimiento th, .seguimiento td { padding-inline: var(--esp-1); }
+      .pruebas li { font-size: var(--texto-xs); padding: var(--esp-2) var(--esp-3); }
+      .fila-botones .btn { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .elegir { gap: var(--esp-1) var(--esp-2); }
+      .elegir .btn { padding: var(--esp-1) var(--esp-2); }
+      #p7-lista .lista__valor { font-size: 0.7rem; padding: 0 0.25em; }
+    }
+    /* RETO-LAB */
+    /* Challenge: the visual panel does not stretch to the end of the code (pasos.js does that so the
+       output stays at the bottom): here the tests and the message go below it and would end up under the
+       footer. The two blanks are picked side by side, so the code column fits on the screen */
+    @media (min-width: 1024px) {
+      #paso-reto .lab__visual { min-height: 0 !important; }
+      #paso-reto .lab__principal { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--esp-3); align-content: start; }
+      #paso-reto .lab__principal > * { grid-column: 1 / -1; }
+      #paso-reto #reto-t-a { grid-area: 2 / 1; }
+      #paso-reto #reto-a { grid-area: 3 / 1; }
+      #paso-reto #reto-t-b { grid-area: 2 / 2; }
+      #paso-reto #reto-b { grid-area: 3 / 2; }
+      #paso-reto .elegir { gap: var(--esp-1); }
+      #paso-reto .elegir .btn { padding-inline: var(--esp-2); }
+      /* The counter goes on the label row, above the list: it leaves room for the tests and the message */
+      #paso-reto .lab__visual { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--esp-3); }
+      #paso-reto .lab__visual > * { grid-column: 1 / -1; }
+      #paso-reto #reto-rotulo { grid-area: 1 / 1; text-align: left; }
+      #paso-reto .lab__visual > .contador { grid-area: 1 / 2; margin: 0; }
+    }
+    /* On mobile, once it is right the answer already reads in the blanks: the buttons hide and the
+       code, the tests and the message stay together (they come back when you enter the step again) */
+    @media (max-width: 1023px) {
+      #paso-reto:has(#reto-fb.feedback--ok) .grupo-titulo,
+      #paso-reto:has(#reto-fb.feedback--ok) .elegir { display: none; }
+    }
+    /* /RETO-LAB */
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="busquedas-binaria">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Binary search, line by line -->
+    <section class="paso" id="paso-codigo" data-visual-fija data-requiere aria-labelledby="t-codigo">
+      <span class="paso__etiqueta">Searching 4/7 · Binary search</span>
+      <h1 class="paso__titulo" id="t-codigo">From the idea to the code</h1>
+      <p>Cutting in half, in Python: three variables, <code>low</code>, <code>mid</code> and <code>high</code>, point to slots. Run it and watch them move.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p1-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p1-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p1-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p1-saltar">Next round ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p1-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p1-lista"></div>
+          <div class="cajas cajas--punteros">
+            <div class="caja caja--inicio" id="p1-inicio">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">low</code>
+            </div>
+            <div class="caja caja--medio" id="p1-medio">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">mid</code>
+            </div>
+            <div class="caja caja--fin" id="p1-fin">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">high</code>
+            </div>
+            <p class="contador">Comparisons: <strong id="p1-comps">0</strong></p>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The student picks which line runs -->
+    <section class="paso" id="paso-tu" data-requiere aria-labelledby="t-tu">
+      <h2 class="paso__titulo" id="t-tu">Now you decide</h2>
+      <p>Python uncovers the middle slot. You pick which line comes next: did you find it, or which half gets discarded? Do two searches.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Code"></pre>
+          <p class="pregunta" id="p2-pregunta" aria-live="polite"></p>
+          <div class="acciones" role="group" aria-label="Which line runs?">
+            <button type="button" class="btn btn-secundario" data-accion2="return" disabled>return mid</button>
+            <button type="button" class="btn btn-secundario" data-accion2="inicio" disabled>low = mid + 1</button>
+            <button type="button" class="btn btn-secundario" data-accion2="fin" disabled>high = mid - 1</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="buscas">You are looking for <strong id="p2-x">11</strong></p>
+          <div id="p2-lista"></div>
+          <p class="contador">Comparisons: <strong id="p2-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="p2-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="p2-otra-btn">🔍 Another search</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. The trace table -->
+    <section class="paso" id="paso-tabla" data-visual-fija data-requiere aria-labelledby="t-tabla">
+      <h2 class="paso__titulo" id="t-tabla">The trace table</h2>
+      <p>To follow it on paper, write one row per round: <code>low</code>, <code>high</code>, <code>mid</code> and what is in <code>items[mid]</code>. Pick a grade and watch the table fill up.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p3-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p3-elegir" role="group" aria-label="Which grade are you looking for?">
+            <span class="elegir__titulo" aria-hidden="true">Search for:</span>
+            <button type="button" class="btn btn-secundario" data-x="20" aria-pressed="true">20</button>
+            <button type="button" class="btn btn-secundario" data-x="9" aria-pressed="false">9</button>
+            <button type="button" class="btn btn-secundario" data-x="15" aria-pressed="false">15</button>
+          </div>
+          <div id="p3-lista"></div>
+          <div class="seguimiento-reserva">
+            <table class="seguimiento" id="p3-tabla">
+              <caption>Trace table <span class="contador">Comparisons: <strong id="p3-comps">0</strong></span></caption>
+              <thead><tr><th scope="col">low</th><th scope="col">high</th><th scope="col">mid</th><th scope="col">items[mid]</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. When it is not there: low passes high -->
+    <section class="paso" id="paso-no-esta" data-visual-fija data-requiere aria-labelledby="t-no-esta">
+      <h2 class="paso__titulo" id="t-no-esta">What if it is not there?</h2>
+      <p>Search for a grade that is <strong>not</strong> in the list. Notice where <code>low</code> and <code>high</code> end up.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p4-elegir" role="group" aria-label="Which grade are you looking for?">
+            <span class="elegir__titulo" aria-hidden="true">Search for:</span>
+            <button type="button" class="btn btn-secundario" data-x="12" aria-pressed="true">12</button>
+            <button type="button" class="btn btn-secundario" data-x="3" aria-pressed="false">3</button>
+            <button type="button" class="btn btn-secundario" data-x="18" aria-pressed="false">18</button>
+          </div>
+          <div id="p4-lista"></div>
+          <div class="seguimiento-reserva">
+            <table class="seguimiento" id="p4-tabla">
+              <caption>Trace table <span class="contador">Comparisons: <strong id="p4-comps">0</strong></span></caption>
+              <thead><tr><th scope="col">low</th><th scope="col">high</th><th scope="col">mid</th><th scope="col">items[mid]</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Typical mistake: low = mid (endless loop) -->
+    <section class="paso" id="paso-sin-fin" data-visual-fija data-requiere aria-labelledby="t-sin-fin">
+      <h2 class="paso__titulo" id="t-sin-fin">Typical mistake: forgetting the + 1</h2>
+      <p>Here someone wrote <code>low = mid</code>, without the <code>+ 1</code>. With some grades it still works… Try all three.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p5-saltar">Next round ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p5-elegir" role="group" aria-label="Which grade are you looking for?">
+            <span class="elegir__titulo" aria-hidden="true">Search for:</span>
+            <button type="button" class="btn btn-secundario" data-x="14" aria-pressed="true">14</button>
+            <button type="button" class="btn btn-secundario" data-x="17" aria-pressed="false">17</button>
+            <button type="button" class="btn btn-secundario" data-x="20" aria-pressed="false">20</button>
+          </div>
+          <div id="p5-lista"></div>
+          <div class="seguimiento-reserva">
+            <table class="seguimiento" id="p5-tabla">
+              <caption>Trace table <span class="contador">Comparisons: <strong id="p5-comps">0</strong></span></caption>
+              <thead><tr><th scope="col">low</th><th scope="col">high</th><th scope="col">mid</th><th scope="col">items[mid]</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Typical mistake: while low < high -->
+    <section class="paso" id="paso-menor" data-requiere aria-labelledby="t-menor">
+      <h2 class="paso__titulo" id="t-menor">Typical mistake: &lt; instead of &lt;=</h2>
+      <p>Now the <code>while</code> says <code>low &lt; high</code>. With some grades it works… Find a grade that <strong>is</strong> in the list but this version does not find.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Code"></pre>
+          <div class="elegir" id="p6-elegir" role="group" aria-label="Which grade are you looking for?">
+            <span class="elegir__titulo" aria-hidden="true">Search for:</span>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p6-lista"></div>
+          <div class="expresion" id="p6-expresion" aria-live="polite" hidden>
+            <span id="p6-expr">search(grades, 9)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="p6-res">?</span>
+          </div>
+          <p class="contador">Comparisons: <strong id="p6-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. With sorted text -->
+    <section class="paso" id="paso-textos" data-visual-fija data-requiere aria-labelledby="t-textos">
+      <h2 class="paso__titulo" id="t-textos">Names work too</h2>
+      <p>Text is compared in alphabetical order: <code>"Ana" &lt; "Luis"</code> is <code>True</code>. If the list of names is sorted, the same function works. Search for a name.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p7-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p7-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p7-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p7-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir" id="p7-elegir" role="group" aria-label="Which name are you looking for?">
+            <span class="elegir__titulo" aria-hidden="true">Search for:</span>
+            <button type="button" class="btn btn-secundario" data-x="Luis" aria-pressed="true">"Luis"</button>
+            <button type="button" class="btn btn-secundario" data-x="Beto" aria-pressed="false">"Beto"</button>
+            <button type="button" class="btn btn-secundario" data-x="Pedro" aria-pressed="false">"Pedro"</button>
+          </div>
+          <div id="p7-lista"></div>
+          <div class="expresion" id="p7-expresion" aria-live="polite" hidden>
+            <span id="p7-expr"></span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="booleano" id="p7-bool"></span>
+          </div>
+          <p class="contador">Comparisons: <strong id="p7-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Challenge: the lines that move the pointers -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Move the pointers</h2>
+      <p>The two lines that move <code>low</code> and <code>high</code> are missing. Pick what goes in each blank. It will be tested with four grades.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="reto-codigo" aria-label="Code"></pre>
+          <p class="grupo-titulo" id="reto-t-a">Blank 1: low = …</p>
+          <div class="elegir" id="reto-a" role="group" aria-labelledby="reto-t-a">
+            <button type="button" class="btn btn-secundario" data-valor="mid" aria-pressed="false">mid</button>
+            <button type="button" class="btn btn-secundario" data-valor="mid + 1" aria-pressed="false">mid + 1</button>
+            <button type="button" class="btn btn-secundario" data-valor="mid - 1" aria-pressed="false">mid - 1</button>
+          </div>
+          <p class="grupo-titulo" id="reto-t-b">Blank 2: high = …</p>
+          <div class="elegir" id="reto-b" role="group" aria-labelledby="reto-t-b">
+            <button type="button" class="btn btn-secundario" data-valor="mid" aria-pressed="false">mid</button>
+            <button type="button" class="btn btn-secundario" data-valor="mid + 1" aria-pressed="false">mid + 1</button>
+            <button type="button" class="btn btn-secundario" data-valor="mid - 1" aria-pressed="false">mid - 1</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-cinta" id="reto-rotulo">grades</p>
+          <div id="reto-lista"></div>
+          <p class="contador">Comparisons: <strong id="reto-comps">0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <ul class="pruebas" id="reto-pruebas" hidden aria-label="Tests"></ul>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Binary search checks the middle slot and discards the half that can't have the value, while <code>low &lt;= high</code>.</p>
+        <pre class="codigo resumen-codigo" aria-label="Summary in code"><code><span class="linea"><span class="tk-palabra">def</span> <span class="tk-funcion">search</span>(<span class="tk-variable">items</span>, <span class="tk-variable">x</span>):  <span class="tk-comentario"># sorted list</span></span><span class="linea">    <span class="tk-variable">low</span> = <span class="tk-numero">0</span></span><span class="linea">    <span class="tk-variable">high</span> = <span class="tk-funcion">len</span>(<span class="tk-variable">items</span>) - <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">while</span> <span class="tk-variable">low</span> &lt;= <span class="tk-variable">high</span>:  <span class="tk-comentario"># &lt;=, not &lt;</span></span><span class="linea">        <span class="tk-variable">mid</span> = (<span class="tk-variable">low</span> + <span class="tk-variable">high</span>) // <span class="tk-numero">2</span></span><span class="linea">        <span class="tk-palabra">if</span> <span class="tk-variable">items</span>[<span class="tk-variable">mid</span>] == <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-palabra">return</span> <span class="tk-variable">mid</span></span><span class="linea">        <span class="tk-palabra">elif</span> <span class="tk-variable">items</span>[<span class="tk-variable">mid</span>] &lt; <span class="tk-variable">x</span>:</span><span class="linea">            <span class="tk-variable">low</span> = <span class="tk-variable">mid</span> + <span class="tk-numero">1</span>  <span class="tk-comentario"># mid was already checked</span></span><span class="linea">        <span class="tk-palabra">else</span>:</span><span class="linea">            <span class="tk-variable">high</span> = <span class="tk-variable">mid</span> - <span class="tk-numero">1</span></span><span class="linea">    <span class="tk-palabra">return</span> <span class="tk-numero">-1</span>  <span class="tk-comentario"># not there</span></span></code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../recursive/index.html">Next: Binary search with recursion →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* Timers of an animation, so it can be cut short */
+  function relojes() {
+    var lista = [];
+    return {
+      luego: function (fn, ms) { lista.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { lista.forEach(clearTimeout); lista = []; }
+    };
+  }
+
+  var NOTAS = [6, 9, 11, 14, 15, 17, 19, 20];
+  var NOMBRES = ["Ana", "Beto", "Eva", "Luis", "Rosa"];
+  /* The state keeps inicio, medio and fin; the pointer chips show their names in English */
+  var PUNTERO = { inicio: "low", medio: "mid", fin: "high" };
+  var COLOR = { inicio: "azul", medio: "morado", fin: "naranja" };
+
+  /* Code lines (from 0) */
+  var L = { inicio: 1, fin: 2, mientras: 3, medio: 4, igual: 5, devuelve: 6, menor: 7, masUno: 8, sino: 9, menosUno: 10, noEsta: 11, llamada: 13 };
+
+  /* ---------- How a value is written ---------- */
+  function fmt(v) { return typeof v === "string" ? '"' + v + '"' : String(v); }
+  function c(s) { return "<code>" + s + "</code>"; }
+
+  /* ---------- The code of search, with its variants ---------- */
+  function kw(s) { return '<span class="tk-palabra">' + s + "</span>"; }
+  function fn(s) { return '<span class="tk-funcion">' + s + "</span>"; }
+  function va(s) { return '<span class="tk-variable">' + s + "</span>"; }
+  function nu(s) { return '<span class="tk-numero">' + s + "</span>"; }
+  function xHTML(x) { return typeof x === "string" ? '<span class="tk-texto">"' + x + '"</span>' : nu(x); }
+  function cambio(html) { return '<span class="pieza-cambio">' + html + "</span>"; }
+  function mover(expr) {
+    if (expr === "mid") return va("mid");
+    return va("mid") + " " + expr.charAt(4) + " " + nu("1");
+  }
+
+  /* o: { lista: "grades", x: 15, cond: "<=", inicio: "mid + 1", fin: "mid - 1",
+          marcar: "cond" | "inicio" (what changes, boxed), huecos: true, llamada: false } */
+  function codigoHTML(o) {
+    o = o || {};
+    var cond = (o.cond || "<=").replace("<", "&lt;");
+    if (o.marcar === "cond") cond = cambio(cond);
+    var a = o.huecos ? '<span class="hueco" id="reto-ha">?</span>' : mover(o.inicio || "mid + 1");
+    var b = o.huecos ? '<span class="hueco" id="reto-hb">?</span>' : mover(o.fin || "mid - 1");
+    if (o.marcar === "inicio") a = cambio(a);
+    var lineas = [
+      kw("def") + " " + fn("search") + "(" + va("items") + ", " + va("x") + "):",
+      "    " + va("low") + " = " + nu("0"),
+      "    " + va("high") + " = " + fn("len") + "(" + va("items") + ") - " + nu("1"),
+      "    " + kw("while") + " " + va("low") + " " + cond + " " + va("high") + ":",
+      "        " + va("mid") + " = (" + va("low") + " + " + va("high") + ") // " + nu("2"),
+      "        " + kw("if") + " " + va("items") + "[" + va("mid") + "] == " + va("x") + ":",
+      "            " + kw("return") + " " + va("mid"),
+      "        " + kw("elif") + " " + va("items") + "[" + va("mid") + "] &lt; " + va("x") + ":",
+      "            " + va("low") + " = " + a,
+      "        " + kw("else") + ":",
+      "            " + va("high") + " = " + b,
+      "    " + kw("return") + " " + nu("-1")
+    ];
+    if (o.llamada !== false) {
+      lineas.push("");
+      lineas.push(fn("print") + "(" + fn("search") + "(" + va(o.lista || "grades") + ", " +
+        '<span class="x-llamada">' + xHTML(o.x) + "</span>))");
+    }
+    return "<code>" + lineas.map(function (l) { return '<span class="linea">' + l + "</span>"; }).join("") + "</code>";
+  }
+
+  function ponerX(pre, x) {
+    var s = pre.querySelector(".x-llamada");
+    if (s) s.innerHTML = xHTML(x);
+  }
+
+  /* ---------- Simulate search(items, x), like Python ----------
+     v = { cond: "<=" | "<", inicio: "mid + 1" | "mid" | "mid - 1", fin: … }
+     If low and high repeat, the loop never ends: it is cut on the third repeated round. */
+  function leer(lista, k) {
+    var n = lista.length;
+    if (k < -n || k >= n) return undefined;
+    return lista[k < 0 ? k + n : k];
+  }
+
+  function moverA(expr, m) { return expr === "mid" ? m : expr === "mid + 1" ? m + 1 : m - 1; }
+
+  function simular(lista, x, v) {
+    v = v || {};
+    var A = v.inicio || "mid + 1";
+    var B = v.fin || "mid - 1";
+    var menorIgual = (v.cond || "<=") === "<=";
+    var ini = 0;
+    var fin = lista.length - 1;
+    var vueltas = [];
+    var vistos = {};
+    var repetidas = 0;
+    while (menorIgual ? ini <= fin : ini < fin) {
+      var clave = ini + "," + fin;
+      var repetida = !!vistos[clave];
+      if (repetida) {
+        repetidas++;
+        if (repetidas > 2) return { vueltas: vueltas, resultado: "sinfin", inicio: ini, fin: fin };
+      }
+      if (vueltas.length >= 30) return { vueltas: vueltas, resultado: "sinfin", inicio: ini, fin: fin };
+      vistos[clave] = true;
+      var m = Math.floor((ini + fin) / 2);
+      var val = leer(lista, m);
+      if (val === undefined) return { vueltas: vueltas, resultado: "IndexError", inicio: ini, fin: fin, medio: m };
+      var caso = val === x ? "igual" : val < x ? "menor" : "mayor";
+      vueltas.push({ inicio: ini, fin: fin, medio: m, valor: val, caso: caso, repetida: repetida });
+      if (caso === "igual") return { vueltas: vueltas, resultado: m, inicio: ini, fin: fin };
+      if (caso === "menor") ini = moverA(A, m);
+      else fin = moverA(B, m);
+    }
+    return { vueltas: vueltas, resultado: -1, inicio: ini, fin: fin };
+  }
+
+  /* ---------- The line-by-line trace ----------
+     Each step keeps a copy of the state: low, high, mid, the slot being checked,
+     the ones already checked, the comparisons and the rows of the trace table. */
+  function trazar(valores, x, v, nombre) {
+    v = v || {};
+    nombre = nombre || "grades";
+    var A = v.inicio || "mid + 1";
+    var B = v.fin || "mid - 1";
+    var menorIgual = (v.cond || "<=") === "<=";
+    var op = menorIgual ? "&lt;=" : "&lt;";
+    var sim = simular(valores, x, v);
+    var X = fmt(x);
+    var n = valores.length;
+    var pasos = [];
+    var e = { inicio: null, fin: null, medio: null, mirar: null, igual: null, comps: 0, mirados: [], filas: [], activa: -1, expr: null, nombres: [nombre] };
+
+    function copia(extra) {
+      var s = Object.assign({}, e, extra || {});
+      s.filas = e.filas.map(function (f) { return Object.assign({}, f); });
+      s.mirados = e.mirados.slice();
+      s.nombres = e.nombres.slice();
+      return s;
+    }
+    function paso(linea, texto, extra, mas) {
+      pasos.push(Object.assign({ linea: linea, texto: texto, estado: copia(extra) }, mas || {}));
+    }
+
+    e.nombres = [nombre, "items"];
+    paso(L.llamada, "Python calls " + c("search(" + nombre + ", " + X + ")") + ". Inside the function, the list is called " + c("items") + ".");
+    e.inicio = 0;
+    paso(L.inicio, c("low") + " points to the first slot: <strong>0</strong>.", null, { flecha: true });
+    e.fin = n - 1;
+    paso(L.fin, c("high") + " points to the last one: " + c("len(items) - 1") + " = <strong>" + (n - 1) + "</strong>.");
+
+    sim.vueltas.forEach(function (vu) {
+      e.mirar = null;
+      paso(L.mientras, c(vu.inicio + " " + op + " " + vu.fin) + "? <strong>True</strong>" +
+        (vu.repetida ? ". 🔁 The same " + c("low") + " and " + c("high") + " as in the last round!" : ": there are slots left to check."),
+        null, { parada: true });
+      e.medio = vu.medio;
+      e.filas.push({ inicio: vu.inicio, fin: vu.fin, medio: vu.medio, repetida: vu.repetida });
+      e.activa = e.filas.length - 1;
+      paso(L.medio, c("mid = (" + vu.inicio + " + " + vu.fin + ") // 2") + " = <strong>" + vu.medio + "</strong>: the middle slot.");
+
+      var V = fmt(vu.valor);
+      e.mirar = vu.medio;
+      e.comps++;
+      e.mirados.push(vu.medio);
+      e.filas[e.activa].valor = vu.valor;
+      e.filas[e.activa].caso = vu.caso;
+      e.expr = { texto: V + " == " + X, valor: vu.caso === "igual" };
+      if (vu.caso === "igual") {
+        paso(L.igual, "It checks slot " + vu.medio + ": " + c(V + " == " + X) + "? <strong>True</strong>: found it!");
+        e.mirar = null;
+        e.igual = vu.medio;
+        paso(L.devuelve, c("return mid") + ": it returns <strong>" + vu.medio + "</strong> and the function ends right there.");
+        return;
+      }
+      paso(L.igual, "It checks slot " + vu.medio + ": " + c(V + " == " + X) + "? <strong>False</strong>.");
+      var alfabeto = typeof x === "string" ? " in alphabetical order" : "";
+      e.expr = { texto: V + " &lt; " + X, valor: vu.caso === "menor" };
+      if (vu.caso === "menor") {
+        paso(L.menor, c(V + " &lt; " + X) + "? <strong>True</strong>" + alfabeto + ": " + X + " has to be further right.");
+        var antes = e.inicio;
+        e.mirar = null;
+        e.inicio = moverA(A, vu.medio);
+        paso(L.masUno, c("low = " + A) + " = <strong>" + e.inicio + "</strong>" +
+          (e.inicio === antes ? ": " + c("low") + " did not move!"
+            : A === "mid + 1" ? ": everything up to slot " + vu.medio + " is discarded, that one included." : "."));
+      } else {
+        paso(L.menor, c(V + " &lt; " + X) + "? <strong>False</strong>" + alfabeto + ": " + X + " has to be further left.");
+        e.mirar = null;
+        e.fin = moverA(B, vu.medio);
+        paso(L.menosUno, "Through the " + c("else") + ": " + c("high = " + B) + " = <strong>" + e.fin + "</strong>" +
+          (B === "mid - 1" ? ": everything from slot " + vu.medio + " on is discarded, that one included." : "."));
+      }
+    });
+
+    var r = sim.resultado;
+    if (r === "sinfin") {
+      e.mirar = null;
+      paso(L.mientras, "🔁 The rounds repeat: " + c("low") + " and " + c("high") + " don't change anymore. This loop would never end: we stop it here.", { aviso: true }, { parada: true });
+    } else if (r === "IndexError") {
+      e.medio = sim.medio;
+      paso(L.medio, c("mid") + " = <strong>" + sim.medio + "</strong>: that slot doesn't exist! 💥 " + c("IndexError") + ".", { error: true });
+    } else if (r >= 0) {
+      e.nombres = [nombre];
+      paso(L.llamada, c("print") + " shows what it returned: <strong>" + r + "</strong>. It checked " + e.comps + (e.comps === 1 ? " slot" : " slots") + " out of " + n + ".",
+        null, { salida: String(r), flecha: true });
+    } else {
+      e.mirar = null;
+      e.filas.push({ inicio: e.inicio, fin: e.fin, salida: true, nota: menorIgual ? "low &gt; high" : e.inicio + " &lt; " + e.fin + ": False" });
+      e.activa = e.filas.length - 1;
+      paso(L.mientras, c(e.inicio + " " + op + " " + e.fin) + "? <strong>False</strong>: " +
+        (menorIgual ? c("low") + " passed " + c("high") + ". There are no slots left." : "the loop ends."), null, { parada: true });
+      paso(L.noEsta, c("return -1") + ": " + (menorIgual ? X + " is not in the list." : "it says " + X + " is not there."));
+      e.nombres = [nombre];
+      paso(L.llamada, c("print") + " shows <strong>-1</strong>. It checked " + e.comps + (e.comps === 1 ? " slot" : " slots") + " out of " + n + ".",
+        null, { salida: "-1", flecha: true });
+    }
+    pasos.resultado = r;
+    pasos.final = { inicio: sim.inicio, fin: sim.fin };
+    return pasos;
+  }
+
+  /* ---------- The trace table ---------- */
+  function celda(td, html, animar) {
+    if (td.getAttribute("data-html") === html) return;
+    td.setAttribute("data-html", html);
+    td.innerHTML = html;
+    if (animar && html) {
+      td.classList.remove("celda--nueva");
+      void td.offsetWidth;
+      td.classList.add("celda--nueva");
+    }
+  }
+
+  function llenarTabla(tabla, filas, activa, animar) {
+    var cuerpo = tabla.tBodies[0];
+    while (cuerpo.rows.length > filas.length) cuerpo.deleteRow(-1);
+    while (cuerpo.rows.length < filas.length) {
+      var tr = cuerpo.insertRow();
+      for (var k = 0; k < 4; k++) tr.insertCell();
+    }
+    filas.forEach(function (f, i) {
+      var tr = cuerpo.rows[i];
+      tr.classList.toggle("seguimiento__activa", i === activa);
+      tr.classList.toggle("seguimiento__repetida", !!f.repetida);
+      celda(tr.cells[0], String(f.inicio), animar);
+      celda(tr.cells[1], String(f.fin), animar);
+      if (f.salida) {
+        celda(tr.cells[2], "—", animar);
+        celda(tr.cells[3], '<span class="seguimiento__nada">' + f.nota + "</span>", animar);
+        return;
+      }
+      celda(tr.cells[2], String(f.medio), animar);
+      celda(tr.cells[3], f.valor === undefined ? "" : '<span class="' + (f.caso === "igual" ? "seguimiento__igual" : "") + '">' + fmt(f.valor) + (f.caso === "igual" ? " ✓" : "") + "</span>", animar);
+    });
+  }
+
+  /* ---------- What you see: the list, its pointers, the boxes, the table ----------
+     o = { lista: el, valores, nombre, tapar, cajas: { inicio, medio, fin }, tabla, comps, expr: { caja, texto, chip }, pisos }
+     pisos: how many pointer levels the list keeps from the start (low, mid and high
+     stack in three when a single slot is left): where there is output below, so it doesn't move */
+  function crearVista(o) {
+    var l = Lista.crear(o.lista, o.valores, { nombres: [o.nombre || "grades"], reservarPunteros: o.pisos || 0 });
+    var ultimo = {};
+    var destapados = {};
+
+    function contar(n) {
+      if (!o.comps || o.comps.textContent === String(n)) return;
+      o.comps.textContent = String(n);
+      var p = o.comps.parentNode;
+      p.classList.remove("contador--pulso");
+      void p.offsetWidth;
+      if (n) p.classList.add("contador--pulso");
+    }
+
+    function reiniciar() {
+      ultimo = {};
+      destapados = {};
+      l.marcar(null);
+      l.clases(null);
+      l.punteros(null);
+      l.nombres([o.nombre || "grades"]);
+      ultimo.nombres = JSON.stringify([o.nombre || "grades"]);
+      if (o.tapar) l.tapar(true);
+      if (o.cajas) Object.keys(o.cajas).forEach(function (k) { Caja.vaciar(o.cajas[k]); });
+      if (o.tabla) llenarTabla(o.tabla, [], -1, false);
+      if (o.expr) o.expr.caja.hidden = true;
+      contar(0);
+    }
+
+    function pintar(e) {
+      // The labels: grades and, inside the function, also items
+      if (e.nombres) {
+        var nom = JSON.stringify(e.nombres);
+        if (nom !== ultimo.nombres) { l.nombres(e.nombres); ultimo.nombres = nom; }
+      }
+      // The pointers (the chips read low, mid and high)
+      var mapa = {};
+      var alguno = false;
+      ["inicio", "medio", "fin"].forEach(function (k) {
+        var hay = e[k] !== null && e[k] !== undefined;
+        mapa[PUNTERO[k]] = hay ? { i: e[k], color: COLOR[k] } : null;
+        if (hay) alguno = true;
+      });
+      if (alguno) l.punteros(mapa); else l.punteros(null);
+      // The slots that were checked get uncovered
+      if (o.tapar) {
+        (e.mirados || []).forEach(function (k) {
+          if (destapados[k]) return;
+          destapados[k] = true;
+          l.destapar(k);
+        });
+      }
+      // Outside low..high, dimmed; the one found, green; the one skipped, orange
+      l.clases(function (i) {
+        if (i === e.igual) return "lista__casilla--igual";
+        if (i === e.perdido) return "lista__casilla--distinta";
+        if (e.inicio !== null && e.fin !== null && (i < e.inicio || i > e.fin)) return "lista__casilla--apagada";
+        return "";
+      });
+      var mirar = e.mirar === null || e.mirar === undefined ? null : e.mirar;
+      if (mirar !== ultimo.mirar) { l.marcar(mirar); ultimo.mirar = mirar; }
+      // The boxes: only the ones that change (the value travels from the active line)
+      if (o.cajas) {
+        Object.keys(o.cajas).forEach(function (k) {
+          var val = e[k] === undefined ? null : e[k];
+          if (val === ultimo[k]) return;
+          ultimo[k] = val;
+          if (val === null) Caja.vaciar(o.cajas[k]);
+          else Caja.poner(o.cajas[k], val);
+        });
+      }
+      if (o.tabla) llenarTabla(o.tabla, e.filas || [], e.activa, true);
+      if (o.expr) {
+        if (e.expr) {
+          o.expr.caja.hidden = false;
+          o.expr.texto.innerHTML = e.expr.texto;
+          Codigo.booleano(o.expr.chip, e.expr.valor);
+        } else {
+          o.expr.caja.hidden = true;
+        }
+      }
+      contar(e.comps || 0);
+    }
+
+    return { l: l, reiniciar: reiniciar, pintar: pintar };
+  }
+
+  /* Steps of a trace played on their own, fast (no buttons) */
+  function reproducirPasos(pre, vista, pasos, ms, reloj, alTerminar) {
+    pasos.forEach(function (p, i) {
+      reloj.luego(function () {
+        Codigo.marcar(pre, { activas: [p.linea] });
+        vista.pintar(p.estado);
+        if (i === pasos.length - 1 && alTerminar) alTerminar(p.estado);
+      }, i * ms);
+    });
+  }
+
+  /* Buttons to pick what to search for */
+  function elegirX(grupo, alElegir) {
+    grupo.querySelectorAll("[data-x]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        grupo.querySelectorAll("[data-x]").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+        var t = b.getAttribute("data-x");
+        alElegir(/^-?\d+$/.test(t) ? Number(t) : t, b);
+      });
+    });
+  }
+
+  /* A trace with buttons (Traza) that paints a view */
+  function montarTraza(c) {
+    var pasos = [];
+    return Traza.crear({
+      codigo: c.pre,
+      explicacion: c.explicacion,
+      consola: c.consola,
+      ejecutar: c.ejecutar,
+      reproducir: c.reproducir,
+      saltar: c.saltar,
+      reiniciar: c.reiniciar,
+      intervalo: c.intervalo || 1100,
+      intervaloSaltar: 260,
+      generar: function () {
+        var d = c.datos();
+        pasos = trazar(d.valores, d.x, d.v, d.nombre);
+        if (c.tabla) {
+          // The height is reserved in the table's box, not in the table: a table taller than its
+          // rows stretches them (a single row looked fat, taking the place of all of them)
+          Codigo.reservarAlto(c.tabla.parentNode, pasos.map(function (p) { return p.estado; }), function (copia, e) {
+            llenarTabla(copia.querySelector("table"), e.filas, e.activa, false);
+          });
+        }
+        return pasos;
+      },
+      alReiniciar: function () {
+        c.vista.reiniciar();
+        if (c.fb) Pasos.limpiarFeedback(c.fb);
+      },
+      alPaso: function (paso) { c.vista.pintar(paso.estado); },
+      alTerminar: function () { c.alTerminar(pasos, pasos[pasos.length - 1].estado); }
+    });
+  }
+
+  function casilleros(n) { return n + (n === 1 ? " slot" : " slots"); }
+
+  /* ---------- 1. Binary search, line by line ---------- */
+  $("p1-codigo").innerHTML = codigoHTML({ x: 15 });
+  var vista1 = crearVista({
+    lista: $("p1-lista"), valores: NOTAS, tapar: true, pisos: 3,
+    cajas: { inicio: $("p1-inicio"), medio: $("p1-medio"), fin: $("p1-fin") },
+    comps: $("p1-comps")
+  });
+
+  /* ---------- 2. Now you decide ---------- */
+  $("p2-codigo").innerHTML = codigoHTML({ x: 11 });
+  var vista2 = crearVista({ lista: $("p2-lista"), valores: NOTAS, tapar: true, comps: $("p2-comps") });
+  var reloj2 = relojes();
+  var X2 = [11, 19, 12, 6, 20, 15];
+  var turno2 = 0;
+  var hechas2 = 0;
+  var s2 = null;
+  var botones2 = Array.prototype.slice.call(document.querySelectorAll("[data-accion2]"));
+
+  function estado2(extra) {
+    return Object.assign({
+      inicio: s2.ini, fin: s2.fin, medio: s2.medio, mirar: null, igual: s2.igual,
+      comps: s2.comps, mirados: s2.mirados.slice(), nombres: ["grades", "items"]
+    }, extra || {});
+  }
+
+  function linea2(lineas) { Codigo.marcar($("p2-codigo"), { activas: lineas }); }
+  function pregunta2(html) { $("p2-pregunta").innerHTML = html; }
+  function activar2(si) { botones2.forEach(function (b) { b.disabled = !si; }); s2.esperando = si; }
+
+  function empezar2() {
+    reloj2.cortar();
+    var x = X2[turno2 % X2.length];
+    turno2++;
+    s2 = { x: x, ini: null, fin: null, medio: null, igual: null, comps: 0, mirados: [], esperando: false };
+    activar2(false);
+    ponerX($("p2-codigo"), x);
+    $("p2-x").textContent = String(x);
+    $("p2-otra").hidden = true;
+    Pasos.limpiarFeedback($("p2-fb"));
+    Codigo.limpiar($("p2-codigo"));
+    vista2.reiniciar();
+    pregunta2("All the slots start covered. Python only checks the one it needs.");
+    reloj2.luego(function () {
+      linea2([L.inicio]);
+      s2.ini = 0;
+      vista2.pintar(estado2());
+    }, 700);
+    reloj2.luego(function () {
+      linea2([L.fin]);
+      s2.fin = NOTAS.length - 1;
+      vista2.pintar(estado2());
+    }, 1300);
+    reloj2.luego(vuelta2, 1900);
+  }
+
+  function vuelta2() {
+    linea2([L.mientras]);
+    if (s2.ini > s2.fin) {
+      pregunta2(c(s2.ini + " &lt;= " + s2.fin) + "? <strong>False</strong>: " + c("low") + " passed " + c("high") + ".");
+      reloj2.luego(function () {
+        linea2([L.noEsta]);
+        pregunta2(c("return -1") + ": " + s2.x + " is not in the list.");
+        terminar2(-1);
+      }, 1100);
+      return;
+    }
+    pregunta2(c(s2.ini + " &lt;= " + s2.fin) + "? <strong>True</strong>: there are slots left to check.");
+    reloj2.luego(function () {
+      linea2([L.medio]);
+      s2.medio = Math.floor((s2.ini + s2.fin) / 2);
+      vista2.pintar(estado2());
+      pregunta2(c("mid = (" + s2.ini + " + " + s2.fin + ") // 2") + " = <strong>" + s2.medio + "</strong>.");
+    }, 800);
+    reloj2.luego(function () {
+      linea2([L.igual]);
+      s2.comps++;
+      s2.mirados.push(s2.medio);
+      vista2.pintar(estado2({ mirar: s2.medio }));
+      pregunta2("Slot " + s2.medio + " has <strong>" + NOTAS[s2.medio] + "</strong> and you are looking for <strong>" + s2.x + "</strong>. Which line comes next?");
+      activar2(true);
+    }, 1600);
+  }
+
+  function pista2(accion, bien, v, x) {
+    if (bien === "return") return "The slot has " + x + "! You already found it: return it with return mid.";
+    if (accion === "return") return "The slot has " + v + ", not " + x + ": you haven't found it yet. Which side is " + x + " on?";
+    if (bien === "inicio") return v + " is less than " + x + ": in a sorted list, " + x + " has to be on the right. The left side is not needed: move low.";
+    return v + " is greater than " + x + ": " + x + " has to be on the left. The right side is not needed: move high.";
+  }
+
+  function elegir2(accion) {
+    if (!s2 || !s2.esperando) return;
+    var v = NOTAS[s2.medio];
+    var x = s2.x;
+    var bien = v === x ? "return" : v < x ? "inicio" : "fin";
+    if (accion !== bien) {
+      Pasos.feedback($("p2-fb"), "pista", pista2(accion, bien, v, x));
+      return;
+    }
+    Pasos.limpiarFeedback($("p2-fb"));
+    activar2(false);
+    if (bien === "return") {
+      linea2([L.devuelve]);
+      s2.igual = s2.medio;
+      vista2.pintar(estado2());
+      pregunta2(c("return mid") + ": it returns <strong>" + s2.medio + "</strong>.");
+      terminar2(s2.medio);
+      return;
+    }
+    if (bien === "inicio") {
+      linea2([L.menor, L.masUno]);
+      s2.ini = s2.medio + 1;
+      pregunta2(c(v + " &lt; " + x) + ", so " + c("low = " + s2.medio + " + 1") + " = <strong>" + s2.ini + "</strong>: the left side is discarded.");
+    } else {
+      linea2([L.sino, L.menosUno]);
+      s2.fin = s2.medio - 1;
+      pregunta2(c(v + " &gt; " + x) + ", so " + c("high = " + s2.medio + " - 1") + " = <strong>" + s2.fin + "</strong>: the right side is discarded.");
+    }
+    vista2.pintar(estado2());
+    reloj2.luego(vuelta2, 1500);
+  }
+
+  function terminar2(r) {
+    hechas2++;
+    var texto = r >= 0
+      ? "You found " + s2.x + " in slot " + r + " by checking " + casilleros(s2.comps) + " out of 8!"
+      : "It's not there, and to know that it was enough to check " + casilleros(s2.comps) + " out of 8: the dimmed halves couldn't have it.";
+    if (hechas2 >= 2) {
+      Pasos.feedback($("p2-fb"), "ok", texto + " That's how Python decides in each round: return, or discard one half.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback($("p2-fb"), "ok", texto + " Do another search.");
+    }
+    $("p2-otra").hidden = false;
+  }
+
+  botones2.forEach(function (b) {
+    b.addEventListener("click", function () { elegir2(b.getAttribute("data-accion2")); });
+  });
+  $("p2-otra-btn").addEventListener("click", function () {
+    empezar2();
+  });
+
+  /* ---------- 3. The trace table ---------- */
+  var x3 = 20;
+  $("p3-codigo").innerHTML = codigoHTML({ x: x3 });
+  var vista3 = crearVista({ lista: $("p3-lista"), valores: NOTAS, tabla: $("p3-tabla"), comps: $("p3-comps") });
+
+  /* ---------- 4. What if it is not there? ---------- */
+  var x4 = 12;
+  $("p4-codigo").innerHTML = codigoHTML({ x: x4 });
+  var vista4 = crearVista({ lista: $("p4-lista"), valores: NOTAS, tabla: $("p4-tabla"), comps: $("p4-comps") });
+
+  /* ---------- 5. low = mid: endless loop ---------- */
+  var x5 = 14;
+  var probados5 = {};
+  $("p5-codigo").innerHTML = codigoHTML({ x: x5, inicio: "mid", marcar: "inicio" });
+  var vista5 = crearVista({ lista: $("p5-lista"), valores: NOTAS, tabla: $("p5-tabla"), comps: $("p5-comps") });
+
+  /* ---------- 6. while low < high: skips the last slot ---------- */
+  $("p6-codigo").innerHTML = codigoHTML({ x: 9, cond: "<", marcar: "cond" });
+  var vista6 = crearVista({ lista: $("p6-lista"), valores: NOTAS, comps: $("p6-comps") });
+  var reloj6 = relojes();
+  var grupo6 = $("p6-elegir");
+  NOTAS.forEach(function (n) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-secundario";
+    b.setAttribute("data-x", String(n));
+    b.setAttribute("aria-pressed", "false");
+    b.textContent = String(n);
+    grupo6.appendChild(b);
+  });
+  var falla6 = false;
+
+  function probar6(x, btn) {
+    reloj6.cortar();
+    var pre = $("p6-codigo");
+    ponerX(pre, x);
+    Codigo.limpiar(pre);
+    vista6.reiniciar();
+    Pasos.limpiarFeedback($("p6-fb"));
+    $("p6-expresion").hidden = false;
+    $("p6-expr").textContent = "search(grades, " + x + ")";
+    $("p6-res").textContent = "?";
+    $("p6-res").className = "expresion__final";
+    grupo6.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    var pasos = trazar(NOTAS, x, { cond: "<" });
+    reproducirPasos(pre, vista6, pasos, 230, reloj6, function (ultimo) {
+      grupo6.querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+      var k = NOTAS.indexOf(x);
+      var r = pasos.resultado;
+      $("p6-res").textContent = String(r);
+      if (r === k) {
+        btn.classList.add("btn--bien");
+        Pasos.feedback($("p6-fb"), falla6 ? "ok" : "pista", "This one works: it found " + x + " in slot " + k + "." + (falla6 ? "" : " Try another grade: look for one where it fails."));
+        return;
+      }
+      btn.classList.add("btn--mal");
+      $("p6-res").textContent = "-1 ✗";
+      $("p6-res").className = "expresion__final expresion__final--mal";
+      vista6.pintar(Object.assign({}, ultimo, { perdido: k }));
+      falla6 = true;
+      Pasos.feedback($("p6-fb"), "ok", "It fails! " + x + " is in slot " + k + ". When low and high both reached " + k +
+        ", that slot was still left to check, but " + k + " < " + k + " is False and the loop ended too early. With <= it does go in when only one is left.");
+      leccion.desbloquear();
+    });
+  }
+  elegirX(grupo6, probar6);
+
+  /* ---------- 7. With text ---------- */
+  var x7 = "Luis";
+  $("p7-codigo").innerHTML = codigoHTML({ x: x7, lista: "names" });
+  var vista7 = crearVista({
+    lista: $("p7-lista"), valores: NOMBRES, nombre: "names", comps: $("p7-comps"), pisos: 3,
+    expr: { caja: $("p7-expresion"), texto: $("p7-expr"), chip: $("p7-bool") }
+  });
+  // The comparison keeps its line even before it shows (#p7-expresion[hidden], in the CSS):
+  // it gets a sample one so it measures the same as when it appears
+  $("p7-expr").innerHTML = "\"Ana\" == \"Luis\"";
+  Codigo.booleano($("p7-bool"), false);
+
+  /* ---------- 8. Challenge ---------- */
+  $("reto-codigo").innerHTML = codigoHTML({ huecos: true, llamada: false });
+  var vistaReto = crearVista({ lista: $("reto-lista"), valores: NOTAS, comps: $("reto-comps") });
+  var relojReto = relojes();
+  var PRUEBAS = [6, 15, 20, 12];
+  var eleccion = { a: null, b: null };
+
+  function elegirReto(cual, btn) {
+    var grupo = $("reto-" + cual);
+    grupo.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+    eleccion[cual] = btn.getAttribute("data-valor");
+    $("reto-h" + cual).textContent = eleccion[cual];
+    limpiarReto();
+    leccion.listoParaComprobar(!!(eleccion.a && eleccion.b));
+  }
+
+  function limpiarReto() {
+    relojReto.cortar();
+    vistaReto.reiniciar();
+    Codigo.limpiar($("reto-codigo"));
+    $("reto-rotulo").textContent = "grades";
+    $("reto-pruebas").hidden = true;
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function entrarReto() {
+    eleccion = { a: null, b: null };
+    ["a", "b"].forEach(function (k) {
+      $("reto-" + k).querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      $("reto-h" + k).textContent = "?";
+    });
+    limpiarReto();
+  }
+
+  function muestra(r) {
+    if (r === "sinfin") return "🔁 endless";
+    if (r === "IndexError") return "💥 IndexError";
+    return String(r);
+  }
+
+  function pistaReto(a, b) {
+    if (a === "mid") return "With low = mid, the slot you already checked is back inside. When two slots are left, mid is the one on the left, low doesn't move and the loop never ends. Discard mid too.";
+    if (a === "mid - 1") return "If items[mid] < x, the value is to the right of mid. low = mid - 1 moves it to the left: it brings back slots that were already discarded.";
+    if (b === "mid") return "Almost: with high = mid, the slot you already checked stays inside. If the grade is not there (try 12), low and high stop moving and the loop never ends.";
+    return "If items[mid] is greater than x, the value is on the left: high has to end up before mid, not after it.";
+  }
+
+  function comprobarReto() {
+    if (!eleccion.a || !eleccion.b) return false;
+    limpiarReto();
+    var v = { inicio: eleccion.a, fin: eleccion.b };
+    var lista = $("reto-pruebas");
+    lista.innerHTML = "";
+    var mala = null;
+    PRUEBAS.forEach(function (x) {
+      var r = simular(NOTAS, x, v).resultado;
+      var esperado = NOTAS.indexOf(x);
+      var bien = r === esperado;
+      if (!bien && mala === null) mala = x;
+      var li = document.createElement("li");
+      if (!bien) li.className = "prueba--mal";
+      var error = typeof r !== "number";
+      li.innerHTML = "<span></span>" + '<span class="' + (error ? "prueba__error" : "prueba__res") + '"></span>';
+      li.children[0].textContent = "search(grades, " + x + ")";
+      li.children[1].textContent = muestra(r) + (bien ? " ✓" : " ✗ (should be " + esperado + ")");
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    // You see the test that failed (or one that works) moving the pointers
+    var xVer = mala === null ? 15 : mala;
+    $("reto-rotulo").textContent = "search(grades, " + xVer + ")";
+    reproducirPasos($("reto-codigo"), vistaReto, trazar(NOTAS, xVer, v), 260, relojReto);
+    if (mala === null) {
+      Pasos.feedback($("reto-fb"), "ok", "That's it! low = mid + 1 and high = mid - 1: slot mid was already checked, so it is discarded along with its half. All four tests pass.");
+      return true;
+    }
+    Pasos.feedback($("reto-fb"), "pista", pistaReto(eleccion.a, eleccion.b));
+    return false;
+  }
+
+  ["a", "b"].forEach(function (k) {
+    $("reto-" + k).querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { elegirReto(k, b); });
+    });
+  });
+
+  /* ---------- The traces with buttons ---------- */
+  var traza1 = montarTraza({
+    pre: $("p1-codigo"), explicacion: $("p1-explicacion"), consola: $("p1-consola"),
+    ejecutar: $("p1-ejecutar"), reproducir: $("p1-reproducir"), saltar: $("p1-saltar"), reiniciar: $("p1-reiniciar"),
+    vista: vista1, fb: $("p1-fb"),
+    datos: function () { return { valores: NOTAS, x: 15 }; },
+    alTerminar: function (pasos, e) {
+      Pasos.feedback($("p1-fb"), "ok", "It found 15 by checking only " + casilleros(e.comps) + " out of 8. In each round, low or high moves and the half that can't have it gets dimmed.");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza3 = montarTraza({
+    pre: $("p3-codigo"), explicacion: $("p3-explicacion"),
+    ejecutar: $("p3-ejecutar"), reproducir: $("p3-reproducir"), reiniciar: $("p3-reiniciar"),
+    vista: vista3, fb: $("p3-fb"), tabla: $("p3-tabla"), intervalo: 900,
+    datos: function () { return { valores: NOTAS, x: x3 }; },
+    alTerminar: function (pasos, e) {
+      Pasos.feedback($("p3-fb"), "ok", "One row per round: " + e.filas.length + (e.filas.length === 1 ? " row" : " rows") + ", " + e.comps + (e.comps === 1 ? " comparison" : " comparisons") +
+        ". With 8 slots you never need more than 4: each row leaves half as many as the one before.");
+      leccion.desbloquear();
+    }
+  });
+  elegirX($("p3-elegir"), function (x) { x3 = x; ponerX($("p3-codigo"), x); traza3.reiniciar(); });
+
+  var traza4 = montarTraza({
+    pre: $("p4-codigo"), explicacion: $("p4-explicacion"),
+    ejecutar: $("p4-ejecutar"), reproducir: $("p4-reproducir"), reiniciar: $("p4-reiniciar"),
+    vista: vista4, fb: $("p4-fb"), tabla: $("p4-tabla"), intervalo: 900,
+    datos: function () { return { valores: NOTAS, x: x4 }; },
+    alTerminar: function (pasos, e) {
+      var f = pasos.final;
+      Pasos.feedback($("p4-fb"), "ok", "low (" + f.inicio + ") and high (" + f.fin + ") crossed: there is no slot left between them. " + x4 +
+        " is not there, and to know that " + casilleros(e.comps) + " were enough.");
+      leccion.desbloquear();
+    }
+  });
+  elegirX($("p4-elegir"), function (x) { x4 = x; ponerX($("p4-codigo"), x); traza4.reiniciar(); });
+
+  var traza5 = montarTraza({
+    pre: $("p5-codigo"), explicacion: $("p5-explicacion"),
+    ejecutar: $("p5-ejecutar"), reproducir: $("p5-reproducir"), saltar: $("p5-saltar"), reiniciar: $("p5-reiniciar"),
+    vista: vista5, fb: $("p5-fb"), tabla: $("p5-tabla"), intervalo: 650,
+    datos: function () { return { valores: NOTAS, x: x5, v: { inicio: "mid" } }; },
+    alTerminar: function (pasos) {
+      probados5[x5] = true;
+      if (pasos.resultado === "sinfin") {
+        Pasos.feedback($("p5-fb"), "ok", "Endless loop! Slots 6 and 7 are left, mid is 6 and low = mid puts low back on 6: nothing changes. With + 1, the slot already checked is discarded too.");
+        leccion.desbloquear();
+        return;
+      }
+      var falta = probados5[20] ? "" : " Now try 20.";
+      Pasos.feedback($("p5-fb"), "pista", "This time it worked: it found " + x5 + " in slot " + pasos.resultado + "." + falta);
+    }
+  });
+  elegirX($("p5-elegir"), function (x) { x5 = x; ponerX($("p5-codigo"), x); traza5.reiniciar(); });
+
+  var traza7 = montarTraza({
+    pre: $("p7-codigo"), explicacion: $("p7-explicacion"), consola: $("p7-consola"),
+    ejecutar: $("p7-ejecutar"), reproducir: $("p7-reproducir"), reiniciar: $("p7-reiniciar"),
+    vista: vista7, fb: $("p7-fb"), intervalo: 1000,
+    datos: function () { return { valores: NOMBRES, x: x7, nombre: "names" }; },
+    alTerminar: function (pasos, e) {
+      var r = pasos.resultado;
+      var texto = r >= 0 ? "\"" + x7 + "\" is in slot " + r + "." : "\"" + x7 + "\" is not there: -1.";
+      Pasos.feedback($("p7-fb"), "ok", texto + " It checked " + casilleros(e.comps) + ". With text, < compares in alphabetical order: the list has to be sorted from A to Z.");
+      leccion.desbloquear();
+    }
+  });
+  elegirX($("p7-elegir"), function (x) { x7 = x; ponerX($("p7-codigo"), x); traza7.reiniciar(); });
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-codigo": function () { traza1.detener(); },
+      "paso-tu": function () { if (!s2) empezar2(); },
+      "paso-tabla": function () { traza3.detener(); },
+      "paso-no-esta": function () { traza4.detener(); },
+      "paso-sin-fin": function () { traza5.detener(); },
+      "paso-textos": function () { traza7.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

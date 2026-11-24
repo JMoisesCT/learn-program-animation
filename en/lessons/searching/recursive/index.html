@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Binary search with recursion · Learn to program</title>
+  <meta name="description" content="Interactive lesson: binary search in Python as a recursive function. search(items, x, low, high) looks at the middle one and calls itself with the half that is left; the call stack, the base case low > high and the slice trap.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .nota { margin: var(--esp-3) 0 0; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .pista-texto { color: var(--color-pista); }
+
+    /* ---------- Comparisons: the thread of the topic ---------- */
+    .contador { margin: 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-azul); }
+    .contador--cambio strong { display: inline-block; animation: valor-pulso 320ms ease-out; }
+    .rotulo-lista { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo-lista code { text-transform: none; letter-spacing: 0; }
+    .rotulo-lista--nueva { color: var(--color-acento); }
+
+    /* ---------- Step 1: the questions, smaller each time ---------- */
+    .preguntas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .preguntas li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .preguntas li:last-child { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .preguntas li.preguntas__fin { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .preguntas__texto { font-weight: 600; }
+    .preguntas__codigo { font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-acento); }
+    .preguntas__titulo { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--codigo .btn { font-family: var(--fuente-codigo); }
+    .elegir .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .btn--mal, .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- Prediction ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion--codigo .btn { font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- The stack, more compact: five cards fit ---------- */
+    .lab .pila { margin-top: var(--esp-3); }
+    /* The variables and “still to do” go on the same row */
+    .lab .marco { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--esp-3); padding: 0.35rem var(--esp-3); }
+    .lab .marco__cabecera { flex: 1 1 100%; }
+    .lab .marco__vars { flex: 0 1 auto; margin-top: 0.3rem; min-height: 0; gap: var(--esp-1) var(--esp-2); }
+    .lab .marco__falta { flex: 1 0 auto; margin-top: 0.3rem; text-align: right; }
+    .lab .marco__toca { flex: 1 1 100%; }
+    .lab .marco .var { font-size: var(--texto-xs); }
+    .lab .marco--programa .marco__vars { display: none; }
+    .lab .pila__marcos { gap: 0.4rem; }
+    /* “Now running: …” on a single row */
+    .lab .rotulo { min-height: 0; }
+    .lab .rotulo__llamada { font-size: var(--texto-xs); }
+    .lab .rotulo .var { font-size: 0.75rem; }
+    .lab .rotulo__cuerpo { flex-basis: auto; gap: var(--esp-1); }
+
+    /* ---------- You do the way back ---------- */
+    .vuelta__opciones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .vuelta__opciones .btn { font-family: var(--fuente-codigo); font-size: var(--texto-md); }
+    .vuelta__opciones--espera { visibility: hidden; }
+    /* On mobile, “Fill the stack again” keeps its place from the start: it goes above
+       the stack and the output, and pushed them down when it showed up */
+    @media (max-width: 1023.98px) {
+      #pv-otra[hidden] { display: inline-flex !important; visibility: hidden; }
+    }
+
+    /* ---------- while versus recursion ---------- */
+    .equivale { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
+    .equivale th { padding: var(--esp-1) var(--esp-2); border-bottom: 2px solid var(--color-borde); text-align: left; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .equivale td { padding: var(--esp-2); border-bottom: 1px solid var(--color-borde); vertical-align: top; transition: background-color var(--dur); }
+    .equivale td code { display: inline; padding: 0; background: none; font-size: inherit; font-weight: 700; white-space: normal; }
+    .equivale .equivale__que { display: block; margin-bottom: 0.15em; font-family: var(--fuente); font-weight: 600; color: var(--color-texto-suave); }
+    .equivale tr.equivale--activa td { background: var(--color-acento-suave); }
+    .equivale tr.equivale--activa td:first-child { box-shadow: inset 4px 0 0 var(--color-acento); }
+    #p5-x { margin-top: 0; }
+    .dos-tablas { margin-top: var(--esp-4); display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--esp-3); }
+    .seguimiento { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--texto-xs); }
+    .seguimiento caption { margin: 0 0 var(--esp-1); text-align: left; font-weight: 700; color: var(--color-texto-suave); }
+    .seguimiento caption small { display: block; font-weight: 400; }
+    .seguimiento th { padding: var(--esp-1); border-bottom: 2px solid var(--color-borde); text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .seguimiento td { padding: 0.3rem var(--esp-1); border-bottom: 1px solid var(--color-borde); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; }
+    .seguimiento tbody tr { animation: aparecer var(--dur) ease both; }
+    .seguimiento td.seguimiento__fin { text-align: left; font-family: var(--fuente); font-weight: 600; color: var(--color-ok); }
+    .seguimiento td.seguimiento__fin code { font-size: inherit; }
+    .seguimiento td.seguimiento__no { color: var(--color-pista); }
+    .seguimiento__vacio td { color: var(--color-texto-suave); font-family: var(--fuente); font-weight: 400; font-style: italic; }
+    .seguimiento__total { margin: var(--esp-1) 0 0; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .seguimiento__total strong { font-family: var(--fuente-codigo); font-size: var(--texto-md); color: var(--color-azul); }
+
+    /* ---------- The slice trap ---------- */
+    .rebanada-zona { margin-top: var(--esp-2); }
+    .rebanada-zona .lista__fila { transition: transform var(--dur) ease; }
+
+    /* ---------- Blanks inside the code ---------- */
+    .codigo__elegir { font: inherit; font-weight: 700; max-width: 100%; padding: 0 0.3em; border: 2px dashed var(--tk-numero); border-radius: 6px; background: #232a33; color: var(--tk-numero); cursor: pointer; }
+    .codigo__elegir:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: 2px; }
+    .codigo__elegir--lleno { border-style: solid; }
+
+    /* ---------- Challenge tests ---------- */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 120ms; }
+    .pruebas li:nth-child(3) { animation-delay: 240ms; }
+    .pruebas li:nth-child(4) { animation-delay: 360ms; }
+    .pruebas li:nth-child(5) { animation-delay: 480ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* The search code has 13 lines: a bit smaller, so the step fits */
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.86rem; line-height: 1.45; padding: var(--esp-3) 0; }
+      .lab .codigo--largo .linea { min-height: 1.45em; }
+      .codigo--reto { font-size: 1rem; }
+    }
+    @media (max-width: 480px) {
+      /* Long lines wrap below, instead of hiding off to the right */
+      .lab .codigo--largo, .codigo--reto { font-size: 0.75rem; }
+      .codigo--largo .linea, .codigo--reto .linea { padding-left: 2.5rem; padding-right: var(--esp-2); white-space: pre-wrap; }
+      .codigo--largo .linea::before, .codigo--reto .linea::before { width: 1.75rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); font-size: var(--texto-xs); }
+      .vuelta__opciones .btn { font-size: var(--texto-sm); }
+      .equivale td, .equivale th { padding-left: var(--esp-1); padding-right: var(--esp-1); }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual > :first-child { margin-top: var(--esp-5); }
+    }
+    /* RETO-LAB */
+    /* Challenge: after answering, the five tests go in two or three columns under the code, so
+       the code, the tests and the message fit together on the screen; on mobile, a smaller font
+       keeps “RecursionError” on the same row as its call */
+    @media (min-width: 1024px) {
+      #reto-pruebas { grid-template-columns: repeat(auto-fill, minmax(18.5rem, 1fr)); column-gap: var(--esp-3); margin-top: var(--esp-3); }
+      #reto-pruebas li { gap: var(--esp-2); padding: 0.375rem var(--esp-3); font-size: 0.8125rem; }
+    }
+    @media (max-width: 480px) {
+      #reto-pruebas li { gap: var(--esp-2); padding: 0.375rem var(--esp-2); font-size: 0.75rem; }
+    }
+    /* /RETO-LAB */
+  </style>
+</head>
+<body>
+<div class="leccion" data-visual-fija data-leccion="busquedas-recursiva">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: the same question, but smaller -->
+    <section class="paso" id="paso-mitad" data-requiere aria-labelledby="h-mitad">
+      <span class="paso__etiqueta">Searching 5/7 · Binary search with recursion</span>
+      <h1 class="paso__titulo" id="h-mitad">The same question, but smaller</h1>
+      <p>Find the <strong id="p1-x">17</strong> in the sorted grades. Look at the middle one and decide in which half the search <strong>goes on</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="rotulo-lista"><code>grades</code> from lowest to highest</p>
+          <div id="p1-lista"></div>
+          <p class="contador" id="p1-contador">Comparisons: <strong>0</strong></p>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="elegir" id="p1-acciones" role="group" aria-label="What to do now"></div>
+        </div>
+        <div class="lab__visual">
+          <p class="preguntas__titulo">What you ask yourself each time</p>
+          <ol class="preguntas" id="p1-preguntas" aria-live="polite"></ol>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The recursive function, line by line -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="h-traza">
+      <h2 class="paso__titulo" id="h-traza">One call per half</h2>
+      <p><code>search</code> also gets <strong>between which positions</strong> to search. If the middle one is not it, it calls itself with the half that is left.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p2-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p2-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p2-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p2-lista"></div>
+          <p class="contador" id="p2-contador">Comparisons: <strong>0</strong></p>
+          <div class="pila" id="p2-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. The student does the way back -->
+    <section class="paso" id="paso-vuelta" data-visual-fija="no" data-requiere aria-labelledby="h-vuelta">
+      <h2 class="paso__titulo" id="h-vuelta">Now you do the way back</h2>
+      <p>The stack is full: the top card found the 17. Tap the card that can return and say what it <strong>returns</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="pv-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="pv-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="pv-otra" hidden>↺ Fill the stack again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="prediccion__pregunta" id="pv-pregunta" aria-live="polite"></p>
+          <div class="prediccion vuelta__opciones" id="pv-opciones" role="group" aria-labelledby="pv-pregunta"></div>
+          <div class="pila" id="pv-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="pv-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="pv-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. When it is not there: the base case -->
+    <section class="paso" id="paso-no-esta" data-requiere aria-labelledby="h-no-esta">
+      <h2 class="paso__titulo" id="h-no-esta">What if it is not there?</h2>
+      <p>Now search for <strong>10</strong>, which is not in <code>grades</code>. Each call makes the range smaller… until no slot is left.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p4-pregunta">Before you run it: what does it print?</p>
+          <div class="prediccion prediccion--codigo" id="p4-prediccion" role="group" aria-labelledby="p4-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="-1" aria-pressed="false">-1</button>
+            <button type="button" class="btn btn-secundario" data-valor="None" aria-pressed="false">None</button>
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">an error</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p4-lista"></div>
+          <p class="contador" id="p4-contador">Comparisons: <strong>0</strong></p>
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. With while or with recursion -->
+    <section class="paso" id="paso-while" data-requiere aria-labelledby="h-while">
+      <h2 class="paso__titulo" id="h-while">With while or with recursion</h2>
+      <p>In the last lesson, a <code>while</code> moved <code>low</code> and <code>high</code>. Here, each call gets its own. The rest (<code>mid</code> and the <code>if</code>s) is the same.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">Searching for the same number, which one looks at fewer slots?</p>
+          <div class="prediccion" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="while" aria-pressed="false">With while</button>
+            <button type="button" class="btn btn-secundario" data-valor="rec" aria-pressed="false">With recursion</button>
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">The same</button>
+          </div>
+          <table class="equivale" id="p5-equivale">
+            <thead><tr><th scope="col">With while</th><th scope="col">With recursion</th></tr></thead>
+            <tbody>
+              <tr data-c="empieza">
+                <td><span class="equivale__que">Starts with the whole list</span><code>low = 0</code><br><code>high = len(items) - 1</code></td>
+                <td><span class="equivale__que">The first call</span><code>search(grades, x, 0, len(grades) - 1)</code></td>
+              </tr>
+              <tr data-c="derecha">
+                <td><span class="equivale__que">Goes on to the right</span><code>low = mid + 1</code></td>
+                <td><span class="equivale__que">Another call, to the right</span><code>return search(items, x, mid + 1, high)</code></td>
+              </tr>
+              <tr data-c="izquierda">
+                <td><span class="equivale__que">Goes on to the left</span><code>high = mid - 1</code></td>
+                <td><span class="equivale__que">Another call, to the left</span><code>return search(items, x, low, mid - 1)</code></td>
+              </tr>
+              <tr data-c="nada">
+                <td><span class="equivale__que">Nothing is left</span><code>while low &lt;= high:</code> ends and <code>return -1</code></td>
+                <td><span class="equivale__que">The base case</span><code>if low &gt; high:</code> <code>return -1</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir elegir--codigo" id="p5-x" role="group" aria-label="Which number to search for">
+            <button type="button" class="btn btn-secundario" data-x="19" aria-pressed="true">x = 19</button>
+            <button type="button" class="btn btn-secundario" data-x="6" aria-pressed="false">x = 6</button>
+            <button type="button" class="btn btn-secundario" data-x="14" aria-pressed="false">x = 14</button>
+            <button type="button" class="btn btn-secundario" data-x="10" aria-pressed="false">x = 10</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar" disabled>▶ Run both</button>
+          </div>
+          <div class="dos-tablas">
+            <div>
+              <table class="seguimiento" id="p5-while">
+                <caption>With while <small>one row per round</small></caption>
+                <thead><tr><th scope="col">low</th><th scope="col">high</th><th scope="col">mid</th><th scope="col">items[mid]</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <p class="seguimiento__total" id="p5-while-total" aria-live="polite"></p>
+            </div>
+            <div>
+              <table class="seguimiento" id="p5-rec">
+                <caption>With recursion <small>one row per call</small></caption>
+                <thead><tr><th scope="col">low</th><th scope="col">high</th><th scope="col">mid</th><th scope="col">items[mid]</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <p class="seguimiento__total" id="p5-rec-total" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. The trap: searching in a slice -->
+    <section class="paso" id="paso-rebanada" data-requiere aria-labelledby="h-rebanada">
+      <h2 class="paso__titulo" id="h-rebanada">The slice trap</h2>
+      <p>What if, instead of passing <code>low</code> and <code>high</code>, we pass only the half that is left, as a slice? It looks easier…</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p6-pregunta">Before you run it: what does it print?</p>
+          <div class="prediccion prediccion--codigo" id="p6-prediccion" role="group" aria-labelledby="p6-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="6" aria-pressed="false">6</button>
+            <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">1</button>
+            <button type="button" class="btn btn-secundario" data-valor="17" aria-pressed="false">17</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p6-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p6-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p6-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista"><code>grades</code></p>
+          <div id="p6-notas"></div>
+          <div class="rebanada-zona" id="p6-rebanada-zona" hidden>
+            <p class="rotulo-lista rotulo-lista--nueva">the slice: another list, from 0</p>
+            <div id="p6-rebanada"></div>
+          </div>
+          <div class="pila" id="p6-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola consola--fases" id="p6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Challenge: complete the two calls -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Complete the two calls</h2>
+      <p>Choose what goes in each blank. We will test it by searching for five numbers in <code>grades = [6, 9, 11, 12, 14, 15, 17, 19]</code>.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--reto" id="reto-codigo" aria-label="Code with two blanks"></pre>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 8. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Each call looks at the middle one and, if it is not it, calls itself with the <strong>half that is left</strong> (same list, a new <code>low</code> and <code>high</code>); what it finds goes down <strong>unchanged</strong>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../compare/index.html">Next: Which one is faster? →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/pila.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function demora(ms) { return Pasos.reducirMovimiento ? Math.min(ms, 200) : ms; }
+
+  var leccion; // set at the end, with Pasos.iniciar
+
+  /* ---------- Colored Python code ----------
+     Each line of the text is a .linea; {{name}} leaves a <span data-hueco="name">
+     where a number that changes or a blank goes later. */
+  var PALABRAS = { def: 1, if: 1, elif: 1, else: 1, return: 1, while: 1, for: 1, in: 1, not: 1, and: 1, or: 1, True: 1, False: 1, None: 1 };
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function resaltar(linea) {
+    var re = /(\{\{\w+\}\})|(#.*$)|("[^"]*")|(\d+)|([A-Za-z_]\w*)|([\s\S])/g;
+    var m, html = "";
+    while ((m = re.exec(linea))) {
+      if (m[1]) html += '<span data-hueco="' + m[1].slice(2, -2) + '"></span>';
+      else if (m[2]) html += '<span class="tk-comentario">' + esc(m[2]) + "</span>";
+      else if (m[3]) html += '<span class="tk-texto">' + esc(m[3]) + "</span>";
+      else if (m[4]) html += '<span class="tk-numero">' + m[4] + "</span>";
+      else if (m[5]) {
+        var clase = PALABRAS[m[5]] ? "tk-palabra" : /^\s*\(/.test(linea.slice(re.lastIndex)) ? "tk-funcion" : "tk-variable";
+        html += '<span class="' + clase + '">' + m[5] + "</span>";
+      } else html += esc(m[6]);
+    }
+    return html;
+  }
+
+  function escribirCodigo(pre, texto) {
+    pre.innerHTML = "<code>" + texto.split("\n").map(function (l) {
+      return '<span class="linea">' + resaltar(l) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function hueco(pre, nombre) { return pre.querySelector('[data-hueco="' + nombre + '"]'); }
+
+  /* ---------- The search ---------- */
+  var NOTAS = [6, 9, 11, 12, 14, 15, 17, 19];
+  var NOTAS_TEXTO = "[6, 9, 11, 12, 14, 15, 17, 19]";
+
+  var FUNCION = [
+    "def search(items, x, low, high):",
+    "    if low > high:",
+    "        return -1",
+    "    mid = (low + high) // 2",
+    "    if items[mid] == x:",
+    "        return mid",
+    "    elif items[mid] < x:",
+    "        return search(items, x, mid + 1, high)",
+    "    else:",
+    "        return search(items, x, low, mid - 1)"
+  ];
+  var PROGRAMA = FUNCION.concat(["", "grades = " + NOTAS_TEXTO, "print(search(grades, {{x}}, 0, len(grades) - 1))"]).join("\n");
+  // Indexes (from 0) of the program lines
+  var L = { def: 0, base: 1, menos1: 2, medio: 3, igual: 4, devuelve: 5, menor: 6, derecha: 7, izquierda: 9, notas: 11, print: 12 };
+
+  function ponerX(pre, x) {
+    var h = hueco(pre, "x");
+    h.className = "tk-numero";
+    h.textContent = String(x);
+  }
+
+  // The calls search(grades, x, 0, 7) makes: low, high, mid, items[mid] and what happened
+  function recorrido(x) {
+    var llamadas = [];
+    var a = 0;
+    var b = NOTAS.length - 1;
+    for (;;) {
+      if (a > b) { llamadas.push({ a: a, b: b, base: true }); break; }
+      var m = Math.floor((a + b) / 2);
+      var c = { a: a, b: b, m: m, v: NOTAS[m] };
+      llamadas.push(c);
+      if (c.v === x) { c.res = "igual"; break; }
+      if (c.v < x) { c.res = "menor"; a = m + 1; } else { c.res = "mayor"; b = m - 1; }
+    }
+    var ultima = llamadas[llamadas.length - 1];
+    var mirados = llamadas.filter(function (c) { return !c.base; }).length;
+    return { x: x, llamadas: llamadas, resultado: ultima.base ? -1 : ultima.m, mirados: mirados };
+  }
+
+  /* ---------- Paint the list: covered, with pointers and the discarded half dimmed ----------
+     e brings: vistos { i: "igual" | "distinta" }, nuevo (the one uncovered in this step),
+     rango [low, high] (what is outside is dimmed) and punteros (or nothing). */
+  function pintarLista(l, e) {
+    var vistos = e.vistos || {};
+    l.tapar(function (i) { return !(i in vistos) || i === e.nuevo; });
+    if (e.nuevo !== undefined && e.nuevo !== null) l.destapar(e.nuevo);
+    l.clases(function (i) {
+      if (i in vistos) return "lista__casilla--" + vistos[i];
+      if (e.rango && (i < e.rango[0] || i > e.rango[1])) return "lista__casilla--apagada";
+      return "";
+    });
+    l.punteros(e.punteros || null);
+  }
+
+  function punteros(a, b, m) {
+    return {
+      low: { i: a, color: "azul" },
+      mid: m === undefined || m === null ? null : { i: m, color: "morado" },
+      high: { i: b, color: "naranja" }
+    };
+  }
+
+  function pintarContador(el, n) {
+    var fuerte = el.querySelector("strong");
+    if (fuerte.textContent === String(n)) return;
+    fuerte.textContent = String(n);
+    el.classList.remove("contador--cambio");
+    void el.offsetWidth;
+    if (n > 0) el.classList.add("contador--cambio");
+  }
+
+  /* ---------- 1. The same question, but smaller ---------- */
+  var lista1 = Lista.crear($("p1-lista"), NOTAS);
+  var OBJETIVOS1 = [17, 9, 19];
+  var juego1 = null;
+
+  function textoPregunta(x, a, b) {
+    return a === 0 && b === NOTAS.length - 1 ? "Search for " + x + " in the whole list" : "Search for " + x + " between " + a + " and " + b;
+  }
+
+  function agregarPregunta(fin) {
+    var j = juego1;
+    var li = crear("li", fin ? "preguntas__fin" : "");
+    li.appendChild(crear("span", "preguntas__texto", fin ? "It is at position " + j.m + "!" : textoPregunta(j.x, j.a, j.b)));
+    li.appendChild(crear("code", "preguntas__codigo", fin ? "return " + j.m : "search(grades, " + j.x + ", " + j.a + ", " + j.b + ")"));
+    $("p1-preguntas").appendChild(li);
+  }
+
+  function boton(texto, alTocar) {
+    var b = crear("button", "btn btn-secundario", texto);
+    b.type = "button";
+    b.addEventListener("click", function () { alTocar(b); });
+    return b;
+  }
+
+  function pintar1() {
+    var j = juego1;
+    pintarLista(lista1, { vistos: j.vistos, nuevo: j.nuevo, rango: [j.a, j.b], punteros: punteros(j.a, j.b, j.fase === "elegir" || j.fase === "fin" ? j.m : null) });
+    j.nuevo = null;
+    pintarContador($("p1-contador"), j.mirados);
+    var acc = $("p1-acciones");
+    acc.textContent = "";
+    if (j.fase === "mirar") {
+      $("p1-explicacion").innerHTML = j.mirados === 0
+        ? "They are covered: the PC only sees a slot when it <strong>looks</strong> at it. Start with the middle one."
+        : "It is the <strong>same question</strong> as before, with fewer slots. Do the same: look at the middle one.";
+      acc.appendChild(boton("Look at the middle one", mirar1));
+    } else if (j.fase === "elegir") {
+      var m = j.m;
+      $("p1-explicacion").innerHTML = "In the middle (position " + m + ") there is a <strong>" + j.v + "</strong>, not a " + j.x + ". Where do you keep searching?";
+      if (j.a <= m - 1) acc.appendChild(boton("Between " + j.a + " and " + (m - 1), function (b) { elegir1("izq", b); }));
+      if (m + 1 <= j.b) acc.appendChild(boton("Between " + (m + 1) + " and " + j.b, function (b) { elegir1("der", b); }));
+    } else {
+      var otra = boton("↺ Search for another number", function () {
+        empezar1(OBJETIVOS1[(OBJETIVOS1.indexOf(j.x) + 1) % OBJETIVOS1.length]);
+        $("p1-acciones").querySelector("button").focus();
+      });
+      acc.appendChild(otra);
+    }
+  }
+
+  function empezar1(x) {
+    juego1 = { x: x, a: 0, b: NOTAS.length - 1, m: null, v: null, fase: "mirar", vistos: {}, nuevo: null, mirados: 0, preguntas: 1 };
+    $("p1-x").textContent = String(x);
+    $("p1-preguntas").textContent = "";
+    agregarPregunta(false);
+    Pasos.limpiarFeedback($("p1-fb"));
+    pintar1();
+  }
+
+  function mirar1() {
+    var j = juego1;
+    j.m = Math.floor((j.a + j.b) / 2);
+    j.v = NOTAS[j.m];
+    j.mirados++;
+    j.nuevo = j.m;
+    j.vistos[j.m] = j.v === j.x ? "igual" : "distinta";
+    if (j.v === j.x) {
+      j.fase = "fin";
+      agregarPregunta(true);
+      pintar1();
+      $("p1-explicacion").innerHTML = "There is the <strong>" + j.x + "</strong>! You looked at only <strong>" + j.mirados + "</strong> " + (j.mirados === 1 ? "slot" : "slots") + " out of 8.";
+      Pasos.feedback($("p1-fb"), "ok", "Each time you asked yourself the same question, with a smaller range: " +
+        (j.preguntas > 1 ? "the whole list, then the half that was left" + (j.preguntas > 2 ? ", then half of that" : "") : "the whole list") +
+        ". A function that asks itself the same question with a smaller problem is a recursive function: search calls itself with the half that is left.");
+      $("p1-acciones").querySelector("button").focus();
+      leccion.desbloquear();
+      return;
+    }
+    j.fase = "elegir";
+    pintar1();
+    var primero = $("p1-acciones").querySelector("button");
+    if (primero) primero.focus();
+  }
+
+  function elegir1(lado, b) {
+    var j = juego1;
+    var bien = j.v < j.x ? "der" : "izq";
+    if (lado !== bien) {
+      b.classList.add("btn--mal");
+      $("p1-explicacion").innerHTML = '<span class="pista-texto">💡 They are sorted: to the ' + (lado === "izq" ? "left of " + j.v + " there are only <strong>lower</strong> grades" : "right of " + j.v + " there are only <strong>higher</strong> grades") +
+        ", and " + j.x + " is " + (j.x > j.v ? "higher" : "lower") + " than " + j.v + ".</span>";
+      return;
+    }
+    if (bien === "der") j.a = j.m + 1; else j.b = j.m - 1;
+    j.fase = "mirar";
+    j.preguntas++;
+    agregarPregunta(false);
+    pintar1();
+    $("p1-acciones").querySelector("button").focus();
+  }
+
+  /* ---------- The trace of search(grades, x, 0, 7) ----------
+     One step per line. The state brings the stack (Pila.crear) and what pintarLista paints. */
+  function trazaBuscar(x) {
+    var r = recorrido(x);
+    var ll = r.llamadas;
+    var vistos = {};
+    var mirados = 0;
+    var pasos = [];
+
+    function titulo(i) { return "search(grades, " + x + ", " + ll[i].a + ", " + ll[i].b + ")"; }
+    function programa(recibe) {
+      var p = Pila.programa();
+      p.linea = L.print;
+      p.ficha = "program";
+      p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+      if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+      return p;
+    }
+    function vars(i, conMedio) {
+      var c = ll[i];
+      var v = [["low", c.a], ["high", c.b]];
+      if (conMedio && !c.base) v.push(["mid", c.m]);
+      return v;
+    }
+    function tarjeta(i, conMedio, extra) {
+      var t = Pila.llamada(titulo(i), vars(i, conMedio));
+      for (var k in extra) t[k] = extra[k];
+      return t;
+    }
+    function lineaLlamada(i) { return ll[i].res === "menor" ? L.derecha : L.izquierda; }
+    function espera(i) { return tarjeta(i, true, { linea: lineaLlamada(i), falta: "return ▢", ficha: ll[i].a + "…" + ll[i].b }); }
+    function debajo(i) {
+      var lista = [programa()];
+      for (var j = 0; j < i; j++) lista.push(espera(j));
+      return lista;
+    }
+    function copia(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
+    // The list as card i sees it
+    function vista(i, conMedio, extra) {
+      var c = ll[i];
+      var e = { vistos: copia(vistos), mirados: mirados, rango: [c.a, c.b], punteros: punteros(c.a, c.b, conMedio && !c.base ? c.m : null) };
+      for (var k in extra) e[k] = extra[k];
+      return e;
+    }
+
+    pasos.push({ linea: L.def, texto: "Python remembers the recipe <strong>search</strong>. It does not run it yet.",
+      estado: { pila: [Pila.programa()], vistos: {}, mirados: 0 } });
+    pasos.push({ linea: L.notas, texto: "The 8 grades, sorted. They are <strong>covered</strong>: the PC only sees a slot when it looks at it.",
+      estado: { pila: [Pila.programa()], vistos: {}, mirados: 0 } });
+    pasos.push({ linea: L.print, fase: "ida", parada: true,
+      texto: "<code>len(grades) - 1</code> is 7. The <code>print</code> needs <strong>" + titulo(0) + "</strong>: Python calls it.",
+      estado: { pila: [programa(), Pila.llamada(titulo(0), [])], vistos: {}, mirados: 0 } });
+
+    ll.forEach(function (c, i) {
+      var abajo = debajo(i);
+      var nivel = abajo.length;
+      pasos.push({ linea: L.def, fase: "ida",
+        texto: i === 0 ? "The card is born with <strong>low = " + c.a + "</strong> and <strong>high = " + c.b + "</strong>: it searches the whole list."
+          : "Another <strong>search</strong> card, with <strong>its own low = " + c.a + " and high = " + c.b + "</strong>: the half that was left.",
+        estado: vista(i, false, { pila: abajo.concat([tarjeta(i, false)]) }) });
+      pasos.push({ linea: L.base,
+        texto: "Is <code>low &gt; high</code>? <code>" + c.a + " &gt; " + c.b + "</code> is " + chip(!!c.base) +
+          (c.base ? ": the pointers crossed, <strong>no slot is left</strong>. It is the base case." : ": there are still slots left."),
+        estado: vista(i, false, { pila: abajo.concat([tarjeta(i, false)]), leer: [nivel, "low"] }) });
+      if (c.base) {
+        pasos.push({ linea: L.menos1, texto: "<strong>return -1</strong>: it is not there. It returns -1 without calling anyone.",
+          estado: vista(i, false, { pila: abajo.concat([tarjeta(i, false, { devuelve: "-1" })]) }) });
+        return;
+      }
+      pasos.push({ linea: L.medio, texto: "<code>mid = (" + c.a + " + " + c.b + ") // 2</code> = <strong>" + c.m + "</strong>.",
+        estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true)]), leer: [nivel, "mid"] }) });
+      mirados++;
+      vistos[c.m] = c.res === "igual" ? "igual" : "distinta";
+      pasos.push({ linea: L.igual,
+        texto: "It looks at slot " + c.m + ": is <code>" + c.v + " == " + x + "</code>? " + chip(c.res === "igual") + (c.res === "igual" ? ": it found it!" : "."),
+        estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true)]), nuevo: c.m }) });
+      if (c.res === "igual") {
+        pasos.push({ linea: L.devuelve, texto: "<strong>return mid</strong>: it returns <strong>" + c.m + "</strong>, the position where " + x + " is.",
+          estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true, { devuelve: String(c.m) })]) }) });
+        return;
+      }
+      var der = c.res === "menor";
+      pasos.push({ linea: L.menor,
+        texto: "Is <code>" + c.v + " &lt; " + x + "</code>? " + chip(der) + ": " + x + " can only be to the <strong>" + (der ? "right" : "left") + "</strong> of the middle.",
+        estado: vista(i, true, { pila: abajo.concat([tarjeta(i, true)]) }) });
+      var sig = ll[i + 1];
+      pasos.push({ linea: lineaLlamada(i),
+        texto: "It calls with " + (der ? "<code>mid + 1</code>" : "<code>mid - 1</code>") + ": <strong>search(grades, " + x + ", " + sig.a + ", " + sig.b + ")</strong>. " +
+          "This card waits with <code>return ▢</code>.",
+        estado: vista(i, true, { pila: abajo.concat([espera(i), Pila.llamada(titulo(i + 1), [])]), rango: [sig.a, sig.b] }) });
+    });
+
+    // The way back: the result goes down card by card, unchanged
+    var res = String(r.resultado);
+    for (var i = ll.length - 2; i >= 0; i--) {
+      pasos.push({ linea: lineaLlamada(i), flecha: true, fase: "vuelta", parada: true,
+        texto: titulo(i + 1) + " returned <strong>" + res + "</strong> and its card left. This one goes on at line " + (lineaLlamada(i) + 1) +
+          ": <code>return ▢</code> is <code>return " + res + "</code>.",
+        estado: vista(i, true, { pila: debajo(i).concat([tarjeta(i, true, { linea: lineaLlamada(i), sigue: true, falta: "return ▢", recibe: res })]) }) });
+      pasos.push({ linea: lineaLlamada(i), fase: "vuelta",
+        texto: "It adds nothing and changes nothing: it returns <strong>" + res + "</strong> as it is to the one below.",
+        estado: vista(i, true, { pila: debajo(i).concat([tarjeta(i, true, { devuelve: res })]) }) });
+    }
+    pasos.push({ linea: L.print, flecha: true, fase: "vuelta", salida: res, parada: true,
+      texto: titulo(0) + " returned <strong>" + res + "</strong> to the program: <code>print(" + res + ")</code> shows it.",
+      estado: { pila: [programa(res)], vistos: copia(vistos), mirados: mirados, rango: r.resultado === -1 ? [1, 0] : null } });
+    return { pasos: pasos, r: r };
+  }
+
+  function crearTrazaBuscar(prefijo, obtenerX, alTerminar, alReiniciar) {
+    var pre = $(prefijo + "-codigo");
+    var lista = Lista.crear($(prefijo + "-lista"), NOTAS);
+    lista.tapar(true);
+    var pila = Pila.crear($(prefijo + "-pila"), { codigo: pre, rotulo: true });
+    var traza = Traza.crear({
+      codigo: pre,
+      explicacion: $(prefijo + "-explicacion"),
+      consola: $(prefijo + "-consola"),
+      ejecutar: $(prefijo + "-ejecutar"),
+      reproducir: $(prefijo + "-reproducir"),
+      reiniciar: $(prefijo + "-reiniciar"),
+      generar: function () { return trazaBuscar(obtenerX()).pasos; },
+      pila: pila,
+      intervalo: 1000,
+      alReiniciar: function () {
+        pila.vaciar();
+        lista.tapar(true);
+        lista.clases(null);
+        lista.punteros(null);
+        pintarContador($(prefijo + "-contador"), 0);
+        Pasos.limpiarFeedback($(prefijo + "-fb"));
+        if (alReiniciar) alReiniciar();
+      },
+      alPaso: function (paso) {
+        pila.pintar(paso.estado);
+        pintarLista(lista, paso.estado);
+        pintarContador($(prefijo + "-contador"), paso.estado.mirados || 0);
+      },
+      alTerminar: alTerminar
+    });
+    return { traza: traza, lista: lista, pila: pila };
+  }
+
+  /* ---------- 2. One call per half ---------- */
+  escribirCodigo($("p2-codigo"), PROGRAMA);
+  var x2 = 17;
+  ponerX($("p2-codigo"), x2);
+  var t2 = crearTrazaBuscar("p2", function () { return x2; }, function () {
+    var r = recorrido(x2);
+    var n = r.llamadas.length;
+    Pasos.feedback($("p2-fb"), "ok", "It found " + x2 + " at position " + r.resultado + " by looking at " + r.mirados + (r.mirados === 1 ? " slot" : " slots") + " out of 8, with " +
+      n + (n === 1 ? " call" : " calls") + ". Each call looked at one and passed the half that was left to the next one." +
+      (n > 1 ? " On the way back, the " + r.resultado + " went down the stack unchanged: each card only did return ▢." : ""));
+    leccion.desbloquear();
+  });
+
+
+  /* ---------- 3. You do the way back ----------
+     The stack starts full: search(…, 0, 7) waits for search(…, 4, 7), which waits for
+     search(…, 6, 7), which found the 17. The student taps the top card and chooses what
+     it returns; when right, its value goes down into the ▢ of the one below. */
+  escribirCodigo($("pv-codigo"), PROGRAMA);
+  ponerX($("pv-codigo"), 17);
+  var VUELTA = recorrido(17);           // three calls; the top one returns 6
+  var LLV = VUELTA.llamadas;
+  var RES = String(VUELTA.resultado);
+  var pilaV = Pila.crear($("pv-pila"), { codigo: $("pv-codigo"), rotulo: true, alTocar: tocarVuelta });
+  var vuelta = null;   // { i: top card (2 … 0, -1 the program), fase: "tocar" | "elegir" | "baja" | "fin" }
+  var timerV = null;
+
+  function tituloV(i) { return "search(grades, 17, " + LLV[i].a + ", " + LLV[i].b + ")"; }
+  function varsV(i) { return [["low", LLV[i].a], ["high", LLV[i].b], ["mid", LLV[i].m]]; }
+  function lineaLlamadaV(i) { return LLV[i].res === "menor" ? L.derecha : L.izquierda; }
+  function programaV(recibe) {
+    var p = Pila.programa();
+    p.linea = L.print;
+    p.ficha = "program";
+    p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+    if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+    return p;
+  }
+  function esperaV(i) {
+    var t = Pila.llamada(tituloV(i), varsV(i));
+    t.linea = lineaLlamadaV(i);
+    t.falta = "return ▢";
+    t.ficha = LLV[i].a + "…" + LLV[i].b;
+    return t;
+  }
+  function debajoV(i) {
+    var lista = [programaV()];
+    for (var j = 0; j < i; j++) lista.push(esperaV(j));
+    return lista;
+  }
+  function arribaV(i, extra) {
+    var t = Pila.llamada(tituloV(i), varsV(i));
+    if (i < LLV.length - 1) {
+      t.linea = lineaLlamadaV(i);
+      t.sigue = true;
+      t.falta = "return ▢";
+      t.recibe = RES;
+    }
+    for (var c in extra) t[c] = extra[c];
+    return t;
+  }
+
+  function estadoV(i, fase) {
+    if (i === -1) {
+      return fase === "fin" ? { pila: [Pila.programa()] }
+        : { pila: [programaV(RES)], tocable: fase === "tocar" ? "👆 Tap it: the program goes on" : "" };
+    }
+    if (fase === "baja") return { pila: debajoV(i).concat([arribaV(i, { devuelve: RES })]) };
+    return { pila: debajoV(i).concat([arribaV(i)]), tocable: fase === "tocar" ? "👆 Tap it: only this one can return" : "" };
+  }
+
+  // What each card returns (always 6) and three wrong answers, each one with its hint
+  function opcionesV(i) {
+    var c = LLV[i];
+    var top = i === LLV.length - 1;
+    var lista = top ? [
+      { v: 17, pista: "17 is <code>x</code>, the number you were searching for. <code>return mid</code> returns the <strong>position</strong> where it is: its mid." },
+      { v: c.b, pista: c.b + " is its <code>high</code>. Line 6 says <code>return mid</code>, and its mid is " + c.m + "." },
+      { v: LLV[0].m, pista: LLV[0].m + " is the mid of the first call. This card has <strong>its own</strong> mid: " + c.m + "." }
+    ] : [
+      { v: c.m, pista: c.m + " is its mid, but the 17 was not there. This card no longer searches: it returns what the one above returned to it, <code>return ▢</code>." },
+      { v: VUELTA.resultado + 1, pista: "Line " + (lineaLlamadaV(i) + 1) + " is <code>return search(…)</code>: it adds nothing to what it gets." },
+      { v: c.a, pista: c.a + " is its <code>low</code>. It returns what it got from the one above, as it is." },
+      { v: c.b, pista: c.b + " is its <code>high</code>. It returns what it got from the one above, as it is." }
+    ];
+    var vistos = {};
+    vistos[VUELTA.resultado] = true;
+    lista = lista.filter(function (o) {
+      if (vistos[o.v]) return false;
+      vistos[o.v] = true;
+      return true;
+    }).slice(0, 3);
+    lista.push({ v: VUELTA.resultado, bien: true });
+    return lista.sort(function (a, b) { return a.v - b.v; });
+  }
+
+  function textosV(i, fase) {
+    if (i === -1 && fase === "fin") return { explica: "The program prints <strong>" + RES + "</strong>: the 17 is in <code>grades[" + RES + "]</code>.", pregunta: "Done! No calls are left: only the program." };
+    if (i === -1) return { explica: tituloV(0) + " returned <strong>" + RES + "</strong> to the program, which goes on at line 13 with <code>print(" + RES + ")</code>.", pregunta: "👆 Tap the program so it goes on." };
+    var top = i === LLV.length - 1;
+    if (fase === "baja") return { explica: tituloV(i) + " returns <strong>" + RES + "</strong> and its card goes away: the value goes down to " + (i > 0 ? tituloV(i - 1) : "the program") + ".", pregunta: "" };
+    if (fase === "tocar") return {
+      explica: top ? "At the top is <strong>" + tituloV(i) + "</strong>: it looked at slot " + LLV[i].m + " and found the 17. The others wait."
+        : "<strong>" + tituloV(i) + "</strong> got " + RES + " and goes on at line " + (lineaLlamadaV(i) + 1) + ". Now it is the top one.",
+      pregunta: "👆 Tap the top card of the stack." };
+    return {
+      explica: top ? "<code>items[" + LLV[i].m + "] == 17</code> is " + chip(true) + ": it goes on at line 6, <code>return mid</code>."
+        : "It still has to do <code>return ▢</code>, and the " + RES + " fell into the blank.",
+      pregunta: "What does " + tituloV(i) + " return?" };
+  }
+
+  function lineaV(i, fase) {
+    if (i === -1) return L.print;
+    if (i === LLV.length - 1) return fase === "tocar" ? L.igual : L.devuelve;
+    return lineaLlamadaV(i);
+  }
+
+  function pintarVuelta(desde) {
+    var i = vuelta.i;
+    var fase = vuelta.fase;
+    var linea = lineaV(i, fase);
+    Codigo.marcar($("pv-codigo"), { activas: fase === "fin" ? [] : [linea] });
+    pilaV.pintar(estadoV(i, fase));
+    if (desde !== undefined) Codigo.salto($("pv-codigo"), desde, linea, "vuelta");
+    else Codigo.quitarSalto($("pv-codigo"));
+    var t = textosV(i, fase);
+    $("pv-explicacion").innerHTML = t.explica;
+    $("pv-pregunta").innerHTML = t.pregunta;
+    var opciones = $("pv-opciones");
+    opciones.textContent = "";
+    if (fase === "elegir") {
+      opcionesV(i).forEach(function (o) {
+        opciones.appendChild(boton(String(o.v), function (b) { elegirVuelta(o, b); }));
+      });
+    } else {
+      // They take up their place without showing: the stack below does not jump
+      for (var k = 0; k < 4; k++) opciones.appendChild(crear("button", "btn btn-secundario", "0")).disabled = true;
+    }
+    opciones.classList.toggle("vuelta__opciones--espera", fase !== "elegir");
+  }
+
+  function pararVuelta() {
+    if (timerV) clearTimeout(timerV);
+    timerV = null;
+  }
+
+  function empezarVuelta() {
+    pararVuelta();
+    vuelta = { i: LLV.length - 1, fase: "tocar" };
+    pilaV.vaciar();
+    Codigo.limpiar($("pv-codigo"));
+    Codigo.consola($("pv-consola"), []);
+    Pasos.limpiarFeedback($("pv-fb"));
+    $("pv-otra").hidden = true;
+    pintarVuelta();
+  }
+
+  function pistaV(texto) { return '<span class="pista-texto">💡 ' + texto + "</span>"; }
+
+  // level 0 is the program; card i is at level i + 1
+  function pistaTocarV(nivel) {
+    return pistaV((nivel === 0 ? "The program is paused" : tituloV(nivel - 1) + " is paused") + ": it waits for what the one above returns. " +
+      "Only the <strong>top</strong> card can return.");
+  }
+
+  function tocarVuelta(nivel, arriba) {
+    if (!vuelta || vuelta.fase === "baja" || vuelta.fase === "fin") return;
+    if (!arriba) {
+      $("pv-explicacion").innerHTML = pistaTocarV(nivel);
+      return;
+    }
+    if (vuelta.fase !== "tocar") return;
+    if (vuelta.i === -1) { terminarVuelta(); return; }
+    vuelta.fase = "elegir";
+    pintarVuelta();
+    var primera = $("pv-opciones").querySelector("button");
+    if (primera) primera.focus();
+  }
+
+  function elegirVuelta(o, b) {
+    if (vuelta.fase !== "elegir") return;
+    if (!o.bien) {
+      b.classList.add("btn--mal");
+      $("pv-explicacion").innerHTML = pistaV(o.pista);
+      return;
+    }
+    var i = vuelta.i;
+    var desde = lineaV(i, "elegir");
+    vuelta.fase = "baja";
+    pintarVuelta();
+    timerV = setTimeout(function () {
+      timerV = null;
+      vuelta = { i: i - 1, fase: "tocar" };
+      pintarVuelta(desde);
+      var tope = pilaV.tope();
+      if (tope && ($("pv-pila").contains(document.activeElement) || $("pv-opciones").contains(document.activeElement) || document.activeElement === document.body)) tope.focus();
+    }, demora(900));
+  }
+
+  function terminarVuelta() {
+    vuelta.fase = "fin";
+    Codigo.marcar($("pv-codigo"), { activas: [L.print] });
+    Codigo.agregar($("pv-consola"), RES);
+    Codigo.volarDesdeLinea($("pv-codigo"), $("pv-consola").lastElementChild, RES, "vuelo--salida");
+    pintarVuelta();
+    $("pv-otra").hidden = false;
+    $("pv-otra").focus();
+    Pasos.feedback($("pv-fb"), "ok", "You undid the stack! The top card returned its mid, 6, and the other two returned that same 6 without touching it: " +
+      "their return ▢ only passes down what it gets. In this search, all the work is done on the way in.");
+    leccion.desbloquear();
+  }
+
+  (function () {
+    var estados = [];
+    var textos = [];
+    var preguntas = [];
+    for (var i = LLV.length - 1; i >= -1; i--) {
+      (i === -1 ? ["tocar", "fin"] : ["tocar", "elegir", "baja"]).forEach(function (fase) {
+        estados.push(estadoV(i, fase));
+        textos.push(textosV(i, fase).explica);
+        preguntas.push(textosV(i, fase).pregunta);
+      });
+      if (i >= 0) opcionesV(i).forEach(function (o) { if (!o.bien) textos.push(pistaV(o.pista)); });
+    }
+    for (var nivel = 0; nivel < LLV.length; nivel++) textos.push(pistaTocarV(nivel));
+    pilaV.reservar(estados);
+    Codigo.reservarAlto($("pv-explicacion"), textos, function (copia, texto) { copia.innerHTML = texto; });
+    // The output goes below the question and the stack: both keep the height of their tallest
+    // state (the question is empty while a value goes down; the stack starts full and
+    // empties), so the output does not move up or down while the student undoes the stack
+    Codigo.reservarAlto($("pv-pregunta"), preguntas, function (copia, texto) { copia.innerHTML = texto || "&nbsp;"; });
+    var llena = LLV.length - 1;
+    Codigo.reservarAlto($("pv-pila"), [estadoV(llena, "tocar"), estadoV(llena, "baja")], function (copia, estado) {
+      copia.textContent = "";
+      Pila.crear(copia).pintar(estado);
+    });
+  })();
+
+  /* ---------- 4. What if it is not there? ---------- */
+  escribirCodigo($("p4-codigo"), PROGRAMA);
+  ponerX($("p4-codigo"), 10);
+  var prediccion4 = null;
+  var t4 = crearTrazaBuscar("p4", function () { return 10; }, function () {
+    var explica = "Each call made the range smaller: from 0…7 to 0…2, then 2…2 (a single slot) and finally low = 2 and high = 1. " +
+      "The pointers crossed: no slot was left and the base case returned -1, which went down the stack to the print. It looked at 3 slots out of 8.";
+    if (prediccion4 === "-1") Pasos.feedback($("p4-fb"), "ok", "Good prediction! It prints -1. " + explica);
+    else Pasos.feedback($("p4-fb"), "ok", "It prints -1" + (prediccion4 === "error" ? ", with no error" : ", not " + prediccion4) + ". " + explica);
+    leccion.desbloquear();
+  }, function () { habilitar4(); });
+
+  function habilitar4() {
+    var listo = prediccion4 !== null;
+    $("p4-ejecutar").disabled = !listo;
+    $("p4-reproducir").disabled = !listo;
+    if (!listo) $("p4-explicacion").textContent = "Choose your prediction so you can run it.";
+  }
+
+  $("p4-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion4 === null;
+      prediccion4 = b.getAttribute("data-valor");
+      $("p4-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (nueva) t4.traza.reiniciar();
+    });
+  });
+
+  /* ---------- 5. With while or with recursion ----------
+     The two tables fill up at the same time, row by row: same mids, same slots. */
+  var x5 = 19;
+  var prediccion5 = null;
+  var timer5 = null;
+
+  function pararComparar() {
+    if (timer5) clearTimeout(timer5);
+    timer5 = null;
+  }
+
+  function marcarEquivale(cual) {
+    $("p5-equivale").querySelectorAll("tbody tr").forEach(function (tr) {
+      tr.classList.toggle("equivale--activa", tr.getAttribute("data-c") === cual);
+    });
+  }
+
+  function vaciarTablas() {
+    ["p5-while", "p5-rec"].forEach(function (id) {
+      var cuerpo = $(id).tBodies[0];
+      cuerpo.textContent = "";
+      var tr = cuerpo.insertRow();
+      tr.className = "seguimiento__vacio";
+      var td = tr.insertCell();
+      td.colSpan = 4;
+      td.textContent = "(not run yet)";
+    });
+    $("p5-while-total").textContent = "";
+    $("p5-rec-total").textContent = "";
+    marcarEquivale(null);
+  }
+
+  function filaTabla(id, celdas, clase) {
+    var cuerpo = $(id).tBodies[0];
+    var vacia = cuerpo.querySelector(".seguimiento__vacio");
+    if (vacia) vacia.remove();
+    var tr = cuerpo.insertRow();
+    celdas.forEach(function (c) {
+      var td = tr.insertCell();
+      if (typeof c === "object") { td.colSpan = c.span; td.className = c.clase || ""; td.innerHTML = c.html; }
+      else td.textContent = String(c);
+    });
+    if (clase) tr.className = clase;
+  }
+
+  function ejecutarComparar() {
+    pararComparar();
+    vaciarTablas();
+    Pasos.limpiarFeedback($("p5-fb"));
+    var r = recorrido(x5);
+    var filas = r.llamadas;
+    var k = 0;
+    $("p5-ejecutar").disabled = true;
+    marcarEquivale("empieza");
+    function una() {
+      if (k < filas.length) {
+        var c = filas[k];
+        if (c.base) {
+          ["p5-while", "p5-rec"].forEach(function (id) {
+            filaTabla(id, [c.a, c.b, { span: 2, clase: "seguimiento__fin", html: "low &gt; high: <code>return -1</code>" }]);
+          });
+          marcarEquivale("nada");
+        } else {
+          ["p5-while", "p5-rec"].forEach(function (id) { filaTabla(id, [c.a, c.b, c.m, { span: 1, clase: c.res === "igual" ? "" : "seguimiento__no", html: String(c.v) }]); });
+          if (c.res === "igual") {
+            ["p5-while", "p5-rec"].forEach(function (id) {
+              filaTabla(id, [{ span: 4, clase: "seguimiento__fin", html: c.v + " == " + x5 + ": <code>return " + c.m + "</code>" }]);
+            });
+            marcarEquivale(null);
+          } else marcarEquivale(c.res === "menor" ? "derecha" : "izquierda");
+        }
+        k++;
+        timer5 = setTimeout(una, demora(1000));
+        return;
+      }
+      timer5 = null;
+      marcarEquivale(null);
+      var texto = "<strong>" + r.mirados + "</strong> " + (r.mirados === 1 ? "comparison" : "comparisons");
+      $("p5-while-total").innerHTML = texto;
+      $("p5-rec-total").innerHTML = texto;
+      $("p5-ejecutar").disabled = false;
+      $("p5-ejecutar").textContent = "▶ Run again";
+      var explica = "The two tables are the same: same mids and " + r.mirados + (r.mirados === 1 ? " comparison" : " comparisons") + ". " +
+        "One round of the while is one call: where the while changes low or high, the recursion calls with the new ones. Try another x.";
+      if (prediccion5 === "igual") Pasos.feedback($("p5-fb"), "ok", "Well thought out! " + explica);
+      else Pasos.feedback($("p5-fb"), "ok", "They look at the same ones. " + explica);
+      leccion.desbloquear();
+    }
+    una();
+  }
+
+  $("p5-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion5 = b.getAttribute("data-valor");
+      $("p5-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (!timer5) $("p5-ejecutar").disabled = false;
+    });
+  });
+  $("p5-x").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      x5 = Number(b.getAttribute("data-x"));
+      $("p5-x").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      pararComparar();
+      vaciarTablas();
+      Pasos.limpiarFeedback($("p5-fb"));
+      $("p5-ejecutar").textContent = "▶ Run both";
+      $("p5-ejecutar").disabled = prediccion5 === null;
+    });
+  });
+  $("p5-ejecutar").addEventListener("click", ejecutarComparar);
+  vaciarTablas();
+
+  /* ---------- 6. The slice trap ---------- */
+  var REBANADA = [
+    "def search(items, x):",
+    "    if len(items) == 0:",
+    "        return -1",
+    "    mid = len(items) // 2",
+    "    if items[mid] == x:",
+    "        return mid",
+    "    elif items[mid] < x:",
+    "        return search(items[mid + 1:], x)",
+    "    else:",
+    "        return search(items[:mid], x)",
+    "",
+    "grades = " + NOTAS_TEXTO,
+    "print(search(grades, 17))"
+  ].join("\n");
+  escribirCodigo($("p6-codigo"), REBANADA);
+  var notas6 = Lista.crear($("p6-notas"), NOTAS);
+  var RESTO = NOTAS.slice(5);   // items[5:] → [15, 17, 19]
+  var rebanada6 = Lista.crear($("p6-rebanada"), RESTO, { capacidad: Number($("p6-notas").style.getPropertyValue("--lista-n")) || 8 });
+  var pila6 = Pila.crear($("p6-pila"), { codigo: $("p6-codigo"), rotulo: true });
+  var prediccion6 = null;
+
+  // The slice shows right below the grades slots it came from (5, 6 and 7)
+  function alinear6() {
+    var caja = $("p6-rebanada");
+    var zona = caja.querySelector(".lista__fila") || caja;
+    zona.style.transform = "";
+    if ($("p6-rebanada-zona").hidden) return;
+    var a = notas6.valor(5);
+    var b = rebanada6.valor(0);
+    var ultimo = rebanada6.valor(RESTO.length - 1);
+    if (!a || !b || !ultimo) return;
+    var dx = a.getBoundingClientRect().left - b.getBoundingClientRect().left;
+    var borde = caja.getBoundingClientRect().right - zona.getBoundingClientRect().right;
+    dx = Math.min(dx, borde);
+    zona.style.transform = "translateX(" + Math.round(dx) + "px)";
+  }
+  window.addEventListener("resize", alinear6);
+
+  var R6 = { programa: 12, def: 0, base: 1, medio: 3, igual: 4, devuelve: 5, menor: 6, derecha: 7 };
+
+  function trazaRebanada() {
+    function programa(recibe) {
+      var p = Pila.programa();
+      p.linea = R6.programa;
+      p.ficha = "program";
+      p.falta = recibe === undefined ? "print(▢)" : "print(" + recibe + ")";
+      if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+      return p;
+    }
+    var T1 = "search(grades, 17)";
+    var T2 = "search(items[5:], 17)";
+    function v1(medio) { var v = [["items", NOTAS_TEXTO], ["x", 17]]; if (medio) v.push(["mid", 4]); return v; }
+    function v2(medio) { var v = [["items", Lista.python(RESTO)], ["x", 17]]; if (medio) v.push(["mid", 1]); return v; }
+    function espera1() { var t = Pila.llamada(T1, v1(true)); t.linea = R6.derecha; t.falta = "return ▢"; t.ficha = "mid=4"; return t; }
+    var nada = { notas: {}, reb: null };
+    return [
+      { linea: R6.def, texto: "A version without <code>low</code> or <code>high</code>: each call gets <strong>only the part</strong> where it searches.",
+        estado: { pila: [Pila.programa()], v: nada } },
+      { linea: 11, texto: "The 8 grades, sorted.", estado: { pila: [Pila.programa()], v: nada } },
+      { linea: R6.programa, fase: "ida", texto: "The <code>print</code> needs <strong>search(grades, 17)</strong>: Python calls it.",
+        estado: { pila: [programa(), Pila.llamada(T1, [])], v: nada } },
+      { linea: R6.def, fase: "ida", texto: "In this card, <code>items</code> is <code>grades</code>: the 8 slots, from 0 to 7.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(false))], v: nada } },
+      { linea: R6.base, texto: "Is <code>len(items) == 0</code>? <code>8 == 0</code> is " + chip(false) + ": there are slots.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(false))], v: nada } },
+      { linea: R6.medio, texto: "<code>mid = 8 // 2</code> = <strong>4</strong>.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(true))], v: { notas: {}, medio: 4, reb: null } } },
+      { linea: R6.igual, texto: "It looks at slot 4: is <code>14 == 17</code>? " + chip(false) + ".",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(true))], v: { notas: { 4: "distinta" }, medio: 4, reb: null } } },
+      { linea: R6.menor, texto: "Is <code>14 &lt; 17</code>? " + chip(true) + ": 17 is to the right.",
+        estado: { pila: [programa(), Pila.llamada(T1, v1(true))], v: { notas: { 4: "distinta" }, medio: 4, reb: null } } },
+      { linea: R6.derecha, texto: "<code>items[5:]</code> cuts out slots 5, 6 and 7 and makes a <strong>new list</strong> with them. That new list counts <strong>from 0</strong>.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, [])], v: { notas: { 4: "distinta" }, apagar: 5, reb: {} } } },
+      { linea: R6.def, fase: "ida", texto: "Another card. Its <code>items</code> is the slice <code>[15, 17, 19]</code>: positions 0, 1 and 2.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(false))], v: { notas: { 4: "distinta" }, apagar: 5, reb: {} } } },
+      { linea: R6.base, texto: "Is <code>len(items) == 0</code>? <code>3 == 0</code> is " + chip(false) + ".",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(false))], v: { notas: { 4: "distinta" }, apagar: 5, reb: {} } } },
+      { linea: R6.medio, texto: "<code>mid = 3 // 2</code> = <strong>1</strong>: position 1 of the <strong>slice</strong>.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(true))], v: { notas: { 4: "distinta" }, apagar: 5, reb: { medio: 1 } } } },
+      { linea: R6.igual, texto: "It looks at its slot 1: is <code>17 == 17</code>? " + chip(true) + ": it found it!",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(true))], v: { notas: { 4: "distinta" }, apagar: 5, reb: { medio: 1, igual: 1 } } } },
+      { linea: R6.devuelve, texto: "<strong>return mid</strong> returns <strong>1</strong>: the position of 17 <strong>in the slice</strong>.",
+        estado: { pila: [programa(), espera1(), Pila.llamada(T2, v2(true), "1")], v: { notas: { 4: "distinta" }, apagar: 5, reb: { medio: 1, igual: 1 } } } },
+      { linea: R6.derecha, flecha: true, fase: "vuelta", texto: "The first card gets 1 and returns it as it is. Nobody knows anymore that the slice started at 5.",
+        estado: { pila: [programa(), (function () { var t = Pila.llamada(T1, v1(true), "1"); return t; })()], v: { notas: { 4: "distinta" }, apagar: 5, reb: { igual: 1 } } } },
+      { linea: R6.programa, flecha: true, fase: "vuelta", salida: "1",
+        texto: "It prints <strong>1</strong>. But <code>grades[1]</code> is <strong>9</strong>: the 17 is at position <strong>6</strong>.",
+        estado: { pila: [programa("1")], v: { notas: { 1: "distinta", 6: "igual" }, final: true, reb: { igual: 1 } } } }
+    ];
+  }
+
+  function pintar6(e) {
+    var v = e.v;
+    notas6.clases(function (i) {
+      if (v.notas[i]) return "lista__casilla--" + v.notas[i];
+      if (v.apagar !== undefined && i < v.apagar) return "lista__casilla--apagada";
+      return "";
+    });
+    if (v.final) notas6.punteros({ mid: null, "returned 1": { i: 1, color: "naranja" }, "the 17": { i: 6, color: "verde" } });
+    else notas6.punteros(v.medio !== undefined ? { mid: { i: v.medio, color: "morado" }, "returned 1": null, "the 17": null } : null);
+    var zona = $("p6-rebanada-zona");
+    var antes = zona.hidden;
+    zona.hidden = !v.reb;
+    if (v.reb) {
+      rebanada6.clases(function (i) { return v.reb.igual === i ? "lista__casilla--igual" : ""; });
+      rebanada6.punteros(v.reb.medio !== undefined ? { mid: { i: v.reb.medio, color: "morado" } } : null);
+      if (antes) alinear6();
+    } else rebanada6.punteros(null);
+  }
+
+  var t6 = Traza.crear({
+    codigo: $("p6-codigo"),
+    explicacion: $("p6-explicacion"),
+    consola: $("p6-consola"),
+    ejecutar: $("p6-ejecutar"),
+    reproducir: $("p6-reproducir"),
+    reiniciar: $("p6-reiniciar"),
+    generar: trazaRebanada,
+    pila: pila6,
+    intervalo: 1100,
+    alReiniciar: function () {
+      pila6.vaciar();
+      pintar6({ v: { notas: {}, reb: null } });
+      Pasos.limpiarFeedback($("p6-fb"));
+      habilitar6();
+    },
+    alPaso: function (paso) {
+      pila6.pintar(paso.estado);
+      pintar6(paso.estado);
+    },
+    alTerminar: function () {
+      var explica = "The slice is a new list and counts from 0: the 17 is at its position 1, but in grades it is at 6. When you cut, the position is lost. " +
+        "That's why the good version does not cut the list: it always passes the same whole list and only changes low and high. That way, mid is always a position in grades.";
+      if (prediccion6 === "1") Pasos.feedback($("p6-fb"), "ok", "Well spotted! It prints 1. " + explica);
+      else Pasos.feedback($("p6-fb"), "ok", "It prints 1, not " + prediccion6 + ". " + explica);
+      leccion.desbloquear();
+    }
+  });
+
+  function habilitar6() {
+    var listo = prediccion6 !== null;
+    $("p6-ejecutar").disabled = !listo;
+    $("p6-reproducir").disabled = !listo;
+    if (!listo) $("p6-explicacion").textContent = "Choose your prediction so you can run it.";
+  }
+
+  $("p6-prediccion").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var nueva = prediccion6 === null;
+      prediccion6 = b.getAttribute("data-valor");
+      $("p6-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      if (nueva) t6.reiniciar();
+    });
+  });
+
+  /* ---------- 7. Challenge: complete the two calls ---------- */
+  var RETO = FUNCION.slice(0, 7).concat([
+    "        return search(items, x, {{a}})",
+    "    else:",
+    "        return search(items, x, {{b}})"
+  ]).join("\n");
+  escribirCodigo($("reto-codigo"), RETO);
+
+  var OPCIONES_RETO = {
+    a: ["mid + 1, high", "mid, high", "low, mid - 1", "low, high"],
+    b: ["low, mid - 1", "low, mid", "mid + 1, high", "low, high"]
+  };
+  var NOMBRES_HUECO = { a: "Blank 1: the call when items[mid] < x", b: "Blank 2: the call in the else" };
+
+  Object.keys(OPCIONES_RETO).forEach(function (h) {
+    var sel = crear("select", "codigo__elegir");
+    sel.id = "reto-" + h;
+    sel.setAttribute("aria-label", NOMBRES_HUECO[h]);
+    sel.appendChild(crear("option", "", "?")).value = "";
+    OPCIONES_RETO[h].forEach(function (t) { sel.appendChild(crear("option", "", t)).value = t; });
+    hueco($("reto-codigo"), h).replaceWith(sel);
+    sel.addEventListener("change", function () {
+      sel.classList.toggle("codigo__elegir--lleno", !!sel.value);
+      $("reto-pruebas").hidden = true;
+      Pasos.limpiarFeedback($("reto-fb"));
+      leccion.listoParaComprobar(!!($("reto-a").value && $("reto-b").value));
+    });
+  });
+
+  // Evaluates "mid + 1, high" and the like with the values of the call
+  function argumentos(texto, a, b, m) {
+    var valores = { low: a, high: b, mid: m };
+    return texto.split(",").map(function (parte) {
+      var p = parte.trim().split(" ");
+      var v = valores[p[0]];
+      if (p[1] === "+") v += Number(p[2]);
+      if (p[1] === "-") v -= Number(p[2]);
+      return v;
+    });
+  }
+
+  // What search(grades, x, 0, 7) prints with those two calls; RecursionError if it never ends
+  function salidaReto(llamadaA, llamadaB, x) {
+    function buscar(a, b, prof) {
+      if (prof > 50) throw new Error("RecursionError");
+      if (a > b) return -1;
+      var m = Math.floor((a + b) / 2);
+      if (NOTAS[m] === x) return m;
+      var args = argumentos(NOTAS[m] < x ? llamadaA : llamadaB, a, b, m);
+      return buscar(args[0], args[1], prof + 1);
+    }
+    try { return String(buscar(0, NOTAS.length - 1, 0)); } catch (err) { return err.message; }
+  }
+
+  var PRUEBAS_RETO = [6, 12, 19, 10, 20];
+
+  function pintarPruebas(ul, filas) {
+    ul.textContent = "";
+    filas.forEach(function (f) {
+      var li = crear("li", f.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", f.llamada));
+      li.appendChild(crear("span", "prueba__salida", f.sale));
+      li.appendChild(crear("span", "prueba__marca", f.ok ? "✓" : "✗"));
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+  }
+
+  function comprobarReto() {
+    var A = $("reto-a").value;
+    var B = $("reto-b").value;
+    if (!A || !B) return false;
+    var bienA = OPCIONES_RETO.a[0];
+    var bienB = OPCIONES_RETO.b[0];
+    pintarPruebas($("reto-pruebas"), PRUEBAS_RETO.map(function (x) {
+      var sale = salidaReto(A, B, x);
+      return { llamada: "search(grades, " + x + ", 0, 7)", sale: sale, ok: sale === salidaReto(bienA, bienB, x) };
+    }));
+    if (A === bienA && B === bienB) {
+      Pasos.feedback($("reto-fb"), "ok", "It works with all five! If items[mid] < x, what is left goes from mid + 1 to high; if not, from low to mid - 1. " +
+        "The middle one was already checked: that's why + 1 and - 1. And the ones that are not there reach the base case and return -1.");
+      return true;
+    }
+    var pista;
+    if (A === "low, high" || B === "low, high") {
+      pista = "With “low, high” the call gets the same range it had: the problem does not get smaller and the stack grows until RecursionError. Each call has to keep only one half.";
+    } else if (A === "low, mid - 1" && B === "mid + 1, high") {
+      pista = "The two calls are backwards. If items[mid] < x, x is to the right of the middle (from mid + 1 to high); in the else, it is to the left (from low to mid - 1).";
+    } else if (A === "low, mid - 1" || B === "mid + 1, high") {
+      pista = (A === "low, mid - 1" ? "On line 8, items[mid] is lower than x: x has to be to the right of the middle, from mid + 1 to high." :
+        "In the else, items[mid] is higher than x: x has to be to the left of the middle, from low to mid - 1.") + " Look at the tests that fail.";
+    } else {
+      pista = "The middle slot was already checked, and it was not it. If you leave it inside (" + (A === "mid, high" ? "mid, high" : "low, mid") + "), with two slots the range sometimes does not get smaller " +
+        "and the same call repeats until RecursionError. You have to leave it out: mid + 1 or mid - 1.";
+    }
+    Pasos.feedback($("reto-fb"), "pista", pista);
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  escribirCodigo($("resumen-codigo"), [
+    "def search(items, x, low, high):",
+    "    if low > high:",
+    "        return -1  # nothing is left",
+    "    mid = (low + high) // 2",
+    "    if items[mid] == x:",
+    "        return mid  # found it",
+    "    elif items[mid] < x:  # to the right",
+    "        return search(items, x, mid + 1, high)",
+    "    else:  # to the left",
+    "        return search(items, x, low, mid - 1)"
+  ].join("\n"));
+
+  /* ---------- Connections ---------- */
+  empezar1(17);
+  $("pv-otra").addEventListener("click", function () {
+    empezarVuelta();
+    var tope = pilaV.tope();
+    if (tope) tope.focus();
+  });
+  empezarVuelta();
+  habilitar4();
+  habilitar6();
+
+  // When the step changes, any running execution is paused
+  function pausar() {
+    t2.traza.detener();
+    t4.traza.detener();
+    t6.detener();
+    if (timer5) {
+      pararComparar();
+      vaciarTablas();
+      $("p5-ejecutar").disabled = prediccion5 === null;
+    }
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-mitad": pausar,
+      "paso-traza": pausar,
+      "paso-vuelta": pausar,
+      "paso-no-esta": pausar,
+      "paso-while": pausar,
+      "paso-rebanada": function () { pausar(); alinear6(); },
+      "paso-reto": function (paso, l, info) {
+        pausar();
+        if (!info.desbloqueado) l.listoParaComprobar(!!($("reto-a").value && $("reto-b").value));
+      },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
