@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project: the leaderboard · Learn to program</title>
+  <meta name="description" content="Sorting project: read in Python the names and grades of a class with input().split(), sort them from highest to lowest with bubble sort, swapping in two lists at once, break ties alphabetically and print the leaderboard with the podium.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .codigo .linea--hecha { opacity: 0.55; }
+    .codigo .hueco { white-space: pre; text-align: left; vertical-align: top; }
+    .codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.9rem; }
+    .lab .codigo { margin-top: var(--esp-4); }
+    .contador { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { color: var(--color-texto); font-family: var(--fuente-codigo); }
+
+    /* ---------- The leaderboard: one row per student (name and grade together) ---------- */
+    .tabla-pos { --fila: 2.9rem; --hueco: 0.5rem; --boton: 2.4rem; max-width: 30rem; margin: 0 auto; }
+    .tabla-pos__cabeza, .tabla-pos__fila {
+      display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) 3rem minmax(0, auto);
+      align-items: center; column-gap: var(--esp-3); padding: 0 var(--esp-3);
+    }
+    .tabla-pos--botones .tabla-pos__cabeza, .tabla-pos--botones .tabla-pos__fila { margin-right: calc(var(--boton) + var(--esp-2)); }
+    .tabla-pos__cabeza { margin-bottom: var(--esp-1); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .tabla-pos__cabeza > :nth-child(3) { text-align: right; }
+    .tabla-pos__cuerpo { position: relative; }
+    .tabla-pos__fila {
+      position: relative; height: var(--fila);
+      border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie);
+      font-weight: 700; transition: border-color var(--dur-rapida), background-color var(--dur-rapida), box-shadow var(--dur-rapida);
+    }
+    .tabla-pos__puesto { font-family: var(--fuente-codigo); color: var(--color-azul); white-space: nowrap; }
+    .tabla-pos__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tabla-pos__nota { font-family: var(--fuente-codigo); font-size: var(--texto-md); text-align: right; }
+    .tabla-pos__marca { font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); white-space: nowrap; }
+    .medalla { font-size: 1.1em; }
+    .tabla-pos__fila--entra { animation: lista-entra 420ms var(--curva-rebote) both; }
+    .tabla-pos__fila--compara { border-color: var(--color-azul); background: var(--color-azul-suave); box-shadow: 0 3px 0 var(--color-azul); }
+    .tabla-pos__fila--imprime { border-color: var(--color-acento); box-shadow: 0 3px 0 var(--color-acento); }
+    .tabla-pos__fila--desaprobado { background: var(--color-pista-suave); }
+    .tabla-pos__fila--error .tabla-pos__nota { color: var(--color-error); }
+    .tabla-pos__fila--podio { border-color: #e2b23c; }
+    .tabla-pos--ordenada .tabla-pos__fila { border-color: var(--color-ok); }
+    .tabla-pos__entre { position: relative; height: var(--hueco); }
+    .tabla-pos__cambiar {
+      position: absolute; z-index: 2; right: 0; top: 50%; transform: translateY(-50%);
+      width: var(--boton); height: var(--boton); padding: 0; border-radius: 50%;
+      border: 2px solid var(--color-azul); background: var(--color-superficie); color: var(--color-azul);
+      font: inherit; font-size: 1.15rem; font-weight: 700; line-height: 1; cursor: pointer;
+      box-shadow: 0 2px 0 var(--color-azul); transition: background-color var(--dur-rapida), transform var(--dur-rapida);
+    }
+    .tabla-pos__cambiar:hover:not(:disabled) { background: var(--color-azul-suave); }
+    .tabla-pos__cambiar:active:not(:disabled) { transform: translateY(-50%) scale(0.92); }
+    .tabla-pos__cambiar:focus-visible { box-shadow: var(--foco); }
+    .tabla-pos__cambiar:disabled { opacity: 0.35; cursor: default; }
+    .tabla-pos__vacia { margin: 0; padding: var(--esp-3); border: 2px dashed var(--color-borde); border-radius: var(--radio-sm); text-align: center; font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); }
+    .tabla-pos--compacta { --fila: 2.4rem; --hueco: 0.3rem; }
+    .tabla-pos--compacta .tabla-pos__nota { font-size: var(--texto-sm); }
+
+    /* ---------- Two parallel lists, with slots of the same width: each column, one student ---------- */
+    .par-listas { display: grid; gap: var(--esp-1); }
+    .par-listas .lista { padding: var(--esp-1) 0; }
+    .par-listas .lista__fila { --c: clamp(1.7rem, calc(100cqi / 13), 2.4rem); }
+    .par-listas .lista__valor { min-width: calc(var(--c) * 2); }
+    .par-listas .lista__nombres { margin-bottom: var(--esp-2); }
+    .estado-listas { min-height: 3em; margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .estado-listas strong, .estado-listas code { color: var(--color-texto); }
+    .estado-listas--mal strong { color: var(--color-pista); }
+    .estado-listas--bien strong { color: var(--color-ok); }
+
+    /* ---------- Console that waits for one student per line ---------- */
+    .entrada { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); }
+    .entrada label { font-weight: 700; }
+    .entrada input { width: 9rem; font: inherit; font-weight: 700; font-size: var(--texto-md); padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-azul); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .entrada input:focus-visible { border-radius: var(--radio-sm); }
+    .entrada .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-4); font-size: var(--texto-sm); }
+    .atajos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); width: 100%; font-family: var(--fuente); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .atajos .btn { min-height: 2.25rem; padding: 0 var(--esp-3); font-family: var(--fuente-codigo); }
+    .registro__pregunta { font-weight: 400; color: var(--color-texto-suave); }
+    .registro__respuesta { color: #a8480a; }
+    .consola .consola__linea { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .consola .consola__linea--error { color: var(--color-error); }
+    .registro { max-height: 12rem; overflow-y: auto; overscroll-behavior: contain; }
+    .vuelta-actual { margin: 0 0 var(--esp-3); text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .vuelta-actual strong { color: var(--color-texto); }
+
+    /* ---------- Missions ---------- */
+    .misiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .misiones li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .misiones li::before { content: ""; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .misiones li.mision--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .misiones li.mision--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Options and tests ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3) var(--esp-4); }
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-1) var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 200ms; }
+    .pruebas li:nth-child(3) { animation-delay: 400ms; }
+    .prueba__etiqueta { font-family: var(--fuente-codigo); overflow-wrap: anywhere; }
+    .prueba__salida { grid-column: 1; grid-row: 2; font-family: var(--fuente-codigo); font-weight: 700; overflow-wrap: anywhere; }
+    .prueba__marca { grid-column: 2; grid-row: 1 / span 2; font-weight: 700; font-size: var(--texto-md); }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+    .consola-prueba { margin-top: var(--esp-4); }
+
+    .usado { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .usado li { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); padding: var(--esp-1) var(--esp-3); border-radius: 999px; background: var(--color-acento-suave); color: var(--color-acento); animation: aparecer var(--dur) var(--curva-rebote) both; }
+
+    @media (max-width: 480px) {
+      .pruebas li { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .opciones--codigo .opcion span { font-size: var(--texto-xs); padding: var(--esp-3); }
+      .codigo.codigo--compacto, .lab .codigo.codigo--compacto { font-size: 0.78rem; }
+      .registro { max-height: 10rem; }
+      .entrada input { width: 7.5rem; }
+      .tabla-pos { --fila: 2.6rem; --boton: 2.25rem; }
+      .tabla-pos__cabeza, .tabla-pos__fila { grid-template-columns: 3rem minmax(0, 1fr) 2.4rem minmax(0, auto); column-gap: var(--esp-2); padding: 0 var(--esp-2); }
+      .tabla-pos--compacta { --fila: 2.3rem; }
+    }
+    /* On desktop, a shorter console leaves the explanation in view */
+    @media (min-width: 1024px) {
+      #paso-jugar .registro { max-height: 8.5rem; }
+      /* The complete program has a line of 58 characters: this way it fits without scrolling */
+      #t-codigo, #r-codigo { font-size: 0.8rem; }
+    }
+    /* Short options two by two, so the step fits on the screen */
+    @media (min-width: 1280px) {
+      #paso-leer .opciones, #paso-mayor .opciones, #paso-dos .opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    /* On mobile, the table and the missions go before the program, which is long */
+    @media (max-width: 1023.98px) {
+      #paso-jugar .lab { display: flex; flex-direction: column; }
+      #paso-jugar .lab__principal { display: contents; }
+      #paso-jugar .consola, #paso-jugar .fila-botones, #paso-jugar .explicacion { order: 0; }
+      #paso-jugar .lab__visual { order: 1; margin-top: var(--esp-4); }
+      #paso-jugar .lab__resultado { order: 2; margin-top: var(--esp-4); }
+      #paso-jugar .reto-codigo { order: 3; }
+    }
+    /* RETO-LAB
+       Parts 1 to 5. When right, the answer already reads in the blank: the options hide (they come back
+       with “Try another option”). On desktop, the program on top and, under it, the tests (or the console)
+       with “Try another option” on the left and the message on the right. In part 3, the visual panel does
+       not stretch to the end of the code. On mobile, the program, the tests, the message and the button,
+       one after the other. */
+    :is(#paso-leer, #paso-mayor, #paso-dos, #paso-empate, #paso-puestos) .tarjeta:has(.opcion--correcta) .op-leyenda,
+    :is(#paso-leer, #paso-mayor, #paso-dos, #paso-empate, #paso-puestos) .opciones:has(.opcion--correcta) { display: none; }
+    :is(#paso-leer, #paso-mayor, #paso-empate) .pruebas li { line-height: 1.45; padding-block: var(--esp-1); }
+    @media (min-width: 1024px) {
+      :is(#paso-leer, #paso-mayor, #paso-empate, #paso-puestos) .tarjeta:has(.opcion--correcta) { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: auto auto 1fr; grid-template-areas: "codigo codigo" "pruebas fb" "otra fb"; column-gap: var(--esp-4); align-items: start; }
+      :is(#paso-leer, #paso-mayor, #paso-empate, #paso-puestos) .tarjeta:has(.opcion--correcta) > .codigo { grid-area: codigo; }
+      :is(#paso-leer, #paso-mayor, #paso-empate, #paso-puestos) .tarjeta:has(.opcion--correcta) > :is(.pruebas, .consola-prueba) { grid-area: pruebas; margin-top: var(--esp-4); }
+      :is(#paso-leer, #paso-mayor, #paso-empate, #paso-puestos) .tarjeta:has(.opcion--correcta) > .feedback { grid-area: fb; margin-top: var(--esp-4); }
+      :is(#paso-leer, #paso-mayor, #paso-empate, #paso-puestos) .tarjeta:has(.opcion--correcta) > .fila-botones { grid-area: otra; margin-top: var(--esp-3); }
+      :is(#paso-leer, #paso-mayor, #paso-empate) .pruebas li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--esp-2); font-size: var(--texto-xs); position: relative; padding-right: 2.25rem; }
+      :is(#paso-leer, #paso-mayor, #paso-empate) .prueba__marca { position: absolute; right: var(--esp-3); top: 50%; transform: translateY(-50%); line-height: 1; }
+      #paso-dos .lab__visual { min-height: 0 !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar-proyecto">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Sorting by hand -->
+    <section class="paso" id="paso-demo" data-requiere aria-labelledby="h-demo">
+      <span class="paso__etiqueta">Sorting 7/7 · Project</span>
+      <h1 class="paso__titulo" id="h-demo">Project: the leaderboard</h1>
+      <p>Five students and their grades. Sort the table from <strong>highest to lowest grade</strong>: tap <strong>⇅</strong> between two neighbors to swap their places. Also watch the lists <code>names</code> and <code>grades</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div id="d-tabla"></div>
+          <p class="contador" id="d-contador" aria-live="polite"></p>
+          <div class="fila-botones" id="d-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="d-desordenar">↺ Mix it up again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="par-listas">
+            <div id="d-nombres"></div>
+            <div id="d-notas"></div>
+          </div>
+          <p class="estado-listas" id="d-estado" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="d-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Part 1: reading the data -->
+    <section class="paso" id="paso-leer" data-comprobar aria-labelledby="h-leer">
+      <span class="paso__etiqueta">Part 1 of 5</span>
+      <h2 class="paso__titulo" id="h-leer">Reading the data</h2>
+      <p>Each line brings one student: <code>Ana 17</code>. <code>.split()</code> cuts it into <code>['Ana', '17']</code>. What goes in the blank? We test it with Ana 17, Luis 14 and Rosa 9.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" id="p1-codigo" aria-label="Your program"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">What goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="p1" value="sin-int"><span>names.append(parts[0])
+grades.append(parts[1])</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="reves"><span>names.append(parts[1])
+grades.append(int(parts[0]))</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="bien"><span>names.append(parts[0])
+grades.append(int(parts[1]))</span></label>
+          <label class="opcion"><input type="radio" name="p1" value="uno-dos"><span>names.append(parts[1])
+grades.append(int(parts[2]))</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Part 2: from highest to lowest -->
+    <section class="paso" id="paso-mayor" data-comprobar aria-labelledby="h-mayor">
+      <span class="paso__etiqueta">Part 2 of 5</span>
+      <h2 class="paso__titulo" id="h-mayor">From highest to lowest</h2>
+      <p>This is the bubble sort you already know: with <code>&gt;</code> it sorts from lowest to highest. The table goes the other way: the highest grade first. What condition goes in the <code>if</code>?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo" id="p2-codigo" aria-label="Your program"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">What condition goes in the if?</legend>
+          <label class="opcion"><input type="radio" name="p2" value="disfraz"><span>grades[j + 1] &lt; grades[j]</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="bien"><span>grades[j] &lt; grades[j + 1]</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="i"><span>grades[j] &lt; grades[i]</span></label>
+          <label class="opcion"><input type="radio" name="p2" value="igual"><span>grades[j] &gt; grades[j + 1]</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Part 3: moving both lists -->
+    <section class="paso" id="paso-dos" data-comprobar aria-labelledby="h-dos">
+      <span class="paso__etiqueta">Part 3 of 5</span>
+      <h2 class="paso__titulo" id="h-dos">Moving both lists</h2>
+      <p>Now <code>sort_table</code> gets both lists, but it only swaps the grades. Tap <strong>▶ Sort</strong> and watch what happens to the names. What is missing in the blank?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--compacto" id="p3-codigo" aria-label="Your program"><code></code></pre>
+          <fieldset class="opciones opciones--codigo">
+            <legend class="visualmente-oculto">What is missing in the blank?</legend>
+            <label class="opcion"><input type="radio" name="p3" value="sin-aux"><span>names[j] = names[j + 1]
+names[j + 1] = names[j]</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="sort"><span>names.sort()</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="mismo-aux"><span>names[j] = names[j + 1]
+names[j + 1] = temp</span></label>
+            <label class="opcion"><input type="radio" name="p3" value="bien"><span>temp = names[j]
+names[j] = names[j + 1]
+names[j + 1] = temp</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="par-listas">
+            <div id="p3-nombres"></div>
+            <div id="p3-notas"></div>
+          </div>
+          <p class="estado-listas" id="p3-estado" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-ordenar">▶ Sort</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" role="status" aria-live="polite"></div>
+          <div class="fila-botones" hidden>
+            <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Part 4: ties -->
+    <section class="paso" id="paso-empate" data-comprobar aria-labelledby="h-empate">
+      <span class="paso__etiqueta">Part 4 of 5</span>
+      <h2 class="paso__titulo" id="h-empate">Ties</h2>
+      <p>Luis and Ana both got 17. In a tie, whoever comes first in the alphabet goes first (<code>"Ana" &lt; "Luis"</code>). <code>lower</code> and <code>tie</code> store two comparisons. When do you have to swap?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--compacto" id="p4-codigo" aria-label="Your program"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">When do you have to swap?</legend>
+          <label class="opcion"><input type="radio" name="p4" value="sin-empate"><span>lower or names[j] &gt; names[j + 1]</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="reves"><span>lower or (tie and names[j] &lt; names[j + 1])</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="and"><span>lower and names[j] &gt; names[j + 1]</span></label>
+          <label class="opcion"><input type="radio" name="p4" value="bien"><span>lower or (tie and names[j] &gt; names[j + 1])</span></label>
+        </fieldset>
+        <ul class="pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Part 5: printing the places -->
+    <section class="paso" id="paso-puestos" data-comprobar aria-labelledby="h-puestos">
+      <span class="paso__etiqueta">Part 5 of 5</span>
+      <h2 class="paso__titulo" id="h-puestos">Printing the places</h2>
+      <p>The lists are already sorted. Each round prints one place: <code>1 Hugo 20</code>, <code>2 Ana 17</code>… What goes in the blank?</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--compacto" id="p5-codigo" aria-label="Your program"><code></code></pre>
+        <fieldset class="opciones opciones--codigo">
+          <legend class="visualmente-oculto">What goes in the blank?</legend>
+          <label class="opcion"><input type="radio" name="p5" value="cero"><span>print(i, names[i], grades[i])</span></label>
+          <label class="opcion"><input type="radio" name="p5" value="listas"><span>print(i + 1, names, grades)</span></label>
+          <label class="opcion"><input type="radio" name="p5" value="bien"><span>print(i + 1, names[i], grades[i])</span></label>
+          <label class="opcion"><input type="radio" name="p5" value="mas-uno"><span>print(i + 1, names[i + 1], grades[i + 1])</span></label>
+        </fieldset>
+        <div class="consola consola-prueba" id="p5-consola" hidden><span class="consola__titulo">Console</span></div>
+        <div class="feedback" role="status" aria-live="polite"></div>
+        <div class="fila-botones" hidden>
+          <button type="button" class="btn btn-secundario" data-otra>↺ Try another option</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Challenge: the complete program -->
+    <section class="paso" id="paso-jugar" data-requiere aria-labelledby="h-jugar">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-jugar">Your leaderboard works!</h2>
+      <p>Your complete program, with one more detail: anyone with less than 11 is marked <strong>failed</strong>. Type one student per line and <code>done</code> to finish. Complete the <strong>four missions</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="consola">
+            <span class="consola__titulo">Console</span>
+            <div class="registro" id="t-registro" aria-live="polite"></div>
+            <div class="entrada" id="t-fila">
+              <label for="t-campo" id="t-etiqueta">Student:</label>
+              <input type="text" id="t-campo" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="button" class="btn btn-secundario" id="t-enviar">Send ⏎</button>
+              <div class="atajos" role="group" aria-label="Type for you">
+                <span>or tap:</span>
+                <button type="button" class="btn btn-secundario" id="t-azar">🎲 A random student</button>
+                <button type="button" class="btn btn-secundario" id="t-fin">done</button>
+              </div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="t-otra" hidden>↺ Run again</button>
+          </div>
+          <p class="explicacion" id="t-explicacion" aria-live="polite"></p>
+          <div class="reto-codigo">
+            <pre class="codigo codigo--compacto" id="t-codigo" aria-label="Your complete program"><code></code></pre>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="vuelta-actual" id="t-vuelta" aria-live="polite"></p>
+          <div id="t-tabla"></div>
+          <p class="contador" id="t-contador" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <ul class="misiones" id="t-misiones" aria-label="Missions">
+            <li data-mision="veinte">Someone with 20 ends up first</li>
+            <li data-mision="empate">A tie broken by the alphabet</li>
+            <li data-mision="cinco">A class of 5 students or more</li>
+            <li data-mision="desaprobado">Someone fails (less than 11)</li>
+          </ul>
+          <div class="feedback" id="t-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🏆</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Project complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Two parallel lists are sorted together: every swap of grades is repeated in the names, and a tie is decided by the alphabet.</p>
+        <ul class="usado" aria-label="What you used">
+          <li>line.split()</li><li>int(parts[1])</li><li>.append()</li><li>grades[j] &lt; grades[j + 1]</li><li>temp</li><li>lower or (tie and …)</li><li>i + 1</li><li>", ".join(names[:3])</li>
+        </ul>
+        <pre class="codigo codigo--compacto resumen-codigo" id="r-codigo" aria-label="Your complete program"><code></code></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the project</button>
+        <a class="btn btn-secundario" href="../../../index.html">Back to the course →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script src="../../../../assets/js/bucle-input.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  var MEDALLAS = ["🥇", "🥈", "🥉"];
+  // Like Pasos.feedback, but the message accepts <code> and <strong> (page texts, never what the student types)
+  function avisar(el, tipo, html) {
+    Pasos.feedback(el, tipo, "");
+    el.lastChild.innerHTML = html;
+  }
+
+  /* ---------- Coloring Python ----------
+     Each line is plain text; @@id@@ leaves a blank (.hueco) with that id.
+     A comment with ✓ is a part already solved (it looks dimmed). */
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not)$/;
+  function tk(clase, t) { return '<span class="tk-' + clase + '">' + esc(t) + "</span>"; }
+  function py(src) {
+    var html = "", m;
+    var re = /(@@[\w-]+@@)|("[^"]*")|(#.*)|(\d+)|([A-Za-z_]\w*)|([\s\S])/g;
+    while ((m = re.exec(src))) {
+      if (m[1]) html += '<span class="hueco" id="' + m[1].slice(2, -2) + '">?</span>';
+      else if (m[2]) html += tk("texto", m[2]);
+      else if (m[3]) html += tk("comentario", m[3]);
+      else if (m[4]) html += tk("numero", m[4]);
+      else if (m[5]) {
+        var clase = PALABRAS.test(m[5]) ? "palabra" : src.charAt(re.lastIndex) === "(" ? "funcion" : "variable";
+        html += tk(clase, m[5]);
+      }
+      else html += esc(m[6]);
+    }
+    return html;
+  }
+  function pintarCodigo(pre, lineas) {
+    pre.querySelector("code").innerHTML = lineas.map(function (l) {
+      var hecha = /^\s*#.*✓/.test(l);
+      return '<span class="linea' + (hecha ? " linea--hecha" : "") + '">' + (l === "" ? " " : py(l)) + "</span>";
+    }).join("");
+  }
+
+  /* ---------- Simulated Python ---------- */
+  // line.split(): cuts at the spaces (several in a row count as one)
+  function partir(t) { return t.split(/\s+/).filter(function (x) { return x !== ""; }); }
+  // int(text): digits only, with an optional sign (and underscores between digits, like Python)
+  function pyInt(t) {
+    if (typeof t !== "string" || !/^[+-]?\d+(_\d+)*$/.test(t)) return null;
+    return parseInt(t.replace(/_/g, ""), 10);
+  }
+  function errorInt(t) { return "ValueError: invalid literal for int() with base 10: " + Lista.python(t); }
+  var INDEX_ERROR = "IndexError: list index out of range";
+
+  /* Bubble sort of two lists. cond(names, grades, j, i) says whether to swap; the grades
+     are always swapped with temp; mover(names, grades, j, temp) does the part of the names.
+     Returns { nombres, notas, ev: [{ j, cambia, nombres, notas }], comparaciones, intercambios } */
+  function burbuja(nombres, notas, cond, mover) {
+    var nom = nombres.slice(), not = notas.slice(), ev = [], c = 0, s = 0;
+    for (var i = 0; i < not.length - 1; i++) {
+      for (var j = 0; j < not.length - 1 - i; j++) {
+        c++;
+        var cambia = !!cond(nom, not, j, i);
+        if (cambia) {
+          s++;
+          var aux = not[j];
+          not[j] = not[j + 1];
+          not[j + 1] = aux;
+          if (mover) mover(nom, not, j, aux);
+        }
+        ev.push({ j: j, cambia: cambia, nombres: nom.slice(), notas: not.slice() });
+      }
+    }
+    return { nombres: nom, notas: not, ev: ev, comparaciones: c, intercambios: s };
+  }
+  function moverBien(nom, not, j) { var aux = nom[j]; nom[j] = nom[j + 1]; nom[j + 1] = aux; }
+  // The condition of the complete program: lower or (tie and names[j] > names[j + 1])
+  function condFinal(nom, not, j) {
+    var menor = not[j] < not[j + 1];
+    var empate = not[j] === not[j + 1];
+    return menor || (empate && nom[j] > nom[j + 1]);
+  }
+  function enOrden(nom, not) {
+    for (var k = 0; k < not.length - 1; k++) if (condFinal(nom, not, k)) return false;
+    return true;
+  }
+  function iguales(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+  /* ---------- The leaderboard ----------
+     crearTabla(el, { botones: fn(k), indice, compacta, vacio, cabecera })
+       botones: a ⇅ between each pair of neighboring rows; tapping it calls fn(k) (rows k and k + 1)
+       indice: the first column shows i (from 0) instead of the place
+     t.poner([{ nombre, nota }]), t.agregar(nombre, nota, error), t.intercambiar(j),
+     t.comparar(j | null), t.imprime(k | null), t.puestos({ desaprobado } | null),
+     t.bloquear(bool), t.cabecera([…]), t.ordenada(bool), t.filas */
+  function crearTabla(el, cfg) {
+    el.classList.add("tabla-pos");
+    if (cfg.botones) el.classList.add("tabla-pos--botones");
+    if (cfg.compacta) el.classList.add("tabla-pos--compacta");
+    el.innerHTML = '<div class="tabla-pos__cabeza" aria-hidden="true"><span></span><span></span><span></span><span></span></div><div class="tabla-pos__cuerpo"></div>';
+    var cabeza = el.firstChild;
+    var cuerpo = el.lastChild;
+    var filas = [];
+    var entres = [];
+    var conPuestos = null;
+    var bloqueada = false;
+
+    function cabecera(textos) { textos.forEach(function (t, k) { cabeza.children[k].innerHTML = t; }); }
+    cabecera(cfg.cabecera || ["Place", "Student", "Grade", ""]);
+
+    function entre(k) {
+      if (entres[k]) return entres[k];
+      var d = document.createElement("div");
+      d.className = "tabla-pos__entre";
+      if (cfg.botones) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "tabla-pos__cambiar";
+        b.textContent = "⇅";
+        b.addEventListener("click", function () { cfg.botones(k); });
+        d.appendChild(b);
+      }
+      entres[k] = d;
+      return d;
+    }
+
+    function nuevaFila(f) {
+      var d = document.createElement("div");
+      d.className = "tabla-pos__fila";
+      d.innerHTML = '<span class="tabla-pos__puesto"></span><span class="tabla-pos__nombre"></span><span class="tabla-pos__nota"></span><span class="tabla-pos__marca"></span>';
+      d.children[1].textContent = f.nombre;
+      d.children[2].textContent = f.error ? "✗" : String(f.nota);
+      if (f.error) d.classList.add("tabla-pos__fila--error");
+      f.el = d;
+      return f;
+    }
+
+    function renumerar() {
+      filas.forEach(function (f, k) {
+        var p = f.el.children[0];
+        var podio = !!conPuestos && k < 3;
+        var mal = !!conPuestos && conPuestos.desaprobado && !f.error && f.nota < 11;
+        if (conPuestos) p.innerHTML = String(k + 1) + (podio ? ' <span class="medalla" aria-hidden="true">' + MEDALLAS[k] + "</span>" : "");
+        else p.textContent = cfg.indice ? String(k) : String(k + 1);
+        f.el.classList.toggle("tabla-pos__fila--podio", podio);
+        f.el.classList.toggle("tabla-pos__fila--desaprobado", mal);
+        f.el.children[3].textContent = mal ? "failed" : "";
+      });
+      entres.forEach(function (d, k) {
+        var b = d.firstChild;
+        if (!b || k >= filas.length - 1) return;
+        b.disabled = bloqueada;
+        b.setAttribute("aria-label", "Swap places " + (k + 1) + " and " + (k + 2) + ": " + filas[k].nombre + " and " + filas[k + 1].nombre);
+      });
+    }
+
+    function construir() {
+      var activo = document.activeElement;
+      cuerpo.textContent = "";
+      filas.forEach(function (f, k) {
+        cuerpo.appendChild(f.el);
+        if (k < filas.length - 1) cuerpo.appendChild(entre(k));
+      });
+      if (!filas.length && cfg.vacio) {
+        var v = document.createElement("p");
+        v.className = "tabla-pos__vacia";
+        v.textContent = cfg.vacio;
+        cuerpo.appendChild(v);
+      }
+      renumerar();
+      if (activo && cuerpo.contains(activo)) activo.focus();
+    }
+
+    function poner(lista) {
+      filas = lista.map(function (a) { return nuevaFila({ nombre: a.nombre, nota: a.nota, error: !!a.error }); });
+      conPuestos = null;
+      el.classList.remove("tabla-pos--ordenada");
+      construir();
+    }
+
+    function agregar(nombre, nota, error) {
+      var f = nuevaFila({ nombre: nombre, nota: nota, error: !!error });
+      filas.push(f);
+      construir();
+      if (!Pasos.reducirMovimiento) f.el.classList.add("tabla-pos__fila--entra");
+    }
+
+    // Rows j and j + 1 swap places: each one slides from where it was
+    function intercambiar(j) {
+      var antes = [filas[j].el.getBoundingClientRect().top, filas[j + 1].el.getBoundingClientRect().top];
+      var a = filas[j];
+      filas[j] = filas[j + 1];
+      filas[j + 1] = a;
+      construir();
+      if (Pasos.reducirMovimiento || !document.body.animate) return;
+      [[filas[j], antes[1]], [filas[j + 1], antes[0]]].forEach(function (par, k) {
+        var dy = par[1] - par[0].el.getBoundingClientRect().top;
+        par[0].el.style.zIndex = k === 0 ? "1" : "";
+        var an = par[0].el.animate([{ transform: "translateY(" + dy + "px)" }, { transform: "none" }],
+          { duration: 420, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)" });
+        an.onfinish = an.oncancel = function () { par[0].el.style.zIndex = ""; };
+      });
+    }
+
+    function resaltar(clase, ks) {
+      filas.forEach(function (f, k) { f.el.classList.toggle(clase, ks.indexOf(k) !== -1); });
+    }
+
+    return {
+      poner: poner,
+      agregar: agregar,
+      intercambiar: intercambiar,
+      comparar: function (j) { resaltar("tabla-pos__fila--compara", j === null ? [] : [j, j + 1]); },
+      imprime: function (k) { resaltar("tabla-pos__fila--imprime", k === null ? [] : [k]); },
+      puestos: function (op) { conPuestos = op; renumerar(); },
+      bloquear: function (si) { bloqueada = si; renumerar(); },
+      cabecera: cabecera,
+      ordenada: function (si) { el.classList.toggle("tabla-pos--ordenada", si); },
+      get filas() { return filas.map(function (f) { return { nombre: f.nombre, nota: f.nota, error: f.error }; }); }
+    };
+  }
+
+  /* ---------- Two lists that move step by step ----------
+     aplicar(list, old, new): if new holds the same values in another order, the
+     slots travel (reordenar); if not, the ones that change get their new value flying
+     from another slot that already had it. */
+  function aplicar(l, viejos, nuevos, otras) {
+    if (iguales(viejos, nuevos)) return;
+    var usados = [], orden = [];
+    var permutacion = viejos.length === nuevos.length && nuevos.every(function (v) {
+      for (var k = 0; k < viejos.length; k++) {
+        if (!usados[k] && viejos[k] === v) { usados[k] = true; orden.push(k); return true; }
+      }
+      return false;
+    });
+    if (permutacion) { l.reordenar(orden); return; }
+    nuevos.forEach(function (v, k) {
+      if (viejos[k] === v) return;
+      var origen = null;
+      [[l, viejos]].concat(otras || []).some(function (par) {
+        var i = par[1].indexOf(v);
+        if (i !== -1 && !(par[0] === l && i === k)) { origen = par[0].valor(i); return true; }
+        return false;
+      });
+      l.cambiar(k, v, origen || undefined);
+    });
+  }
+
+  function marcarParejas(lNom, lNot, nom, not, deQuien) {
+    function clase(k) { return deQuien[nom[k]] === not[k] ? "lista__casilla--igual" : "lista__casilla--distinta"; }
+    lNom.clases(function (k) { return clase(k); });
+    lNot.clases(function (k) { return clase(k); });
+  }
+
+  /* ---------- 1. Sorting the table by hand ---------- */
+  var D_ALUMNOS = [{ nombre: "Luis", nota: 14 }, { nombre: "Ana", nota: 17 }, { nombre: "Rosa", nota: 9 }, { nombre: "Hugo", nota: 20 }, { nombre: "Eva", nota: 11 }];
+  var D_MINIMO = 5;   // how many pairs are out of order: the fewest swaps needed
+  var demo = {};
+  var dTabla = crearTabla($("d-tabla"), { botones: tocarDemo });
+  var dNombres = Lista.crear($("d-nombres"), [], { nombres: ["names"], capacidad: 5 });
+  var dNotas = Lista.crear($("d-notas"), [], { nombres: ["grades"], capacidad: 5 });
+
+  function contadorDemo() {
+    $("d-contador").innerHTML = "Swaps: <strong>" + demo.intercambios + "</strong>";
+  }
+
+  function empezarDemo() {
+    demo = { intercambios: 0, hecho: false };
+    dTabla.poner(D_ALUMNOS);
+    dTabla.bloquear(false);
+    dNombres.valores(D_ALUMNOS.map(function (a) { return a.nombre; }));
+    dNotas.valores(D_ALUMNOS.map(function (a) { return a.nota; }));
+    dNombres.clases(null);
+    dNotas.clases(null);
+    $("d-estado").innerHTML = "Each student is in the <strong>same slot</strong> in both lists: Luis and his 14 are in slot 0.";
+    $("d-otra").hidden = true;
+    Pasos.limpiarFeedback($("d-fb"));
+    contadorDemo();
+  }
+
+  function tocarDemo(k) {
+    if (demo.hecho) return;
+    var f = dTabla.filas;
+    var a = f[k], b = f[k + 1];
+    dTabla.intercambiar(k);
+    var orden = f.map(function (x, i) { return i === k ? k + 1 : i === k + 1 ? k : i; });
+    dNombres.reordenar(orden);
+    dNotas.reordenar(orden);
+    var marca = function (i) { return i === k || i === k + 1 ? "lista__casilla--cambio" : ""; };
+    dNombres.clases(marca);
+    dNotas.clases(marca);
+    demo.intercambios++;
+    contadorDemo();
+    $("d-estado").innerHTML = "<strong>" + esc(b.nombre) + "</strong> and the " + b.nota + " moved to slot " + k +
+      "; <strong>" + esc(a.nombre) + "</strong> and the " + a.nota + ", to slot " + (k + 1) + ". The same thing moved in both lists.";
+    var ahora = dTabla.filas;
+    if (!enOrden(ahora.map(function (x) { return x.nombre; }), ahora.map(function (x) { return x.nota; }))) return;
+    demo.hecho = true;
+    dTabla.bloquear(true);
+    dTabla.puestos({ desaprobado: false });
+    dTabla.ordenada(true);
+    dNombres.clases(function () { return "lista__casilla--igual"; });
+    dNotas.clases(function () { return "lista__casilla--igual"; });
+    $("d-estado").innerHTML = "Hugo still has his 20, Ana her 17…: <strong>each name with its grade</strong>.";
+    $("d-otra").hidden = false;
+    avisar($("d-fb"), "ok", "Table sorted in " + demo.intercambios + " swaps!" +
+      (demo.intercambios > D_MINIMO ? " (It could be done in " + D_MINIMO + ".)" : "") +
+      " Each time two students swapped places, their name and their grade traveled together: the same slot moved in <code>names</code> and in <code>grades</code>. Your program will do that, in five parts.");
+    leccion.desbloquear();
+  }
+
+  $("d-desordenar").addEventListener("click", function () {
+    empezarDemo();
+    var b = $("d-tabla").querySelector(".tabla-pos__cambiar");
+    if (b) b.focus();
+  });
+
+  /* ---------- Tests and steps where you choose an option ---------- */
+  /* Paints a list of tests: [{ etiqueta, salida, ok }] */
+  function pintarPruebas(lista, filas) {
+    lista.innerHTML = "";
+    filas.forEach(function (p) {
+      var li = document.createElement("li");
+      li.className = p.ok ? "prueba--ok" : "prueba--mal";
+      li.innerHTML = '<span class="prueba__etiqueta"></span><span class="prueba__salida"></span><span class="prueba__marca">' + (p.ok ? "✓" : "✗") + "</span>";
+      li.children[0].textContent = p.etiqueta;
+      li.children[1].textContent = p.salida;
+      li.setAttribute("aria-label", p.etiqueta + ": " + p.salida + (p.ok ? ", correct" : ", incorrect"));
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+  }
+
+  /* cfg: { id, nombre, correcta, hueco, sangria, probar(value) → rows of tests,
+            mostrar(value) (instead of probar), limpiar(), ok, pistas } */
+  function crearEleccion(cfg) {
+    var paso = $(cfg.id);
+    var radios = paso.querySelectorAll('input[name="' + cfg.nombre + '"]');
+    var lista = paso.querySelector(".pruebas");
+    var fb = paso.querySelector(".feedback");
+    var otra = paso.querySelector("[data-otra]").parentNode;
+
+    function limpiar() {
+      paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      if (lista) lista.hidden = true;
+      if (cfg.limpiar) cfg.limpiar();
+      Pasos.limpiarFeedback(fb);
+    }
+
+    function entrar() {
+      otra.hidden = true;
+      radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+      limpiar();
+      $(cfg.hueco).textContent = "?";
+      if (cfg.alEntrar) cfg.alEntrar();
+    }
+
+    function comprobar() {
+      var marcada = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+      if (!marcada) return false;
+      var opcion = marcada.closest(".opcion");
+      if (cfg.probar) pintarPruebas(lista, cfg.probar(marcada.value));
+      if (cfg.mostrar) cfg.mostrar(marcada.value);
+      if (marcada.value === cfg.correcta) {
+        opcion.classList.add("opcion--correcta");
+        avisar(fb, "ok", cfg.ok);
+        radios.forEach(function (r) { r.disabled = true; });
+        otra.hidden = false;
+        return true;
+      }
+      opcion.classList.add("opcion--incorrecta");
+      avisar(fb, "pista", cfg.pistas[marcada.value]);
+      return false;
+    }
+
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        // The blank is a block: the lines of a long option stay aligned with the first one
+        $(cfg.hueco).textContent = r.nextElementSibling.textContent;
+        leccion.listoParaComprobar(true);
+      });
+    });
+    paso.querySelector("[data-otra]").addEventListener("click", function () {
+      entrar();
+      radios[0].focus();
+    });
+
+    return {
+      entrar: entrar,
+      comprobar: comprobar,
+      elegida: function () {
+        var m = paso.querySelector('input[name="' + cfg.nombre + '"]:checked');
+        return m ? m.value : null;
+      }
+    };
+  }
+
+  /* ---------- 2. Part 1: reading the data ---------- */
+  pintarCodigo($("p1-codigo"), [
+    "names = []",
+    "grades = []",
+    "while True:",
+    '    line = input("Student: ")',
+    '    if line == "done":',
+    "        break",
+    "    parts = line.split()",
+    "    @@p1-hueco@@"
+  ]);
+  var LINEAS_P1 = ["Ana 17", "Luis 14", "Rosa 9"];
+
+  // What each option does with the three lines: { nombres, notas, error, linea }
+  function leerP1(valor) {
+    var nom = [], not = [];
+    for (var k = 0; k < LINEAS_P1.length; k++) {
+      var p = partir(LINEAS_P1[k]);
+      var n;
+      if (valor === "bien") { nom.push(p[0]); not.push(pyInt(p[1])); }
+      else if (valor === "sin-int") { nom.push(p[0]); not.push(p[1]); }
+      else if (valor === "reves") {
+        nom.push(p[1]);
+        n = pyInt(p[0]);
+        if (n === null) return { error: errorInt(p[0]), linea: LINEAS_P1[k] };
+        not.push(n);
+      } else {
+        nom.push(p[1]);
+        if (p[2] === undefined) return { error: INDEX_ERROR, linea: LINEAS_P1[k] };
+        not.push(pyInt(p[2]));
+      }
+    }
+    return { nombres: nom, notas: not };
+  }
+
+  var parte1 = crearEleccion({
+    id: "paso-leer",
+    nombre: "p1",
+    correcta: "bien",
+    hueco: "p1-hueco",
+    probar: function (valor) {
+      var r = leerP1(valor);
+      if (r.error) return [{ etiqueta: "Student: " + r.linea, salida: r.error, ok: false }];
+      var mas = r.notas[0] > r.notas[2];
+      return [
+        { etiqueta: "names", salida: Lista.python(r.nombres), ok: iguales(r.nombres, ["Ana", "Luis", "Rosa"]) },
+        { etiqueta: "grades", salida: Lista.python(r.notas), ok: iguales(r.notas, [17, 14, 9]) },
+        { etiqueta: "Did Ana get more than Rosa? grades[0] > grades[2]", salida: mas ? "True" : "False", ok: mas }
+      ];
+    },
+    ok: "That's it! <code>.split()</code> cuts “Ana 17” into <code>['Ana', '17']</code>: the name goes to <code>names</code> and the grade, turned into a number with <code>int()</code>, goes to <code>grades</code>. Same index, same student.",
+    pistas: {
+      "sin-int": "The grades stayed as texts (with quotes). Between texts, <code>'17' &gt; '9'</code> is <code>False</code>: they are compared letter by letter, and 1 comes before 9. When sorting, Rosa would end up first. <code>int()</code> is missing.",
+      reves: "Backwards: <code>parts[0]</code> is the name and <code>parts[1]</code> is the grade. <code>int('Ana')</code> can't turn Ana into a number: <code>ValueError</code>.",
+      "uno-dos": "Indexes start at 0: <code>parts</code> has two slots, <code>parts[0]</code> and <code>parts[1]</code>. <code>parts[2]</code> doesn't exist: <code>IndexError</code>."
+    }
+  });
+
+  /* ---------- 3. Part 2: from highest to lowest ---------- */
+  pintarCodigo($("p2-codigo"), [
+    "def sort_table(grades):",
+    "    for i in range(len(grades) - 1):",
+    "        for j in range(len(grades) - 1 - i):",
+    "            if @@p2-hueco@@:",
+    "                temp = grades[j]",
+    "                grades[j] = grades[j + 1]",
+    "                grades[j + 1] = temp"
+  ]);
+  var COND_P2 = {
+    bien: function (nom, n, j) { return n[j] < n[j + 1]; },
+    igual: function (nom, n, j) { return n[j] > n[j + 1]; },
+    disfraz: function (nom, n, j) { return n[j + 1] < n[j]; },
+    i: function (nom, n, j, i) { return n[j] < n[i]; }
+  };
+  var LISTAS_P2 = [[14, 17, 9, 20, 11], [6, 11, 15, 18], [13, 20, 13, 5]];
+
+  var parte2 = crearEleccion({
+    id: "paso-mayor",
+    nombre: "p2",
+    correcta: "bien",
+    hueco: "p2-hueco",
+    probar: function (valor) {
+      return LISTAS_P2.map(function (l) {
+        var r = burbuja([], l, COND_P2[valor]);
+        var debe = l.slice().sort(function (a, b) { return b - a; });
+        return { etiqueta: "grades = " + Lista.python(l), salida: "ends up " + Lista.python(r.notas), ok: iguales(r.notas, debe) };
+      });
+    },
+    ok: "Good! Now it swaps when the one on the left is <strong>lower</strong>: the lower ones move to the right and the highest stays first. Only <code>&gt;</code> changed to <code>&lt;</code>.",
+    pistas: {
+      igual: "That's the usual bubble sort: it swaps when the one on the left is higher, so the higher ones move to the end. It sorts from lowest to highest, and in the table the highest goes first.",
+      disfraz: "It has a <code>&lt;</code>, but <code>grades[j + 1] &lt; grades[j]</code> says the same as <code>grades[j] &gt; grades[j + 1]</code>: the one on the left is higher. It still sorts from lowest to highest.",
+      i: "<code>grades[i]</code> isn't the neighbor: <code>i</code> counts the passes. Bubble sort always compares two neighbors, <code>j</code> and <code>j + 1</code>."
+    }
+  });
+
+  /* ---------- 4. Part 3: moving both lists ---------- */
+  pintarCodigo($("p3-codigo"), [
+    "def sort_table(names, grades):",
+    "    for i in range(len(grades) - 1):",
+    "        for j in range(len(grades) - 1 - i):",
+    "            if grades[j] < grades[j + 1]:",
+    "                temp = grades[j]",
+    "                grades[j] = grades[j + 1]",
+    "                grades[j + 1] = temp",
+    "                @@p3-hueco@@"
+  ]);
+  var P3_NOMBRES = D_ALUMNOS.map(function (a) { return a.nombre; });
+  var P3_NOTAS = D_ALUMNOS.map(function (a) { return a.nota; });
+  var P3_DE = {};
+  D_ALUMNOS.forEach(function (a) { P3_DE[a.nombre] = a.nota; });
+  var MOVER_P3 = {
+    ninguno: null,
+    bien: moverBien,
+    "sin-aux": function (nom, not, j) { nom[j] = nom[j + 1]; nom[j + 1] = nom[j]; },
+    "mismo-aux": function (nom, not, j, aux) { nom[j] = nom[j + 1]; nom[j + 1] = aux; },
+    sort: function (nom) { nom.sort(); }
+  };
+  var p3Codigo = $("p3-codigo");
+  var p3Nombres = Lista.crear($("p3-nombres"), P3_NOMBRES, { nombres: ["names"], capacidad: 5 });
+  var p3Notas = Lista.crear($("p3-notas"), P3_NOTAS, { nombres: ["grades"], capacidad: 5 });
+  var p3 = { token: 0 };
+
+  function reiniciarP3() {
+    p3.token++;
+    p3Nombres.valores(P3_NOMBRES);
+    p3Notas.valores(P3_NOTAS);
+    Codigo.limpiar(p3Codigo);
+    var e = $("p3-estado");
+    e.className = "estado-listas";
+    e.innerHTML = "Luis got 14, Ana 17, Rosa 9, Hugo 20 and Eva 11. Tap <strong>▶ Sort</strong>.";
+  }
+
+  function estadoP3(nom, not) {
+    var e = $("p3-estado");
+    var mal = [];
+    nom.forEach(function (x, k) { if (P3_DE[x] !== not[k]) mal.push(k); });
+    var perdidos = P3_NOMBRES.filter(function (x) { return nom.indexOf(x) === -1; });
+    if (!mal.length) {
+      e.className = "estado-listas estado-listas--bien";
+      e.innerHTML = "<strong>Each student with their grade</strong>: Hugo first with his 20, Rosa last with her 9.";
+      return;
+    }
+    e.className = "estado-listas estado-listas--mal";
+    var k = mal[0];
+    var quien = typeof nom[k] === "string" ? esc(nom[k]) : "the number " + nom[k];
+    var detalle = typeof nom[k] === "string"
+      ? "<strong>" + quien + "</strong> ended up with " + not[k] + ", but got " + P3_DE[nom[k]] + "."
+      : "In <code>names</code> there is <strong>" + quien + "</strong>: that's not a name!";
+    if (perdidos.length) detalle += " And <strong>" + perdidos.map(esc).join(", ") + "</strong> disappeared.";
+    e.innerHTML = "<strong>" + mal.length + " of 5</strong> with a grade that isn't theirs. " + detalle;
+  }
+
+  function ordenarP3(variante) {
+    reiniciarP3();
+    var token = p3.token;
+    var r = burbuja(P3_NOMBRES, P3_NOTAS, COND_P2.bien, MOVER_P3[variante]);
+    var swaps = r.ev.filter(function (e) { return e.cambia; });
+    var nom = P3_NOMBRES.slice(), not = P3_NOTAS.slice();
+    var k = 0;
+    $("p3-estado").textContent = "Sorting…";
+    function paso() {
+      if (token !== p3.token) return;
+      if (k >= swaps.length) {
+        Codigo.limpiar(p3Codigo);
+        marcarParejas(p3Nombres, p3Notas, nom, not, P3_DE);
+        estadoP3(nom, not);
+        return;
+      }
+      var e = swaps[k++];
+      var marca = function (i) { return i === e.j || i === e.j + 1 ? "lista__casilla--cambio" : ""; };
+      Codigo.marcar(p3Codigo, { activas: variante === "ninguno" ? [3, 4, 5, 6] : [3, 4, 5, 6, 7] });
+      aplicar(p3Notas, not, e.notas);
+      aplicar(p3Nombres, nom, e.nombres, [[p3Notas, e.notas]]);
+      nom = e.nombres;
+      not = e.notas;
+      p3Nombres.clases(marca);
+      p3Notas.clases(marca);
+      setTimeout(paso, espera(700));
+    }
+    setTimeout(paso, espera(250));
+  }
+
+  $("p3-ordenar").addEventListener("click", function () { ordenarP3(parte3.elegida() || "ninguno"); });
+
+  var parte3 = crearEleccion({
+    id: "paso-dos",
+    nombre: "p3",
+    correcta: "bien",
+    hueco: "p3-hueco",
+    alEntrar: reiniciarP3,
+    limpiar: function () { if (p3.token) reiniciarP3(); },
+    mostrar: function (valor) { ordenarP3(valor); },
+    ok: "That's it! Each time two grades are swapped, their names are swapped too, in the same places <code>j</code> and <code>j + 1</code>. That way each student travels with their grade.",
+    pistas: {
+      "sin-aux": "Without <code>temp</code>, <code>names[j] = names[j + 1]</code> erases the name on the left before copying it: two end up the same and one is lost. Just like with the grades, you need an extra box.",
+      "mismo-aux": "<code>temp</code> still holds the grade (<code>temp = grades[j]</code>), not the name: a number ended up in <code>names</code>. The names need their own <code>temp = names[j]</code>.",
+      sort: "<code>names.sort()</code> sorts the names alphabetically, without looking at the grades: each one ends up with someone else's grade. The names need the same swap as the grades."
+    }
+  });
+
+  /* ---------- 5. Part 4: ties ---------- */
+  pintarCodigo($("p4-codigo"), [
+    "def sort_table(names, grades):",
+    "    for i in range(len(grades) - 1):",
+    "        for j in range(len(grades) - 1 - i):",
+    "            lower = grades[j] < grades[j + 1]",
+    "            tie = grades[j] == grades[j + 1]",
+    "            if @@p4-hueco@@:",
+    "                # swap grades and names ✓"
+  ]);
+  var COND_P4 = {
+    bien: condFinal,
+    reves: function (nom, n, j) { return n[j] < n[j + 1] || (n[j] === n[j + 1] && nom[j] < nom[j + 1]); },
+    "sin-empate": function (nom, n, j) { return n[j] < n[j + 1] || nom[j] > nom[j + 1]; },
+    and: function (nom, n, j) { return n[j] < n[j + 1] && nom[j] > nom[j + 1]; }
+  };
+  var SALONES_P4 = [
+    [["Luis", 17], ["Rosa", 12], ["Ana", 17], ["Eva", 9]],
+    [["Ana", 15], ["Luis", 15], ["Hugo", 20]],
+    [["Teo", 11], ["Eva", 18], ["Bea", 11], ["Rosa", 11]]
+  ];
+  function salonTexto(nom, not) { return nom.map(function (x, k) { return x + " " + not[k]; }).join(" · "); }
+
+  var parte4 = crearEleccion({
+    id: "paso-empate",
+    nombre: "p4",
+    correcta: "bien",
+    hueco: "p4-hueco",
+    probar: function (valor) {
+      return SALONES_P4.map(function (s) {
+        var nom = s.map(function (a) { return a[0]; }), not = s.map(function (a) { return a[1]; });
+        var r = burbuja(nom, not, COND_P4[valor], moverBien);
+        var bien = burbuja(nom, not, condFinal, moverBien);
+        return { etiqueta: salonTexto(nom, not).replace(/ · /g, ", "), salida: salonTexto(r.nombres, r.notas), ok: iguales(r.nombres, bien.nombres) && iguales(r.notas, bien.notas) };
+      });
+    },
+    ok: "Perfect! It swaps if the one on the left has a lower grade, <strong>or</strong> if they tie <strong>and</strong> its name comes later in the alphabet (<code>\"Luis\" &gt; \"Ana\"</code>). The parentheses group the two conditions of the tie.",
+    pistas: {
+      reves: "It breaks ties backwards: with <code>names[j] &lt; names[j + 1]</code> it swaps when the one on the left comes first in the alphabet, and Luis ends up before Ana. It must swap if it comes later: <code>&gt;</code>.",
+      "sin-empate": "Without <code>tie</code>, it looks at the names even when the grades are different: Eva, with 9, moved above Luis and Rosa just because of her name. The name decides only when the grades tie.",
+      and: "With <code>and</code> it swaps only if the one on the left has a lower grade <strong>and also</strong> its name comes later. Ana (15) stayed above Hugo (20) because “Ana” comes before “Hugo”. One of the two reasons is enough: <code>or</code>."
+    }
+  });
+
+  /* ---------- 6. Part 5: printing the places ---------- */
+  pintarCodigo($("p5-codigo"), [
+    'names = ["Hugo", "Ana", "Luis", "Eva", "Rosa"]',
+    "grades = [20, 17, 14, 11, 9]",
+    "for i in range(len(grades)):",
+    "    @@p5-hueco@@",
+    'print("Podium:", ", ".join(names[:3]))'
+  ]);
+  var P5_NOMBRES = ["Hugo", "Ana", "Luis", "Eva", "Rosa"];
+  var P5_NOTAS = [20, 17, 14, 11, 9];
+  function podio(nom) { return "Podium: " + nom.slice(0, 3).join(", "); }
+
+  // What each option prints: { lineas, error }
+  function imprimirP5(valor) {
+    var ls = [];
+    for (var i = 0; i < P5_NOTAS.length; i++) {
+      if (valor === "bien") ls.push((i + 1) + " " + P5_NOMBRES[i] + " " + P5_NOTAS[i]);
+      else if (valor === "cero") ls.push(i + " " + P5_NOMBRES[i] + " " + P5_NOTAS[i]);
+      else if (valor === "listas") ls.push((i + 1) + " " + Lista.python(P5_NOMBRES) + " " + Lista.python(P5_NOTAS));
+      else {
+        if (i + 1 >= P5_NOTAS.length) return { lineas: ls, error: INDEX_ERROR };
+        ls.push((i + 1) + " " + P5_NOMBRES[i + 1] + " " + P5_NOTAS[i + 1]);
+      }
+    }
+    ls.push(podio(P5_NOMBRES));
+    return { lineas: ls };
+  }
+
+  var parte5 = crearEleccion({
+    id: "paso-puestos",
+    nombre: "p5",
+    correcta: "bien",
+    hueco: "p5-hueco",
+    mostrar: function (valor) {
+      var r = imprimirP5(valor);
+      var c = $("p5-consola");
+      Codigo.consola(c, r.lineas.concat(r.error ? [r.error] : []));
+      if (r.error) c.lastElementChild.classList.add("consola__linea--error");
+      c.hidden = false;
+    },
+    limpiar: function () { $("p5-consola").hidden = true; },
+    ok: "Done! <code>i</code> goes through slots 0, 1, 2…; the place is <code>i + 1</code> and the student is <code>names[i]</code> with <code>grades[i]</code>. And <code>\", \".join(names[:3])</code> joins the first three: the podium.",
+    pistas: {
+      cero: "The places start at 0: <code>i</code> counts from 0, like the indexes. For the place, add 1: <code>i + 1</code>.",
+      listas: "<code>names</code> and <code>grades</code> are the whole lists: each round prints everything. For one student, one slot: <code>names[i]</code> and <code>grades[i]</code>.",
+      "mas-uno": "<code>names[i + 1]</code> skips Hugo, and in the last round it goes past the end: <code>IndexError</code>, and the podium never gets printed. The place is <code>i + 1</code>, but the slot is <code>i</code>."
+    }
+  });
+
+  /* ---------- 7. The complete program ---------- */
+  var RETO = [
+    "def sort_table(names, grades):",                                // 0
+    "    for i in range(len(grades) - 1):",
+    "        for j in range(len(grades) - 1 - i):",
+    "            lower = grades[j] < grades[j + 1]",                    // 3
+    "            tie = grades[j] == grades[j + 1]",
+    "            if lower or (tie and names[j] > names[j + 1]):",
+    "                temp = grades[j]",                                 // 6
+    "                grades[j] = grades[j + 1]",
+    "                grades[j + 1] = temp",
+    "                temp = names[j]",                                  // 9
+    "                names[j] = names[j + 1]",
+    "                names[j + 1] = temp",
+    "",                                                               // 12
+    "names = []",
+    "grades = []",
+    "while True:",                                                    // 15
+    '    line = input("Student: ")',
+    '    if line == "done":',
+    "        break",                                                  // 18
+    "    parts = line.split()",
+    "    names.append(parts[0])",
+    "    grades.append(int(parts[1]))",                                 // 21
+    "sort_table(names, grades)",
+    "for i in range(len(grades)):",
+    "    if grades[i] >= 11:",                                          // 24
+    "        print(i + 1, names[i], grades[i])",
+    "    else:",
+    '        print(i + 1, names[i], grades[i], "failed")',              // 27
+    'print("Podium:", ", ".join(names[:3]))'
+  ];
+  var MAX_ALUMNOS = 8;
+  pintarCodigo($("t-codigo"), RETO);
+  pintarCodigo($("r-codigo"), RETO);
+
+  var tCodigo = $("t-codigo");
+  var registro = $("t-registro");
+  var tTabla = crearTabla($("t-tabla"), { indice: true, compacta: true, vacio: "No students yet.", cabecera: ["i", "names[i]", "grades[i]", ""] });
+  var reto = { alumnos: [], filas: 0, final: null, token: 0 };
+  var misiones = {};
+
+  function bajarConsola() {
+    setTimeout(function () { registro.scrollTop = registro.scrollHeight; }, 0);
+  }
+  function cumplir(m) {
+    if (misiones[m]) return;
+    misiones[m] = true;
+    document.querySelector('#t-misiones [data-mision="' + m + '"]').classList.add("mision--hecha");
+  }
+  function contadorReto(c, s) {
+    $("t-contador").innerHTML = c === null ? "" : "Comparisons: <strong>" + c + "</strong> · Swaps: <strong>" + s + "</strong>";
+  }
+  function q(t) { return "<code>" + esc(Lista.python(t)) + "</code>"; }
+
+  var config = {
+    prefijo: "t",
+    vueltas: null,
+    rotulo: "Student",
+    pregunta: "Student:",
+    lineaInput: 16,
+    siguiente: "Type another student, or <code>done</code>.",
+    validar: function (texto) {
+      if (texto !== "done" && reto.filas >= MAX_ALUMNOS) return "The table in this simulation has room for " + MAX_ALUMNOS + " students: type done to sort them.";
+      return null;
+    },
+    alEmpezar: function () {
+      reto.token++;
+      reto.alumnos = [];
+      reto.filas = 0;
+      reto.final = null;
+      tTabla.poner([]);
+      tTabla.cabecera(["i", "names[i]", "grades[i]", ""]);
+      contadorReto(null);
+      return "Type a name and a grade with a space, like <code>Ana 17</code>.";
+    },
+    alDato: function (texto) {
+      bajarConsola();
+      if (texto === "done") {
+        reto.final = "fin";
+        return {
+          texto: "<code>line == \"done\"</code>: <code>break</code> leaves the loop. <code>sort_table(names, grades)</code> compares neighbors and, when it has to swap, it moves the grade and the name.",
+          camino: { activas: [16, 17, 18, 22], saltadas: [19, 20, 21] },
+          fin: true
+        };
+      }
+      var partes = partir(texto);
+      var antes = texto === "Done" || texto === "DONE" ? "“" + esc(texto) + "” is not equal to “done”: for Python, uppercase and lowercase letters are different. " : "";
+      if (!partes.length) {
+        reto.final = "error";
+        return {
+          texto: "<code>\"\".split()</code> gives <code>[]</code>: there is no <code>parts[0]</code>. Python stops with <code>IndexError</code> and never gets to print the table.",
+          camino: { activas: [16, 17, 19, 20], saltadas: [18] },
+          salida: [INDEX_ERROR],
+          fin: true
+        };
+      }
+      reto.filas++;
+      reto.alumnos.push({ nombre: partes[0], nota: null });
+      if (partes.length < 2) {
+        tTabla.agregar(partes[0], null, true);
+        reto.final = "error";
+        return {
+          texto: antes + q(texto) + ".split() gives <code>" + esc(Lista.python(partes)) + "</code>: the name went into <code>names</code>, but there is no <code>parts[1]</code>. Python stops with <code>IndexError</code>.",
+          camino: { activas: [16, 17, 19, 20, 21], saltadas: [18] },
+          salida: [INDEX_ERROR],
+          fin: true
+        };
+      }
+      var nota = pyInt(partes[1]);
+      if (nota === null) {
+        tTabla.agregar(partes[0], null, true);
+        reto.final = "error";
+        var porque = /^[+-]?\d+[.,]\d+$/.test(partes[1]) ? " <code>int()</code> doesn't accept decimals."
+          : partes.length > 2 && /^[+-]?\d+$/.test(partes[partes.length - 1]) ? " <code>.split()</code> cuts at every space: with two names, <code>parts[1]</code> is the second name."
+          : "";
+        return {
+          texto: "<code>int(" + esc(Lista.python(partes[1])) + ")</code> can't turn it into a number: <code>ValueError</code>, and Python stops." + porque,
+          camino: { activas: [16, 17, 19, 20, 21], saltadas: [18] },
+          salida: [errorInt(partes[1])],
+          fin: true
+        };
+      }
+      reto.alumnos[reto.alumnos.length - 1].nota = nota;
+      tTabla.agregar(partes[0], nota, false);
+      var i = reto.alumnos.length - 1;
+      var fuera = nota < 0 || nota > 20 ? " Grades go from 0 to 20, but the program doesn't check that." : "";
+      return {
+        texto: "<code>.split()</code> gave <code>" + esc(Lista.python(partes.slice(0, 2))) + "</code>" + (partes.length > 2 ? " (and something else, which isn't used)" : "") +
+          ": " + esc(partes[0]) + " goes to <code>names</code> and " + nota + " to <code>grades</code>, both in slot " + i + "." + fuera,
+        camino: { activas: [16, 17, 19, 20, 21, 15], saltadas: [18] }
+      };
+    },
+    alTerminar: function () {
+      bajarConsola();
+      if (reto.final === "error") {
+        registro.lastElementChild.classList.add("consola__linea--error");
+        $("t-vuelta").textContent = "The program stopped";
+        avisar($("t-fb"), "pista", "An error stops the whole program (later you will learn to catch errors). Tap “Run again” and type each student like this: a name, a space and the grade.");
+        return;
+      }
+      $("t-vuelta").textContent = "Sorting…";
+      animarOrden();
+    }
+  };
+  var bucle = BucleInput.crear(config);
+
+  /* done: bubble sort moves the rows of the table (name and grade together) and then prints */
+  function animarOrden() {
+    var token = ++reto.token;
+    var nom = reto.alumnos.map(function (a) { return a.nombre; });
+    var not = reto.alumnos.map(function (a) { return a.nota; });
+    var r = burbuja(nom, not, condFinal, moverBien);
+    var d = Math.max(espera(160), Math.min(espera(520), espera(Math.round(3600 / Math.max(1, r.ev.length)))));
+    var k = 0, c = 0, s = 0;
+    contadorReto(0, 0);
+    function siguiente() {
+      if (token !== reto.token) return;
+      if (k >= r.ev.length) {
+        tTabla.comparar(null);
+        imprimir(token, r);
+        return;
+      }
+      var e = r.ev[k++];
+      c++;
+      tTabla.comparar(e.j);
+      Codigo.marcar(tCodigo, { activas: [3, 4, 5] });
+      contadorReto(c, s);
+      if (!e.cambia) { setTimeout(siguiente, d); return; }
+      setTimeout(function () {
+        if (token !== reto.token) return;
+        s++;
+        tTabla.intercambiar(e.j);
+        Codigo.marcar(tCodigo, { activas: [6, 7, 8, 9, 10, 11] });
+        contadorReto(c, s);
+        setTimeout(siguiente, Math.max(d, espera(460)));
+      }, d);
+    }
+    setTimeout(siguiente, espera(300));
+  }
+
+  function imprimir(token, r) {
+    tTabla.cabecera(["Place", "Student", "Grade", ""]);
+    tTabla.puestos({ desaprobado: true });
+    $("t-vuelta").textContent = "Printing the table";
+    var k = 0;
+    function linea() {
+      if (token !== reto.token) return;
+      if (k < r.notas.length) {
+        var ok = r.notas[k] >= 11;
+        Codigo.agregar(registro, (k + 1) + " " + r.nombres[k] + " " + r.notas[k] + (ok ? "" : " failed"));
+        Codigo.marcar(tCodigo, ok ? { activas: [23, 24, 25], saltadas: [26, 27] } : { activas: [23, 24, 26, 27], saltadas: [25] });
+        tTabla.imprime(k);
+        bajarConsola();
+        k++;
+        setTimeout(linea, espera(320));
+        return;
+      }
+      tTabla.imprime(null);
+      Codigo.agregar(registro, podio(r.nombres));
+      Codigo.marcar(tCodigo, { activas: [28] });
+      bajarConsola();
+      $("t-vuelta").textContent = "End of program";
+      $("t-explicacion").innerHTML = r.notas.length
+        ? "<code>sort_table</code> made <strong>" + r.comparaciones + "</strong> comparison" + (r.comparaciones === 1 ? "" : "s") + " and <strong>" + r.intercambios + "</strong> swap" + (r.intercambios === 1 ? "" : "s") + ". Each place is <code>i + 1</code>; the podium, <code>names[:3]</code>."
+        : "You didn't type any students: the lists stayed empty and the podium comes out blank.";
+      evaluar(r);
+    }
+    setTimeout(linea, espera(250));
+  }
+
+  function evaluar(r) {
+    var al = reto.alumnos;
+    if (r.notas.length && r.notas[0] === 20) cumplir("veinte");
+    var empateResuelto = false, empateEnOrden = false;
+    for (var a = 0; a < al.length; a++) {
+      for (var b = a + 1; b < al.length; b++) {
+        if (al[a].nota !== al[b].nota || al[a].nombre === al[b].nombre) continue;
+        if (al[a].nombre > al[b].nombre) empateResuelto = true;
+        else empateEnOrden = true;
+      }
+    }
+    if (empateResuelto) cumplir("empate");
+    if (al.length >= 5) cumplir("cinco");
+    if (r.notas.some(function (n) { return n < 11; })) cumplir("desaprobado");
+
+    var faltan = ["veinte", "empate", "cinco", "desaprobado"].filter(function (m) { return !misiones[m]; });
+    // If there was a tie that was already in order, that hint goes first: it is what just happened
+    if (empateEnOrden && !misiones.empate) faltan.unshift("empate");
+    if (!faltan.length) {
+      avisar($("t-fb"), "ok", "Missions complete! Your program reads a class, sorts it moving each name with its grade, breaks ties by the alphabet and prints the table with the podium.");
+      leccion.desbloquear();
+      return;
+    }
+    var pistas = {
+      veinte: "For the first mission, type someone with 20 (not as the first student: that way you see them move up).",
+      empate: empateEnOrden
+        ? "There was a tie, but they were already in alphabetical order: the program didn't have to swap them. First type the one who comes later in the alphabet: Luis 15 and then Ana 15."
+        : "For the tie, type two students with the same grade, and first the one who comes later in the alphabet: Luis 15 and then Ana 15.",
+      cinco: "Type at least 5 students before done (🎲 helps).",
+      desaprobado: "Include someone with less than 11: they will be marked as failed."
+    };
+    avisar($("t-fb"), "pista", pistas[faltan[0]] + " Tap “Run again”.");
+  }
+
+  /* Shortcuts that type for you */
+  var NOMBRES_AZAR = ["Ana", "Luis", "Rosa", "Hugo", "Eva", "Teo", "Bea", "Sara", "Mateo", "Pablo", "Nora", "Diego", "Clara", "Bruno"];
+  function escribir(t, boton) {
+    $("t-campo").value = t;
+    $("t-enviar").click();
+    if (!$("t-fila").hidden) boton.focus();
+  }
+  $("t-azar").addEventListener("click", function () {
+    var usados = reto.alumnos.map(function (a) { return a.nombre; });
+    var libres = NOMBRES_AZAR.filter(function (n) { return usados.indexOf(n) === -1; });
+    var nombre = libres[Math.floor(Math.random() * libres.length)] || "Student";
+    escribir(nombre + " " + (4 + Math.floor(Math.random() * 17)), $("t-azar"));
+  });
+  $("t-fin").addEventListener("click", function () { escribir("done", $("t-fin")); });
+  $("t-otra").addEventListener("click", function () { Pasos.limpiarFeedback($("t-fb")); });
+
+  empezarDemo();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-leer": parte1.entrar,
+      "paso-mayor": parte2.entrar,
+      "paso-dos": parte3.entrar,
+      "paso-empate": parte4.entrar,
+      "paso-puestos": parte5.entrar
+    },
+    comprobar: {
+      "paso-leer": parte1.comprobar,
+      "paso-mayor": parte2.comprobar,
+      "paso-dos": parte3.comprobar,
+      "paso-empate": parte4.comprobar,
+      "paso-puestos": parte5.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>
