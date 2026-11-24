@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Swapping neighbors · Learn to program</title>
+  <meta name="description" content="Interactive lesson: how the PC sorts a list when it can only compare two values at a time. Swap neighbors by hand, swap two variables with a temp box, swap two slots of a list, and one pass where the highest value bubbles up to the end.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .fila-botones:empty, .fila-botones:not(:has(> :not([hidden]))) { display: none; }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .paso__intro p code { white-space: nowrap; }
+
+    /* ---------- Variable boxes, smaller ---------- */
+    .cajas--chicas { padding-top: var(--esp-4); gap: var(--esp-4) var(--esp-6); align-items: center; }
+    .cajas--chicas .caja__cuerpo { width: 5.5rem; height: 4rem; padding-bottom: var(--esp-2); }
+    .cajas--chicas .caja__cuerpo::before { left: -0.8rem; }
+    .cajas--chicas .caja__cuerpo::after { right: -0.8rem; }
+    .cajas--chicas .caja__valor { font-size: var(--texto-lg); min-width: 2.4rem; padding: 0 var(--esp-2); }
+    .cajas--chicas .caja__nombre { font-size: var(--texto-xs); padding: var(--esp-1) var(--esp-2); }
+    .lista + .cajas--chicas { padding-top: var(--esp-2); }
+    /* The list and the temp box, side by side (if they fit) */
+    .lado-a-lado { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; column-gap: var(--esp-4); }
+    .lado-a-lado > .lista { flex: 1 1 17rem; width: auto; }
+    .lado-a-lado > .cajas { flex: none; padding: 0 0 var(--esp-2); }
+    /* The output doesn't move: the warning keeps its place before it shows up */
+    .perdido[hidden] { display: block !important; visibility: hidden; animation: none; }
+    .perdido { margin: var(--esp-2) 0 0; text-align: center; font-weight: 700; color: var(--color-error); animation: aparecer var(--dur) var(--curva-rebote) both; }
+    .perdido strong { display: inline-block; margin-left: 0.3em; padding: 0 0.4em; border: 2px dashed var(--color-error); border-radius: var(--radio-sm); font-family: var(--fuente-codigo); text-decoration: line-through 2px; }
+
+    /* ---------- Counters: swaps, comparisons, passes ---------- */
+    .cuentas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-5); margin: 0 0 var(--esp-2); }
+    .cuenta { margin: 0; text-align: center; font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+    .cuenta strong { display: inline-block; min-width: 1.6em; font-family: var(--fuente-codigo); font-size: var(--texto-xl); line-height: 1.1; color: var(--color-texto); vertical-align: -0.12em; }
+    .cuenta strong.cuenta--cambio { animation: valor-pulso 300ms ease-out; }
+
+    /* ---------- Slots you tap ---------- */
+    .lista--tocable .lista__casilla { cursor: pointer; }
+    .lista--tocable.lista--quieta .lista__casilla { cursor: default; }
+    .lista--tocable:not(.lista--quieta) .lista__casilla:not(.lista__casilla--marcada):hover > .lista__valor { border-color: var(--color-azul); transform: translateY(-3px); }
+    .lista--tocable .lista__casilla:focus { outline: none; }
+    .lista--tocable .lista__casilla:focus-visible > .lista__valor { box-shadow: var(--foco); }
+    /* The two neighbors being compared, and the part already in its place */
+    .lista__casilla--compara > .lista__valor { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); transform: translateY(-4px); }
+    .lista__casilla--fija > .lista__valor { border-color: var(--color-ok); background: var(--color-ok); color: #fff; }
+    .lista__casilla--fija > .lista__indice { color: var(--color-ok); }
+
+    /* ---------- Questions and decisions ---------- */
+    .pregunta { margin: var(--esp-4) 0 0; min-height: 1.6em; text-align: center; font-weight: 600; }
+    .pregunta code { font-size: var(--texto-md); }
+    .chip { padding: 0 0.35em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); font-family: var(--fuente-codigo); font-weight: 700; }
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--codigo .btn { font-family: var(--fuente-codigo); }
+    .elegir--arriba { margin: 0 0 var(--esp-2); }
+    .elegir__rotulo { align-self: center; margin-right: var(--esp-1); font-family: var(--fuente-codigo); font-weight: 700; }
+    .elegir .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .elegir .btn--usada::after { content: " ✓"; color: var(--color-ok); }
+    .prediccion { margin-top: var(--esp-4); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__texto { margin: 0; font-weight: 600; }
+    .prediccion .elegir { justify-content: flex-start; margin-top: var(--esp-2); }
+    .prediccion .btn { min-width: 3.5rem; font-family: var(--fuente-codigo); }
+
+    /* ---------- Passes: how the list looks after each one ---------- */
+    .pasadas { display: grid; gap: var(--esp-1); margin: 0; padding: 0; list-style: none; font-size: var(--texto-sm); }
+    .pasadas li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-2) var(--esp-3); padding: var(--esp-1) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie-2); animation: aparecer var(--dur) ease both; }
+    .pasadas__n { font-weight: 700; white-space: nowrap; color: var(--color-texto-suave); }
+    .pasadas__lista { font-family: var(--fuente-codigo); font-weight: 700; white-space: nowrap; }
+    .pasadas__lista b { color: var(--color-ok); }
+    .pasadas__comp { font-size: var(--texto-xs); color: var(--color-texto-suave); white-space: nowrap; }
+
+    /* ---------- Options ---------- */
+    .opciones--codigo { grid-template-columns: minmax(0, 1fr); }
+    .opciones--codigo .opcion span { text-align: left; font-size: var(--texto-sm); white-space: pre; overflow-x: auto; padding: var(--esp-3); }
+    .opciones--codigo .op-linea--activa { background: var(--color-azul-suave); opacity: 1; }
+    .opciones--listas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--listas .opcion span { font-size: var(--texto-md); padding: var(--esp-3) var(--esp-2); white-space: nowrap; }
+    .rotulo-j { margin: 0 0 var(--esp-1); text-align: center; font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-texto-suave); }
+
+    /* RETO-LAB */
+    /* Order matters: four programs of three lines go two by two on desktop, so the step still fits after
+       answering. On mobile, once it's right, only the chosen one stays, next to the list that runs it
+       (the others come back with “Try another option”) */
+    @media (min-width: 1024px) {
+      #s7-opciones { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); }
+      #s7-opciones .opcion span { padding: var(--esp-2) var(--esp-3); }
+      #s7-otra { display: none; }
+    }
+    @media (min-width: 1024px) and (max-width: 1279.98px) {
+      #s7-opciones .opcion span { font-size: var(--texto-xs); padding-inline: var(--esp-2); }
+    }
+    @media (max-width: 1023.98px) {
+      #s7-opciones:has(.opcion--correcta) .opcion:not(.opcion--correcta) { display: none; }
+    }
+    /* /RETO-LAB */
+    @media (min-width: 1024px) {
+      .lab__visual .pasadas li, .lab__visual .prediccion:not(.prediccion--ok) { background: var(--color-superficie); }
+    }
+    @media (min-width: 1024px) and (max-height: 720px) {
+      .lab .codigo { font-size: 1rem; line-height: 1.55; padding-block: var(--esp-3); }
+      .lab .codigo .linea { min-height: 1.55em; }
+      .lab .explicacion { margin-top: var(--esp-3); }
+      .lab .fila-botones { margin-top: var(--esp-3); }
+      .lab .consola { min-height: 0; }
+      .pasadas li { padding-block: 0.1rem; }
+      .paso > .celebracion { font-size: 2.75rem; }
+      .resumen-linea { font-size: var(--texto-md); }
+      .codigo.resumen-codigo { margin-top: var(--esp-3); padding-block: var(--esp-3); line-height: 1.5; }
+      .resumen-codigo .linea { min-height: 1.5em; }
+    }
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual { margin-top: var(--esp-4); }
+      /* The run buttons are there from the start, disabled until the student chooses */
+      #s2-ejecucion[hidden] { display: block !important; }
+    }
+    @media (max-width: 480px) {
+      .pasadas li { grid-template-columns: auto minmax(0, 1fr); }
+      .pasadas__comp { grid-column: 2; }
+      .opciones--listas { grid-template-columns: minmax(0, 1fr); }
+      .cajas--chicas { gap: var(--esp-4) var(--esp-5); }
+      .elegir .btn { padding-inline: var(--esp-3); }
+      /* The explanation goes above the output: with any j it keeps the height of the longest
+         one (four lines), and the output doesn't move when j changes */
+      #s4-explicacion { min-height: 6.4em !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="ordenar">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: sort by hand, two neighbors at a time -->
+    <section class="paso" id="paso-mano" data-requiere aria-labelledby="h-mano">
+      <span class="paso__etiqueta">Sorting 1/7 · Swapping neighbors</span>
+      <h1 class="paso__titulo" id="h-mano">Sort it with your hands</h1>
+      <p><code>sorted(grades)</code> sorts a list in one line. But how does the PC do it, if it can only compare two values at a time? Try it that way: sort from lowest to highest by swapping <strong>neighbors</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="pregunta" id="s1-ayuda" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-otra" hidden>↺ Shuffle and try again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cuentas">
+            <p class="cuenta">Swaps: <strong id="s1-cuenta">0</strong></p>
+          </div>
+          <div id="s1-lista" role="group" aria-label="Slots of the list grades"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The trap: a = b and b = a -->
+    <section class="paso" id="paso-perder" data-requiere aria-labelledby="h-perder">
+      <h2 class="paso__titulo" id="h-perder">Swapping two variables</h2>
+      <p>The PC swaps values stored in variables. To swap <code>a</code> and <code>b</code>, someone wrote this. Before you run it: what does it print?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" data-colorear aria-label="Code"><code>a = 14
+b = 9
+a = b
+b = a
+print(a, b)</code></pre>
+          <div class="elegir elegir--codigo" id="s2-elegir" role="group" aria-label="What does it print?">
+            <button type="button" class="btn btn-secundario" data-valor="9 14" aria-pressed="false">9 14</button>
+            <button type="button" class="btn btn-secundario" data-valor="9 9" aria-pressed="false">9 9</button>
+            <button type="button" class="btn btn-secundario" data-valor="14 14" aria-pressed="false">14 14</button>
+          </div>
+          <div id="s2-ejecucion" hidden>
+            <p class="explicacion" id="s2-explicacion" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s2-reiniciar" hidden>↺ Reset</button>
+              <button type="button" class="btn btn-secundario" id="s2-reproducir" aria-pressed="false">▶ Run all</button>
+              <button type="button" class="btn btn-secundario" id="s2-ejecutar">Run line ▸</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="s2-a">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">a</code>
+            </div>
+            <div class="caja" id="s2-b">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">b</code>
+            </div>
+          </div>
+          <p class="perdido" id="s2-perdido" hidden>The <strong>14</strong> is lost</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. A third box: temp -->
+    <section class="paso" id="paso-aux" data-requiere aria-labelledby="h-aux">
+      <h2 class="paso__titulo" id="h-aux">A third box</h2>
+      <p>To swap the juice and the milk in two glasses, you need a third, empty glass. In the code, that glass is another variable: <code>temp</code> (short for “temporary”). Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" data-colorear aria-label="Code"><code>a = 14
+b = 9
+temp = a
+a = b
+b = temp
+print(a, b)</code></pre>
+          <p class="explicacion" id="s3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s3-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas cajas--chicas">
+            <div class="caja" id="s3-a">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">a</code>
+            </div>
+            <div class="caja" id="s3-b">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">b</code>
+            </div>
+            <div class="caja caja--acento" id="s3-aux">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">temp</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. The same in a list, with an if -->
+    <section class="paso" id="paso-lista" data-requiere aria-labelledby="h-lista">
+      <h2 class="paso__titulo" id="h-lista">Two neighbors in a list</h2>
+      <p>With slots it's the same, and they only swap if they're in the wrong order. Try a <code>j</code> that swaps and one that doesn't.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" data-colorear aria-label="Code"><code>grades = [14, 9, 17, 11, 6]
+j = 2
+if grades[j] &gt; grades[j + 1]:
+    temp = grades[j]
+    grades[j] = grades[j + 1]
+    grades[j + 1] = temp
+print(grades)</code></pre>
+          <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="elegir elegir--codigo elegir--arriba" id="s4-elegir" role="group" aria-label="Value of j">
+            <span class="elegir__rotulo">j =</span>
+            <button type="button" class="btn btn-secundario" data-valor="0" aria-pressed="false">0</button>
+            <button type="button" class="btn btn-secundario" data-valor="1" aria-pressed="false">1</button>
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="true">2</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+          </div>
+          <div class="lado-a-lado">
+          <div id="s4-lista"></div>
+          <div class="cajas cajas--chicas">
+            <div class="caja caja--acento" id="s4-aux">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">temp</code>
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. One pass: the student decides on each pair -->
+    <section class="paso" id="paso-pasada" data-requiere aria-labelledby="h-pasada">
+      <h2 class="paso__titulo" id="h-pasada">One pass</h2>
+      <p>Now the whole row, from left to right: <code>j</code> goes from 0 to 3. On each pair of neighbors, you decide: swap or not?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" data-colorear aria-label="Code"><code>if grades[j] &gt; grades[j + 1]:
+    temp = grades[j]
+    grades[j] = grades[j + 1]
+    grades[j + 1] = temp</code></pre>
+          <p class="pregunta" id="s5-pregunta" aria-live="polite"></p>
+          <div class="elegir" id="s5-elegir" role="group" aria-label="Swap or not?">
+            <button type="button" class="btn btn-secundario" data-valor="si">⇄ Swap</button>
+            <button type="button" class="btn btn-secundario" data-valor="no">Leave it</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-otra" hidden>↺ Again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cuentas">
+            <p class="cuenta">Comparisons: <strong id="s5-comp">0</strong></p>
+            <p class="cuenta">Swaps: <strong id="s5-inter">0</strong></p>
+          </div>
+          <div id="s5-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. How many passes it takes -->
+    <section class="paso" id="paso-pasadas" data-requiere aria-labelledby="h-pasadas">
+      <h2 class="paso__titulo" id="h-pasadas">How many passes?</h2>
+      <p>After one pass, the 17 is already in its place, but the others aren't. Each pass puts <strong>one more</strong> in its place, at the end. Keep going until it's sorted.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="cuentas">
+            <p class="cuenta">Passes: <strong id="s6-n">1</strong></p>
+            <p class="cuenta">Comparisons: <strong id="s6-comp">4</strong></p>
+          </div>
+          <div id="s6-lista"></div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-pasada">▶ Pass 2</button>
+            <button type="button" class="btn btn-secundario" id="s6-otra" hidden>↺ Again</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <ol class="pasadas" id="s6-pasadas" aria-label="How the list looked after each pass"></ol>
+          <div class="prediccion" id="s6-pregunta" hidden>
+            <p class="prediccion__texto">With 5 grades it took 4 passes. And with <strong>8</strong> grades, at most?</p>
+            <div class="elegir" role="group" aria-label="How many passes with 8 grades?">
+              <button type="button" class="btn btn-secundario" data-valor="4" aria-pressed="false">4</button>
+              <button type="button" class="btn btn-secundario" data-valor="7" aria-pressed="false">7</button>
+              <button type="button" class="btn btn-secundario" data-valor="8" aria-pressed="false">8</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Which one swaps correctly? The order of the three lines -->
+    <section class="paso" id="paso-cual" data-comprobar aria-labelledby="h-cual">
+      <h2 class="paso__titulo" id="h-cual">Order matters</h2>
+      <p>The same three lines in another order can lose a value. With <code>j = 2</code>, which one swaps <code>grades[j]</code> and <code>grades[j + 1]</code> correctly?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--codigo" id="s7-opciones">
+            <legend class="visualmente-oculto">Which code swaps the two neighbors correctly?</legend>
+            <label class="opcion"><input type="radio" name="cual" value="b"><span>grades[j] = grades[j + 1]
+temp = grades[j]
+grades[j + 1] = temp</span></label>
+            <label class="opcion"><input type="radio" name="cual" value="a"><span>temp = grades[j]
+grades[j] = grades[j + 1]
+grades[j + 1] = temp</span></label>
+            <label class="opcion"><input type="radio" name="cual" value="d"><span>temp = grades[j]
+grades[j] = grades[j + 1]
+grades[j + 1] = grades[j]</span></label>
+            <label class="opcion"><input type="radio" name="cual" value="c"><span>temp = grades[j]
+grades[j + 1] = temp
+grades[j] = grades[j + 1]</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-j">j = 2</p>
+          <div class="lado-a-lado">
+            <div id="s7-lista"></div>
+            <div class="cajas cajas--chicas">
+              <div class="caja caja--acento" id="s7-aux">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">temp</code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="s7-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="s7-otra-btn">↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Challenge: predict the list after one pass -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Be the PC</h2>
+      <p>Do <strong>one</strong> pass over <code>[12, 20, 8, 15, 5]</code> in your head: compare each pair of neighbors, from left to right. What does the list look like?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <fieldset class="opciones opciones--listas" id="r-opciones">
+            <legend class="visualmente-oculto">What does the list look like after one pass?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="corta"><span>[12, 8, 20, 15, 5]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="toda"><span>[5, 8, 12, 15, 20]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="bien"><span>[12, 8, 15, 5, 20]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="frente"><span>[20, 12, 8, 15, 5]</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div class="cuentas">
+            <p class="cuenta">Comparisons: <strong id="r-comp">0</strong></p>
+            <p class="cuenta">Swaps: <strong id="r-inter">0</strong></p>
+          </div>
+          <div id="r-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="r-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">To sort, the PC compares two neighbors and, if they're in the wrong order, swaps them with a <code>temp</code> box; on each pass, the highest one bubbles up to the end.</p>
+        <pre class="codigo resumen-codigo" data-colorear aria-label="Summary in code"><code>if grades[j] &gt; grades[j + 1]:   # wrong order?
+    temp = grades[j]            # 1. keep it safe
+    grades[j] = grades[j + 1]   # 2. copy over it
+    grades[j + 1] = temp        # 3. put it back
+# 5 grades: 4 passes</code></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="bubble/index.html">Next: Bubble sort →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function plural(n, uno, varios) { return n + " " + (n === 1 ? uno : varios); }
+  function chip(v) { return "<span class=\"chip\">" + v + "</span>"; }
+
+  /* ---------- Color the code of the data-colorear blocks ----------
+     The code is written as is inside the <pre>; here each line becomes a
+     .linea with its colored pieces (what Codigo and Traza expect). */
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not|import)$/;
+  var PIEZA = /("[^"\n]*")|(#.*)|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?/g;
+
+  function escapar(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function tk(clase, texto) { return "<span class=\"tk-" + clase + "\">" + escapar(texto) + "</span>"; }
+
+  function colorear(linea) {
+    var html = "";
+    var desde = 0;
+    linea.replace(PIEZA, function (todo, texto, comentario, numero, nombre, parentesis, pos) {
+      html += escapar(linea.slice(desde, pos));
+      desde = pos + todo.length;
+      if (texto) html += tk("texto", texto);
+      else if (comentario) html += tk("comentario", comentario);
+      else if (numero) html += tk("numero", numero);
+      else if (PALABRAS.test(nombre)) html += tk("palabra", nombre) + escapar(parentesis || "");
+      else if (parentesis) html += tk("funcion", nombre) + escapar(parentesis);
+      else html += tk("variable", nombre);
+      return todo;
+    });
+    return html + escapar(linea.slice(desde));
+  }
+
+  document.querySelectorAll("pre.codigo[data-colorear]").forEach(function (pre) {
+    var code = pre.querySelector("code");
+    code.innerHTML = code.textContent.split("\n").map(function (l) {
+      return "<span class=\"linea\">" + colorear(l) + "</span>";
+    }).join("");
+  });
+
+  /* Timers of a step: they are all canceled together when starting over */
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) {
+        var id = setTimeout(function () {
+          ids = ids.filter(function (otro) { return otro !== id; });
+          fn();
+        }, espera(ms));
+        ids.push(id);
+      },
+      cancelar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  /* A counter (swaps, comparisons): the number jumps when it changes */
+  function contar(el, n) {
+    el.textContent = String(n);
+    el.classList.remove("cuenta--cambio");
+    if (n > 0 && !Pasos.reducirMovimiento) {
+      void el.offsetWidth;
+      el.classList.add("cuenta--cambio");
+    }
+  }
+
+  /* The order for reordenar(): all in their place except j and j + 1, which cross */
+  function cruzar(n, j) {
+    var orden = [];
+    for (var k = 0; k < n; k++) orden.push(k);
+    orden[j] = j + 1;
+    orden[j + 1] = j;
+    return orden;
+  }
+
+  function ordenada(v) {
+    for (var k = 0; k + 1 < v.length; k++) if (v[k] > v[k + 1]) return false;
+    return true;
+  }
+
+  /* How many pairs are in the wrong order: the fewest neighbor swaps needed to sort */
+  function alReves(v) {
+    var n = 0;
+    for (var a = 0; a < v.length; a++) for (var b = a + 1; b < v.length; b++) if (v[a] > v[b]) n++;
+    return n;
+  }
+
+  function valorDeCaja(caja) { return caja.querySelector(".caja__valor:not(.caja__valor--saliendo)"); }
+
+  /* The two neighbors being compared light up; from `fijas` on, the part already in its place */
+  function pintarPasada(lista, j, fijas) {
+    lista.clases(function (i) {
+      if (fijas !== undefined && i >= fijas) return "lista__casilla--fija";
+      if (j !== null && (i === j || i === j + 1)) return "lista__casilla--compara";
+      return "";
+    });
+  }
+
+  /* Single-choice buttons: the chosen one stays marked */
+  function pulsar(grupo, boton) {
+    grupo.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b === boton)); });
+  }
+
+  var INICIAL = [14, 9, 17, 11, 6];
+
+  /* ---------- 1. Sort it with your hands ---------- */
+  var el1 = $("s1-lista");
+  var lista1 = Lista.crear(el1, INICIAL, { nombres: ["grades"] });
+  el1.removeAttribute("aria-hidden");
+  el1.classList.add("lista--tocable");
+  var v1 = INICIAL.slice();
+  var minimo1 = alReves(v1);
+  var elegida1 = null;
+  var cuenta1 = 0;
+  var listo1 = false;
+
+  function casillas1() {
+    return Array.prototype.slice.call(el1.querySelectorAll(".lista__fila > .lista__casilla"));
+  }
+
+  // Each slot is a button (also with the keyboard)
+  function etiquetar1() {
+    el1.classList.toggle("lista--quieta", listo1);
+    casillas1().forEach(function (c, i) {
+      c.setAttribute("role", "button");
+      c.setAttribute("tabindex", listo1 ? "-1" : "0");
+      c.setAttribute("aria-pressed", String(i === elegida1));
+      c.setAttribute("aria-label", "Slot " + i + ": " + v1[i]);
+      if (listo1) c.setAttribute("aria-disabled", "true");
+      else c.removeAttribute("aria-disabled");
+    });
+    el1.querySelectorAll(".lista__corchete, .lista__nombres").forEach(function (e) { e.setAttribute("aria-hidden", "true"); });
+  }
+
+  function ayuda1(html) { $("s1-ayuda").innerHTML = html; }
+
+  function empezar1(valores) {
+    v1 = valores.slice();
+    minimo1 = alReves(v1);
+    elegida1 = null;
+    cuenta1 = 0;
+    listo1 = false;
+    lista1.valores(v1);
+    lista1.clases(null);
+    lista1.marcar(null);
+    contar($("s1-cuenta"), 0);
+    $("s1-otra").hidden = true;
+    Pasos.limpiarFeedback($("s1-fb"));
+    ayuda1("Tap a slot and then its neighbor to swap them.");
+    etiquetar1();
+  }
+
+  function tocar1(i) {
+    if (listo1 || i < 0) return;
+    var fb = $("s1-fb");
+    if (elegida1 === null || Math.abs(i - elegida1) > 1) {
+      var salto = elegida1 !== null;
+      elegida1 = i;
+      lista1.marcar(i);
+      ayuda1((salto ? "You can only swap neighbors, right next to each other. " : "") +
+        "You chose the " + chip(v1[i]) + ". Now tap one of its neighbors.");
+      etiquetar1();
+      return;
+    }
+    if (i === elegida1) {
+      elegida1 = null;
+      lista1.marcar(null);
+      ayuda1("You let it go. Tap a slot and then its neighbor.");
+      etiquetar1();
+      return;
+    }
+    var a = Math.min(i, elegida1);
+    var izq = v1[a];
+    var der = v1[a + 1];
+    v1[a] = der;
+    v1[a + 1] = izq;
+    elegida1 = null;
+    lista1.reordenar(cruzar(v1.length, a));
+    cuenta1++;
+    contar($("s1-cuenta"), cuenta1);
+    etiquetar1();
+    var c = casillas1()[i];
+    if (c) c.focus({ preventScroll: true });
+    if (ordenada(v1)) { terminar1(); return; }
+    if (izq < der) Pasos.feedback(fb, "pista", izq + " and " + der + " were already in order, the lower one on the left: that swap put them out of order.");
+    else Pasos.limpiarFeedback(fb);
+    ayuda1("You swapped the " + chip(izq) + " and the " + chip(der) + ". Keep going: tap another slot.");
+  }
+
+  function terminar1() {
+    listo1 = true;
+    lista1.clases(function () { return "lista__casilla--fija"; });
+    ayuda1("From lowest to highest!");
+    var texto = "Sorted with " + plural(cuenta1, "swap", "swaps") + "! ";
+    texto += cuenta1 === minimo1
+      ? "That's the fewest: each swap fixed a pair of neighbors that was in the wrong order."
+      : "It can be done with " + minimo1 + ": only swap neighbors in the wrong order, the higher one on the left.";
+    texto += " The PC does the same, but with a fixed rule. Let's find it.";
+    Pasos.feedback($("s1-fb"), "ok", texto);
+    $("s1-otra").hidden = false;
+    etiquetar1();
+    $("s1-otra").focus({ preventScroll: true });
+    leccion.desbloquear();
+  }
+
+  el1.addEventListener("click", function (e) {
+    var c = e.target.closest(".lista__casilla");
+    if (c) tocar1(casillas1().indexOf(c));
+  });
+  el1.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var c = e.target.closest(".lista__casilla");
+    if (!c) return;
+    e.preventDefault();
+    tocar1(casillas1().indexOf(c));
+  });
+
+  $("s1-otra").addEventListener("click", function () {
+    // Another order, with enough pairs in the wrong order so it isn't trivial
+    var v;
+    do {
+      v = INICIAL.slice();
+      for (var k = v.length - 1; k > 0; k--) {
+        var r = Math.floor(Math.random() * (k + 1));
+        var t = v[k]; v[k] = v[r]; v[r] = t;
+      }
+    } while (alReves(v) < 5);
+    empezar1(v);
+    var c = casillas1()[0];
+    if (c) c.focus({ preventScroll: true });
+  });
+
+  /* ---------- 2. Swapping two variables: the trap ---------- */
+  var prediccion2 = null;
+
+  // Joins a Traza with its boxes: each step can put a value in a box, from another one
+  function trazaCajas(n, pasos, alPaso, alTerminar) {
+    var nombres = Object.keys(pasos.cajas);
+    return Traza.crear({
+      codigo: $(n + "-codigo"),
+      explicacion: $(n + "-explicacion"),
+      consola: $(n + "-consola"),
+      ejecutar: $(n + "-ejecutar"),
+      reproducir: $(n + "-reproducir"),
+      reiniciar: $(n + "-reiniciar"),
+      intervalo: 1100,
+      generar: function () { return pasos.lista; },
+      alReiniciar: function () {
+        nombres.forEach(function (c) { Caja.vaciar($(n + "-" + c)); });
+        Pasos.limpiarFeedback($(n + "-fb"));
+        if (pasos.alReiniciar) pasos.alReiniciar();
+      },
+      alPaso: function (p) {
+        if (p.caja) {
+          var origen = p.desde ? valorDeCaja($(n + "-" + p.desde)) : undefined;
+          Caja.poner($(n + "-" + p.caja), p.valor, origen);
+        }
+        if (alPaso) alPaso(p);
+      },
+      alTerminar: alTerminar
+    });
+  }
+
+  var traza2 = trazaCajas("s2", {
+    cajas: { a: 1, b: 1 },
+    lista: [
+      { linea: 0, caja: "a", valor: 14, texto: "<code>a</code> stores the <strong>14</strong>." },
+      { linea: 1, caja: "b", valor: 9, texto: "<code>b</code> stores the <strong>9</strong>." },
+      { linea: 2, caja: "a", valor: 9, desde: "b", pierde: true, texto: "<code>a = b</code>: <code>a</code> gets a copy of the 9. The 14 leaves the box… and nobody else was keeping it." },
+      { linea: 3, caja: "b", valor: 9, desde: "a", texto: "<code>b = a</code>: <code>b</code> gets what is in <code>a</code> now. But <code>a</code> is already 9!" },
+      { linea: 4, salida: "9 9", texto: "Both are <strong>9</strong>: the 14 was lost on line 3." }
+    ],
+    alReiniciar: function () { $("s2-perdido").hidden = true; }
+  }, function (p) {
+    if (p.pierde) $("s2-perdido").hidden = false;
+  }, function () {
+    var base = "a = b erased the 14 before b could copy it. To swap, one of the two values has to wait somewhere else.";
+    var fb = $("s2-fb");
+    if (prediccion2 === "9 9") Pasos.feedback(fb, "ok", "You predicted it! " + base);
+    else if (prediccion2 === "14 14") Pasos.feedback(fb, "ok", "Close: both end up the same, but they're 9. " + base);
+    else Pasos.feedback(fb, "ok", "It looked like it would, but it prints 9 9. " + base);
+    leccion.desbloquear();
+  });
+
+  // Until the student chooses what it prints, it can't run (on mobile the buttons
+  // are already shown, disabled, to keep their place: that way they don't push the boxes or the output)
+  $("s2-ejecutar").disabled = true;
+  $("s2-reproducir").disabled = true;
+  $("s2-explicacion").textContent = "";
+
+  $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion2 = b.getAttribute("data-valor");
+      pulsar($("s2-elegir"), b);
+      $("s2-ejecucion").hidden = false;
+      traza2.reiniciar();
+    });
+  });
+
+  /* ---------- 3. A third box: temp ---------- */
+  var traza3 = trazaCajas("s3", {
+    cajas: { a: 1, b: 1, aux: 1 },
+    lista: [
+      { linea: 0, caja: "a", valor: 14, texto: "<code>a</code> stores the <strong>14</strong>." },
+      { linea: 1, caja: "b", valor: 9, texto: "<code>b</code> stores the <strong>9</strong>." },
+      { linea: 2, caja: "aux", valor: 14, desde: "a", texto: "<code>temp = a</code>: a copy of the 14 stays safe in <code>temp</code>, the empty glass." },
+      { linea: 3, caja: "a", valor: 9, desde: "b", texto: "<code>a = b</code>: now <code>a</code> can get the 9. The 14 is still in <code>temp</code>." },
+      { linea: 4, caja: "b", valor: 14, desde: "aux", texto: "<code>b = temp</code>: <code>b</code> gets the 14 from <code>temp</code>." },
+      { linea: 5, salida: "9 14", texto: "Swapped: <code>a</code> is 9 and <code>b</code> is 14." }
+    ]
+  }, null, function () {
+    Pasos.feedback($("s3-fb"), "ok", "Three lines: keep one in temp, copy the other over it, and put back the one in temp. (temp keeps a copy of the 14; that does no harm.)");
+    leccion.desbloquear();
+  });
+
+  /* ---------- 4. Two neighbors in a list ---------- */
+  var pre4 = $("s4-codigo");
+  var lista4 = Lista.crear($("s4-lista"), INICIAL, { reservarPunteros: 1 });   // j and j + 1 already have their place
+  var aux4 = $("s4-aux");
+  var j4 = 2;
+  var metas4 = { si: false, no: false };
+
+  function generar4() {
+    var v = INICIAL.slice();
+    var j = j4;
+    var a = v[j];
+    var b = v[j + 1];
+    var mayor = a > b;
+    var pasos = [
+      { linea: 0, texto: "<code>grades</code> stores 5 grades." },
+      { linea: 1, punteros: true, texto: "<code>j</code> is <strong>" + j + "</strong>: compare <code>grades[" + j + "]</code> with its neighbor on the right, <code>grades[" + (j + 1) + "]</code>." },
+      { linea: 2, compara: true, texto: "<code>grades[" + j + "] &gt; grades[" + (j + 1) + "]</code>? " + a + " &gt; " + b + "? <strong>" + (mayor ? "True" : "False") + "</strong>" + (mayor ? ": they're in the wrong order." : ": they're already in order.") }
+    ];
+    if (mayor) {
+      pasos.push({ linea: 3, aux: a, texto: "<code>temp = grades[" + j + "]</code>: the " + a + " stays safe in <code>temp</code>." });
+      pasos.push({ linea: 4, cambia: j, valor: b, desde: j + 1, texto: "<code>grades[" + j + "] = grades[" + (j + 1) + "]</code>: the " + b + " is copied to the left. For a moment it's there twice, but the " + a + " is still in <code>temp</code>." });
+      pasos.push({ linea: 5, cambia: j + 1, valor: a, desdeAux: true, texto: "<code>grades[" + (j + 1) + "] = temp</code>: the " + a + " comes back from <code>temp</code>, one place to the right." });
+      v[j] = b;
+      v[j + 1] = a;
+      pasos.push({ linea: 6, salida: Lista.python(v), texto: "Swapped: the higher of the two ended up on the right." });
+    } else {
+      pasos.push({ linea: 6, saltar: true, salida: Lista.python(v), texto: "It was False: the three lines of the swap don't run and the list doesn't change." });
+    }
+    return pasos;
+  }
+
+  var traza4 = Traza.crear({
+    codigo: pre4,
+    explicacion: $("s4-explicacion"),
+    consola: $("s4-consola"),
+    ejecutar: $("s4-ejecutar"),
+    reproducir: $("s4-reproducir"),
+    reiniciar: $("s4-reiniciar"),
+    intervalo: 1100,
+    generar: generar4,
+    alReiniciar: function () {
+      lista4.valores(INICIAL);
+      lista4.punteros(null);
+      lista4.clases(null);
+      Caja.vaciar(aux4);
+      Pasos.limpiarFeedback($("s4-fb"));
+    },
+    alPaso: function (p) {
+      if (p.punteros) lista4.punteros({ j: j4, "j + 1": j4 + 1 });
+      if (p.compara) pintarPasada(lista4, j4);
+      if (p.aux !== undefined) Caja.poner(aux4, p.aux, lista4.valor(j4));
+      if (p.cambia !== undefined) lista4.cambiar(p.cambia, p.valor, p.desdeAux ? valorDeCaja(aux4) : lista4.valor(p.desde));
+      if (p.saltar) Codigo.marcar(pre4, { activas: [6], saltadas: [3, 4, 5] });
+    },
+    alTerminar: function () {
+      var v = INICIAL;
+      var cambio = v[j4] > v[j4 + 1];
+      metas4[cambio ? "si" : "no"] = true;
+      $("s4-elegir").querySelector('[data-valor="' + j4 + '"]').classList.add("btn--usada");
+      var texto = cambio
+        ? "With j = " + j4 + ", " + v[j4] + " > " + v[j4 + 1] + ": they were swapped with the temp recipe."
+        : "With j = " + j4 + ", " + v[j4] + " > " + v[j4 + 1] + " is False: the if skips the swap.";
+      if (metas4.si && metas4.no) {
+        Pasos.feedback($("s4-fb"), "ok", texto + " You tried both cases.");
+        leccion.desbloquear();
+        return;
+      }
+      Pasos.feedback($("s4-fb"), "ok", texto + (cambio ? " Now choose a j where no swap is needed." : " Now choose a j where a swap is needed."));
+    }
+  });
+
+  $("s4-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      j4 = Number(b.getAttribute("data-valor"));
+      pulsar($("s4-elegir"), b);
+      pre4.querySelectorAll(".linea")[1].querySelector(".tk-numero").textContent = String(j4);
+      traza4.reiniciar();
+    });
+  });
+
+  /* ---------- 5. One pass: you decide ---------- */
+  var pre5 = $("s5-codigo");
+  var lista5 = Lista.crear($("s5-lista"), INICIAL, { nombres: ["grades"] });
+  var r5 = reloj();
+  var v5, j5, comp5, inter5;
+  var ocupado5 = true;
+  var fin5 = false;
+
+  function empezar5() {
+    r5.cancelar();
+    v5 = INICIAL.slice();
+    j5 = 0;
+    comp5 = 0;
+    inter5 = 0;
+    fin5 = false;
+    lista5.valores(v5);
+    lista5.clases(null);
+    contar($("s5-comp"), 0);
+    contar($("s5-inter"), 0);
+    Pasos.limpiarFeedback($("s5-fb"));
+    $("s5-elegir").hidden = false;
+    $("s5-otra").hidden = true;
+    preguntar5();
+  }
+
+  function preguntar5() {
+    lista5.punteros({ j: j5, "j + 1": j5 + 1 });
+    pintarPasada(lista5, j5);
+    comp5++;
+    contar($("s5-comp"), comp5);
+    Codigo.marcar(pre5, { activas: [0] });
+    $("s5-pregunta").innerHTML = "With <code>j = " + j5 + "</code>, " + chip(v5[j5]) + " &gt; " + chip(v5[j5 + 1]) + "?";
+    ocupado5 = false;
+  }
+
+  function decidir5(intercambiar) {
+    if (ocupado5 || fin5) return;
+    var a = v5[j5];
+    var b = v5[j5 + 1];
+    var hace = a > b;
+    var fb = $("s5-fb");
+    if (intercambiar !== hace) {
+      Pasos.feedback(fb, "pista", hace
+        ? a + " is greater than " + b + ": they're in the wrong order. You need to swap them."
+        : a + " is less than " + b + ": they're already in order. They only swap if the one on the left is greater.");
+      return;
+    }
+    Pasos.limpiarFeedback(fb);
+    ocupado5 = true;
+    if (!hace) {
+      Codigo.marcar(pre5, { activas: [0], saltadas: [1, 2, 3] });
+      r5.luego(avanzar5, 450);
+      return;
+    }
+    Codigo.marcar(pre5, { activas: [1, 2, 3] });
+    v5[j5] = b;
+    v5[j5 + 1] = a;
+    lista5.reordenar(cruzar(v5.length, j5));
+    pintarPasada(lista5, j5);
+    inter5++;
+    contar($("s5-inter"), inter5);
+    r5.luego(avanzar5, 700);
+  }
+
+  function avanzar5() {
+    j5++;
+    if (j5 < v5.length - 1) { preguntar5(); return; }
+    fin5 = true;
+    lista5.punteros(null);
+    pintarPasada(lista5, null, v5.length - 1);
+    Codigo.limpiar(pre5);
+    $("s5-pregunta").textContent = "Pass done.";
+    $("s5-elegir").hidden = true;
+    $("s5-otra").hidden = false;
+    Pasos.feedback($("s5-fb"), "ok", "The highest, 17, bubbled up: each time it was its turn, it was the greater of the pair and moved one place. It's now in its place, at the end. " +
+      plural(comp5, "comparison", "comparisons") + " and " + plural(inter5, "swap", "swaps") + ".");
+    $("s5-otra").focus({ preventScroll: true });
+    leccion.desbloquear();
+  }
+
+  $("s5-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { decidir5(b.getAttribute("data-valor") === "si"); });
+  });
+  $("s5-otra").addEventListener("click", function () {
+    empezar5();
+    $("s5-elegir").querySelector("button").focus({ preventScroll: true });
+  });
+
+  /* ---------- 6. How many passes? ---------- */
+  var DESPUES1 = [9, 14, 11, 6, 17];
+  var lista6 = Lista.crear($("s6-lista"), DESPUES1, { nombres: ["grades"] });
+  var r6 = reloj();
+  var v6, pasada6, comp6, fijas6;
+
+  function textoPasada(v, fijas) {
+    return "[" + v.map(function (x, i) { return i >= fijas ? "<b>" + x + "</b>" : String(x); }).join(", ") + "]";
+  }
+
+  function anotar6(n, v, fijas, comps) {
+    var li = document.createElement("li");
+    li.innerHTML = "<span class=\"pasadas__n\">Pass " + n + "</span><span class=\"pasadas__lista\">" + textoPasada(v, fijas) +
+      "</span><span class=\"pasadas__comp\">" + plural(comps, "comparison", "comparisons") + "</span>";
+    $("s6-pasadas").appendChild(li);
+  }
+
+  function empezar6() {
+    r6.cancelar();
+    v6 = DESPUES1.slice();
+    pasada6 = 1;
+    comp6 = 4;
+    fijas6 = v6.length - 1;
+    lista6.valores(v6);
+    lista6.punteros(null);
+    pintarPasada(lista6, null, fijas6);
+    $("s6-pasadas").textContent = "";
+    anotar6(1, v6, fijas6, 4);
+    $("s6-n").textContent = "1";
+    $("s6-comp").textContent = "4";
+    $("s6-pasada").textContent = "▶ Pass 2";
+    $("s6-pasada").hidden = false;
+    $("s6-pasada").disabled = false;
+    $("s6-otra").hidden = true;
+    Pasos.limpiarFeedback($("s6-fb"));
+  }
+
+  function pasada6Animada() {
+    var btn = $("s6-pasada");
+    btn.disabled = true;
+    pasada6++;
+    contar($("s6-n"), pasada6);
+    var limite = v6.length - pasada6;   // compares j and j + 1 for j < limite
+    var comps = 0;
+    var j = 0;
+    function uno() {
+      if (j >= limite) { cerrar(); return; }
+      lista6.punteros({ j: j, "j + 1": j + 1 });
+      pintarPasada(lista6, j, fijas6);
+      comps++;
+      comp6++;
+      contar($("s6-comp"), comp6);
+      var jj = j;
+      r6.luego(function () {
+        if (v6[jj] > v6[jj + 1]) {
+          var t = v6[jj]; v6[jj] = v6[jj + 1]; v6[jj + 1] = t;
+          lista6.reordenar(cruzar(v6.length, jj));
+          pintarPasada(lista6, jj, fijas6);
+          r6.luego(siguiente, 650);
+        } else {
+          r6.luego(siguiente, 250);
+        }
+      }, 550);
+    }
+    function siguiente() { j++; uno(); }
+    function cerrar() {
+      lista6.punteros(null);
+      fijas6--;
+      if (fijas6 === 1) fijas6 = 0;   // with 4 in their place, the one left is too
+      pintarPasada(lista6, null, fijas6);
+      anotar6(pasada6, v6, fijas6, comps);
+      if (pasada6 < v6.length - 1) {
+        btn.textContent = "▶ Pass " + (pasada6 + 1);
+        btn.disabled = false;
+        btn.focus({ preventScroll: true });
+        Pasos.feedback($("s6-fb"), "ok", "Pass " + pasada6 + ": now " + (v6.length - fijas6) + " are in their place." + (pasada6 === 2 ? " Notice: the green ones aren't compared anymore." : ""));
+        return;
+      }
+      btn.hidden = true;
+      $("s6-otra").hidden = false;
+      $("s6-pregunta").hidden = false;
+      Pasos.feedback($("s6-fb"), "ok", "Sorted in 4 passes! Why not 5? When 4 grades are already in their place, the one left can only go in the first one.");
+      var primero = $("s6-pregunta").querySelector("button:not([disabled])");
+      if (primero) primero.focus({ preventScroll: true });
+    }
+    uno();
+  }
+
+  $("s6-pasada").addEventListener("click", pasada6Animada);
+  $("s6-otra").addEventListener("click", function () {
+    empezar6();
+    $("s6-pasada").focus({ preventScroll: true });
+  });
+
+  var pistas6 = {
+    "8": "With 5 grades it was 4, not 5: the last pass puts two in their place at once.",
+    "4": "Each pass fixes just one grade at the end. With 8 grades you have to fix 7 (the last one falls into place by itself)."
+  };
+  $("s6-pregunta").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var caja = $("s6-pregunta");
+      pulsar(caja, b);
+      var valor = b.getAttribute("data-valor");
+      if (valor !== "7") {
+        Pasos.feedback($("s6-fb"), "pista", pistas6[valor]);
+        return;
+      }
+      caja.classList.add("prediccion--ok");
+      caja.querySelectorAll("button").forEach(function (o) { o.disabled = true; });
+      Pasos.feedback($("s6-fb"), "ok", "7: with n grades, it takes n - 1 passes, because each one puts one more in its place. Repeating passes until it's sorted: that's bubble sort.");
+      leccion.desbloquear();
+    });
+  });
+
+  /* ---------- A step of options with Check ---------- */
+  function crearPrediccion(o) {
+    function limpiar() {
+      o.paso.querySelectorAll(".opcion").forEach(function (op) { op.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+      Pasos.limpiarFeedback(o.fb);
+      if (o.limpiar) o.limpiar();
+    }
+    function entrar(paso, lec, info) {
+      if (info && info.desbloqueado) return;
+      paso.querySelectorAll("input[type=radio]").forEach(function (r) { r.checked = false; });
+      limpiar();
+    }
+    function comprobar(paso) {
+      var marcada = paso.querySelector("input[type=radio]:checked");
+      if (!marcada) return false;
+      limpiar();
+      var opcion = marcada.closest(".opcion");
+      var bien = marcada.value === o.bien;
+      opcion.classList.add(bien ? "opcion--correcta" : "opcion--incorrecta");
+      Pasos.feedback(o.fb, bien ? "ok" : "pista", bien ? o.acierto : o.pistas[marcada.value]);
+      if (o.alComprobar) o.alComprobar(marcada.value, opcion);
+      return bien;
+    }
+    o.paso.querySelectorAll("input[type=radio]").forEach(function (r) {
+      r.addEventListener("change", function () {
+        limpiar();
+        leccion.listoParaComprobar(true);
+      });
+    });
+    return { entrar: entrar, comprobar: comprobar };
+  }
+
+  /* ---------- 7. Order matters ---------- */
+  var J7 = 2;
+  var lista7 = Lista.crear($("s7-lista"), INICIAL, { nombres: ["grades"] });
+  var aux7 = $("s7-aux");
+  var r7 = reloj();
+  // Each option, line by line: [destination, origin]; "aux", or 0 / 1 for grades[j] / grades[j + 1]
+  var OPCIONES7 = {
+    a: [["aux", 0], [0, 1], [1, "aux"]],
+    b: [[0, 1], ["aux", 0], [1, "aux"]],
+    c: [["aux", 0], [1, "aux"], [0, 1]],
+    d: [["aux", 0], [0, 1], [1, 0]]
+  };
+
+  function limpiar7() {
+    r7.cancelar();
+    lista7.valores(INICIAL);
+    lista7.punteros({ j: J7, "j + 1": J7 + 1 });
+    pintarPasada(lista7, J7);
+    Caja.vaciar(aux7);
+    $("paso-cual").querySelectorAll(".op-linea--activa").forEach(function (l) { l.classList.remove("op-linea--activa"); });
+  }
+
+  // Runs the chosen option on the list, line by line
+  function ejecutar7(clave, opcion) {
+    var ops = OPCIONES7[clave];
+    var lineas = opcion.querySelectorAll(".op-linea");
+    var estado = { aux: undefined, 0: INICIAL[J7], 1: INICIAL[J7 + 1] };
+    var k = 0;
+    function uno() {
+      lineas.forEach(function (l, i) { l.classList.toggle("op-linea--activa", i === k); });
+      if (k >= ops.length) return;
+      var destino = ops[k][0];
+      var origen = ops[k][1];
+      var valor = estado[origen];
+      var desde = origen === "aux" ? valorDeCaja(aux7) : lista7.valor(J7 + origen);
+      estado[destino] = valor;
+      if (destino === "aux") Caja.poner(aux7, valor, desde);
+      else lista7.cambiar(J7 + destino, valor, desde);
+      k++;
+      r7.luego(uno, 900);
+    }
+    r7.luego(uno, 200);
+  }
+
+  // Here what changes is the order of the lines, not the lines: don't dim the repeated ones
+  $("s7-opciones").querySelectorAll(".op-linea").forEach(function (l) { l.classList.remove("op-linea--comun", "op-linea--cambia"); });
+  $("paso-cual").querySelectorAll(".op-leyenda").forEach(function (l) { l.remove(); });
+
+  var pred7 = crearPrediccion({
+    paso: $("paso-cual"),
+    fb: $("s7-fb"),
+    bien: "a",
+    acierto: "First the 17 safe in temp, then the 11 over the 17, and finally the 17 back from temp. Watch how they move.",
+    pistas: {
+      b: "The first line erases the 17 before saving it: temp gets the 11. See how it ends: the 17 is lost. You have to save it in temp first.",
+      c: "The 17 reaches grades[j + 1] before the 11 is rescued, so the 11 is lost. See how it ends: two 17s.",
+      d: "The last line copies grades[j], which is already 11: two 11s are left. The 17 is safe in temp: you have to use it."
+    },
+    limpiar: function () { limpiar7(); $("s7-otra").hidden = true; },
+    alComprobar: function (valor, opcion) {
+      ejecutar7(valor, opcion);
+      if (valor === "a") $("s7-otra").hidden = false;
+    }
+  });
+  limpiar7();
+  // On mobile, once it's right, only the chosen option stays: this brings the others back
+  $("s7-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-cual");
+    paso.querySelectorAll("input[type=radio]").forEach(function (r) { r.checked = false; });
+    pred7.entrar(paso);
+    paso.querySelector("input[type=radio]").focus();
+  });
+
+  /* ---------- 8. Challenge: be the PC ---------- */
+  var RETO = [12, 20, 8, 15, 5];
+  var listaR = Lista.crear($("r-lista"), RETO);
+  var rR = reloj();
+
+  function limpiarR() {
+    rR.cancelar();
+    listaR.valores(RETO);
+    listaR.punteros(null);
+    listaR.clases(null);
+    contar($("r-comp"), 0);
+    contar($("r-inter"), 0);
+  }
+
+  // The real pass, animated, to see that this was the answer
+  function pasadaR() {
+    var v = RETO.slice();
+    var j = 0;
+    var comps = 0;
+    var inter = 0;
+    function uno() {
+      if (j >= v.length - 1) {
+        listaR.punteros(null);
+        pintarPasada(listaR, null, v.length - 1);
+        return;
+      }
+      listaR.punteros({ j: j, "j + 1": j + 1 });
+      pintarPasada(listaR, j);
+      contar($("r-comp"), ++comps);
+      var jj = j;
+      rR.luego(function () {
+        if (v[jj] > v[jj + 1]) {
+          var t = v[jj]; v[jj] = v[jj + 1]; v[jj + 1] = t;
+          listaR.reordenar(cruzar(v.length, jj));
+          pintarPasada(listaR, jj);
+          contar($("r-inter"), ++inter);
+          rR.luego(function () { j++; uno(); }, 650);
+        } else {
+          rR.luego(function () { j++; uno(); }, 250);
+        }
+      }, 550);
+    }
+    rR.luego(uno, 300);
+  }
+
+  var predR = crearPrediccion({
+    paso: $("paso-reto"),
+    fb: $("r-fb"),
+    bien: "bien",
+    acierto: "Exactly! 12 and 20 stay; then the 20 swaps with the 8, the 15, and the 5, and reaches the end. One pass only puts the highest in its place.",
+    pistas: {
+      corta: "You stopped at the first swap. The pass goes on to the last pair: the 20 keeps moving while it's the greater of the pair.",
+      toda: "That's the fully sorted list, and that takes several passes. One pass only makes sure of the last place.",
+      frente: "The highest doesn't go to the front: with each swap it moves to the right, to the end."
+    },
+    limpiar: limpiarR,
+    alComprobar: function (valor) { if (valor === "bien") pasadaR(); }
+  });
+
+  /* ---------- Initial state ---------- */
+  empezar1(INICIAL);
+  empezar5();
+  empezar6();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-perder": function () { traza2.detener(); },
+      "paso-aux": function () { traza3.detener(); },
+      "paso-lista": function () { traza4.detener(); },
+      "paso-cual": pred7.entrar,
+      "paso-reto": predR.entrar
+    },
+    comprobar: {
+      "paso-cual": pred7.comprobar,
+      "paso-reto": predR.comprobar
+    }
+  });
+})();
+</script>
+</body>
+</html>

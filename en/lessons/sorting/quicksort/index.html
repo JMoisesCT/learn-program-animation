@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quicksort · Learn to program</title>
+  <meta name="description" content="Interactive lesson: quicksort in Python. Pick a pivot, split the rest into smaller and greater or equal, and sort each side with recursion: the list splits into pieces and comes back put together.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    /* Four buttons (with “Next jump”): closer together, so they fit in one row */
+    .fila-botones--cuatro { gap: var(--esp-2); }
+    .fila-botones--cuatro .btn { padding-inline: var(--esp-2); font-size: var(--texto-sm); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .explicacion .booleano { font-size: var(--texto-xs); }
+    .pista-texto { color: var(--color-pista); }
+
+    /* ---------- Comparisons: the thread of the topic ---------- */
+    .contador { margin: var(--esp-2) 0 0; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .contador strong { font-family: var(--fuente-codigo); font-size: var(--texto-lg); color: var(--color-azul); }
+    .contador--cambio strong { display: inline-block; animation: valor-pulso 320ms ease-out; }
+    .rotulo-lista { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo-lista code { text-transform: none; letter-spacing: 0; }
+
+    /* ---------- Colors of the split: the same as in the partition ---------- */
+    .lista__casilla--pivote > .lista__valor { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+    .lista__casilla--menor > .lista__valor { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+    .lista__casilla--mayor > .lista__valor { border-color: #7a3fb0; background: #f2eafa; color: #7a3fb0; }
+    .leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-1) var(--esp-3); margin: 0 0 var(--esp-1); font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .leyenda span::before { content: ""; display: inline-block; width: 0.85em; height: 0.85em; margin-right: 0.35em; vertical-align: -0.1em; border: 2px solid; border-radius: 3px; }
+    .leyenda .ley--pivote::before { border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .leyenda .ley--menor::before { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .leyenda .ley--mayor::before { border-color: #7a3fb0; background: #f2eafa; }
+    .leyenda .ley--listo::before { border-color: var(--color-ok); background: var(--color-ok-suave); }
+
+    /* ---------- Step 1: three piles ---------- */
+    .zonas { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--esp-3); margin-top: var(--esp-3); }
+    .zona { display: flex; flex-direction: column; justify-content: space-between; min-width: 0; text-align: center; }
+    .zona__nombre { display: block; margin-bottom: var(--esp-1); font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; }
+    .zona--menor .zona__nombre { color: var(--color-azul); }
+    .zona--mayor .zona__nombre { color: #7a3fb0; }
+    .zona--pivote .zona__nombre { color: var(--color-pista); }
+    .zona--pivote .lista { width: 5.5rem; margin-inline: auto; }
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-3); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--numeros .btn { min-width: 2.9rem; padding-inline: var(--esp-2); font-family: var(--fuente-codigo); }
+    .btn--menor { border-color: var(--color-azul); color: var(--color-azul); }
+    .btn--mayor { border-color: #7a3fb0; color: #7a3fb0; }
+    .btn--mal, .btn--mal:hover:not(:disabled) { border-color: var(--color-pista); background: var(--color-pista-suave); color: var(--color-pista); }
+
+    /* ---------- The partition ---------- */
+    .particion .trozo--tocable { cursor: pointer; border-radius: var(--radio-sm); outline: none; }
+    .particion .trozo--tocable > .particion__celdas { border-style: dashed; border-color: var(--color-azul); background: var(--color-azul-suave); animation: trozo-llama 1.4s ease-in-out infinite; }
+    .particion .trozo--tocable:hover > .particion__celdas { border-style: solid; }
+    .particion .trozo--tocable:focus-visible > .particion__celdas { box-shadow: var(--foco); }
+    .particion .trozo--tocable .particion__rotulo { color: var(--color-azul); background: var(--color-azul-suave); }
+    @keyframes trozo-llama { 50% { transform: translateY(-3px); } }
+    .particion .trozo--error .particion__vacio { color: var(--color-error); }
+    .particion .trozo--error > .particion__celdas { border-style: dashed; border-color: var(--color-error); background: #fde8e8; }
+    .particion .trozo--error .particion__rotulo { color: var(--color-error); background: #fde8e8; }
+
+    /* ---------- Boxes of the split ---------- */
+    .lab .cajas.cajas--dos { gap: var(--esp-3) var(--esp-6); padding: var(--esp-3) 0 0; justify-content: center; }
+    .cajas--dos .caja { gap: var(--esp-1); }
+    .cajas--dos .caja__cuerpo { width: 5.5rem; height: 3.6rem; padding-bottom: var(--esp-2); }
+    .cajas--dos .caja__cuerpo::before { left: -0.8rem; }
+    .cajas--dos .caja__cuerpo::after { right: -0.8rem; }
+    .cajas--dos .caja__valor { font-size: var(--texto-lg); min-width: 2.4rem; }
+    .cajas--dos .caja__nombre { padding: 0 var(--esp-3); font-size: var(--texto-sm); }
+    .montones { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--esp-3); margin-top: var(--esp-3); }
+
+    /* ---------- Prediction ---------- */
+    .prediccion__pregunta { margin: 0 0 var(--esp-2); font-weight: 700; }
+    .prediccion { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: var(--esp-2); margin: 0 0 var(--esp-3); }
+    .prediccion .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion--codigo .btn { padding-inline: var(--esp-2); font-family: var(--fuente-codigo); white-space: nowrap; }
+    .prediccion .btn[aria-pressed="true"] { border-color: var(--color-azul); background: var(--color-azul-suave); color: var(--color-azul); }
+
+    /* ---------- The stack, compact: one row per card ----------
+       Title, pivot and state in the same row. The waiting ones don't show what they still need
+       (their chips in the code and the partition say it); the one that goes on does. */
+    .lab .pila { margin-top: var(--esp-3); }
+    .lab .pila__titulo { margin-bottom: var(--esp-1); }
+    .lab .pila__marcos { gap: 0.3rem; }
+    .lab .marco { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem var(--esp-2); padding: 0.25rem var(--esp-3); }
+    .lab .marco__cabecera { display: contents; }
+    .lab .marco__titulo { order: 1; }
+    .lab .marco__titulo code { font-size: var(--texto-xs); }
+    .lab .marco__vars { order: 2; margin: 0; min-height: 0; }
+    .lab .marco__estado { order: 3; margin-left: auto; }
+    .lab .marco__falta { order: 4; flex: 1 1 100%; margin: 0; text-align: right; }
+    .lab .marco__toca { order: 5; }
+    .lab .marco .var { font-size: 0.75rem; }
+    .lab .marco__vacia, .lab .marco--programa .marco__vars { display: none; }
+    .lab .marco--esperando .marco__falta, .lab .marco--esperando .marco__vars { display: none; }
+
+    /* ---------- A new list ---------- */
+    .nueva-zona { margin-top: var(--esp-4); transition: opacity var(--dur); }
+    .nueva-zona--olvidada { opacity: 0.35; }
+    .nueva-zona .rotulo-lista { color: var(--color-acento); }
+
+    /* ---------- Find the bug ---------- */
+    .versiones { display: grid; gap: var(--esp-3); margin-top: var(--esp-3); }
+    .version { padding: var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur); }
+    .version--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .version--mal { border-color: var(--color-pista); background: var(--color-pista-suave); }
+    .version__nombre { display: block; margin-bottom: var(--esp-1); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .version .codigo { margin: 0; font-size: 0.85rem; padding: var(--esp-2) 0; }
+    .version__elegir { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); font-weight: 600; }
+    .version__elegir select { min-height: 2.5rem; max-width: 100%; padding: 0 var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); font: inherit; font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .version__elegir select:focus-visible { outline: none; box-shadow: var(--foco); }
+    .version__porque { margin: var(--esp-2) 0 0; font-size: var(--texto-sm); }
+    .version--ok .version__porque { color: var(--color-ok); }
+    .version--mal .version__porque { color: var(--color-pista); }
+
+    /* ---------- Blanks inside the code ---------- */
+    .codigo__elegir { font: inherit; font-weight: 700; max-width: 100%; padding: 0 0.3em; border: 2px dashed var(--tk-numero); border-radius: 6px; background: #232a33; color: var(--tk-numero); cursor: pointer; }
+    .codigo__elegir:focus-visible { outline: 3px solid var(--tk-variable); outline-offset: 2px; }
+    .codigo__elegir--lleno { border-style: solid; }
+
+    /* ---------- Challenge tests ---------- */
+    .pruebas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .pruebas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-4); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-family: var(--fuente-codigo); font-size: var(--texto-sm); animation: aparecer var(--dur) ease both; }
+    .pruebas li:nth-child(2) { animation-delay: 100ms; }
+    .pruebas li:nth-child(3) { animation-delay: 200ms; }
+    .pruebas li:nth-child(4) { animation-delay: 300ms; }
+    .pruebas li:nth-child(5) { animation-delay: 400ms; }
+    .prueba__salida { font-weight: 700; text-align: right; }
+    .prueba__marca { font-weight: 700; }
+    .prueba--ok .prueba__marca { color: var(--color-ok); }
+    .prueba--mal { background: var(--color-pista-suave); }
+    .prueba--mal .prueba__marca, .prueba--mal .prueba__salida { color: var(--color-pista); }
+
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+
+    /* The quicksort code has 15 lines: smaller, so the step fits */
+    @media (min-width: 1024px) {
+      .lab .codigo--largo { font-size: 0.8rem; line-height: 1.42; padding: var(--esp-3) 0; }
+      .lab .codigo--largo .linea { min-height: 1.42em; }
+      .lab .codigo--medio { font-size: 0.95rem; }
+      .codigo--reto { font-size: 0.95rem; }
+      .lab .pila .marco__titulo { font-size: var(--texto-xs); }
+    }
+    @media (max-width: 480px) {
+      /* Long lines go on below, instead of hiding on the right */
+      .lab .codigo--largo, .lab .codigo--medio, .codigo--reto, .version .codigo { font-size: 0.75rem; }
+      .codigo--largo .linea, .codigo--medio .linea, .codigo--reto .linea, .version .codigo .linea { padding-left: 2.5rem; padding-right: var(--esp-2); white-space: pre-wrap; }
+      .codigo--largo .linea::before, .codigo--medio .linea::before, .codigo--reto .linea::before, .version .codigo .linea::before { width: 1.75rem; }
+      .pruebas li { padding: var(--esp-2) var(--esp-3); gap: var(--esp-2); font-size: var(--texto-xs); }
+      .zonas { gap: var(--esp-2); }
+      /* [3, 9, 14, 14, 17] fits in its button, two per row */
+      .prediccion--codigo .btn { padding-inline: var(--esp-1); font-size: 0.8125rem; }
+    }
+    @media (max-width: 1023px) {
+      .lab__visual > :first-child { margin-top: var(--esp-5); }
+    }
+    /* RETO-LAB */
+    /* After answering, “One changed line” and the challenge fit on the screen. Versions: on desktop,
+       the select goes next to the name (or next to the line, when it fits) and everything is tighter;
+       on mobile, “It prints:” and the select share a row. Challenge: the code a bit tighter, the tests
+       tighter and, when it fits, the message to the right of the code; otherwise, the tests two by two.
+       On mobile, each test takes two rows (the call on top, what it prints below) */
+    @media (min-width: 1024px) {
+      #paso-versiones .versiones { gap: var(--esp-2); margin-top: var(--esp-2); }
+      #paso-versiones .version { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nombre elegir" "codigo codigo" "porque porque"; column-gap: var(--esp-3); align-items: center; padding: 0.375rem var(--esp-3); }
+      #paso-versiones .version__nombre { grid-area: nombre; margin: 0; }
+      #paso-versiones .version .codigo { grid-area: codigo; margin-top: var(--esp-1); }
+      #paso-versiones .version__elegir { grid-area: elegir; margin: 0; }
+      #paso-versiones .version__elegir select { min-height: 2.25rem; }
+      #paso-versiones .version__porque { grid-area: porque; margin-top: var(--esp-1); }
+      #paso-versiones #v-fb { margin-top: var(--esp-3); padding: var(--esp-3) var(--esp-4); }
+      #paso-reto .codigo--reto { line-height: 1.5; }
+      #paso-reto .codigo--reto .linea { min-height: 1.5em; }
+      #reto-pruebas { gap: var(--esp-1); margin-top: var(--esp-3); }
+      #reto-pruebas li { padding-block: 0.375rem; font-size: 0.8125rem; }
+      #paso-reto #reto-fb { padding: var(--esp-3) var(--esp-4); }
+    }
+    @media (min-width: 1440px), (min-width: 1340px) and (max-height: 720px) {
+      #paso-versiones .version { grid-template-areas: "nombre nombre" "codigo elegir" "porque porque"; }
+      #paso-versiones .version .codigo { margin-top: 0; }
+      #paso-reto .tarjeta:has(#reto-pruebas:not([hidden])) { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "codigo fb" "pruebas pruebas"; column-gap: var(--esp-4); align-items: start; }
+      #paso-reto .tarjeta:has(#reto-pruebas:not([hidden])) #reto-codigo { grid-area: codigo; margin: 0; }
+      #paso-reto .tarjeta:has(#reto-pruebas:not([hidden])) #reto-pruebas { grid-area: pruebas; }
+      #paso-reto .tarjeta:has(#reto-pruebas:not([hidden])) #reto-fb { grid-area: fb; margin-top: 0; }
+    }
+    @media (min-width: 1024px) and (max-width: 1339.98px), (min-width: 1340px) and (max-width: 1439.98px) and (min-height: 720.02px) {
+      #reto-pruebas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #reto-pruebas li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0; padding: 0.25rem var(--esp-3); }
+      #reto-pruebas li > :first-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      #reto-pruebas { gap: var(--esp-1); margin-top: var(--esp-3); }
+      #reto-pruebas li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0; padding: 0.375rem var(--esp-2); font-size: 0.75rem; }
+      #reto-pruebas li > :first-child { grid-column: 1 / -1; }
+      #paso-reto #reto-fb { margin-top: var(--esp-3); padding: var(--esp-3); font-size: 0.9375rem; }
+      #paso-versiones .versiones { gap: var(--esp-2); margin-top: var(--esp-2); }
+      #paso-versiones .version { padding: var(--esp-2); }
+      #paso-versiones .version__elegir { flex-wrap: nowrap; margin-top: var(--esp-1); font-size: var(--texto-sm); white-space: nowrap; }
+      #paso-versiones .version__elegir select { flex: 1 1 auto; min-width: 0; min-height: 2.25rem; padding-inline: var(--esp-1); font-size: var(--texto-xs); }
+      #paso-versiones .version__porque { margin-top: var(--esp-1); font-size: var(--texto-xs); }
+      #paso-versiones #v-fb { margin-top: var(--esp-3); padding: var(--esp-3); font-size: 0.9375rem; }
+    }
+    /* /RETO-LAB */
+  </style>
+</head>
+<body>
+<div class="leccion" data-visual-fija data-leccion="ordenar-quicksort">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: split around a pivot -->
+    <section class="paso" id="paso-pivote" data-requiere aria-labelledby="h-pivote">
+      <span class="paso__etiqueta">Sorting 3/7 · Quicksort</span>
+      <h1 class="paso__titulo" id="h-pivote">Split around the pivot</h1>
+      <p>Another way to sort: take the first one, the <strong>pivot</strong>, and put the others on its left or on its right.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="rotulo-lista"><code>grades</code></p>
+          <div id="p1-notas"></div>
+          <p class="contador" id="p1-contador">Comparisons: <strong>0</strong></p>
+          <p class="explicacion" id="p1-explicacion" aria-live="polite"></p>
+          <div class="elegir" id="p1-acciones" role="group" aria-label="Where it goes"></div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas">
+            <div class="zona zona--menor"><span class="zona__nombre">smaller</span><div id="p1-men"></div></div>
+            <div class="zona zona--pivote"><span class="zona__nombre">pivot</span><div id="p1-piv"></div></div>
+            <div class="zona zona--mayor"><span class="zona__nombre">greater or equal</span><div id="p1-may"></div></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Each side is sorted the same way -->
+    <section class="paso" id="paso-lados" data-requiere aria-labelledby="h-lados">
+      <h2 class="paso__titulo" id="h-lados">Each side, the same way</h2>
+      <p>Each side is a <strong>smaller</strong> unsorted list. You sort it with the same idea: another pivot, another split.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="explicacion" id="p2-explicacion" aria-live="polite"></p>
+          <p class="contador" id="p2-contador">Comparisons: <strong>0</strong></p>
+          <div class="elegir" id="p2-acciones"></div>
+        </div>
+        <div class="lab__visual">
+          <p class="leyenda" aria-hidden="true"><span class="ley--pivote">pivot</span><span class="ley--menor">smaller</span><span class="ley--mayor">greater or equal</span><span class="ley--listo">already sorted</span></p>
+          <div id="p2-part"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="p2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. The split in Python -->
+    <section class="paso" id="paso-reparto" data-requiere aria-labelledby="h-reparto">
+      <h2 class="paso__titulo" id="h-reparto">The split in Python</h2>
+      <p>Two empty lists and a <code>for</code> that sends each value to one of them with <code>.append()</code>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--medio" id="p3-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p3-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p3-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p3-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p3-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="rotulo-lista"><code>grades</code></p>
+          <div id="p3-notas"></div>
+          <div class="cajas cajas--dos">
+            <div class="caja" id="p3-pivote">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">pivot</code>
+            </div>
+            <div class="caja caja--acento" id="p3-x">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">x</code>
+            </div>
+          </div>
+          <div class="montones">
+            <div><p class="rotulo-lista"><code>smaller</code></p><div id="p3-men"></div></div>
+            <div><p class="rotulo-lista"><code>larger</code></p><div id="p3-may"></div></div>
+          </div>
+          <p class="contador" id="p3-contador">Comparisons: <strong>0</strong></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. The whole function: it splits and comes back put together -->
+    <section class="paso" id="paso-traza" data-requiere aria-labelledby="h-traza">
+      <h2 class="paso__titulo" id="h-traza">It splits and comes back together</h2>
+      <p><code>quicksort</code> splits and calls itself on each side. Then it joins the pieces.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo codigo--largo" id="p4-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones fila-botones--cuatro">
+            <button type="button" class="btn btn-secundario" id="p4-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p4-saltar">Next jump ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="leyenda" aria-hidden="true"><span class="ley--pivote">pivot</span><span class="ley--menor">smaller</span><span class="ley--mayor">greater or equal</span><span class="ley--listo">already sorted</span></p>
+          <div id="p4-part"></div>
+          <p class="contador" id="p4-contador">Comparisons: <strong>0</strong></p>
+          <div class="pila" id="p4-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. No base case -->
+    <section class="paso" id="paso-base" data-requiere aria-labelledby="h-base">
+      <h2 class="paso__titulo" id="h-base">What if you remove the base case?</h2>
+      <p>Without the <code>if len(items) &lt;= 1</code>. Each call gets a smaller list…</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p5-pregunta">Before you run it: what happens?</p>
+          <div class="prediccion prediccion--codigo" id="p5-prediccion" role="group" aria-labelledby="p5-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="bien" aria-pressed="false">[3, 6]</button>
+            <button type="button" class="btn btn-secundario" data-valor="RecursionError" aria-pressed="false">RecursionError</button>
+            <button type="button" class="btn btn-secundario" data-valor="IndexError" aria-pressed="false">IndexError</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p5-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p5-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p5-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p5-part"></div>
+          <div class="pila" id="p5-pila"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. The trap of repeated values -->
+    <section class="paso" id="paso-repetidos" data-requiere aria-labelledby="h-repetidos">
+      <h2 class="paso__titulo" id="h-repetidos">Two equal grades</h2>
+      <p>Someone changed the <code>else</code> to <code>elif x &gt; pivot</code>. It looks the same… Sort <code>[14, 9, 14, 3, 17]</code>, with two 14s.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="prediccion__pregunta" id="p6-pregunta">Before you run it: what does it print?</p>
+          <div class="prediccion prediccion--codigo" id="p6-prediccion" role="group" aria-labelledby="p6-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="bien" aria-pressed="false">[3, 9, 14, 14, 17]</button>
+            <button type="button" class="btn btn-secundario" data-valor="pierde" aria-pressed="false">[3, 9, 14, 17]</button>
+            <button type="button" class="btn btn-secundario" data-valor="error" aria-pressed="false">an error</button>
+          </div>
+          <pre class="codigo codigo--largo" id="p6-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="p6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones fila-botones--cuatro">
+            <button type="button" class="btn btn-secundario" id="p6-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p6-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="p6-saltar">Next jump ▸▸</button>
+            <button type="button" class="btn btn-secundario" id="p6-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <p class="leyenda" aria-hidden="true"><span class="ley--pivote">pivot</span><span class="ley--menor">smaller</span><span class="ley--mayor">larger</span><span class="ley--listo">already sorted</span></p>
+          <div id="p6-part"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Find the bug: three versions -->
+    <section class="paso" id="paso-versiones" data-comprobar aria-labelledby="h-versiones">
+      <h2 class="paso__titulo" id="h-versiones">One changed line</h2>
+      <p>Three classmates changed <strong>just one line</strong> of <code>quicksort</code>. With <code>grades = [11, 17, 6, 14, 9, 20, 3]</code>, what does each version print?</p>
+
+      <div class="tarjeta">
+        <p class="rotulo-lista"><code>print(quicksort(grades))</code></p>
+        <div class="versiones" id="versiones"></div>
+        <div class="feedback" id="v-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 8. A new list -->
+    <section class="paso" id="paso-nueva" data-requiere data-salida="arriba" aria-labelledby="h-nueva">
+      <h2 class="paso__titulo" id="h-nueva">What about the old list?</h2>
+      <p>Bubble sort swapped inside the same list. What about <code>quicksort</code>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="p8-codigo" aria-label="Code"></pre>
+          <p class="prediccion__pregunta" id="p8-pregunta">Before you run it: what does it print?</p>
+          <div class="prediccion prediccion--codigo" id="p8-prediccion" role="group" aria-labelledby="p8-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="igual" aria-pressed="false">[11, 17, 6, 14, 9]</button>
+            <button type="button" class="btn btn-secundario" data-valor="ordenada" aria-pressed="false">[6, 9, 11, 14, 17]</button>
+            <button type="button" class="btn btn-secundario" data-valor="None" aria-pressed="false">None</button>
+          </div>
+          <p class="explicacion" id="p8-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="p8-reiniciar">↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="p8-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="p8-notas"></div>
+          <div class="nueva-zona" id="p8-zona" hidden>
+            <p class="rotulo-lista" id="p8-rotulo">what <code>quicksort(grades)</code> returned</p>
+            <div id="p8-nueva"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="p8-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="p8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Challenge: complete quicksort -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Complete quicksort</h2>
+      <p>Choose what goes in each blank. We will test it with five lists, one with repeated grades.</p>
+
+      <div class="tarjeta">
+        <pre class="codigo codigo--reto" id="reto-codigo" aria-label="Code with three blanks"></pre>
+        <ul class="pruebas" id="reto-pruebas" hidden aria-label="Tests"></ul>
+        <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 10. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Pick a <strong>pivot</strong>, split the others into <strong>smaller</strong> and <strong>greater or equal</strong>, sort each side with the same function and join them: <code>smaller + [pivot] + larger</code>.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../merge/index.html">Next: Merging two sorted lists →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/pila.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/particion.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  function crear(etiqueta, clase, texto) {
+    var el = document.createElement(etiqueta);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function chip(valor) {
+    return '<span class="booleano booleano--' + (valor ? "true" : "false") + '">' + (valor ? "True" : "False") + "</span>";
+  }
+
+  function boton(texto, clase, alTocar) {
+    var b = crear("button", "btn btn-secundario" + (clase ? " " + clase : ""), texto);
+    b.type = "button";
+    b.addEventListener("click", function () { alTocar(b); });
+    return b;
+  }
+
+  var leccion; // set at the end, with Pasos.iniciar
+
+  /* ---------- Colored Python code ----------
+     Each line of the text is a .linea; {{name}} leaves a <span data-hueco="name">
+     where a blank goes later. */
+  var PALABRAS = { def: 1, if: 1, elif: 1, else: 1, return: 1, while: 1, for: 1, in: 1, not: 1, and: 1, or: 1, True: 1, False: 1, None: 1 };
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function resaltar(linea) {
+    var re = /(\{\{\w+\}\})|(#.*$)|("[^"]*")|(\d+)|([A-Za-z_]\w*)|([\s\S])/g;
+    var m, html = "";
+    while ((m = re.exec(linea))) {
+      if (m[1]) html += '<span data-hueco="' + m[1].slice(2, -2) + '"></span>';
+      else if (m[2]) html += '<span class="tk-comentario">' + esc(m[2]) + "</span>";
+      else if (m[3]) html += '<span class="tk-texto">' + esc(m[3]) + "</span>";
+      else if (m[4]) html += '<span class="tk-numero">' + m[4] + "</span>";
+      else if (m[5]) {
+        var clase = PALABRAS[m[5]] ? "tk-palabra" : /^\s*\(/.test(linea.slice(re.lastIndex)) ? "tk-funcion" : "tk-variable";
+        html += '<span class="' + clase + '">' + m[5] + "</span>";
+      } else html += esc(m[6]);
+    }
+    return html;
+  }
+
+  function escribirCodigo(pre, texto) {
+    pre.innerHTML = "<code>" + texto.split("\n").map(function (l) {
+      return '<span class="linea">' + resaltar(l) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  function hueco(pre, nombre) { return pre.querySelector('[data-hueco="' + nombre + '"]'); }
+
+  function pintarContador(el, n) {
+    var fuerte = el.querySelector("strong");
+    if (fuerte.textContent === String(n)) return;
+    fuerte.textContent = String(n);
+    el.classList.remove("contador--cambio");
+    void el.offsetWidth;
+    if (n > 0) el.classList.add("contador--cambio");
+  }
+
+  function py(v) { return Lista.python(v); }
+
+  /* ---------- Data and code ---------- */
+  var NOTAS = [11, 17, 6, 14, 9, 20, 3];
+
+  var FUNCION = [
+    "def quicksort(items):",
+    "    if len(items) <= 1:",
+    "        return items",
+    "    pivot = items[0]",
+    "    smaller = []",
+    "    larger = []",
+    "    for x in items[1:]:",
+    "        if x < pivot:",
+    "            smaller.append(x)",
+    "        else:",
+    "            larger.append(x)",
+    "    return quicksort(smaller) + [pivot] + quicksort(larger)"
+  ];
+  var LINEA_RETURN = FUNCION[11];
+  // Columns (in characters) of the two calls in the return: the chips of the waiting ones go there
+  var COL = { m: LINEA_RETURN.indexOf("quicksort(smaller)"), M: LINEA_RETURN.indexOf("quicksort(larger)") };
+
+  // Indexes (from 0) of the lines of each version
+  var L_BIEN = { def: 0, base: 1, ret1: 2, piv: 3, men: 4, may: 5, "for": 6, "if": 7, app1: 8, "else": 9, app2: 10, ret: 11, notas: 13, print: 14 };
+  var L_SINBASE = { def: 0, piv: 1, men: 2, may: 3, "for": 4, "if": 5, app1: 6, "else": 7, app2: 8, ret: 9, print: 11 };
+
+  var C_PIV = "particion__celda--pivote";
+  var C_MEN = "particion__celda--menor";
+  var C_MAY = "particion__celda--mayor";
+  var C_FUERA = "particion__celda--apagada";
+  var C_MIRA = "particion__celda--marcada";
+
+  /* ---------- The call tree of quicksort ----------
+     Each node is a call: its list, its pivot, where each value went and its two children.
+     ver: { base: with a base case, elif: with “elif x > pivot” (loses the equal ones) }.
+     w is the number of columns it takes in the partition: an empty list needs one too. */
+  function construir(lista, id, piso, ver) {
+    var n = { id: id, lista: lista.slice(), piso: piso };
+    if (ver.base && lista.length <= 1) { n.base = true; n.res = lista.slice(); n.w = 1; return n; }
+    if (!lista.length) { n.error = true; n.w = 1; return n; }
+    n.pivote = lista[0];
+    n.menores = [];
+    n.mayores = [];
+    n.perdidos = [];
+    n.destino = [null];
+    for (var k = 1; k < lista.length; k++) {
+      var x = lista[k];
+      if (x < n.pivote) { n.menores.push(x); n.destino.push("m"); }
+      else if (!ver.elif || x > n.pivote) { n.mayores.push(x); n.destino.push("M"); }
+      else { n.perdidos.push(x); n.destino.push("x"); }
+    }
+    n.m = construir(n.menores, id + "0", piso + 1, ver);
+    n.M = construir(n.mayores, id + "1", piso + 1, ver);
+    n.w = Math.max(n.m.w + 1 + n.M.w, lista.length);
+    if (n.m.res && n.M.res) n.res = n.m.res.concat([n.pivote], n.M.res);
+    return n;
+  }
+
+  // Columns: the smaller ones on the left, the pivot in the middle and the larger ones on the right
+  function ubicar(n, desde) {
+    n.desde = desde;
+    if (!n.m) return;
+    ubicar(n.m, desde);
+    n.colPiv = desde + n.m.w;
+    ubicar(n.M, desde + n.m.w + 1);
+  }
+
+  function arbol(lista, ver) {
+    var r = construir(lista, "r", 0, ver);
+    ubicar(r, 0);
+    return r;
+  }
+
+  // How many levels the tree goes down under the node (the pivot goes on the level of its children)
+  function profundidad(n) { return n.m ? 1 + Math.max(profundidad(n.m), profundidad(n.M)) : 0; }
+
+  function padreDe(id) { return id.length > 1 ? id.slice(0, -1) : null; }
+
+  function trozoDe(n, valores) {
+    return { piso: n.piso, desde: n.desde, ancho: n.w, valores: valores.slice(), padre: padreDe(n.id), celdas: [], estado: null };
+  }
+
+  /* ---------- A partition painted from a state ----------
+     part: { id: { piso, desde, ancho, valores, padre, celdas, estado, rotulo, error } }
+     vuelos: [{ de: [id, i], a: [id, j], texto }], after painting. */
+  function crearPart(el, n, etiqueta, max, pisos) {
+    var p = Particion.crear(el, { n: n, etiqueta: etiqueta, max: max, pisos: pisos });
+    var vistos = {};
+    function porPiso(part) {
+      return Object.keys(part).sort(function (a, b) { return part[a].piso - part[b].piso || a.length - b.length; });
+    }
+    p.sync = function (part, vuelos) {
+      Object.keys(p.trozos).forEach(function (id) {
+        if (!part[id]) { p.quitar(id); delete vistos[id]; }
+      });
+      porPiso(part).forEach(function (id) {
+        var t = part[id];
+        var clave = JSON.stringify(t.valores);
+        if (!p.trozos[id]) {
+          p.trozo({ id: id, piso: t.piso, desde: t.desde, ancho: t.ancho, valores: t.valores, padre: t.padre });
+          vistos[id] = clave;
+        } else if (vistos[id] !== clave) {
+          p.valores(id, t.valores);
+          vistos[id] = clave;
+        }
+        p.clases(id, function (i) { return (t.celdas && t.celdas[i]) || ""; });
+        p.estado(id, t.estado || null);
+        p.rotulo(id, t.rotulo || null);
+        p.trozos[id].classList.toggle("trozo--error", !!t.error);
+      });
+      (vuelos || []).forEach(function (v) {
+        var a = p.celda(v.de[0], v.de[1]);
+        var b = p.celda(v.a[0], v.a[1]);
+        if (a && b) Codigo.volar(a, b, String(v.texto), "lista__vuelo");
+      });
+    };
+    p.limpiar = function () { p.vaciar(); vistos = {}; };
+    return p;
+  }
+
+  function apagarDebajo(vista, n) {
+    if (!n.m) return;
+    [n.m.id, n.id + "p", n.M.id].forEach(function (id) { if (vista[id]) vista[id].estado = "apagado"; });
+    apagarDebajo(vista, n.m);
+    apagarDebajo(vista, n.M);
+  }
+
+  // Flights on the way back: each value goes up from its piece (smaller, pivot, larger) to the one above
+  function vuelosJuntar(n) {
+    var v = [];
+    var j = 0;
+    n.m.res.forEach(function (x, k) { v.push({ de: [n.m.id, k], a: [n.id, j++], texto: x }); });
+    v.push({ de: [n.id + "p", 0], a: [n.id, j++], texto: n.pivote });
+    n.M.res.forEach(function (x, k) { v.push({ de: [n.M.id, k], a: [n.id, j++], texto: x }); });
+    return v;
+  }
+
+  // The whole split at once: the children appear with their values, which fly down
+  function repartir(vista, n) {
+    vista[n.m.id] = trozoDe(n.m, n.menores);
+    vista[n.M.id] = trozoDe(n.M, n.mayores);
+    var celdas = [C_PIV];
+    var v = [];
+    var im = 0, iM = 0;
+    n.destino.forEach(function (d, k) {
+      if (k === 0) return;
+      if (d === "m") { celdas.push(C_MEN); v.push({ de: [n.id, k], a: [n.m.id, im++], texto: n.lista[k] }); }
+      else if (d === "M") { celdas.push(C_MAY); v.push({ de: [n.id, k], a: [n.M.id, iM++], texto: n.lista[k] }); }
+      else celdas.push(C_FUERA);
+    });
+    vista[n.id].celdas = celdas;
+    return v;
+  }
+
+  function ponerPivote(vista, n) {
+    vista[n.id].celdas = [C_PIV];
+    vista[n.id + "p"] = { piso: n.piso + 1, desde: n.colPiv, ancho: 1, valores: [n.pivote], padre: n.id, celdas: [C_PIV], estado: null };
+    return [{ de: [n.id, 0], a: [n.id + "p", 0], texto: n.pivote }];
+  }
+
+  function listaCon(valores) {
+    return valores.length ? valores.map(String).join(", ").replace(/, ([^,]*)$/, " and $1") : "";
+  }
+
+  /* ---------- 1. Split around the pivot ---------- */
+  var notas1 = Lista.crear($("p1-notas"), NOTAS);
+  var men1 = Lista.crear($("p1-men"), [], { capacidad: 4, indices: false });
+  var may1 = Lista.crear($("p1-may"), [], { capacidad: 4, indices: false });
+  var piv1 = Lista.crear($("p1-piv"), [NOTAS[0]], { indices: false, corchetes: false, capacidad: 1 });
+  var juego1 = null;
+
+  function pintar1() {
+    var j = juego1;
+    piv1.clases(function () { return "lista__casilla--pivote"; });
+    men1.clases(function () { return "lista__casilla--menor"; });
+    may1.clases(function () { return "lista__casilla--mayor"; });
+    notas1.clases(function (i) {
+      if (i === 0) return "lista__casilla--pivote";
+      if (i < j.i) return "lista__casilla--apagada";
+      return "";
+    });
+    notas1.marcar(j.fase === "repartir" ? j.i : null);
+    pintarContador($("p1-contador"), j.comps);
+    var acc = $("p1-acciones");
+    acc.textContent = "";
+    if (j.fase === "repartir") {
+      var v = NOTAS[j.i];
+      if (!j.pista) {
+        $("p1-explicacion").innerHTML = j.i === 1
+          ? "The <strong>11</strong> is the pivot. Does the <strong>" + v + "</strong> go with the ones smaller than 11, or with the greater or equal ones?"
+          : "And the <strong>" + v + "</strong>?";
+      }
+      acc.appendChild(boton("◀ Smaller than 11", "btn--menor", function (b) { elegir1("m", b); }));
+      acc.appendChild(boton("Greater or equal ▶", "btn--mayor", function (b) { elegir1("M", b); }));
+    } else if (j.fase === "posicion") {
+      $("p1-explicacion").innerHTML = "All split! When the list is sorted, at what <strong>position</strong> will the 11 be?";
+      acc.className = "elegir elegir--numeros";
+      for (var k = 0; k < NOTAS.length; k++) {
+        (function (k) { acc.appendChild(boton(String(k), "", function (b) { posicion1(k, b); })); })(k);
+      }
+      return;
+    } else {
+      acc.appendChild(boton("↺ Split again", "", function () {
+        empezar1();
+        $("p1-acciones").querySelector("button").focus();
+      }));
+    }
+    acc.className = "elegir";
+  }
+
+  function empezar1() {
+    juego1 = { i: 1, comps: 0, fase: "repartir", pista: false };
+    men1.valores([]);
+    may1.valores([]);
+    Pasos.limpiarFeedback($("p1-fb"));
+    pintar1();
+  }
+
+  function elegir1(lado, b) {
+    var j = juego1;
+    var v = NOTAS[j.i];
+    var bien = v < NOTAS[0] ? "m" : "M";
+    if (lado !== bien) {
+      b.classList.add("btn--mal");
+      j.pista = true;
+      $("p1-explicacion").innerHTML = '<span class="pista-texto">💡 ' + (bien === "m"
+        ? "The " + v + " is <strong>smaller</strong> than 11: it goes on the left."
+        : "The " + v + " is not smaller than 11: it goes on the right, with the <strong>greater or equal</strong> ones.") + "</span>";
+      return;
+    }
+    j.pista = false;
+    j.comps++;
+    (bien === "m" ? men1 : may1).agregar(v, notas1.valor(j.i));
+    j.i++;
+    if (j.i >= NOTAS.length) j.fase = "posicion";
+    pintar1();
+    var primero = $("p1-acciones").querySelector("button");
+    if (primero) primero.focus();
+  }
+
+  function posicion1(k, b) {
+    var menores = NOTAS.filter(function (x) { return x < NOTAS[0]; }).length;
+    if (k !== menores) {
+      b.classList.add("btn--mal");
+      Pasos.feedback($("p1-fb"), "pista", "Count the values on its left: they will all go before the 11, in the first positions.");
+      return;
+    }
+    juego1.fase = "fin";
+    pintar1();
+    $("p1-explicacion").innerHTML = "6 comparisons: each value was compared <strong>once</strong>, with the pivot.";
+    Pasos.feedback($("p1-fb"), "ok", "Yes, at 3! The 3 smaller ones will take positions 0, 1 and 2, so the 11 goes at 3, no matter how the others end up. " +
+      "The pivot is already in its place. Each side still has to be sorted.");
+    $("p1-acciones").querySelector("button").focus();
+    leccion.desbloquear();
+  }
+
+  /* ---------- 2. Each side, the same way ----------
+     The partition starts with the split of step 1. The student taps the pieces that
+     still have to be split; then joins them from the bottom up. */
+  var ARBOL2 = arbol(NOTAS, { base: true });
+  var part2 = crearPart($("p2-part"), ARBOL2.w, "The list splits into pieces around each pivot", undefined, profundidad(ARBOL2) + 1);
+  part2.el.setAttribute("role", "group");
+  var est2 = null;
+
+  function nodos(n, acc) {
+    acc = acc || [];
+    acc.push(n);
+    if (n.m) { nodos(n.m, acc); nodos(n.M, acc); }
+    return acc;
+  }
+  var NODOS2 = nodos(ARBOL2);
+  // Order of the way back: the lowest ones first (the children before the parent)
+  var JUNTAR2 = (function () {
+    var orden = [];
+    (function post(n) { if (!n.m) return; post(n.m); post(n.M); orden.push(n); })(ARBOL2);
+    return orden;
+  })();
+
+  function nodoPorId(id) {
+    for (var k = 0; k < NODOS2.length; k++) if (NODOS2[k].id === id) return NODOS2[k];
+    return null;
+  }
+
+  function partir2(n) {
+    var v = ponerPivote(est2.vista, n).concat(repartir(est2.vista, n));
+    [n.m, n.M].forEach(function (h) { if (h.base) est2.vista[h.id].estado = "listo"; });
+    est2.partidos[n.id] = true;
+    est2.comps += n.lista.length - 1;
+    return v;
+  }
+
+  function porPartir() {
+    return NODOS2.filter(function (n) { return n.m && est2.vista[n.id] && !est2.partidos[n.id]; });
+  }
+
+  function pintar2(vuelos) {
+    var faltan = porPartir();
+    var tocables = {};
+    faltan.forEach(function (n) { tocables[n.id] = true; });
+    Object.keys(est2.vista).forEach(function (id) { est2.vista[id].rotulo = tocables[id] ? "👆 Tap it" : null; });
+    part2.sync(est2.vista, vuelos);
+    Object.keys(part2.trozos).forEach(function (id) {
+      var t = part2.trozos[id];
+      var si = !!tocables[id];
+      t.classList.toggle("trozo--tocable", si);
+      if (si) {
+        t.setAttribute("tabindex", "0");
+        t.setAttribute("role", "button");
+        t.setAttribute("aria-label", "Split " + py(nodoPorId(id).lista));
+      } else {
+        t.removeAttribute("tabindex");
+        t.removeAttribute("role");
+        t.removeAttribute("aria-label");
+      }
+    });
+    pintarContador($("p2-contador"), est2.comps);
+    var acc = $("p2-acciones");
+    acc.textContent = "";
+    if (est2.fase === "juntar") {
+      var sig = JUNTAR2[est2.juntados];
+      acc.appendChild(boton("Join " + py(sig.lista) + " ▸", "", juntar2));
+    } else if (est2.fase === "fin") {
+      acc.appendChild(boton("↺ Again", "", function () { empezar2(); }));
+    }
+  }
+
+  function empezar2() {
+    est2 = { vista: {}, partidos: {}, comps: 0, fase: "partir", juntados: 0 };
+    part2.limpiar();
+    est2.vista.r = trozoDe(ARBOL2, ARBOL2.lista);
+    partir2(ARBOL2);
+    est2.vista.r.estado = null;
+    $("p2-explicacion").innerHTML = "At the top, the split you made: the 11 is already in its place. Tap a piece to <strong>split it</strong> with its own pivot.";
+    Pasos.limpiarFeedback($("p2-fb"));
+    pintar2();
+  }
+
+  function tocar2(id) {
+    if (est2.fase !== "partir") return;
+    var n = nodoPorId(id);
+    if (!n || !n.m || est2.partidos[id]) return;
+    var vuelos = partir2(n);
+    var unos = [n.m, n.M].filter(function (h) { return h.base; }).map(function (h) { return "<code>" + py(h.lista) + "</code>"; });
+    var texto = "Pivot <strong>" + n.pivote + "</strong>: " +
+      (n.menores.length ? listaCon(n.menores) + (n.menores.length > 1 ? " are smaller" : " is smaller") : "none is smaller") + "; " +
+      (n.mayores.length ? listaCon(n.mayores) + (n.mayores.length > 1 ? " are larger." : " is larger.") : "none is larger.") +
+      (unos.length ? " " + unos.join(" and ") + (unos.length > 1 ? " have" : " has") + " just one value: " + (unos.length > 1 ? "they are" : "it is") + " already sorted." : "");
+    if (porPartir().length) {
+      texto += " Tap the other piece.";
+    } else {
+      est2.fase = "juntar";
+      texto += " There is nothing left to split. Look at the bottom row: <strong>3, 6, 9, 11, 14, 17, 20</strong>. Now, join them.";
+    }
+    $("p2-explicacion").innerHTML = texto;
+    pintar2(vuelos);
+    if (est2.fase === "juntar") $("p2-acciones").querySelector("button").focus();
+    else {
+      var otro = part2.el.querySelector(".trozo--tocable");
+      if (otro) otro.focus();
+    }
+  }
+
+  function juntar2() {
+    var n = JUNTAR2[est2.juntados];
+    est2.vista[n.id].valores = n.res.slice();
+    est2.vista[n.id].celdas = [];
+    est2.vista[n.id].estado = "listo";
+    apagarDebajo(est2.vista, n);
+    est2.juntados++;
+    var cuenta = "<code>" + py(n.m.res) + " + [" + n.pivote + "] + " + py(n.M.res) + "</code> = <strong>" + py(n.res) + "</strong>";
+    if (est2.juntados < JUNTAR2.length) {
+      $("p2-explicacion").innerHTML = "Smaller, pivot and larger, in that order: " + cuenta + ".";
+      pintar2(vuelosJuntar(n));
+      $("p2-acciones").querySelector("button").focus();
+      return;
+    }
+    est2.fase = "fin";
+    $("p2-explicacion").innerHTML = cuenta + ". Sorted!";
+    pintar2(vuelosJuntar(n));
+    Pasos.feedback($("p2-fb"), "ok", "10 comparisons (6 + 2 + 2): each value was compared with the pivot of its piece. With 7 values, bubble sort makes 21. " +
+      "Split, sort each side with the same idea and join: that is quicksort.");
+    leccion.desbloquear();
+  }
+
+  part2.el.addEventListener("click", function (ev) {
+    var t = ev.target.closest(".trozo--tocable");
+    if (!t) return;
+    Object.keys(part2.trozos).forEach(function (id) { if (part2.trozos[id] === t) tocar2(id); });
+  });
+  part2.el.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    var t = ev.target.closest(".trozo--tocable");
+    if (!t) return;
+    ev.preventDefault();
+    Object.keys(part2.trozos).forEach(function (id) { if (part2.trozos[id] === t) tocar2(id); });
+  });
+
+  /* ---------- 3. The split in Python ---------- */
+  var REPARTO = [
+    "grades = [11, 17, 6, 14, 9, 20, 3]",
+    "pivot = grades[0]",
+    "smaller = []",
+    "larger = []",
+    "for x in grades[1:]:",
+    "    if x < pivot:",
+    "        smaller.append(x)",
+    "    else:",
+    "        larger.append(x)",
+    "print(smaller, pivot, larger)"
+  ].join("\n");
+  escribirCodigo($("p3-codigo"), REPARTO);
+  var notas3 = Lista.crear($("p3-notas"), NOTAS);
+  var men3 = Lista.crear($("p3-men"), [], { capacidad: 4, indices: false });
+  var may3 = Lista.crear($("p3-may"), [], { capacidad: 4, indices: false });
+
+  function trazaReparto() {
+    var p = NOTAS[0];
+    var pasos = [];
+    var clases = [];
+    var comps = 0;
+    function paso(linea, texto, extra) {
+      var e = { clases: clases.slice(), comps: comps };
+      for (var k in extra) e[k] = extra[k];
+      pasos.push({ linea: linea, texto: texto, estado: e, salida: e.salida });
+    }
+    paso(0, "The 7 grades, unsorted.", {});
+    clases[0] = "lista__casilla--pivote";
+    paso(1, "The first one is the <strong>pivot</strong>: " + p + ".", { poner: ["p3-pivote", p, 0] });
+    paso(2, "<code>smaller</code> starts empty.", {});
+    paso(3, "<code>larger</code> too.", {});
+    for (var i = 1; i < NOTAS.length; i++) {
+      var v = NOTAS[i];
+      paso(4, i === 1 ? "<code>grades[1:]</code> is the list <strong>without the pivot</strong>. <code>x</code> takes the " + v + "." : "<code>x</code> takes the " + v + ".",
+        { poner: ["p3-x", v, i], marca: i });
+      comps++;
+      paso(5, "<code>" + v + " &lt; " + p + "</code>? " + chip(v < p), { marca: i });
+      if (v < p) {
+        clases[i] = "lista__casilla--menor";
+        paso(6, "It is smaller: it goes to <code>smaller</code>.", { agregar: ["m", v] });
+      } else {
+        paso(7, "It is not smaller: it goes to <code>larger</code>, which holds the <strong>greater or equal</strong> ones.", { marca: i });
+        clases[i] = "lista__casilla--mayor";
+        paso(8, "The " + v + " goes to <code>larger</code>.", { agregar: ["M", v] });
+      }
+    }
+    var men = NOTAS.slice(1).filter(function (x) { return x < p; });
+    var may = NOTAS.slice(1).filter(function (x) { return x >= p; });
+    paso(9, "It prints the two lists, with the pivot in the middle.", { salida: py(men) + " " + p + " " + py(may) });
+    return pasos;
+  }
+
+  function reiniciar3() {
+    notas3.clases(null);
+    notas3.marcar(null);
+    men3.valores([]);
+    may3.valores([]);
+    Caja.vaciar($("p3-pivote"));
+    Caja.vaciar($("p3-x"));
+    pintarContador($("p3-contador"), 0);
+    Pasos.limpiarFeedback($("p3-fb"));
+  }
+
+  var t3 = Traza.crear({
+    codigo: $("p3-codigo"),
+    explicacion: $("p3-explicacion"),
+    consola: $("p3-consola"),
+    ejecutar: $("p3-ejecutar"),
+    reproducir: $("p3-reproducir"),
+    reiniciar: $("p3-reiniciar"),
+    generar: trazaReparto,
+    intervalo: 850,
+    alReiniciar: reiniciar3,
+    alPaso: function (paso) {
+      var e = paso.estado;
+      notas3.clases(function (i) { return e.clases[i] || ""; });
+      notas3.marcar(e.marca === undefined ? null : e.marca);
+      pintarContador($("p3-contador"), e.comps);
+      if (e.poner) Caja.poner($(e.poner[0]), e.poner[1], notas3.valor(e.poner[2]));
+      if (e.agregar) {
+        var origen = $("p3-x").querySelector(".caja__valor");
+        (e.agregar[0] === "m" ? men3 : may3).agregar(e.agregar[1], origen);
+        men3.clases(function () { return "lista__casilla--menor"; });
+        may3.clases(function () { return "lista__casilla--mayor"; });
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("p3-fb"), "ok", "6 comparisons: one per value, not counting the pivot. smaller and larger are still unsorted: recursion takes care of that.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- The quicksort trace ----------
+     cfg: { ver, lista, L, llamada (what is inside the print), detalle (the for of the
+     first call, line by line) }. One step per line; the state brings the stack, the
+     partition (part), the flights and the comparisons. */
+  var FIN = {};
+
+  function trazaQS(cfg) {
+    var ver = cfg.ver;
+    var L = cfg.L;
+    var raiz = arbol(cfg.lista, ver);
+    var pasos = [];
+    var vista = {};
+    var comps = 0;
+    var marcos = [];      // the waiting calls: { n, espera: "m" | "M" }
+    var vuelos = [];
+
+    function copia(o) { return JSON.parse(JSON.stringify(o)); }
+    function titulo(n) { return "quicksort(" + py(n.lista) + ")"; }
+    function programa(recibe) {
+      var p = Pila.programa();
+      p.linea = L.print;
+      p.ficha = "program";
+      p.falta = "print(" + cfg.llamada + ")";
+      p.espera = cfg.llamada;
+      if (recibe !== undefined) { p.sigue = true; p.recibe = recibe; }
+      return p;
+    }
+    function faltaDe(n, espera) {
+      return espera === "m" ? "return quicksort(smaller) + [" + n.pivote + "] + quicksort(larger)"
+        : "return " + py(n.m.res) + " + [" + n.pivote + "] + quicksort(larger)";
+    }
+    function cartaEspera(f) {
+      var t = Pila.llamada(titulo(f.n), f.vars);
+      t.linea = L.ret;
+      t.ficha = "pivot=" + f.n.pivote;
+      t.columna = COL[f.espera];
+      t.falta = faltaDe(f.n, f.espera);
+      t.espera = f.espera === "m" ? "quicksort(smaller)" : "quicksort(larger)";
+      return t;
+    }
+    function paso(linea, texto, arriba, extra) {
+      extra = extra || {};
+      var pila;
+      if (extra.pila) pila = extra.pila;
+      else {
+        pila = [programa()];
+        marcos.forEach(function (f) { pila.push(cartaEspera(f)); });
+        pila.push(arriba);
+      }
+      var e = { pila: pila, part: copia(vista), vuelos: vuelos, comps: comps };
+      if (extra.leer) e.leer = extra.leer;
+      if (extra.valores) e.valores = extra.valores;
+      var p = { linea: linea, texto: texto, estado: e };
+      ["fase", "parada", "flecha", "salida"].forEach(function (k) { if (extra[k] !== undefined) p[k] = extra[k]; });
+      pasos.push(p);
+      vuelos = [];
+    }
+
+    function visitar(n) {
+      var nivel = marcos.length + 1;
+      var k = n.lista.length;
+      function carta(vars, mas) {
+        var t = Pila.llamada(titulo(n), vars || []);
+        for (var c in mas) t[c] = mas[c];
+        return t;
+      }
+      if (!vista[n.id]) vista[n.id] = trozoDe(n, n.lista);
+      vista[n.id].estado = "activo";
+      if (marcos.length) vista[marcos[marcos.length - 1].n.id].estado = "espera";
+      paso(L.def, n === raiz ? "A <strong>quicksort</strong> card is born with the whole list."
+        : "Another <strong>quicksort</strong> card, with <strong>its own list</strong>: <code>" + py(n.lista) + "</code>.", carta(), { fase: "ida" });
+
+      if (ver.base) {
+        paso(L.base, "<code>len(items) &lt;= 1</code>? It has " + k + (k === 1 ? " value" : " values") + ": " + chip(k <= 1) + (k <= 1 ? ": it is the base case." : "."), carta());
+        if (n.base) {
+          vista[n.id].estado = "listo";
+          paso(L.ret1, "<strong>return items</strong>: " + (k ? "<code>" + py(n.lista) + "</code> has just one value: it is already sorted." : "an empty list is already sorted.") + " It goes back as it is.",
+            carta([], { devuelve: py(n.res) }), { fase: "vuelta" });
+          return;
+        }
+      }
+      if (n.error) {
+        vista[n.id].error = true;
+        vista[n.id].rotulo = "no items[0]";
+        paso(L.piv, "<code>items[0]</code> is the first one… but the list is <strong>empty</strong>: there is no position 0. <strong>IndexError</strong>!", carta(),
+          { salida: "IndexError: list index out of range" });
+        throw FIN;
+      }
+
+      vuelos = ponerPivote(vista, n);
+      var vars = [["pivot", n.pivote]];
+      paso(L.piv, "The first one is the <strong>pivot</strong>: " + n.pivote + ". It goes down to its place.", carta(vars), { leer: [nivel, "pivot"] });
+
+      if (cfg.detalle && n === raiz) vars = repartoDetalle(n, vars, carta, nivel);
+      else {
+        vuelos = repartir(vista, n);
+        comps += k - 1;
+        var perdidos = n.perdidos.length ? " The " + listaCon(n.perdidos) + " goes to neither: it gets lost!" : "";
+        paso(L["for"], k === 1 ? "<code>items[1:]</code> is empty: there is nothing to split. <code>smaller</code> and <code>larger</code> stay empty."
+          : (k === 2 ? "The <code>for</code> splits the other value" : "<code>smaller</code> and <code>larger</code> start empty and the <code>for</code> splits the other " + (k - 1)) +
+          ": <code>smaller = " + py(n.menores) + "</code>, <code>larger = " + py(n.mayores) + "</code>." + perdidos, carta(vars));
+      }
+
+      // First quicksort(smaller)
+      marcos.push({ n: n, espera: "m", vars: vars });
+      paso(L.ret, "For the <code>return</code>, it first needs <strong>quicksort(smaller)</strong>, with <code>" + py(n.menores) + "</code>. This card waits.",
+        Pila.llamada(titulo(n.m), []), { fase: "ida", parada: true });
+      visitar(n.m);
+      marcos.pop();
+      vista[n.id].estado = "activo";
+      paso(L.ret, "<code>" + titulo(n.m) + "</code> returned <strong>" + py(n.m.res) + "</strong>: it drops into its place.",
+        carta(vars, { linea: L.ret, sigue: true, falta: faltaDe(n, "m"), espera: "quicksort(smaller)", recibe: py(n.m.res) }),
+        { fase: "vuelta", flecha: true, parada: true });
+
+      // Then quicksort(larger)
+      marcos.push({ n: n, espera: "M", vars: vars });
+      paso(L.ret, "Now it needs <strong>quicksort(larger)</strong>, with <code>" + py(n.mayores) + "</code>.",
+        Pila.llamada(titulo(n.M), []), { fase: "ida", parada: true });
+      visitar(n.M);
+      marcos.pop();
+      vista[n.id].estado = "activo";
+      paso(L.ret, "<code>" + titulo(n.M) + "</code> returned <strong>" + py(n.M.res) + "</strong>.",
+        carta(vars, { linea: L.ret, sigue: true, falta: faltaDe(n, "M"), espera: "quicksort(larger)", recibe: py(n.M.res) }),
+        { fase: "vuelta", flecha: true, parada: true });
+
+      // Joins the three parts and returns
+      vista[n.id].valores = n.res.slice();
+      vista[n.id].celdas = [];
+      vista[n.id].estado = "listo";
+      vista[n.id].rotulo = n.perdidos.length ? "missing " + (n.perdidos.length > 1 ? "" : "a ") + listaCon(n.perdidos) : null;
+      apagarDebajo(vista, n);
+      vuelos = vuelosJuntar(n);
+      var r0 = py(n.m.res), r1 = py(n.M.res);
+      paso(L.ret, "It joins the three parts: <code>" + r0 + " + [" + n.pivote + "] + " + r1 + "</code> = <strong>" + py(n.res) + "</strong>. It returns that.",
+        carta(vars, { devuelve: py(n.res) }),
+        { fase: "vuelta", valores: { linea: L.ret, partes: ["    return ", [r0, "recibe"], " + [" + n.pivote + "] + ", [r1, "recibe"]] } });
+    }
+
+    function repartoDetalle(n, vars, carta, nivel) {
+      vista[n.m.id] = trozoDe(n.m, []);
+      paso(L.men, "<code>smaller</code> starts empty.", carta(vars));
+      vista[n.M.id] = trozoDe(n.M, []);
+      paso(L.may, "<code>larger</code> too.", carta(vars));
+      var celdas = vista[n.id].celdas;
+      var conX = vars;
+      for (var k = 1; k < n.lista.length; k++) {
+        var x = n.lista[k];
+        conX = vars.concat([["x", x]]);
+        celdas[k] = C_MIRA;
+        paso(L["for"], k === 1 ? "<code>items[1:]</code> skips the pivot. <code>x</code> takes the " + x + "." : "<code>x</code> takes the " + x + ".", carta(conX), { leer: [nivel, "x"] });
+        comps++;
+        paso(L["if"], "<code>" + x + " &lt; " + n.pivote + "</code>? " + chip(x < n.pivote), carta(conX));
+        var t;
+        if (x < n.pivote) {
+          celdas[k] = C_MEN;
+          t = vista[n.m.id];
+          t.valores.push(x);
+          vuelos = [{ de: [n.id, k], a: [n.m.id, t.valores.length - 1], texto: x }];
+          paso(L.app1, "The " + x + " goes to <code>smaller</code>.", carta(conX));
+        } else if (!ver.elif || x > n.pivote) {
+          paso(L["else"], ver.elif ? "<code>" + x + " &gt; " + n.pivote + "</code>? " + chip(true) : "It is not smaller: it goes to <code>larger</code>.", carta(conX));
+          celdas[k] = C_MAY;
+          t = vista[n.M.id];
+          t.valores.push(x);
+          vuelos = [{ de: [n.id, k], a: [n.M.id, t.valores.length - 1], texto: x }];
+          paso(L.app2, "The " + x + " goes to <code>larger</code>.", carta(conX));
+        } else {
+          celdas[k] = C_FUERA;
+          vista[n.id].rotulo = "the " + x + " is lost";
+          paso(L["else"], "<code>" + x + " &gt; " + n.pivote + "</code>? " + chip(false) + ": neither smaller nor larger. The " + x + " goes to <strong>neither</strong> list. It gets lost!", carta(conX));
+        }
+      }
+      return conX;
+    }
+
+    if (L.notas !== undefined) {
+      paso(L.def, "Python remembers the <strong>quicksort</strong> recipe. It does not run it yet.", null, { pila: [Pila.programa()] });
+      paso(L.notas, "The grades, unsorted.", null, { pila: [Pila.programa()] });
+    } else {
+      paso(L.def, "Python remembers the <strong>quicksort</strong> recipe. It does not run it yet.", null, { pila: [Pila.programa()] });
+    }
+    paso(L.print, "<code>print</code> needs <strong>" + cfg.llamada + "</strong>: Python calls it.", Pila.llamada(titulo(raiz), []), { fase: "ida", parada: true });
+    try {
+      visitar(raiz);
+      paso(L.print, "<code>" + cfg.llamada + "</code> returned <strong>" + py(raiz.res) + "</strong>: <code>print</code> shows it.", null,
+        { pila: [programa(py(raiz.res))], fase: "vuelta", flecha: true, parada: true, salida: py(raiz.res) });
+    } catch (err) {
+      if (err !== FIN) throw err;
+    }
+    return pasos;
+  }
+
+  // A quicksort trace with its partition and, if asked, the stack
+  function crearTrazaQS(prefijo, cfg) {
+    var pre = $(prefijo + "-codigo");
+    var columnas = arbol(cfg.lista, cfg.ver).w;
+    // The levels the trace reaches: their height is reserved from the start
+    var pisos = 0;
+    trazaQS(cfg).forEach(function (paso) {
+      var part = paso.estado.part || {};
+      Object.keys(part).forEach(function (id) { pisos = Math.max(pisos, part[id].piso + 1); });
+    });
+    var part = crearPart($(prefijo + "-part"), columnas, "How " + py(cfg.lista) + " splits", cfg.max, pisos);
+    var pila = $(prefijo + "-pila") ? Pila.crear($(prefijo + "-pila"), { codigo: pre }) : null;
+    var contador = $(prefijo + "-contador");
+    var traza = Traza.crear({
+      codigo: pre,
+      explicacion: $(prefijo + "-explicacion"),
+      consola: $(prefijo + "-consola"),
+      ejecutar: $(prefijo + "-ejecutar"),
+      reproducir: $(prefijo + "-reproducir"),
+      saltar: $(prefijo + "-saltar") || undefined,
+      reiniciar: $(prefijo + "-reiniciar"),
+      generar: function () { return trazaQS(cfg); },
+      pila: pila || undefined,
+      intervalo: 950,
+      alReiniciar: function () {
+        if (pila) pila.vaciar();
+        part.limpiar();
+        if (contador) pintarContador(contador, 0);
+        Pasos.limpiarFeedback($(prefijo + "-fb"));
+        if (cfg.alReiniciar) cfg.alReiniciar();
+      },
+      alPaso: function (paso) {
+        if (pila) pila.pintar(paso.estado);
+        else Codigo.valores(pre, paso.estado.valores || null);
+        part.sync(paso.estado.part, paso.estado.vuelos);
+        if (contador) pintarContador(contador, paso.estado.comps);
+      },
+      alTerminar: cfg.alTerminar
+    });
+    return { traza: traza, part: part, pila: pila };
+  }
+
+  function programaCompleto(lineas, lista, llamada) {
+    return lineas.concat(["", "grades = " + py(lista), "print(" + llamada + ")"]).join("\n");
+  }
+
+  /* ---------- 4. It splits and comes back together ---------- */
+  escribirCodigo($("p4-codigo"), programaCompleto(FUNCION, NOTAS, "quicksort(grades)"));
+  var t4 = crearTrazaQS("p4", {
+    ver: { base: true }, lista: NOTAS, L: L_BIEN, llamada: "quicksort(grades)", max: 2.1,
+    alTerminar: function () {
+      Pasos.feedback($("p4-fb"), "ok", "7 calls and 10 comparisons. Each call split its list and passed each side to another call; " +
+        "on the way back, each one joined smaller + [pivot] + larger.");
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 5. What if you remove the base case? ---------- */
+  var SIN_BASE = [FUNCION[0]].concat(FUNCION.slice(3)).concat(["", "print(quicksort([6, 3]))"]).join("\n");
+  escribirCodigo($("p5-codigo"), SIN_BASE);
+  var prediccion5 = null;
+  var t5 = crearTrazaQS("p5", {
+    ver: { base: false }, lista: [6, 3], L: L_SINBASE, llamada: "quicksort([6, 3])", max: 2.3,
+    alReiniciar: function () { habilitar("p5", prediccion5); },
+    alTerminar: function () {
+      var explica = "The list got smaller ([6, 3], [3], [ ]) and [ ] has no items[0]. " +
+        "The base case stops earlier: an empty list or a list with one value is already sorted.";
+      Pasos.feedback($("p5-fb"), "ok", (prediccion5 === "IndexError" ? "Well spotted! IndexError. " : "It is IndexError. ") + explica);
+      leccion.desbloquear();
+    }
+  });
+
+  /* ---------- 6. Two equal grades ---------- */
+  var REPETIDOS = [14, 9, 14, 3, 17];
+  var FUNCION_ELIF = FUNCION.slice();
+  FUNCION_ELIF[9] = "        elif x > pivot:";
+  escribirCodigo($("p6-codigo"), programaCompleto(FUNCION_ELIF, REPETIDOS, "quicksort(grades)"));
+  var prediccion6 = null;
+  var t6 = crearTrazaQS("p6", {
+    ver: { base: true, elif: true }, lista: REPETIDOS, L: L_BIEN, llamada: "quicksort(grades)", detalle: true, max: 2.3,
+    alReiniciar: function () { habilitar("p6", prediccion6); },
+    alTerminar: function () {
+      var explica = "The second 14 was neither smaller nor larger than the pivot 14: it went to neither list. " +
+        "That is why it is else: larger holds the greater or equal ones.";
+      Pasos.feedback($("p6-fb"), "ok", (prediccion6 === "pierde" ? "Well spotted! A 14 is missing. " : "It prints [3, 9, 14, 17]: a 14 is missing. ") + explica);
+      leccion.desbloquear();
+    }
+  });
+
+  // The run buttons wait for the prediction
+  function habilitar(prefijo, prediccion) {
+    var listo = prediccion !== null;
+    ["ejecutar", "reproducir", "saltar"].forEach(function (b) { if ($(prefijo + "-" + b)) $(prefijo + "-" + b).disabled = !listo; });
+    if (!listo) $(prefijo + "-explicacion").textContent = "Choose your prediction so you can run it.";
+  }
+
+  function conectarPrediccion(prefijo, alElegir) {
+    $(prefijo + "-prediccion").querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        $(prefijo + "-prediccion").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+        alElegir(b.getAttribute("data-valor"));
+      });
+    });
+  }
+
+  conectarPrediccion("p5", function (v) { var nueva = prediccion5 === null; prediccion5 = v; if (nueva) t5.traza.reiniciar(); });
+  conectarPrediccion("p6", function (v) { var nueva = prediccion6 === null; prediccion6 = v; if (nueva) t6.traza.reiniciar(); });
+
+  /* ---------- Simulator for the versions and the challenge ----------
+     o: { recorre: "items[1:]" | "items" | "items[:-1]", cmp: "<" | ">" | "==" | "<=",
+          ret: "bien" | "sinpivote" | "reves" | "sinllamar" } */
+  var BIEN = { recorre: "items[1:]", cmp: "<", ret: "bien" };
+
+  function compara(x, p, cmp) {
+    if (cmp === "<") return x < p;
+    if (cmp === ">") return x > p;
+    if (cmp === "==") return x === p;
+    return x <= p;
+  }
+
+  function quicksortCon(lista, o, prof) {
+    if (prof > 60) throw new Error("RecursionError");
+    if (lista.length <= 1) return lista;
+    var pivote = lista[0];
+    var recorre = o.recorre === "items[1:]" ? lista.slice(1) : o.recorre === "items" ? lista.slice() : lista.slice(0, -1);
+    var menores = [], mayores = [];
+    recorre.forEach(function (x) { if (compara(x, pivote, o.cmp)) menores.push(x); else mayores.push(x); });
+    if (o.ret === "sinllamar") return menores.concat([pivote], mayores);
+    var a = quicksortCon(menores, o, prof + 1);
+    var b = quicksortCon(mayores, o, prof + 1);
+    if (o.ret === "sinpivote") return a.concat(b);
+    if (o.ret === "reves") return b.concat([pivote], a);
+    return a.concat([pivote], b);
+  }
+
+  function salida(lista, o) {
+    try { return py(quicksortCon(lista, o, 0)); } catch (err) { return err.message; }
+  }
+
+  function mezclar(o, cambios) {
+    var r = {};
+    for (var k in o) r[k] = o[k];
+    for (k in cambios) r[k] = cambios[k];
+    return r;
+  }
+
+  /* ---------- 7. One changed line ---------- */
+  var VERSIONES = [
+    { nombre: "Version A · line 12", numero: 12, linea: "    return quicksort(smaller) + quicksort(larger)", o: mezclar(BIEN, { ret: "sinpivote" }),
+      porque: "Without [pivot], each call throws its pivot away: the 11, the 6 and the 17 get lost. Only the lists with one value are left.",
+      pista: "Where does the pivot of each call end up in that return?" },
+    { nombre: "Version B · line 12", numero: 12, linea: "    return quicksort(larger) + [pivot] + quicksort(smaller)", o: mezclar(BIEN, { ret: "reves" }),
+      porque: "It works, but the larger ones go first: it ends up from largest to smallest.",
+      pista: "Look at the order of the three parts of the return: which ones go first?" },
+    { nombre: "Version C · line 7", numero: 7, linea: "    for x in items:", o: mezclar(BIEN, { recorre: "items" }),
+      porque: "The pivot gets split too and goes to larger (it is not smaller than itself). A list like [6, 9] calls itself again with [6, 9]: it never gets smaller, and the stack grows until the RecursionError.",
+      pista: "Without [1:], the pivot goes into the for too: which list does it go to? Does the list get smaller in the next call?" }
+  ];
+  var SALIDAS = ["[3, 6, 9, 11, 14, 17, 20]", "[20, 17, 14, 11, 9, 6, 3]", "[3, 9, 14, 20]", "[11, 6, 17]", "RecursionError", "IndexError"];
+
+  VERSIONES.forEach(function (v, i) {
+    var caja = crear("div", "version");
+    caja.appendChild(crear("span", "version__nombre", v.nombre));
+    var pre = crear("pre", "codigo");
+    escribirCodigo(pre, v.linea);
+    pre.style.counterReset = "linea " + (v.numero - 1);
+    pre.setAttribute("aria-label", "Line " + v.numero + " of " + v.nombre.split(" · ")[0]);
+    caja.appendChild(pre);
+    var etiqueta = crear("label", "version__elegir", "It prints: ");
+    var sel = crear("select");
+    sel.id = "v-sel-" + i;
+    sel.appendChild(crear("option", "", "?")).value = "";
+    SALIDAS.forEach(function (s) { sel.appendChild(crear("option", "", s)).value = s; });
+    etiqueta.appendChild(sel);
+    caja.appendChild(etiqueta);
+    var porque = crear("p", "version__porque");
+    porque.hidden = true;
+    caja.appendChild(porque);
+    $("versiones").appendChild(caja);
+    v.caja = caja;
+    v.sel = sel;
+    v.porqueEl = porque;
+    v.correcta = salida(NOTAS, v.o);
+    sel.addEventListener("change", function () {
+      caja.classList.remove("version--ok", "version--mal");
+      porque.hidden = true;
+      Pasos.limpiarFeedback($("v-fb"));
+      leccion.listoParaComprobar(VERSIONES.every(function (x) { return !!x.sel.value; }));
+    });
+  });
+
+  function comprobarVersiones() {
+    var bien = 0;
+    VERSIONES.forEach(function (v) {
+      var ok = v.sel.value === v.correcta;
+      if (ok) bien++;
+      v.caja.classList.toggle("version--ok", ok);
+      v.caja.classList.toggle("version--mal", !ok);
+      v.porqueEl.textContent = (ok ? "✓ " : "💡 ") + (ok ? v.porque : v.pista);
+      v.porqueEl.hidden = false;
+    });
+    if (bien === VERSIONES.length) {
+      Pasos.feedback($("v-fb"), "ok", "All three! One line changes a lot: without [pivot] values get lost, the order of the return decides whether it goes from smallest to largest, and without [1:] the list never gets smaller.");
+      return true;
+    }
+    Pasos.feedback($("v-fb"), "pista", "You got " + bien + " of 3 right. Read the hint of the others and change your answer.");
+    return false;
+  }
+
+  /* ---------- 8. What about the old list? ---------- */
+  var NOTAS8 = [11, 17, 6, 14, 9];
+  escribirCodigo($("p8-codigo"), ["grades = " + py(NOTAS8), "quicksort(grades)", "print(grades)"].join("\n"));
+  var notas8 = Lista.crear($("p8-notas"), NOTAS8, { nombres: ["grades"] });
+  var nueva8 = Lista.crear($("p8-nueva"), [], { capacidad: 5 });
+  var prediccion8 = null;
+
+  var t8 = Traza.crear({
+    codigo: $("p8-codigo"),
+    explicacion: $("p8-explicacion"),
+    consola: $("p8-consola"),
+    ejecutar: $("p8-ejecutar"),
+    reiniciar: $("p8-reiniciar"),
+    generar: function () {
+      return [
+        { linea: 0, texto: "<code>grades</code> holds 5 unsorted grades.", estado: {} },
+        { linea: 1, texto: "<code>quicksort</code> builds a <strong>new</strong> sorted list and returns it… but nobody stores it in a variable.", estado: { nueva: true } },
+        { linea: 2, texto: "<code>grades</code> is the same as before: <code>quicksort</code> never changed it.", estado: { nueva: true, olvidada: true }, salida: py(NOTAS8) }
+      ];
+    },
+    alReiniciar: function () {
+      $("p8-zona").hidden = true;
+      $("p8-zona").classList.remove("nueva-zona--olvidada");
+      nueva8.valores([]);
+      Pasos.limpiarFeedback($("p8-fb"));
+      habilitar("p8", prediccion8);
+    },
+    alPaso: function (paso) {
+      if (paso.estado.nueva && $("p8-zona").hidden) {
+        $("p8-zona").hidden = false;
+        nueva8.valores(NOTAS8.slice().sort(function (a, b) { return a - b; }));
+        nueva8.clases(function () { return "lista__casilla--igual"; });
+      }
+      if (paso.estado.olvidada) {
+        $("p8-zona").classList.add("nueva-zona--olvidada");
+        $("p8-rotulo").innerHTML = "nobody stored it: it gets lost";
+      } else {
+        $("p8-rotulo").innerHTML = "what <code>quicksort(grades)</code> returned";
+      }
+    },
+    alTerminar: function () {
+      var explica = "quicksort does not touch grades: it returns a new list, like sorted(). You have to store it: sorted_grades = quicksort(grades). " +
+        "Bubble sort, instead, changes the same list, like .sort().";
+      Pasos.feedback($("p8-fb"), "ok", (prediccion8 === "igual" ? "Exactly! grades did not change. " : "It prints [11, 17, 6, 14, 9]: grades did not change. ") + explica);
+      leccion.desbloquear();
+    }
+  });
+  conectarPrediccion("p8", function (v) { var nueva = prediccion8 === null; prediccion8 = v; if (nueva) t8.reiniciar(); });
+
+  /* ---------- 9. Challenge: complete quicksort ---------- */
+  var RETO = FUNCION.slice(0, 6).concat([
+    "    for x in {{a}}:",
+    "        if x {{b}} pivot:",
+    "            smaller.append(x)",
+    "        else:",
+    "            larger.append(x)",
+    "    return {{c}}"
+  ]).join("\n");
+  escribirCodigo($("reto-codigo"), RETO);
+
+  var OPCIONES_RETO = {
+    a: ["items[1:]", "items", "items[:-1]"],
+    b: ["<", ">", "=="],
+    c: ["quicksort(smaller) + [pivot] + quicksort(larger)", "quicksort(smaller) + quicksort(larger)", "smaller + [pivot] + larger", "quicksort(larger) + [pivot] + quicksort(smaller)"]
+  };
+  var RET_DE = {
+    "quicksort(smaller) + [pivot] + quicksort(larger)": "bien",
+    "quicksort(smaller) + quicksort(larger)": "sinpivote",
+    "smaller + [pivot] + larger": "sinllamar",
+    "quicksort(larger) + [pivot] + quicksort(smaller)": "reves"
+  };
+  var NOMBRES_HUECO = { a: "Blank 1: what the for goes through", b: "Blank 2: the comparison with the pivot", c: "Blank 3: what it returns" };
+
+  Object.keys(OPCIONES_RETO).forEach(function (h) {
+    var sel = crear("select", "codigo__elegir");
+    sel.id = "reto-" + h;
+    sel.setAttribute("aria-label", NOMBRES_HUECO[h]);
+    sel.appendChild(crear("option", "", "?")).value = "";
+    OPCIONES_RETO[h].forEach(function (t) { sel.appendChild(crear("option", "", t)).value = t; });
+    hueco($("reto-codigo"), h).replaceWith(sel);
+    sel.addEventListener("change", function () {
+      sel.classList.toggle("codigo__elegir--lleno", !!sel.value);
+      $("reto-pruebas").hidden = true;
+      Pasos.limpiarFeedback($("reto-fb"));
+      leccion.listoParaComprobar(retoLleno());
+    });
+  });
+
+  function retoLleno() { return !!($("reto-a").value && $("reto-b").value && $("reto-c").value); }
+
+  var PRUEBAS_RETO = [NOTAS, [14, 9, 14, 3], [20, 15, 10, 5], [12], []];
+
+  function pintarPruebas(ul, filas) {
+    ul.textContent = "";
+    filas.forEach(function (f) {
+      var li = crear("li", f.ok ? "prueba--ok" : "prueba--mal");
+      li.appendChild(crear("span", "", f.llamada));
+      li.appendChild(crear("span", "prueba__salida", f.sale));
+      li.appendChild(crear("span", "prueba__marca", f.ok ? "✓" : "✗"));
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+  }
+
+  function comprobarReto() {
+    if (!retoLleno()) return false;
+    var o = { recorre: $("reto-a").value, cmp: $("reto-b").value, ret: RET_DE[$("reto-c").value] };
+    var todas = true;
+    pintarPruebas($("reto-pruebas"), PRUEBAS_RETO.map(function (lista) {
+      var sale = salida(lista, o);
+      var ok = sale === py(lista.slice().sort(function (a, b) { return a - b; }));
+      if (!ok) todas = false;
+      return { llamada: "quicksort(" + py(lista) + ")", sale: sale, ok: ok };
+    }));
+    if (todas) {
+      Pasos.feedback($("reto-fb"), "ok", o.cmp === "<"
+        ? "It sorts all five, even the one with two 14s! The for skips the pivot with items[1:], the smaller ones go on the left and the greater or equal ones on the right, and the return joins each sorted side with the pivot in the middle."
+        : "It sorts all five! But the names ended up backwards: with >, the list smaller holds the larger ones, and the backwards return puts them at the end. It works, but with < it reads better.");
+      return true;
+    }
+    var pista;
+    if (o.recorre !== "items[1:]") {
+      pista = o.recorre === "items"
+        ? "With for x in items, the pivot gets split too and goes back into one of the lists: the next call gets a list just as big and never ends (RecursionError). The pivot is already set aside: go through the rest."
+        : "items[:-1] leaves out the last value and puts the pivot back into the split. The pivot is already set aside: the for has to go through all the others.";
+    } else if (o.ret === "sinllamar") {
+      pista = "smaller and larger stay as they came, unsorted. Each side is sorted with the same function: you still need to call quicksort with each one.";
+    } else if (o.ret === "sinpivote") {
+      pista = "The pivot is not in that return: each call loses its own. Look at how many values come out in the tests.";
+    } else if (o.cmp === "==") {
+      pista = "With ==, smaller only holds the ones equal to the pivot and everything else goes to larger without sorting by size. The comparison has to separate the smaller ones.";
+    } else if (o.cmp === ">" || o.ret === "reves") {
+      pista = "The tests come out from largest to smallest. Check the comparison and the order of the parts of the return: the smaller ones go first.";
+    } else {
+      pista = "Look at the tests that fail and follow the first call by hand.";
+    }
+    Pasos.feedback($("reto-fb"), "pista", pista);
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  escribirCodigo($("resumen-codigo"), [
+    "def quicksort(items):",
+    "    if len(items) <= 1:",
+    "        return items  # already sorted",
+    "    pivot = items[0]",
+    "    smaller = []",
+    "    larger = []  # greater or equal",
+    "    for x in items[1:]:",
+    "        if x < pivot:",
+    "            smaller.append(x)",
+    "        else:",
+    "            larger.append(x)",
+    "    return quicksort(smaller) + [pivot] + quicksort(larger)"
+  ].join("\n"));
+
+  /* ---------- Connections ---------- */
+  empezar1();
+  empezar2();
+  habilitar("p5", prediccion5);
+  habilitar("p6", prediccion6);
+  habilitar("p8", prediccion8);
+
+  // When the step changes, any running trace pauses
+  function pausar() {
+    t3.detener();
+    t4.traza.detener();
+    t5.traza.detener();
+    t6.traza.detener();
+    t8.detener();
+  }
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-pivote": pausar,
+      "paso-lados": function () { pausar(); part2.rayas(); },
+      "paso-reparto": pausar,
+      "paso-traza": function () { pausar(); t4.part.rayas(); },
+      "paso-base": function () { pausar(); t5.part.rayas(); },
+      "paso-repetidos": function () { pausar(); t6.part.rayas(); },
+      "paso-versiones": function (paso, l, info) {
+        pausar();
+        if (!info.desbloqueado) l.listoParaComprobar(VERSIONES.every(function (x) { return !!x.sel.value; }));
+      },
+      "paso-nueva": pausar,
+      "paso-reto": function (paso, l, info) {
+        pausar();
+        if (!info.desbloqueado) l.listoParaComprobar(retoLleno());
+      },
+      "paso-resumen": pausar
+    },
+    comprobar: { "paso-reto": comprobarReto, "paso-versiones": comprobarVersiones }
+  });
+})();
+</script>
+</body>
+</html>

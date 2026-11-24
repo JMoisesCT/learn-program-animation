@@ -74,7 +74,7 @@
     if (opciones.max) el.style.setProperty("--particion-max", opciones.max + "rem");
     pisos(opciones.pisos);
     el.setAttribute("role", "img");
-    el.setAttribute("aria-label", opciones.etiqueta || "Una lista que se parte en pedazos");
+    el.setAttribute("aria-label", opciones.etiqueta || (/^en/i.test(document.documentElement.lang || "") ? "A list that splits into pieces" : "Una lista que se parte en pedazos"));
 
     var rejilla = el.appendChild(span("particion__rejilla"));
     var dibujo = document.createElementNS(SVG, "svg");
