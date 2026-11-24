@@ -1,13 +1,13 @@
 # Traducir una lección al inglés (instrucciones para un agente)
 
-Cómo se tradujeron Recursión, Texto a fondo y Listas (ver «Curso en inglés» en `CLAUDE.md`):
+Cómo se tradujeron Recursión, Texto a fondo, Listas y Otras estructuras (ver «Curso en inglés» en `CLAUDE.md`):
 
 1. Rama `mejora/ingles-<tema>` desde `main`.
 2. Medir los retos del tema en español: `node herramientas/responder-retos.js <tema>/<lección>` para cada lección (en segundo plano; tarda).
 3. Revisar las piezas compartidas que usa el tema (`assets/js/*.js`) y darles su texto en inglés con `lang="en"`.
 4. Copiar este archivo a la carpeta temporal, completar la sección **«Topic»** del final (títulos, carpetas, nombres de Python y glosario del tema) y lanzar **un agente por lección** en paralelo con: «Read the brief at <ruta> and follow it exactly. Your lesson: …» más lo propio de la lección (qué palabras importan, qué juego probar).
 5. Mientras traducen: la tarjeta del tema en `en/index.html` (antes de la de aviso), el «Next: <Tema> →» de la última lección traducida, `CLAUDE.md`.
-6. Al terminar cada agente: arreglar en los dos idiomas los retos que no caben al responder (ver «También después de responder» en `CLAUDE.md`), probar con `seguir-consola.js`, `PENDIENTES.md`, PR y fusión.
+6. Desde Otras estructuras, el arreglo de los retos lo hace cada agente en su lección, en los dos idiomas: añadir al encargo una sección «Phase 2» con las medidas en español (ver el registro del 2026-11-24 en `PENDIENTES.md`). Al terminar cada agente: arreglar en los dos idiomas los retos que no caben al responder (ver «También después de responder» en `CLAUDE.md`), probar con `seguir-consola.js`, `PENDIENTES.md`, PR y fusión.
 
 Los agentes no deben hacer commit ni tocar otros archivos: el coordinador sube todo. Lo de abajo va en inglés porque es lo que lee el agente.
 
