@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Structures together · Learn to program</title>
+  <meta name="description" content="Interactive lesson: combining structures in Python. A dictionary of lists, a list of dictionaries, a list of tuples and how to choose the structure for each problem.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .expresion { flex-wrap: wrap; overflow-wrap: anywhere; margin-top: var(--esp-3); }
+    .expresion > span { white-space: pre-wrap; }
+    .expresion__final { padding: 0 0.4em; border-radius: var(--radio-sm); background: var(--color-azul-suave); color: var(--color-azul); }
+    .expresion--columna { flex-direction: column; gap: 0; }
+    .consola .consola__linea { white-space: pre-wrap; }
+    .consola__linea--error { color: var(--color-error); }
+    .lab__visual .lista { padding-bottom: 0; }
+
+    /* Buttons to choose (a key, a name, a code option) */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--codigo .btn { font-family: var(--fuente-codigo); white-space: pre; }
+    .elegir__rotulo { width: 100%; margin: 0; text-align: center; font-size: var(--texto-sm); font-weight: 600; color: var(--color-texto-suave); }
+
+    .control-slider { margin: var(--esp-4) 0 0; }
+    .control-slider label { display: flex; justify-content: space-between; gap: var(--esp-3); font-weight: 600; }
+    .control-slider output { font-family: var(--fuente-codigo); font-weight: 700; color: var(--color-azul); }
+
+    /* ---------- A list of dictionaries: one slot per row, with its dictionary ---------- */
+    .ldicc { width: 100%; }
+    /* The list's brackets, on both sides of the column of slots */
+    .ldicc__cuerpo { position: relative; display: grid; row-gap: 0.15rem; padding: 0.2rem 0.9rem; }
+    .ldicc__cuerpo::before, .ldicc__cuerpo::after { content: ""; position: absolute; top: 0; bottom: 0; width: 0.45rem; border: 2.5px solid #9aa4b2; }
+    .ldicc__cuerpo::before { left: 0; border-right: 0; border-radius: 4px 0 0 4px; }
+    .ldicc__cuerpo::after { right: 0; border-left: 0; border-radius: 0 4px 4px 0; }
+    .ldicc__fila { display: flex; align-items: center; gap: var(--esp-2); width: 100%; padding: 0 var(--esp-2); border-radius: var(--radio-sm); transition: background-color var(--dur-rapida); }
+    .ldicc__indice { flex: none; font-size: var(--texto-sm); }
+    .ldicc__dicc { flex: 1; min-width: 0; }
+    .ldicc__fila--marcada { background: var(--color-azul-suave); }
+    .ldicc__fila--marcada > .ldicc__indice { background: var(--color-azul); color: #fff; }
+    .ldicc__fila--apagada { opacity: 0.45; }
+    .ldicc .dicc { --dicc-max: 2.4rem; padding: 0.15rem 0; }
+    .ldicc .lista__nombres { margin-bottom: var(--esp-2); }
+
+    /* The dictionary of a single student, below (going through the list) */
+    .alumno-actual { margin-top: var(--esp-3); }
+    .alumno-actual .dicc { --dicc-max: 2.4rem; }
+    /* What appears and goes away above the output keeps its space (it is not seen, but takes its
+       height): the inner list when the key is not there («Rosa») and the dictionary of each
+       round's student before starting. That way the output doesn't move */
+    #s3-lista[hidden], #s6-alumno[hidden] { display: block !important; visibility: hidden; }
+    /* On desktop they go side by side: with their space already saved, the step doesn't grow */
+    @media (min-width: 1024px) {
+      #paso-agregar .lab__visual, #paso-recorrer .lab__visual { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; column-gap: var(--esp-3); }
+      #paso-recorrer .alumno-actual { margin-top: 0; }
+    }
+
+    /* The dictionary on the left and the boxes on the right */
+    .visual-dos { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: center; gap: var(--esp-3); }
+    .cajas--columna { flex-direction: column; flex-wrap: nowrap; align-items: center; gap: var(--esp-3); padding: 0; }
+    .cajas--compactas .caja__cuerpo { width: 7rem; height: 4.5rem; padding-bottom: var(--esp-2); }
+    /* A bit wider and with less padding: "Luis" fits whole (it used to be cut to "Lui…") */
+    .cajas--compactas .caja__valor { font-size: var(--texto-lg); max-width: 6.6rem; padding: 0 var(--esp-2); }
+    .cajas.cajas--compactas, .lab .cajas.cajas--compactas { padding: var(--esp-5) 0 0; }
+    .cajas.cajas--columna, .lab .cajas.cajas--columna { padding: var(--esp-3) 0 0; }
+    .expresion--chica { font-size: var(--texto-md); }
+
+    /* ---------- Predict / choose the structure ---------- */
+    .predicciones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-3); }
+    .prediccion { padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); }
+    .prediccion__texto { flex: 1 1 15rem; margin: 0; font-weight: 600; }
+    .prediccion .elegir { margin-top: 0; justify-content: flex-end; }
+    .prediccion .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); }
+    .prediccion .feedback { margin-top: var(--esp-2); padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion--ok .elegir .btn[aria-pressed="false"] { display: none; }
+
+    /* The four structures, at hand */
+    .leyenda { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin: var(--esp-4) 0 0; padding: 0; list-style: none; }
+    .leyenda li { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); background: var(--color-superficie-2); font-size: var(--texto-sm); line-height: 1.35; }
+    .leyenda strong { display: block; }
+    .leyenda code { font-size: 0.85em; }
+
+    /* ---------- Challenge ---------- */
+    .opciones--codigo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opciones--codigo .opcion span { font-size: var(--texto-md); padding: var(--esp-3); }
+
+    @media (max-width: 480px) {
+      .opciones--codigo .opcion span { font-size: var(--texto-sm); padding: var(--esp-3) var(--esp-2); }
+      .prediccion .elegir { justify-content: flex-start; }
+      .visual-dos { grid-template-columns: minmax(0, 1fr); }
+      .cajas--columna { flex-direction: row; justify-content: center; }
+    }
+    /* RETO-LAB */
+    /* Challenge: the visual panel doesn't stretch down to the end of the code (pasos.js does that so the
+       output lands at the bottom): here what shows up when you answer goes below it and would end up under the
+       footer. On mobile, when right, only the chosen option stays (the others come back with “Try another option”) */
+    @media (min-width: 1024px) { #paso-reto .lab__visual { min-height: 0 !important; } }
+    @media (max-width: 1023px) { #reto-opciones:has(.opcion--correcta) .opcion:not(.opcion--correcta) { display: none; } }
+    /* When right, the answer can already be read in the code's blank: the options hide and, on desktop, the
+       output, the message and the button go under the code; the visual takes the right column */
+    #paso-reto:has(.hueco) #reto-opciones:has(.opcion--correcta),
+    #paso-reto .op-leyenda:has(+ #reto-opciones .opcion--correcta) { display: none; }
+    @media (min-width: 1024px) {
+      #paso-reto:has(.opcion--correcta) { grid-template-areas: "intro visual" "principal visual" "resultado visual"; grid-template-rows: auto auto 1fr; }
+      /* Luis's list, beside the dictionary: the visual doesn't grow downward when you answer */
+      #paso-reto .lab__visual:has(#reto-lista:not([hidden])) { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: center; column-gap: var(--esp-3); }
+    }
+    /* On mobile, the visual goes between the code and the output: when right, only Luis's list stays
+       (the dictionary can already be read in the code), so the print line, the output, the message and
+       the button fit together on the screen */
+    @media (max-width: 1023px) {
+      #paso-reto:has(.opcion--correcta) #reto-notas { display: none; }
+      #paso-reto:has(.opcion--correcta) .lab__visual { min-height: 0 !important; }
+    }
+    /* /RETO-LAB */
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="estructuras-juntas">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: one key, several grades -->
+    <section class="paso" id="paso-varias" data-requiere aria-labelledby="t-varias">
+      <span class="paso__etiqueta">Other structures 6/7 · Structures together</span>
+      <h1 class="paso__titulo" id="t-varias">Ana took another test</h1>
+      <p>Ana got <strong>17</strong> on the second test, but without losing her 14. How do you store it? Try it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <div class="elegir elegir--codigo" id="s1-elegir" role="group" aria-label="Which line to add?">
+            <button type="button" class="btn btn-secundario" data-valor="pisa" aria-pressed="false">grades["Ana"] = 17</button>
+            <button type="button" class="btn btn-secundario" data-valor="otra" aria-pressed="false">grades["Ana2"] = 17</button>
+            <button type="button" class="btn btn-secundario" data-valor="lista" aria-pressed="false">grades["Ana"] = [14, 17]</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s1-notas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. grades["Luis"][1]: first the key, then the position -->
+    <section class="paso" id="paso-acceso" data-requiere aria-labelledby="t-acceso">
+      <h2 class="paso__titulo" id="t-acceso">First the key, then the position</h2>
+      <p><code>grades["Luis"]</code> gives Luis’s list, and <code>[1]</code> picks inside it. Choose the student and the position, and find the <strong>12</strong> and the <strong>16</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Code"></pre>
+          <div class="elegir" id="s2-nombre" role="group" aria-label="Whose?">
+            <p class="elegir__rotulo" aria-hidden="true">Key</p>
+            <button type="button" class="btn btn-secundario" data-valor="Ana" aria-pressed="true">"Ana"</button>
+            <button type="button" class="btn btn-secundario" data-valor="Luis" aria-pressed="false">"Luis"</button>
+            <button type="button" class="btn btn-secundario" data-valor="Eva" aria-pressed="false">"Eva"</button>
+          </div>
+          <div class="control-slider">
+            <label for="s2-i">Position <output id="s2-i-valor" for="s2-i">0</output></label>
+            <input type="range" id="s2-i" min="0" max="1" step="1" value="0">
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s2-notas"></div>
+          <div id="s2-lista"></div>
+          <div class="expresion" id="s2-expresion" aria-live="polite"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. grades["Ana"].append(15) -->
+    <section class="paso" id="paso-agregar" data-requiere aria-labelledby="t-agregar">
+      <h2 class="paso__titulo" id="t-agregar">The inner list grows</h2>
+      <p>There was another test. <code>grades["Ana"]</code> is a list, so it has <code>.append()</code>. Choose who and what grade, and run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <div class="elegir" id="s3-nombre" role="group" aria-label="Who?">
+            <button type="button" class="btn btn-secundario" data-valor="Ana" aria-pressed="true">"Ana"</button>
+            <button type="button" class="btn btn-secundario" data-valor="Luis" aria-pressed="false">"Luis"</button>
+            <button type="button" class="btn btn-secundario" data-valor="Eva" aria-pressed="false">"Eva"</button>
+            <button type="button" class="btn btn-secundario" data-valor="Rosa" aria-pressed="false">"Rosa"</button>
+          </div>
+          <div class="control-slider">
+            <label for="s3-nota">Grade <output id="s3-nota-valor" for="s3-nota">15</output></label>
+            <input type="range" id="s3-nota" min="0" max="20" step="1" value="15">
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-crear" hidden>Create her list first</button>
+            <button type="button" class="btn btn-secundario" id="s3-limpiar">↺ Grades again</button>
+            <button type="button" class="btn btn-secundario" id="s3-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-notas"></div>
+          <div id="s3-lista"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Each one's average -->
+    <section class="paso" id="paso-promedio" data-requiere aria-labelledby="t-promedio">
+      <h2 class="paso__titulo" id="t-promedio">One average per student</h2>
+      <p>With <code>.items()</code>, each round brings a name and <strong>its list</strong>. And <code>sum()</code> and <code>len()</code> work on a list. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="visual-dos">
+            <div>
+              <div id="s4-notas"></div>
+              <div id="s4-lista"></div>
+            </div>
+            <div class="cajas cajas--columna cajas--compactas" id="s4-cajas">
+              <div class="caja" id="s4-nombre">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">name</code>
+              </div>
+              <div class="caja caja--acento" id="s4-promedio">
+                <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                <code class="caja__nombre">average</code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. A list of dictionaries -->
+    <section class="paso" id="paso-fichas" data-requiere aria-labelledby="t-fichas">
+      <h2 class="paso__titulo" id="t-fichas">One card per student</h2>
+      <p>Now the other way around: a list, and in each slot a <strong>dictionary</strong>. First comes the slot number, then the key. Get <strong>Eva’s grade</strong> and the <strong>name</strong> of the student who got 9.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Code"></pre>
+          <div class="control-slider">
+            <label for="s5-i">Slot <output id="s5-i-valor" for="s5-i">0</output></label>
+            <input type="range" id="s5-i" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="elegir" id="s5-clave" role="group" aria-label="Which key?">
+            <p class="elegir__rotulo" aria-hidden="true">Key</p>
+            <button type="button" class="btn btn-secundario" data-valor="name" aria-pressed="true">"name"</button>
+            <button type="button" class="btn btn-secundario" data-valor="grade" aria-pressed="false">"grade"</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-alumnos"></div>
+          <div class="expresion expresion--columna expresion--chica" id="s5-expresion" aria-live="polite"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Going through the list of dictionaries -->
+    <section class="paso" id="paso-recorrer" data-requiere aria-labelledby="t-recorrer">
+      <h2 class="paso__titulo" id="t-recorrer">Card by card</h2>
+      <p>The <code>for</code> takes one slot per round: <code>student</code> is <strong>a dictionary</strong>, and with its key you get what you need. Who passed?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s6-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s6-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s6-alumnos"></div>
+          <div class="alumno-actual" id="s6-alumno" hidden></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. A list of tuples -->
+    <section class="paso" id="paso-pares" data-requiere aria-labelledby="t-pares">
+      <h2 class="paso__titulo" id="t-pares">A list of pairs</h2>
+      <p>Each slot holds a <strong>tuple</strong> of two. The <code>for</code> unpacks it into two boxes, like <code>day, month, year = date</code>. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s7-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s7-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s7-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s7-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s7-pares"></div>
+          <div class="cajas cajas--compactas" id="s7-cajas">
+            <div class="caja" id="s7-nombre">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">name</code>
+            </div>
+            <div class="caja caja--acento" id="s7-nota">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">grade</code>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Choosing the structure -->
+    <section class="paso" id="paso-elegir" data-requiere aria-labelledby="t-elegir">
+      <h2 class="paso__titulo" id="t-elegir">Which one fits?</h2>
+      <p>Each problem has its own structure. Choose one for each case.</p>
+      <ul class="leyenda" aria-label="The four structures">
+        <li><strong>List <code>[ ]</code></strong>ordered, and it changes</li>
+        <li><strong>Tuple <code>( )</code></strong>ordered, doesn’t change</li>
+        <li><strong>Dictionary</strong>looks up by its key</li>
+        <li><strong>Set</strong>no repeats: is it in there?</li>
+      </ul>
+
+      <div class="tarjeta">
+        <ol class="predicciones" id="s8-predicciones">
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <p class="prediccion__texto">The days of the week: always the same 7, in the same order.</p>
+              <div class="elegir" role="group" aria-label="Structure for the days of the week"></div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <p class="prediccion__texto">The lunch line: people join at the end, and the first one gets served.</p>
+              <div class="elegir" role="group" aria-label="Structure for the lunch line"></div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <p class="prediccion__texto">Each friend’s phone number, to look it up by their name.</p>
+              <div class="elegir" role="group" aria-label="Structure for the phone numbers"></div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <p class="prediccion__texto">The countries you visited: each one once, and you want to know if you went to one.</p>
+              <div class="elegir" role="group" aria-label="Structure for the countries you visited"></div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+          <li class="prediccion">
+            <div class="prediccion__fila">
+              <p class="prediccion__texto">Each player’s points in each round, to see one player’s points by name.</p>
+              <div class="elegir" role="group" aria-label="Structure for each player’s points"></div>
+            </div>
+            <div class="feedback" role="status" aria-live="polite"></div>
+          </li>
+        </ol>
+        <div class="feedback" id="s8-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 9. Challenge: Luis's second grade -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="t-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="t-reto">Luis’s second grade</h2>
+      <p>This program should print Luis’s <strong>second</strong> grade. What goes in the blank?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Code"></pre>
+          <fieldset class="opciones opciones--codigo" id="reto-opciones">
+            <legend class="visualmente-oculto">What goes in the blank?</legend>
+            <label class="opcion"><input type="radio" name="reto" value="1l"><span>grades[1]["Luis"]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="l"><span>grades["Luis"]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="l1"><span>grades["Luis"][1]</span></label>
+            <label class="opcion"><input type="radio" name="reto" value="l2"><span>grades["Luis"][2]</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__visual">
+          <div id="reto-notas"></div>
+          <div id="reto-lista" hidden></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite" hidden><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another option</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="t-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="t-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Structures can go one inside another: <code>grades["Ana"][0]</code> goes by the key and then by the position; <code>students[0]["grade"]</code>, the other way around. And each problem calls for its own.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../project/index.html">Next: Project: the class vote →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/lista.js"></script>
+<script src="../../../../assets/js/dicc.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* ---------- Colored Python code ---------- */
+  var PALABRAS = /^(for|in|if|else|def|return|True|False|None)$/;
+  var PIEZA = /("[^"\n]*")|(#.*)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)(\s*\()?/g;
+
+  function escapar(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function tk(clase, t) { return '<span class="tk-' + clase + '">' + escapar(t) + "</span>"; }
+
+  function py(linea) {
+    var html = "";
+    var desde = 0;
+    linea.replace(PIEZA, function (todo, texto, comentario, numero, nombre, parentesis, pos) {
+      html += escapar(linea.slice(desde, pos));
+      desde = pos + todo.length;
+      if (texto) html += tk("texto", texto);
+      else if (comentario) html += tk("comentario", comentario);
+      else if (numero) html += tk("numero", numero);
+      else if (PALABRAS.test(nombre)) html += tk("palabra", nombre) + escapar(parentesis || "");
+      else if (parentesis) html += tk("funcion", nombre) + escapar(parentesis);
+      else html += tk("variable", nombre);
+      return todo;
+    });
+    html += escapar(linea.slice(desde));
+    return html.replace("▢", '<span class="hueco" id="reto-hueco">?</span>');
+  }
+
+  function codigo(pre, lineas) {
+    pre.innerHTML = "<code>" + lineas.map(function (l) { return '<span class="linea">' + py(l) + "</span>"; }).join("") + "</code>";
+  }
+
+  function lineaDe(pre, k) { return pre.querySelectorAll(".linea")[k]; }
+
+  function t(v) { return Lista.texto(v); }
+
+  // How Python prints a number with decimals: 14.0, 10.5
+  function flotante(x) { return Number.isInteger(x) ? x + ".0" : String(x); }
+
+  function copiaPares(pares) { return pares.map(function (p) { return [p[0], Lista.copiar(p[1])]; }); }
+
+  /* A dictionary written on several lines, one pair per line:
+       grades = {"Ana": [14, 17],
+                 "Luis": [9, 12]} */
+  function lineasDicc(nombre, pares) {
+    var sangria = new Array(nombre.length + 5).join(" ");
+    return pares.map(function (p, k) {
+      return (k === 0 ? nombre + " = {" : sangria) + t(p[0]) + ": " + t(p[1]) + (k === pares.length - 1 ? "}" : ",");
+    });
+  }
+
+  /* A list written on several lines, one value per line */
+  function lineasLista(nombre, valores) {
+    var sangria = new Array(nombre.length + 5).join(" ");
+    return valores.map(function (v, k) {
+      return (k === 0 ? nombre + " = [" : sangria) + t(v) + (k === valores.length - 1 ? "]" : ",");
+    });
+  }
+
+  /* What print prints: the line flies from wherever it is told */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      tiene: function (clave) { return !!s[clave]; },
+      cuantos: function (claves) { return claves.filter(function (k) { return s[k]; }).length; }
+    };
+  }
+
+  /* A group of buttons with aria-pressed: one chosen at a time */
+  function grupo(el, alElegir) {
+    var botones = el.querySelectorAll("button[data-valor]");
+    botones.forEach(function (b) {
+      b.addEventListener("click", function () {
+        botones.forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+        alElegir(b.getAttribute("data-valor"));
+      });
+    });
+    return {
+      valor: function () {
+        var b = el.querySelector('button[aria-pressed="true"]');
+        return b ? b.getAttribute("data-valor") : null;
+      },
+      poner: function (v) {
+        botones.forEach(function (o) { o.setAttribute("aria-pressed", String(o.getAttribute("data-valor") === v)); });
+      }
+    };
+  }
+
+  /* An expression solved in parts: a → b → c */
+  function expresion(el, partes) {
+    el.innerHTML = "";
+    partes.forEach(function (p, k) {
+      if (k > 0) {
+        var flecha = document.createElement("span");
+        flecha.className = "expresion__flecha";
+        flecha.setAttribute("aria-hidden", "true");
+        flecha.textContent = el.classList.contains("expresion--columna") ? "↓" : "→";
+        el.appendChild(flecha);
+      }
+      var s = document.createElement("span");
+      if (k === partes.length - 1) s.className = "expresion__final";
+      s.textContent = p;
+      el.appendChild(s);
+    });
+  }
+
+  function nuevaLista(el, valores, opciones) {
+    el.textContent = "";
+    el.className = "";
+    return Lista.crear(el, valores, opciones);
+  }
+
+  function nuevoDicc(el, pares, opciones) {
+    el.textContent = "";
+    el.className = "";
+    return Dicc.crear(el, pares, opciones);
+  }
+
+  /* A list of dictionaries: one slot per row (its index on the left) and, inside,
+     the dictionary with its keys. Built from pieces of lista.js and dicc.js. */
+  function listaDeDiccs(el, valores, nombre) {
+    el.textContent = "";
+    el.className = "ldicc";
+    el.setAttribute("aria-hidden", "true");
+    if (nombre) {
+      var nombres = document.createElement("div");
+      nombres.className = "lista__nombres";
+      var n = document.createElement("span");
+      n.className = "lista__nombre";
+      n.textContent = nombre;
+      nombres.appendChild(n);
+      el.appendChild(nombres);
+    }
+    var cuerpo = document.createElement("div");
+    cuerpo.className = "ldicc__cuerpo";
+    var filas = valores.map(function (v, i) {
+      var f = document.createElement("div");
+      f.className = "ldicc__fila";
+      var indice = document.createElement("span");
+      indice.className = "lista__indice ldicc__indice";
+      indice.textContent = String(i);
+      var d = document.createElement("div");
+      d.className = "ldicc__dicc";
+      f.appendChild(indice);
+      f.appendChild(d);
+      cuerpo.appendChild(f);
+      return { el: f, dicc: Dicc.crear(d, v, { capacidad: 3 }) };
+    });
+    el.appendChild(cuerpo);
+
+    function marcar(i, clave) {
+      filas.forEach(function (f, k) {
+        f.el.classList.toggle("ldicc__fila--marcada", k === i);
+        f.dicc.marcar(k === i && clave ? clave : null);
+      });
+    }
+    return {
+      marcar: marcar,
+      fila: function (i) { return filas[i].el; },
+      dicc: function (i) { return filas[i].dicc; },
+      apagar: function (fn) {
+        filas.forEach(function (f, k) { f.el.classList.toggle("ldicc__fila--apagada", !!(fn && fn(k))); });
+      }
+    };
+  }
+
+  var ALUMNOS = [{ name: "Ana", grade: 14 }, { name: "Luis", grade: 9 }, { name: "Eva", grade: 17 }];
+
+  /* ---------- 1. Ana took another test ---------- */
+  var UNA = [["Ana", 14], ["Luis", 9], ["Eva", 16]];
+  var VARIAS = [["Ana", [14, 17]], ["Luis", [9, 12]], ["Eva", [16, 18]]];
+  var notas1 = null;
+  var corriendo1 = [];
+  var LINEAS1 = {
+    pisa: 'grades["Ana"] = 17',
+    otra: 'grades["Ana2"] = 17',
+    lista: 'grades["Ana"] = [14, 17]'
+  };
+
+  function cancelar1() {
+    corriendo1.forEach(clearTimeout);
+    corriendo1 = [];
+  }
+
+  function inicio1() {
+    cancelar1();
+    codigo($("s1-codigo"), ['grades = {"Ana": 14, "Luis": 9, "Eva": 16}', "# Where does Ana's 17 go?"]);
+    notas1 = nuevoDicc($("s1-notas"), copiaPares(UNA), { vertical: true, nombres: ["grades"] });
+    $("s1-elegir").querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+  }
+
+  function probar1(valor, leccion) {
+    cancelar1();
+    notas1 = nuevoDicc($("s1-notas"), copiaPares(UNA), { vertical: true, nombres: ["grades"] });
+    var pre = $("s1-codigo");
+    codigo(pre, ['grades = {"Ana": 14, "Luis": 9, "Eva": 16}', LINEAS1[valor]]);
+    Codigo.marcar(pre, { activas: [1] });
+    var fb = $("s1-fb");
+    if (valor === "pisa") {
+      notas1.poner("Ana", 17, Codigo.piezaEnLinea(lineaDe(pre, 1), "17"));
+      notas1.clases(function (k) { return k === "Ana" ? "dicc__par--distinta" : ""; });
+      Pasos.feedback(fb, "pista", "The 14 is gone! A key holds just one value: when you give it another one, the old one leaves.");
+      return;
+    }
+    if (valor === "otra") {
+      notas1.poner("Ana2", 17, Codigo.piezaEnLinea(lineaDe(pre, 1), "17"), Codigo.piezaEnLinea(lineaDe(pre, 1), '"Ana2"'));
+      notas1.clases(function (k) { return k === "Ana2" ? "dicc__par--distinta" : ""; });
+      Pasos.feedback(fb, "pista", "It works, but Ana got split into two keys. And on the third test, \"Ana3\"? How do you get her average?");
+      return;
+    }
+    notas1.poner("Ana", [14, 17], lineaDe(pre, 1));
+    notas1.clases(function (k) { return k === "Ana" ? "dicc__par--igual" : ""; });
+    Pasos.feedback(fb, "ok", "One key, one value… and that value can be a list with all her grades. Look: the others too.");
+    // The others get a list too
+    corriendo1.push(setTimeout(function () {
+      codigo(pre, lineasDicc("grades", VARIAS));
+      Codigo.marcar(pre, { activas: [1] });
+      notas1.poner("Luis", [9, 12], lineaDe(pre, 1));
+    }, espera(1100)));
+    corriendo1.push(setTimeout(function () {
+      Codigo.marcar(pre, { activas: [2] });
+      notas1.poner("Eva", [16, 18], lineaDe(pre, 2));
+    }, espera(1700)));
+    corriendo1.push(setTimeout(function () {
+      Codigo.marcar(pre, {});
+      notas1.clases(function () { return "dicc__par--igual"; });
+      Pasos.feedback(fb, "ok", "A dictionary of lists: each student is a key, and its value is the list of their grades. Every new test will fit.");
+      leccion.desbloquear();
+    }, espera(2400)));
+  }
+
+  /* ---------- 2. grades["Luis"][1] ---------- */
+  var notas2 = Dicc.crear($("s2-notas"), copiaPares(VARIAS), { vertical: true, nombres: ["grades"] });
+  var lista2 = null;
+  var s2 = vistos();
+  var nombre2 = null;
+
+  function valorDe(pares, clave) {
+    for (var k = 0; k < pares.length; k++) if (pares[k][0] === clave) return pares[k][1];
+    return undefined;
+  }
+
+  function mostrar2(leccion, conVuelo) {
+    var nombre = nombre2.valor();
+    var i = Number($("s2-i").value);
+    var lista = valorDe(VARIAS, nombre);
+    var v = lista[i];
+    $("s2-i-valor").textContent = String(i);
+    var pre = $("s2-codigo");
+    codigo(pre, lineasDicc("grades", VARIAS).concat(["print(grades[\"" + nombre + "\"][" + i + "])"]));
+    Codigo.marcar(pre, { activas: [3] });
+    notas2.marcar(nombre);
+    lista2 = nuevaLista($("s2-lista"), lista.slice(), { nombres: ["grades[\"" + nombre + "\"]"] });
+    lista2.marcar(i);
+    if (conVuelo) Codigo.volar(notas2.valor(nombre), lista2.el.querySelector(".lista__fila"), t(lista), "lista__valor lista__vuelo");
+    expresion($("s2-expresion"), ["grades[\"" + nombre + "\"][" + i + "]", t(lista) + "[" + i + "]", t(v)]);
+    if (!leccion) return;
+
+    var fb = $("s2-fb");
+    if (v === 12 || v === 16) s2.marcar(String(v));
+    var halladas = s2.cuantos(["12", "16"]);
+    if (halladas === 2) {
+      Pasos.feedback(fb, "ok", "Both! grades[\"Luis\"][1] is 12 and grades[\"Eva\"][0] is 16: the key gives the list, and the position picks inside it.");
+      leccion.desbloquear();
+    } else if (v === 12 || v === 16) {
+      Pasos.feedback(fb, "pista", "There’s the " + v + "! grades[\"" + nombre + "\"][" + i + "]. Now find the " + (v === 12 ? "16" : "12") + ".");
+    } else {
+      Pasos.feedback(fb, "pista", "grades[\"" + nombre + "\"] is the list " + t(lista) + ", and its position " + i + " holds " + v + ". Look for the 12 and the 16.");
+    }
+  }
+
+  /* ---------- 3. grades["Ana"].append(15) ---------- */
+  var notas3 = null;
+  var lista3 = null;
+  var nombre3 = null;
+  var crear3 = false;      // does the first line create Rosa's list?
+  var corriendo3 = [];
+
+  function lineas3() {
+    var n = nombre3.valor();
+    var v = $("s3-nota").value;
+    var l = [];
+    if (crear3 && n === "Rosa" && !notas3.tiene("Rosa")) l.push("grades[\"Rosa\"] = []");
+    l.push("grades[\"" + n + "\"].append(" + v + ")");
+    l.push("print(grades[\"" + n + "\"])");
+    return l;
+  }
+
+  function cancelar3() {
+    corriendo3.forEach(clearTimeout);
+    corriendo3 = [];
+    $("s3-ejecutar").disabled = false;
+  }
+
+  // The dictionary saves the height of its 4 keys (once «Rosa» has her list) and the row
+  // of buttons, the height of «Create her list first», which appears after the KeyError
+  Codigo.reservarAlto($("s3-notas"), [VARIAS.concat([["Rosa", []]])], function (copia, pares) {
+    nuevoDicc(copia, copiaPares(pares), { vertical: true, nombres: ["grades"] });
+  });
+  // …and the code, the height of its 3 lines (with «grades["Rosa"] = []» first)
+  Codigo.reservarAlto($("s3-codigo"), [["x", "x", "x"]], function (copia, lineas) { codigo(copia, lineas); });
+  Codigo.reservarAlto($("s3-crear").parentNode, [true], function (copia) {
+    copia.querySelector('[id="s3-crear"]').hidden = false;
+  });
+
+  function mostrarLista3() {
+    var n = nombre3.valor();
+    var esta = notas3.tiene(n);
+    $("s3-lista").hidden = !esta;
+    if (esta) lista3 = nuevaLista($("s3-lista"), notas3.obtener(n), { capacidad: 6, nombres: ["grades[\"" + n + "\"]"] });
+  }
+
+  function escribir3() {
+    $("s3-nota-valor").textContent = $("s3-nota").value;
+    codigo($("s3-codigo"), lineas3());
+    $("s3-crear").hidden = !(nombre3.valor() === "Rosa" && !notas3.tiene("Rosa") && !crear3 && $("s3-crear").getAttribute("data-visto") === "1");
+  }
+
+  function elegir3() {
+    cancelar3();
+    notas3.marcar(null);
+    notas3.clases(null);
+    mostrarLista3();
+    escribir3();
+  }
+
+  function limpiar3() {
+    cancelar3();
+    crear3 = false;
+    $("s3-crear").removeAttribute("data-visto");
+    notas3 = nuevoDicc($("s3-notas"), copiaPares(VARIAS), { vertical: true, nombres: ["grades"] });
+    mostrarLista3();
+    escribir3();
+    Codigo.consola($("s3-consola"), []);
+    Pasos.limpiarFeedback($("s3-fb"));
+  }
+
+  function ejecutar3(leccion) {
+    cancelar3();
+    escribir3();
+    var n = nombre3.valor();
+    var v = Number($("s3-nota").value);
+    var pre = $("s3-codigo");
+    var fb = $("s3-fb");
+    var k = 0;
+    var t0 = 0;
+    $("s3-ejecutar").disabled = true;
+    notas3.clases(null);
+    Codigo.consola($("s3-consola"), []);
+    if (crear3 && n === "Rosa" && !notas3.tiene("Rosa")) {
+      Codigo.marcar(pre, { activas: [0] });
+      notas3.poner("Rosa", [], Codigo.piezaEnLinea(lineaDe(pre, 0), "[]"), Codigo.piezaEnLinea(lineaDe(pre, 0), '"Rosa"'));
+      k = 1;
+      t0 = espera(900);
+      corriendo3.push(setTimeout(mostrarLista3, t0));
+    }
+    corriendo3.push(setTimeout(function () {
+      Codigo.marcar(pre, { activas: [k] });
+      if (!notas3.tiene(n)) {
+        notas3.marcar(n);
+        imprimir($("s3-consola"), "KeyError: '" + n + "'", null, true);
+        $("s3-crear").setAttribute("data-visto", "1");
+        $("s3-crear").hidden = false;
+        $("s3-ejecutar").disabled = false;
+        Pasos.feedback(fb, "pista", "\"Rosa\" is not a key: there is no list to add to, so Python stops with KeyError. First you have to create her empty list.");
+        return;
+      }
+      notas3.marcar(n, "valor");
+      lista3.agregar(v, Codigo.piezaEnLinea(lineaDe(pre, k), String(v)));
+    }, t0));
+    corriendo3.push(setTimeout(function () {
+      if (!notas3.tiene(n)) return;
+      var nueva = notas3.obtener(n).concat([v]);
+      notas3.poner(n, nueva, lista3.el.querySelector(".lista__fila"));
+      notas3.clases(function (c) { return c === n ? "dicc__par--cambio" : ""; });
+    }, t0 + espera(800)));
+    corriendo3.push(setTimeout(function () {
+      if (!notas3.tiene(n)) return;
+      Codigo.marcar(pre, { activas: [k + 1] });
+      imprimir($("s3-consola"), Lista.python(notas3.obtener(n)), notas3.valor(n));
+      $("s3-ejecutar").disabled = false;
+      if (n === "Rosa") {
+        crear3 = false;
+        $("s3-crear").hidden = true;
+        escribir3();
+        Pasos.feedback(fb, "ok", "First grades[\"Rosa\"] = [] created the key with an empty list; then .append() had somewhere to add.");
+      } else {
+        Pasos.feedback(fb, "ok", n + "’s list grew, and the dictionary still has the same keys: what changed is inside. What about \"Rosa\", who isn’t there yet?");
+      }
+      leccion.desbloquear();
+    }, t0 + espera(1600)));
+  }
+
+  /* ---------- 4. Each one's average ---------- */
+  var NOTAS4 = [["Ana", [14, 17, 11]], ["Luis", [9, 12]], ["Eva", [16, 18, 20]]];
+  var CODIGO4 = lineasDicc("grades", NOTAS4).concat([
+    "for name, scores in grades.items():",
+    "    average = sum(scores) / len(scores)",
+    "    print(name, average)"
+  ]);
+  codigo($("s4-codigo"), CODIGO4);
+  var notas4 = Dicc.crear($("s4-notas"), copiaPares(NOTAS4), { vertical: true, nombres: ["grades"] });
+  var lista4 = Lista.crear($("s4-lista"), [], { nombres: ["scores"], capacidad: 4 });
+
+  function suma(l) { return l.reduce(function (a, b) { return a + b; }, 0); }
+
+  function trazaPromedio() {
+    var pasos = [];
+    NOTAS4.forEach(function (p, k) {
+      var prom = suma(p[1]) / p[1].length;
+      pasos.push({
+        linea: 3, k: k,
+        texto: (k === 0 ? "First round: " : "Another round: ") + "<code>name</code> is <code>\"" + p[0] + "\"</code> and <code>scores</code> is that student’s list <code>" + escapar(t(p[1])) + "</code>."
+      });
+      pasos.push({
+        linea: 4, k: k, promedio: prom,
+        texto: "<code>sum(scores)</code> is " + suma(p[1]) + " and <code>len(scores)</code> is " + p[1].length + ": " + suma(p[1]) + " / " + p[1].length + " gives <strong>" + flotante(prom) + "</strong>."
+      });
+      pasos.push({ linea: 5, k: k, salida: p[0] + " " + flotante(prom), texto: "Prints the name and the average." });
+    });
+    pasos.push({ linea: 3, fin: true, texto: "No pairs left: one average per student, even if they don’t all have the same number of grades." });
+    return pasos;
+  }
+
+  /* ---------- 5. A list of dictionaries ---------- */
+  var alumnos5 = listaDeDiccs($("s5-alumnos"), ALUMNOS, "students");
+  var clave5 = null;
+  var s5 = vistos();
+
+  function mostrar5(leccion) {
+    var i = Number($("s5-i").value);
+    var c = clave5.valor();
+    var ficha = ALUMNOS[i];
+    var v = ficha[c];
+    $("s5-i-valor").textContent = String(i);
+    var pre = $("s5-codigo");
+    codigo(pre, lineasLista("students", ALUMNOS).concat(["print(students[" + i + "][\"" + c + "\"])"]));
+    Codigo.marcar(pre, { activas: [3] });
+    alumnos5.marcar(i, c);
+    expresion($("s5-expresion"), ["students[" + i + "][\"" + c + "\"]", t(ficha) + "[\"" + c + "\"]", t(v)]);
+    if (!leccion) return;
+
+    var fb = $("s5-fb");
+    var clave = i + "," + c;
+    var metas = ["2,grade", "1,name"];
+    if (metas.indexOf(clave) !== -1) s5.marcar(clave);
+    var halladas = s5.cuantos(metas);
+    if (halladas === 2) {
+      Pasos.feedback(fb, "ok", "Both! students[2][\"grade\"] is 17 and students[1][\"name\"] is \"Luis\". First the slot gives the whole card; then the key takes one piece of data out of it.");
+      leccion.desbloquear();
+    } else if (clave === "2,grade") {
+      Pasos.feedback(fb, "pista", "That’s Eva’s grade! students[2] is her card, and [\"grade\"] takes out the 17. Now find the name of the student who got 9.");
+    } else if (clave === "1,name") {
+      Pasos.feedback(fb, "pista", "It was Luis! students[1] is his card, and [\"name\"] takes out \"Luis\". Now get Eva’s grade.");
+    } else {
+      Pasos.feedback(fb, "pista", "students[" + i + "] is " + ficha.name + "’s card, and [\"" + c + "\"] takes out " + t(v) + ".");
+    }
+  }
+
+  /* ---------- 6. Going through the list of dictionaries ---------- */
+  var CODIGO6 = lineasLista("students", ALUMNOS).concat([
+    "for student in students:",
+    "    if student[\"grade\"] >= 11:",
+    "        print(student[\"name\"], \"passed\")"
+  ]);
+  codigo($("s6-codigo"), CODIGO6);
+  var alumnos6 = listaDeDiccs($("s6-alumnos"), ALUMNOS, "students");
+  // Hidden, it saves from the start the space of each round's dictionary
+  var alumno6 = nuevoDicc($("s6-alumno"), ALUMNOS[0], { nombres: ["student"], capacidad: 3 });
+  $("s6-alumno").classList.add("alumno-actual");
+
+  function trazaRecorrer() {
+    var pasos = [];
+    ALUMNOS.forEach(function (a, k) {
+      var aprueba = a.grade >= 11;
+      pasos.push({
+        linea: 3, k: k,
+        texto: (k === 0 ? "First round: " : "Another round: ") + "<code>student</code> is slot " + k + ", " + a.name + "’s card."
+      });
+      pasos.push({
+        linea: 4, k: k, clave: "grade",
+        texto: "<code>student[\"grade\"]</code> is " + a.grade + ", and <code>" + a.grade + " &gt;= 11</code> is <strong>" + (aprueba ? "True" : "False") + "</strong>" + (aprueba ? "." : ": the <code>print</code> is skipped.")
+      });
+      if (aprueba) {
+        pasos.push({ linea: 5, k: k, clave: "name", salida: a.name + " passed", texto: "<code>student[\"name\"]</code> is <code>\"" + a.name + "\"</code>: it gets printed." });
+      }
+    });
+    pasos.push({ linea: 3, fin: true, texto: "No slots left: the <code>for</code> is over." });
+    return pasos;
+  }
+
+  /* ---------- 7. A list of tuples ---------- */
+  var PARES = [Lista.tupla(["Ana", 14]), Lista.tupla(["Luis", 9]), Lista.tupla(["Eva", 17])];
+  var CODIGO7 = lineasLista("pairs", PARES).concat([
+    "for name, grade in pairs:",
+    "    print(name, \"got\", grade)"
+  ]);
+  codigo($("s7-codigo"), CODIGO7);
+  var pares7 = Lista.crear($("s7-pares"), PARES, { nombres: ["pairs"] });
+
+  function trazaPares() {
+    var pasos = [];
+    PARES.forEach(function (p, k) {
+      pasos.push({
+        linea: 3, k: k,
+        texto: "<code>pairs[" + k + "]</code> is the tuple <code>" + escapar(t(p)) + "</code>: <code>\"" + p[0] + "\"</code> goes to <code>name</code> and " + p[1] + " to <code>grade</code>."
+      });
+      pasos.push({ linea: 4, k: k, salida: p[0] + " got " + p[1], texto: "Prints the two values with <code>\"got\"</code> in between." });
+    });
+    pasos.push({ linea: 3, fin: true, texto: "No pairs left: the <code>for</code> is over." });
+    return pasos;
+  }
+
+  /* ---------- 8. Which one fits? ---------- */
+  var ESTRUCTURAS = [["lista", "List"], ["tupla", "Tuple"], ["dicc", "Dictionary"], ["conjunto", "Set"]];
+  var datos8 = [
+    {
+      correcta: "tupla",
+      ok: "A tuple: they have an order and never change. days = (\"mon\", \"tue\", \"wed\", …)",
+      pistas: {
+        lista: "A list would work, but days are never added or removed. What doesn’t change goes in a…",
+        dicc: "You don’t look up a day by its name to get other data: you just go through them in order.",
+        conjunto: "A set has no order: Monday could come out after Thursday."
+      }
+    },
+    {
+      correcta: "lista",
+      ok: "A list: the order matters, and it changes. .append() when someone arrives and .pop(0) when they get served.",
+      pistas: {
+        tupla: "A tuple doesn’t change: nobody could join the line or leave it.",
+        dicc: "You don’t look anyone up by name: what matters is who is first.",
+        conjunto: "A set has no order: you wouldn’t know whose turn it is."
+      }
+    },
+    {
+      correcta: "dicc",
+      ok: "A dictionary: the name is the key and the phone number is its value. phones[\"Ana\"] goes straight to it.",
+      pistas: {
+        lista: "With a list you’d have to go through it to find Ana. Which one looks up by name?",
+        tupla: "A tuple doesn’t look up by name either, and you couldn’t add new friends.",
+        conjunto: "A set holds loose values: it doesn’t link each name to its phone number."
+      }
+    },
+    {
+      correcta: "conjunto",
+      ok: "A set: a repeated country doesn’t go in, and \"Peru\" in visited tells you if you went there.",
+      pistas: {
+        lista: "A list would store Peru twice if you went there twice. Which one has no repeats?",
+        tupla: "A tuple doesn’t change: you couldn’t add the next country.",
+        dicc: "You don’t need a value for each country: you just need to know if it’s there or not."
+      }
+    },
+    {
+      correcta: "dicc",
+      ok: "A dictionary of lists, like the grades one: points[\"Ana\"] is the list of her rounds, and .append() adds one more.",
+      pistas: {
+        lista: "A list of points doesn’t say whose each one is. You need to look up by name…",
+        tupla: "Rounds keep coming, and a tuple doesn’t change. Also, it doesn’t look up by name.",
+        conjunto: "In a set, two rounds with the same points would count as one. And it doesn’t look up by name."
+      }
+    }
+  ];
+
+  function armarElegir8() {
+    document.querySelectorAll("#s8-predicciones .elegir").forEach(function (g) {
+      ESTRUCTURAS.forEach(function (e) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("data-valor", e[0]);
+        b.setAttribute("aria-pressed", "false");
+        b.textContent = e[1];
+        g.appendChild(b);
+      });
+    });
+  }
+
+  function predicciones(filas, datos, alTerminar) {
+    var aciertos = datos.map(function () { return false; });
+    filas.forEach(function (fila, k) {
+      var botones = fila.querySelectorAll("button[data-valor]");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var p = datos[k];
+          var valor = btn.getAttribute("data-valor");
+          var acierta = valor === p.correcta;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          Pasos.feedback(fila.querySelector(".feedback"), acierta ? "ok" : "pista", acierta ? p.ok : p.pistas[valor]);
+          if (!acierta) return;
+          fila.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) alTerminar();
+        });
+      });
+    });
+  }
+
+  /* ---------- 9. Challenge: Luis's second grade ---------- */
+  var RETO = [["Ana", [14, 17]], ["Luis", [9, 12, 15]], ["Eva", [16, 18]]];
+  var notasReto = Dicc.crear($("reto-notas"), copiaPares(RETO), { vertical: true, nombres: ["grades"] });
+  var listaReto = null;
+  var pistasReto = {
+    l2: "It printed 15: that’s the third one. Positions count from 0, so the second one is 1.",
+    "1l": "The other way around: a dictionary has no positions, it has keys. grades[1] looks for the key 1, which doesn’t exist: KeyError. The key goes first.",
+    l: "It printed Luis’s whole list. The second level is missing: choosing the position inside it."
+  };
+
+  function escribirReto() {
+    codigo($("reto-codigo"), lineasDicc("grades", RETO).concat(["print(▢)"]));
+  }
+
+  function limpiarReto() {
+    notasReto.marcar(null);
+    notasReto.clases(null);
+    $("reto-lista").hidden = true;
+    $("reto-consola").hidden = true;
+    Codigo.consola($("reto-consola"), []);
+    Codigo.limpiar($("reto-codigo"));
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    $("reto-hueco").textContent = e.target.nextElementSibling.textContent;
+    document.querySelectorAll("#reto-opciones .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(true);
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[name="reto"]').forEach(function (r) {
+      r.checked = false;
+      r.disabled = false;
+    });
+    paso.querySelectorAll(".opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    $("reto-hueco").textContent = "?";
+    limpiarReto();
+  }
+
+  function mostrarListaReto(marca) {
+    $("reto-lista").hidden = false;
+    listaReto = nuevaLista($("reto-lista"), RETO[1][1].slice(), { nombres: ["grades[\"Luis\"]"] });
+    if (marca === "todo") listaReto.rango(0, RETO[1][1].length);
+    else if (marca !== null) listaReto.marcar(marca);
+  }
+
+  function comprobarReto(paso) {
+    var marcada = paso.querySelector('input[name="reto"]:checked');
+    if (!marcada) return false;
+    var opcion = marcada.closest(".opcion");
+    var valor = marcada.value;
+    limpiarReto();
+    Codigo.marcar($("reto-codigo"), { activas: [3] });
+    var consola = $("reto-consola");
+    consola.hidden = false;
+    Codigo.consola(consola, []);
+    if (valor === "1l") {
+      notasReto.marcar(1);
+      imprimir(consola, "KeyError: 1", null, true);
+    } else {
+      notasReto.marcar("Luis", "valor");
+      var pos = valor === "l1" ? 1 : valor === "l2" ? 2 : "todo";
+      mostrarListaReto(pos);
+      var sale = pos === "todo" ? Lista.python(RETO[1][1]) : String(RETO[1][1][pos]);
+      var desde = pos === "todo" ? listaReto.el.querySelector(".lista__fila") : listaReto.valor(pos);
+      imprimir(consola, sale, desde);
+      if (pos === 1) listaReto.clases(function (i) { return i === 1 ? "lista__casilla--igual" : ""; });
+      if (pos === 2) listaReto.clases(function (i) { return i === 2 ? "lista__casilla--distinta" : ""; });
+    }
+    if (valor === "l1") {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback($("reto-fb"), "ok", "Exactly! grades[\"Luis\"] gives his list [9, 12, 15], and [1] picks the second one: 12. First the key, then the position.");
+      paso.querySelectorAll('input[name="reto"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback($("reto-fb"), "pista", pistasReto[valor]);
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  codigo($("resumen-codigo"), [
+    "grades = {\"Ana\": [14, 17], \"Luis\": [9, 12]}",
+    "grades[\"Ana\"][0]          # 14: the key, then the position",
+    "grades[\"Ana\"].append(11)  # the inner list grows",
+    "students = [{\"name\": \"Ana\", \"grade\": 14}]",
+    "students[0][\"grade\"]      # 14: the position, then the key",
+    "pairs = [(\"Ana\", 14), (\"Luis\", 9)]",
+    "for name, grade in pairs:",
+    "    print(name, grade)"
+  ]);
+
+  /* ---------- Connections ---------- */
+  $("s1-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("s1-elegir").querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      probar1(b.getAttribute("data-valor"), leccion);
+    });
+  });
+
+  nombre2 = grupo($("s2-nombre"), function () { mostrar2(leccion, true); });
+  $("s2-i").addEventListener("input", function () { mostrar2(leccion, false); });
+
+  nombre3 = grupo($("s3-nombre"), elegir3);
+  $("s3-nota").addEventListener("input", function () { cancelar3(); escribir3(); });
+  $("s3-ejecutar").addEventListener("click", function () { ejecutar3(leccion); });
+  $("s3-limpiar").addEventListener("click", limpiar3);
+  $("s3-crear").addEventListener("click", function () {
+    crear3 = true;
+    escribir3();
+    $("s3-ejecutar").focus();
+    Pasos.feedback($("s3-fb"), "pista", "Now the first line creates the key \"Rosa\" with an empty list. Run it again.");
+  });
+
+  var traza4 = Traza.crear({
+    codigo: $("s4-codigo"),
+    explicacion: $("s4-explicacion"),
+    consola: $("s4-consola"),
+    ejecutar: $("s4-ejecutar"),
+    reproducir: $("s4-reproducir"),
+    reiniciar: $("s4-reiniciar"),
+    generar: trazaPromedio,
+    intervalo: 1000,
+    alReiniciar: function () {
+      Caja.vaciar($("s4-nombre"));
+      Caja.vaciar($("s4-promedio"));
+      notas4.marcar(null);
+      lista4.valores([]);
+      lista4.rango(null);
+      Pasos.limpiarFeedback($("s4-fb"));
+    },
+    alPaso: function (paso) {
+      lista4.rango(null);
+      if (paso.fin) { notas4.marcar(null); return; }
+      var p = NOTAS4[paso.k];
+      if (paso.linea === 3) {
+        notas4.marcar(p[0]);
+        Caja.poner($("s4-nombre"), t(p[0]), notas4.clave(p[0]));
+        lista4.valores(p[1].slice());
+        Codigo.volar(notas4.valor(p[0]), lista4.el.querySelector(".lista__fila"), t(p[1]), "lista__valor lista__vuelo");
+        return;
+      }
+      if (paso.linea === 4) {
+        lista4.rango(0, p[1].length);
+        Caja.poner($("s4-promedio"), flotante(paso.promedio));
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s4-fb"), "ok", "Each value is a list, so sum() and len() work on it as it is.");
+      leccion.desbloquear();
+    }
+  });
+
+  clave5 = grupo($("s5-clave"), function () { mostrar5(leccion); });
+  $("s5-i").addEventListener("input", function () { mostrar5(leccion); });
+
+  var traza6 = Traza.crear({
+    codigo: $("s6-codigo"),
+    explicacion: $("s6-explicacion"),
+    consola: $("s6-consola"),
+    ejecutar: $("s6-ejecutar"),
+    reproducir: $("s6-reproducir"),
+    reiniciar: $("s6-reiniciar"),
+    generar: trazaRecorrer,
+    intervalo: 950,
+    alReiniciar: function () {
+      alumnos6.marcar(null);
+      $("s6-alumno").hidden = true;
+      Pasos.limpiarFeedback($("s6-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) {
+        alumnos6.marcar(null);
+        if (alumno6) alumno6.marcar(null);
+        return;
+      }
+      var a = ALUMNOS[paso.k];
+      if (paso.linea === 3) {
+        alumnos6.marcar(paso.k);
+        var zona = $("s6-alumno");
+        zona.hidden = false;
+        alumno6 = nuevoDicc(zona, a, { nombres: ["student"], capacidad: 3 });
+        zona.classList.add("alumno-actual");
+        Object.keys(a).forEach(function (c) {
+          Codigo.volar(alumnos6.dicc(paso.k).valor(c), alumno6.valor(c), t(a[c]), "dicc__valor dicc__vuelo");
+        });
+        return;
+      }
+      alumno6.marcar(paso.clave);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s6-fb"), "ok", "In each round, student was a whole dictionary, and student[\"grade\"] got their grade.");
+      leccion.desbloquear();
+    }
+  });
+
+  var traza7 = Traza.crear({
+    codigo: $("s7-codigo"),
+    explicacion: $("s7-explicacion"),
+    consola: $("s7-consola"),
+    ejecutar: $("s7-ejecutar"),
+    reproducir: $("s7-reproducir"),
+    reiniciar: $("s7-reiniciar"),
+    generar: trazaPares,
+    intervalo: 950,
+    alReiniciar: function () {
+      Caja.vaciar($("s7-nombre"));
+      Caja.vaciar($("s7-nota"));
+      pares7.marcar(null);
+      Pasos.limpiarFeedback($("s7-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.fin) { pares7.marcar(null); return; }
+      if (paso.linea !== 3) return;
+      var p = PARES[paso.k];
+      pares7.marcar(paso.k);
+      var desde = pares7.valor(paso.k);
+      Caja.poner($("s7-nombre"), t(p[0]), desde);
+      Caja.poner($("s7-nota"), t(p[1]), desde);
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s7-fb"), "ok", "Each slot held a pair that doesn’t change: a tuple. It’s what .items() gives you with a dictionary: two at a time, name and grade.");
+      leccion.desbloquear();
+    }
+  });
+
+  armarElegir8();
+  predicciones(Array.prototype.slice.call(document.querySelectorAll("#s8-predicciones .prediccion")), datos8, function () {
+    Pasos.feedback($("s8-fb"), "ok", "All five! Does it change and have an order? List. Doesn’t it change? Tuple. Looking up by name? Dictionary. No repeats? Set.");
+    leccion.desbloquear();
+  });
+
+  document.querySelectorAll('#reto-opciones input[name="reto"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[name="reto"]').focus();
+  });
+
+  // Initial state of each step
+  inicio1();
+  mostrar2(null, false);
+  limpiar3();
+  mostrar5(null);
+  escribirReto();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-varias": function () { cancelar1(); },
+      "paso-agregar": function () { cancelar3(); },
+      "paso-promedio": function () { traza4.detener(); },
+      "paso-recorrer": function () { traza6.detener(); },
+      "paso-pares": function () { traza7.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>

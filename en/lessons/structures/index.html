@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A list that doesn’t change: tuples · Learn to program</title>
+  <meta name="description" content="Interactive lesson: tuples in Python. You read them like a list, but you can’t change them; unpack into several variables, swap with a, b = b, a and return two values from a function.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .consola__linea--error { color: var(--color-error); }
+    .rotulo { margin: 0; text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .dos-filas { display: grid; gap: var(--esp-3); }
+    .rotulo code { text-transform: none; letter-spacing: 0; }
+    .cajas--fila { gap: var(--esp-3) 2.6rem; padding-top: var(--esp-4); }
+    .cajas--fila .caja { gap: var(--esp-1); }
+    .cajas--fila .caja__cuerpo { width: 5rem; height: 3.9rem; padding-bottom: var(--esp-2); }
+    .cajas--fila .caja__valor { max-width: 4.6rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+    @media (min-width: 1024px) {
+      .dos-filas--lado { grid-template-columns: 2fr 3fr; align-items: end; }
+    }
+    .cajas--fila:empty { display: none; }
+    /* What appears while the code runs keeps its place from the start (hidden,
+       but taking its height): so the output below doesn’t move */
+    .guarda-lugar[hidden] { display: block !important; visibility: hidden; }
+    .cajas.guarda-lugar[hidden] { display: flex !important; }
+    #reto-cajas:empty { display: flex; }
+    .cajas--fila .caja--ancha .caja__cuerpo { width: 7.5rem; }
+    .cajas--fila .caja--ancha .caja__valor { max-width: 7rem; }
+    /* The copy that flies to a box lives outside it: with the font of these boxes, “2026” isn’t cut */
+    .vuelo.caja__valor { padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+
+    /* ---------- Choose and predict ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); font-family: var(--fuente-codigo); }
+    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+    .version-elegir { margin: 0 0 var(--esp-4); }
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-3); }
+    @media (min-width: 1024px) {
+      .predicciones { grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); }
+      .prediccion--ancha { grid-column: 1 / -1; }
+    }
+    .prediccion { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); }
+    .prediccion__expr { font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-md); background: none; padding: 0; white-space: pre; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-width: 3.5rem; min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); white-space: pre; line-height: 1.25; }
+    .prediccion .btn--lineas { border-radius: var(--radio-sm); }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+    .prediccion__salida { margin: var(--esp-1) 0 0; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-sm); }
+    .prediccion__salida--error { color: var(--color-error); }
+    .prediccion__salida:empty { display: none; }
+
+    /* ---------- Boxes that get nothing ---------- */
+    .caja--falta .caja__cuerpo { border-color: var(--color-error); background: linear-gradient(to bottom, transparent 30%, #fdecea 30%); animation: sacudir 420ms ease; }
+    .caja--falta .caja__nombre { color: var(--color-error); background: #fdecea; }
+
+    /* ---------- The temporary tuple (a, b = b, a) ---------- */
+    .de-paso { margin-top: var(--esp-4); transition: opacity var(--dur); }
+    .de-paso--usada { opacity: 0.35; }
+    /* In the tuple version, the temporary tuple keeps its place before it is built */
+    .de-paso--lugar[hidden] { display: block !important; visibility: hidden; }
+
+    /* ---------- Zones: the program and inside the function ---------- */
+    /* The zones keep the height of their tallest moment (reservarLugar): the function zone
+       takes what is left */
+    .zonas { display: grid; grid-template-rows: auto 1fr; gap: var(--esp-3); }
+    .zona { padding: var(--esp-2) var(--esp-3) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio); background: var(--color-superficie); transition: border-color var(--dur), background-color var(--dur), opacity var(--dur); }
+    .zona__titulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .zona__titulo code { padding: 0; background: none; text-transform: none; letter-spacing: 0; }
+    .zona--programa .zona__titulo { color: var(--color-azul); }
+    .zona__cajas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: var(--esp-3) var(--esp-5); min-height: 5.5rem; padding: var(--esp-2) var(--esp-2) 0; }
+    .zona__cajas > .lista { flex: 1 1 12rem; }
+    .par-cajas { display: flex; gap: var(--esp-5); }
+    .par-cajas:not(:has(.caja:not([hidden]))) { display: none; }
+    .zona__cajas > .devuelve { flex: 0 1 auto; min-width: 10rem; }
+    .zona__vacia { align-self: center; margin: 0; font-size: var(--texto-sm); font-style: italic; color: var(--color-texto-suave); text-align: center; }
+    .zona--funcion { border-style: dashed; background: transparent; }
+    .zona--activa { border-style: solid; border-color: var(--color-acento); background: var(--color-superficie); }
+    .zona--activa .zona__titulo { color: var(--color-acento); }
+    .zona--cerrando { animation: zona-cierra 700ms ease-in both; }
+    .zona .caja { gap: var(--esp-1); margin: 0 0.55rem; }
+    .zona .caja__cuerpo { width: 5rem; height: 3.9rem; padding-bottom: var(--esp-2); }
+    .zona .caja__valor { max-width: 4.5rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+    .caja--acento-local .caja__cuerpo { border-color: var(--color-acento); background: linear-gradient(to bottom, transparent 30%, var(--color-acento-suave) 30%); }
+    .caja--acento-local .caja__cuerpo::before, .caja--acento-local .caja__cuerpo::after { background: var(--color-acento); }
+    .caja--acento-local .caja__valor { border-color: var(--color-acento); }
+    .caja--acento-local .caja__nombre { color: var(--color-acento); background: var(--color-acento-suave); }
+    .lista__nombre.nombre--local { color: var(--color-acento); background: var(--color-acento-suave); }
+    .lista__nombre.nombre--local::after { color: var(--color-acento); }
+    @keyframes zona-cierra { 100% { opacity: 0.35; transform: scale(0.98); } }
+
+    /* ---------- Challenge ---------- */
+    .huecos { display: grid; gap: var(--esp-3); margin-top: var(--esp-4); }
+    .huecos .opciones { grid-template-columns: 4.5rem repeat(3, minmax(0, 1fr)); align-items: center; gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .huecos legend { float: left; margin: 0; padding: 0; font-size: var(--texto-xs); font-weight: 700; line-height: 1.25; color: var(--color-texto-suave); }
+    .huecos .opcion span { padding: var(--esp-2) var(--esp-2); font-size: var(--texto-sm); }
+    .reto-llamada { margin-top: 0; }
+    .reto-llamada .expresion__final:empty::before { content: "?"; color: var(--color-texto-suave); }
+
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual { margin-top: var(--esp-4); }
+    }
+    @media (max-width: 480px) {
+      .cajas--fila { gap: var(--esp-3) 2.6rem; }
+      /* Four boxes (day, month, year, hour) fit on one row, like three: they are a bit
+         narrower (with 4 names there is an error and none gets a value) */
+      #s6-cajas:has(> .caja:nth-child(4)) { column-gap: 2rem; }
+      #s6-cajas:has(> .caja:nth-child(4)) .caja__cuerpo { width: 3.5rem; }
+      #s6-cajas:has(> .caja:nth-child(4)) .caja__nombre { padding-inline: var(--esp-1); font-size: var(--texto-sm); }
+      .cajas--fila .caja__cuerpo { width: 4rem; height: 3.4rem; }
+      .cajas--fila .caja__valor { font-size: var(--texto-md); }
+      .zona__cajas, .par-cajas { column-gap: var(--esp-4); }
+      .zona .caja__cuerpo { width: 4.5rem; height: 3.6rem; }
+      .zona .caja__valor { max-width: 4rem; font-size: var(--texto-md); }
+      .zona .caja__nombre { font-size: var(--texto-xs); }
+      .vuelo.caja__valor { font-size: var(--texto-md); }
+      .prediccion__expr { font-size: var(--texto-sm); }
+      .huecos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-xs); }
+      .huecos .opciones { display: flex; flex-wrap: wrap; }
+      .huecos .opcion { flex: 1 1 auto; }
+      .huecos legend { width: 100%; }
+    }
+    /* RETO-LAB */
+    /* Challenge: the panel of what you see doesn't stretch to the end of the code (pasos.js does it so the
+       output sits at the bottom): here what appears after answering goes below and would end up under the
+       footer. On mobile, once both blanks are right, the options hide: the answer already reads in the code
+       (they come back with “Try another combination”) */
+    @media (min-width: 1024px) { #paso-reto .lab__visual { min-height: 0 !important; } }
+    @media (max-width: 1023px) { #paso-reto .huecos:has(#reto-op1 .opcion--correcta):has(#reto-op2 .opcion--correcta) { display: none; } }
+    /* /RETO-LAB */
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="estructuras">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos">
+
+    <!-- 1. Intuition: a row with a padlock -->
+    <section class="paso" id="paso-tupla" data-requiere aria-labelledby="h-tupla">
+      <span class="paso__etiqueta">Other structures 1/7 · Tuples</span>
+      <h1 class="paso__titulo" id="h-tupla">A list with a padlock</h1>
+      <p>Some values always go together: the coordinates of a point, or the day, month and year of a date. For that, Python has the <strong>tuple</strong>: you write it with parentheses. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s1-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual dos-filas dos-filas--lado">
+          <div id="s1-punto" class="guarda-lugar"></div>
+          <div id="s1-fecha" class="guarda-lugar"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. You read it like a list -->
+    <section class="paso" id="paso-leer" data-requiere aria-labelledby="h-leer">
+      <h2 class="paso__titulo" id="h-leer">You read it like a list</h2>
+      <p>The slot numbers are hidden. Use what you know about lists: indexes, negatives, <code>len</code>, <code>in</code> and <code>for</code>.</p>
+
+      <div class="tarjeta">
+        <div id="s2-fecha"></div>
+        <ol class="predicciones" id="s2-predicciones"></ol>
+        <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 3. You can't change a slot -->
+    <section class="paso" id="paso-cambiar" data-requiere aria-labelledby="h-cambiar">
+      <h2 class="paso__titulo" id="h-cambiar">The padlock</h2>
+      <p>The date changed: it was the 22nd, not the 21st. With a list, <code>date[0] = 22</code> fixes it. And with a tuple? Try both.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir version-elegir" id="s3-elegir" role="group" aria-label="What do you want to change?">
+            <button type="button" class="btn btn-secundario" data-valor="lista" aria-pressed="true">A list</button>
+            <button type="button" class="btn btn-secundario" data-valor="tupla" aria-pressed="false">A tuple</button>
+          </div>
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s3-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s3-lista"></div>
+          <div id="s3-tupla" hidden></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. It can't grow or shrink, but you can make a new tuple -->
+    <section class="paso" id="paso-candado" data-requiere aria-labelledby="h-candado">
+      <h2 class="paso__titulo" id="h-candado">Works or error?</h2>
+      <p>Each line runs with the tuple <code>date</code> below. Think: does it change the tuple, or only read it?</p>
+
+      <div class="tarjeta">
+        <div id="s4-fecha"></div>
+        <ol class="predicciones" id="s4-predicciones"></ol>
+        <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 5. Unpacking -->
+    <section class="paso" id="paso-desempaquetar" data-requiere aria-labelledby="h-desempaquetar">
+      <h2 class="paso__titulo" id="h-desempaquetar">Each value to its box</h2>
+      <p>With several names on the left of the <code>=</code>, the tuple is <strong>unpacked</strong>: each value goes to its own variable, in order. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s5-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s5-fecha" class="guarda-lugar"></div>
+          <div class="cajas cajas--fila guarda-lugar" id="s5-cajas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. As many names as values -->
+    <section class="paso" id="paso-cantidad" data-requiere aria-labelledby="h-cantidad">
+      <h2 class="paso__titulo" id="h-cantidad">What if they don’t match?</h2>
+      <p>The tuple has 3 values. What happens if you put 2 names on the left, or 4? Try all three cases.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir version-elegir" id="s6-elegir" role="group" aria-label="How many names?">
+            <button type="button" class="btn btn-secundario" data-valor="2" aria-pressed="false">2 names</button>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="true">3 names</button>
+            <button type="button" class="btn btn-secundario" data-valor="4" aria-pressed="false">4 names</button>
+          </div>
+          <pre class="codigo" id="s6-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div id="s6-fecha"></div>
+          <div class="cajas cajas--fila" id="s6-cajas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Swapping -->
+    <section class="paso" id="paso-intercambiar" data-requiere aria-labelledby="h-intercambiar">
+      <h2 class="paso__titulo" id="h-intercambiar">Swap two variables</h2>
+      <p>The grades in <code>a</code> and <code>b</code> were written the wrong way around. To swap them, you needed an extra box. With a tuple, one line is enough. Run both versions.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir version-elegir" id="s7-elegir" role="group" aria-label="How do you swap?">
+            <button type="button" class="btn btn-secundario" data-valor="aux" aria-pressed="true">With an extra box</button>
+            <button type="button" class="btn btn-secundario" data-valor="tupla" aria-pressed="false">With a tuple</button>
+          </div>
+          <pre class="codigo" id="s7-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s7-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s7-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s7-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s7-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="cajas cajas--fila">
+            <div class="caja" id="s7-caja-a">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">a</code>
+            </div>
+            <div class="caja" id="s7-caja-b">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">b</code>
+            </div>
+            <div class="caja caja--acento" id="s7-caja-aux">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">temp</code>
+            </div>
+          </div>
+          <div class="de-paso" id="s7-de-paso" hidden>
+            <p class="rotulo">The tuple on the right: <code>b, a</code></p>
+            <div id="s7-tupla"></div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. A function that returns two values -->
+    <section class="paso" id="paso-funcion" data-requiere aria-labelledby="h-funcion">
+      <h2 class="paso__titulo" id="h-funcion">Return two values</h2>
+      <p>A <code>return</code> gives back just one thing… but that thing can be a tuple. That’s how <code>extremes</code> returns the lowest and the highest grade at once. Run it.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s8-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s8-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s8-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s8-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s8-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="zonas">
+            <div class="zona zona--programa">
+              <p class="zona__titulo">Program</p>
+              <div class="zona__cajas">
+                <div id="s8-lista" class="guarda-lugar"></div>
+                <div class="par-cajas">
+                <div class="caja" id="s8-menor" hidden>
+                  <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                  <code class="caja__nombre">lowest</code>
+                </div>
+                <div class="caja" id="s8-mayor" hidden>
+                  <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                  <code class="caja__nombre">highest</code>
+                </div>
+                </div>
+              </div>
+            </div>
+            <div class="zona zona--funcion" id="s8-zona">
+              <p class="zona__titulo">Inside <code>extremes()</code></p>
+              <div class="zona__cajas">
+                <p class="zona__vacia" id="s8-vacia">It opens when the function is called.</p>
+                <div class="caja caja--acento-local" id="s8-fmenor" hidden>
+                  <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                  <code class="caja__nombre">lowest</code>
+                </div>
+                <div class="caja caja--acento-local" id="s8-fmayor" hidden>
+                  <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+                  <code class="caja__nombre">highest</code>
+                </div>
+                <div class="devuelve" id="s8-devuelve" hidden>
+                  <p class="rotulo">returns</p>
+                  <div id="s8-tupla"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s8-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s8-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Challenge: complete the return and the unpacking -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">From minutes to hours</h2>
+      <p><code>to_hours</code> gets minutes and must give the hours and the minutes left over. With 135 minutes, the program has to print <code>2 h 15 min</code>. Fill in the two blanks.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Code"></pre>
+          <div class="huecos">
+            <fieldset class="opciones opciones--codigo" id="reto-op1">
+              <legend>Blank 1<span class="visualmente-oculto">: what it returns</span></legend>
+              <label class="opcion"><input type="radio" name="reto-h1" value="solo"><span>return hours</span></label>
+              <label class="opcion"><input type="radio" name="reto-h1" value="ok"><span>return hours, minutes</span></label>
+              <label class="opcion"><input type="radio" name="reto-h1" value="alreves"><span>return minutes, hours</span></label>
+            </fieldset>
+            <fieldset class="opciones opciones--codigo" id="reto-op2">
+              <legend>Blank 2<span class="visualmente-oculto">: where it is stored</span></legend>
+              <label class="opcion"><input type="radio" name="reto-h2" value="uno"><span>h</span></label>
+              <label class="opcion"><input type="radio" name="reto-h2" value="tres"><span>h, m, s</span></label>
+              <label class="opcion"><input type="radio" name="reto-h2" value="ok"><span>h, m</span></label>
+            </fieldset>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="expresion reto-llamada" aria-live="polite">
+            <span>to_hours(135)</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="reto-devuelve"></span>
+          </div>
+          <div class="cajas cajas--fila" id="reto-cajas"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="reto-otra" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-otra-btn">↺ Try another combination</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">A tuple is a list with a padlock: you read it the same way, but it doesn’t change. And you can unpack it: several values into several variables at once.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="dictionaries/index.html">Next: Dictionaries →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/lista.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  /* ---------- Code colored like in the dark blocks ---------- */
+  var PALABRAS = /^(def|return|if|elif|else|for|in|while|True|False|None|break|continue|and|or|not|import)$/;
+
+  // ▢ is a blank: it takes, in order, the ids in huecos
+  function colorear(linea, huecos) {
+    return linea.replace(/(f?"[^"]*")|(#.*)|(\b\d+\b)|([A-Za-z_]\w*)(\s*\()?|(▢)/g, function (todo, texto, comentario, numero, nombre, parentesis, hueco) {
+      if (texto) return '<span class="tk-texto">' + texto + "</span>";
+      if (comentario) return '<span class="tk-comentario">' + comentario + "</span>";
+      if (numero) return '<span class="tk-numero">' + numero + "</span>";
+      if (hueco) {
+        var id = huecos && huecos.length ? huecos.shift() : null;
+        return '<span class="hueco"' + (id ? ' id="' + id + '"' : "") + ">?</span>";
+      }
+      if (PALABRAS.test(nombre)) return '<span class="tk-palabra">' + nombre + "</span>" + (parentesis || "");
+      if (parentesis) return '<span class="tk-funcion">' + nombre + "</span>" + parentesis;
+      return '<span class="tk-variable">' + nombre + "</span>";
+    });
+  }
+
+  function escribir(pre, lineas, huecos) {
+    var ids = huecos ? huecos.slice() : null;
+    pre.innerHTML = "<code>" + lineas.map(function (l) {
+      return '<span class="linea">' + colorear(l, ids) + "</span>";
+    }).join("") + "</code>";
+  }
+
+  /* What print prints: the line flies from the given place */
+  function imprimir(consola, texto, desde, error) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (error) linea.classList.add("consola__linea--error");
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+  }
+
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (clave) { s[clave] = true; },
+      todos: function (claves) { return claves.every(function (k) { return s[k]; }); },
+      borrar: function () { s = {}; }
+    };
+  }
+
+  /* A variable box (.caja component) */
+  function nuevaCaja(nombre) {
+    var caja = document.createElement("div");
+    caja.className = "caja";
+    caja.innerHTML = '<div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div><code class="caja__nombre"></code>';
+    caja.querySelector(".caja__nombre").textContent = nombre;
+    return caja;
+  }
+
+  function valorDe(caja) { return caja.querySelector(".caja__valor:not(.caja__valor--saliendo)"); }
+
+  function tupla(v) { return Lista.python(Lista.tupla(v.slice())); }
+
+  // A step's timers, to cut them on reset
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) { ids.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  // The values arrive one after another at a list or tuple, from the active line or from origenes[k]
+  function llenar(l, valores, r, origenes, ms) {
+    l.valores([]);
+    valores.forEach(function (v, k) {
+      r.luego(function () { l.agregar(v, origenes ? origenes[k]() : undefined); }, k * (ms || 220));
+    });
+  }
+
+  // Shows a list that was keeping its place: its name comes in with the usual hop
+  function aparecer(l, nombres) {
+    l.el.hidden = false;
+    l.nombres([]);
+    l.nombres(nombres);
+  }
+
+  /* Keeps the place of what appears while the code runs, so the output below doesn't
+     move: measures a hidden copy of el with each group of pieces visible (their ids;
+     the rest of "piezas", hidden) and sets the height of the tallest. */
+  function reservarLugar(el, piezas, estados) {
+    Codigo.reservarAlto(el, estados, function (copia, visibles) {
+      piezas.forEach(function (id) {
+        var pieza = copia.querySelector('[id="' + id + '"]');
+        if (pieza) pieza.hidden = visibles.indexOf(id) === -1;
+      });
+    });
+  }
+
+  function marcarBotones(grupo, valor) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+  }
+
+  var FECHA = [21, 10, 2026];
+
+  /* ---------- 1. A list with a padlock ---------- */
+  escribir($("s1-codigo"), ["point = (3, 5)", "date = (21, 10, 2026)", "print(point)", "print(date)"]);
+  var punto1 = Lista.crear($("s1-punto"), [], { tupla: true, nombres: ["point"] });
+  var fecha1 = Lista.crear($("s1-fecha"), [], { tupla: true, nombres: ["date"] });
+  var r1 = reloj();
+
+  function trazaTupla() {
+    return [
+      { linea: 0, hacer: "punto", texto: "<code>point</code> stores two values together, in parentheses: it’s a <strong>tuple</strong>." },
+      { linea: 1, hacer: "fecha", texto: "<code>date</code> is another tuple, with three values: day, month and year." },
+      { linea: 2, salida: "(3, 5)", ver: "punto", texto: "<code>print</code> shows it with its parentheses." },
+      { linea: 3, salida: "(21, 10, 2026)", ver: "fecha", texto: "Same with <code>date</code>." }
+    ];
+  }
+
+  /* ---------- Predictions (steps 2 and 4) ---------- */
+  function armarPredicciones(ol, datos, fbGeneral, alTerminar) {
+    var aciertos = datos.map(function () { return false; });
+    datos.forEach(function (p, k) {
+      var li = document.createElement("li");
+      li.className = "prediccion" + (p.ancha ? " prediccion--ancha" : "");
+      li.innerHTML = '<div class="prediccion__fila"><div><code class="prediccion__expr"></code>' +
+        '<p class="prediccion__salida" aria-live="polite"></p></div>' +
+        '<div class="elegir" role="group"></div></div>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>';
+      li.querySelector(".prediccion__expr").textContent = p.expr;
+      var grupo = li.querySelector(".elegir");
+      grupo.setAttribute("aria-label", "Answer for " + p.expr.replace(/\s+/g, " "));
+      p.opciones.forEach(function (op) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("aria-pressed", "false");
+        b.textContent = op;
+        if (op.indexOf("\n") !== -1) b.classList.add("btn--lineas");
+        grupo.appendChild(b);
+      });
+      var botones = grupo.querySelectorAll("button");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var valor = btn.textContent;
+          var acierta = valor === p.correcta;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          var fbFila = li.querySelector(".feedback");
+          if (!acierta) { Pasos.feedback(fbFila, "pista", p.pistas[valor]); return; }
+          Pasos.limpiarFeedback(fbFila);
+          li.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          var sale = p.marcar ? p.marcar() : null;
+          if (sale) {
+            var salida = li.querySelector(".prediccion__salida");
+            salida.textContent = sale.texto;
+            salida.classList.toggle("prediccion__salida--error", !!sale.error);
+          }
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) alTerminar(p);
+          else Pasos.feedback(fbGeneral, "ok", p.ok);
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  /* ---------- 2. You read it like a list ---------- */
+  var fecha2 = Lista.crear($("s2-fecha"), FECHA, { tupla: true, nombres: ["date"], indices: false });
+  var PRED2 = [
+    {
+      expr: "date[0]", opciones: ["21", "10", "💥 Error"], correcta: "21",
+      ok: "The first one, counting from 0: like in a list.",
+      pistas: { "10": "10 is date[1]. You count from 0, like in a list.", "💥 Error": "You can read a tuple: the padlock only stops you from changing it." },
+      marcar: function () { fecha2.rango(null); fecha2.clases(null); fecha2.marcar(0); }
+    },
+    {
+      expr: "date[-1]", opciones: ["21", "10", "2026"], correcta: "2026",
+      ok: "-1 is always the last one: the year.",
+      pistas: { "21": "21 is date[0], the first one. Negatives count from the end.", "10": "10 is the second to last, date[-2]. -1 is the last one." },
+      marcar: function () { fecha2.rango(null); fecha2.clases(null); fecha2.marcar(-1); }
+    },
+    {
+      expr: "len(date)", opciones: ["2", "3", "2057"], correcta: "3",
+      ok: "len counts the values: day, month and year.",
+      pistas: { "2": "2 is the last index. There are 3 slots: from 0 to 2.", "2057": "2057 is the sum. len doesn’t add: it counts how many values there are." },
+      marcar: function () { fecha2.marcar(null); fecha2.clases(null); fecha2.rango(0, 3); }
+    },
+    {
+      expr: "10 in date", opciones: ["True", "False"], correcta: "True",
+      ok: "in asks if the value is in some slot: 10 is there.",
+      pistas: { "False": "in looks at every slot. Is there a 10?" },
+      marcar: function () {
+        fecha2.marcar(null); fecha2.rango(null);
+        fecha2.clases(function (i, v) { return v === 10 ? "lista__casilla--igual" : ""; });
+      }
+    },
+    {
+      ancha: true,
+      expr: "for x in date:\n    print(x)", opciones: ["21\n10\n2026", "(21, 10, 2026)", "💥 Error"], correcta: "21\n10\n2026",
+      ok: "The for goes through each value, in order, like in a list.",
+      pistas: { "(21, 10, 2026)": "That’s what print(date) prints. The for gives one value in each round.", "💥 Error": "Looping only reads: the for works just like with a list." },
+      marcar: function () { fecha2.clases(null); fecha2.marcar(null); fecha2.rango(0, 3); }
+    }
+  ];
+
+  /* ---------- 3. The padlock ---------- */
+  var lista3 = Lista.crear($("s3-lista"), FECHA, { nombres: ["date"] });
+  var tupla3 = Lista.crear($("s3-tupla"), FECHA, { tupla: true, nombres: ["date"] });
+  var version3 = "lista";
+  var s3 = vistos();
+  var r3 = reloj();
+  var VERSIONES3 = {
+    lista: ["date = [21, 10, 2026]", "date[0] = 22", "print(date)"],
+    tupla: ["date = (21, 10, 2026)", "date[0] = 22", "print(date)"]
+  };
+
+  function preparar3(version) {
+    r3.cortar();
+    $("s3-ejecutar").disabled = false;
+    version3 = version;
+    marcarBotones($("s3-elegir"), version);
+    escribir($("s3-codigo"), VERSIONES3[version]);
+    $("s3-lista").hidden = version !== "lista";
+    $("s3-tupla").hidden = version !== "tupla";
+    lista3.valores(FECHA);
+    tupla3.valores(FECHA);
+    tupla3.marcar(null);
+    Codigo.consola($("s3-consola"), []);
+  }
+
+  function ejecutar3(leccion) {
+    preparar3(version3);
+    $("s3-ejecutar").disabled = true;
+    var pre = $("s3-codigo");
+    var lineas = pre.querySelectorAll(".linea");
+    Codigo.marcar(pre, { activas: [0] });
+    r3.luego(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      if (version3 === "lista") {
+        lista3.marcar(0);
+        r3.luego(function () { lista3.cambiar(0, 22, Codigo.piezaEnLinea(lineas[1], "22")); }, 350);
+        r3.luego(function () {
+          lista3.marcar(null);
+          Codigo.marcar(pre, { activas: [2] });
+          imprimir($("s3-consola"), Lista.python(lista3.lista), lista3.el.querySelector(".lista__fila"));
+          $("s3-ejecutar").disabled = false;
+          s3.marcar("lista");
+          terminar3(leccion, "With the list, only slot 0 changed: the 21 went out and the 22 came in.");
+        }, 1300);
+        return;
+      }
+      tupla3.rechazar(0);
+      Codigo.marcar(pre, { activas: [1], saltadas: [2] });
+      imprimir($("s3-consola"), "TypeError: 'tuple' object does not support item assignment", null, true);
+      $("s3-ejecutar").disabled = false;
+      s3.marcar("tupla");
+      terminar3(leccion, "Error: a tuple doesn’t let you change a slot (it “does not support item assignment”), just like a text. Python stops and print(date) doesn’t run.");
+    }, 600);
+  }
+
+  function terminar3(leccion, texto) {
+    var fb = $("s3-fb");
+    $("s3-elegir").querySelector('[data-valor="' + version3 + '"]').classList.add("hecho");
+    if (s3.todos(["lista", "tupla"])) {
+      Pasos.feedback(fb, "ok", texto + " That’s the difference: you can change a list, but not a tuple. Use one for values that shouldn’t change by mistake.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, version3 === "lista" ? "ok" : "pista", texto + " Now try " + (version3 === "lista" ? "a tuple" : "a list") + ".");
+    }
+  }
+
+  /* ---------- 4. Works or error? ---------- */
+  var fecha4 = Lista.crear($("s4-fecha"), FECHA, { tupla: true, nombres: ["date"] });
+  var PRED4 = [
+    {
+      expr: "date.append(2027)", opciones: ["✓ Works", "💥 Error"], correcta: "💥 Error",
+      ok: "A tuple has no .append(): it can’t grow. It has no .insert(), .pop() or .remove() either.",
+      pistas: { "✓ Works": ".append() changes the list by adding a slot. Does a tuple let you change it?" },
+      marcar: function () {
+        fecha4.rechazar();
+        return { texto: "AttributeError: 'tuple' object has no attribute 'append'", error: true };
+      }
+    },
+    {
+      expr: "date = (22, 10, 2026)", opciones: ["✓ Works", "💥 Error"], correcta: "✓ Works",
+      ok: "It works: it doesn’t change the old tuple, it makes a whole new one, and date becomes the name of the new one. If the date changes, you write another tuple.",
+      pistas: { "💥 Error": "Look closely: no slot changes, you write a whole new tuple with =. That doesn’t change it inside." },
+      marcar: function () {
+        fecha4.valores([22, 10, 2026]);
+        fecha4.clases(function (i) { return i === 0 ? "lista__casilla--cambio" : ""; });
+        return null;
+      }
+    },
+    {
+      expr: "print(sorted(date))", opciones: ["✓ Works", "💥 Error"], correcta: "✓ Works",
+      ok: "It works: sorted() only reads the tuple and builds a new list (that’s why it prints with brackets). sum(), max() and min() only read too.",
+      pistas: { "💥 Error": "sorted() doesn’t change anything: it reads the values and builds a new list." },
+      marcar: function () {
+        var v = fecha4.lista.slice().sort(function (a, b) { return a - b; });
+        return { texto: Lista.python(v) };
+      }
+    }
+  ];
+
+  /* ---------- 5. Unpacking ---------- */
+  escribir($("s5-codigo"), ["date = (21, 10, 2026)", "day, month, year = date", "print(day)", "print(year)"]);
+  var fecha5 = Lista.crear($("s5-fecha"), [], { tupla: true, nombres: ["date"] });
+  var NOMBRES5 = ["day", "month", "year"];
+  var cajas5 = NOMBRES5.map(function (n) { var c = nuevaCaja(n); $("s5-cajas").appendChild(c); return c; });
+  var r5 = reloj();
+
+  function trazaDesempaquetar() {
+    return [
+      { linea: 0, hacer: "crear", texto: "<code>date</code> is a tuple with 3 values." },
+      { linea: 1, hacer: "repartir", texto: "3 names on the left, 3 values in the tuple: the first goes to <code>day</code>, the second to <code>month</code> and the third to <code>year</code>." },
+      { linea: 2, salida: "21", ver: 0, texto: "<code>day</code> is a normal variable: it holds 21." },
+      { linea: 3, salida: "2026", ver: 2, texto: "And <code>year</code> holds 2026. No need to write <code>date[0]</code> or <code>date[2]</code>." }
+    ];
+  }
+
+  /* ---------- 6. What if they don't match? ---------- */
+  var fecha6 = Lista.crear($("s6-fecha"), FECHA, { tupla: true, nombres: ["date"] });
+  var NOMBRES6 = { "2": ["day", "month"], "3": ["day", "month", "year"], "4": ["day", "month", "year", "hour"] };
+  var version6 = "3";
+  var cajas6 = [];
+  var s6 = vistos();
+  var r6 = reloj();
+
+  function preparar6(version) {
+    r6.cortar();
+    $("s6-ejecutar").disabled = false;
+    version6 = version;
+    marcarBotones($("s6-elegir"), version);
+    escribir($("s6-codigo"), ["date = (21, 10, 2026)", NOMBRES6[version].join(", ") + " = date", "print(day)"]);
+    fecha6.marcar(null);
+    fecha6.clases(null);
+    var zona = $("s6-cajas");
+    zona.textContent = "";
+    cajas6 = NOMBRES6[version].map(function (n) { var c = nuevaCaja(n); zona.appendChild(c); return c; });
+    Codigo.consola($("s6-consola"), []);
+  }
+
+  // With 4 names, on a narrow screen the boxes take two rows: the place is kept in
+  // all three versions, so the output doesn't move down when you pick another one
+  Codigo.reservarAlto($("s6-cajas"), ["2", "3", "4"], function (copia, version) {
+    copia.textContent = "";
+    NOMBRES6[version].forEach(function (n) { copia.appendChild(nuevaCaja(n)); });
+  });
+
+  function ejecutar6(leccion) {
+    preparar6(version6);
+    $("s6-ejecutar").disabled = true;
+    var pre = $("s6-codigo");
+    var n = Number(version6);
+    var fb = $("s6-fb");
+    Codigo.marcar(pre, { activas: [0] });
+    r6.luego(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      var texto;
+      if (n === 3) {
+        cajas6.forEach(function (c, k) {
+          r6.luego(function () { Caja.poner(c, FECHA[k], fecha6.valor(k)); }, k * 250);
+        });
+        r6.luego(function () {
+          Codigo.marcar(pre, { activas: [2] });
+          imprimir($("s6-consola"), "21", valorDe(cajas6[0]));
+        }, 1300);
+        texto = "It works: 3 names and 3 values, one for each box.";
+      } else if (n === 2) {
+        fecha6.clases(function (i) { return i === 2 ? "lista__casilla--distinta" : ""; });
+        fecha6.rechazar(2);
+        Codigo.marcar(pre, { activas: [1], saltadas: [2] });
+        imprimir($("s6-consola"), "ValueError: too many values to unpack (expected 2)", null, true);
+        texto = "Error: “too many values to unpack”. There are 3 values and only 2 names: 2026 has no box, so Python hands out none of them.";
+      } else {
+        cajas6[3].classList.remove("caja--falta");
+        void cajas6[3].offsetWidth;
+        cajas6[3].classList.add("caja--falta");
+        Codigo.marcar(pre, { activas: [1], saltadas: [2] });
+        imprimir($("s6-consola"), "ValueError: not enough values to unpack (expected 4, got 3)", null, true);
+        texto = "Error: “not enough values”. 4 names and only 3 values: hour would be left empty.";
+      }
+      r6.luego(function () {
+        $("s6-ejecutar").disabled = false;
+        s6.marcar(version6);
+        $("s6-elegir").querySelector('[data-valor="' + version6 + '"]').classList.add("hecho");
+        if (s6.todos(["2", "3", "4"])) {
+          Pasos.feedback(fb, "ok", texto + " The rule: as many names as values. If they don’t match, ValueError.");
+          leccion.desbloquear();
+        } else {
+          var faltan = ["2", "3", "4"].filter(function (k) { return !s6.todos([k]); }).map(function (k) { return k + " names"; });
+          Pasos.feedback(fb, n === 3 ? "ok" : "pista", texto + " Also try " + faltan.join(" and ") + ".");
+        }
+      }, n === 3 ? 1300 : 0);
+    }, 600);
+  }
+
+  /* ---------- 7. Swapping ---------- */
+  var VERSIONES7 = {
+    aux: ["a = 9", "b = 14", "temp = a", "a = b", "b = temp", "print(a)", "print(b)"],
+    tupla: ["a = 9", "b = 14", "a, b = b, a", "print(a)", "print(b)"]
+  };
+  var version7 = "aux";
+  var tupla7 = Lista.crear($("s7-tupla"), [], { tupla: true });
+  var s7 = vistos();
+  var r7 = reloj();
+  var traza7 = null;
+
+  function trazaIntercambiar() {
+    var inicio = [
+      { linea: 0, hacer: "a", texto: "<code>a</code> holds 9…" },
+      { linea: 1, hacer: "b", texto: "…and <code>b</code> holds 14. You have to swap them." }
+    ];
+    if (version7 === "aux") {
+      return inicio.concat([
+        { linea: 2, hacer: "aux", texto: "First the 9 is saved in <code>temp</code>, so it isn’t lost." },
+        { linea: 3, hacer: "a-b", texto: "<code>a</code> gets the 14. The 9 is still safe in <code>temp</code>." },
+        { linea: 4, hacer: "b-aux", texto: "<code>b</code> gets the 9 from <code>temp</code>. Three lines and an extra box." },
+        { linea: 5, salida: "14", texto: "<code>a</code> holds 14." },
+        { linea: 6, salida: "9", texto: "<code>b</code> holds 9: swapped." }
+      ]);
+    }
+    return inicio.concat([
+      { linea: 2, hacer: "armar", texto: "The right side goes first: <code>b, a</code> builds a tuple with the current values: <code>(14, 9)</code>." },
+      { linea: 2, hacer: "repartir", texto: "Then it unpacks it: <code>a</code> gets 14 and <code>b</code> gets 9. No extra box." },
+      { linea: 3, salida: "14", texto: "<code>a</code> holds 14." },
+      { linea: 4, salida: "9", texto: "<code>b</code> holds 9: swapped in a single line." }
+    ]);
+  }
+
+  function limpiar7() {
+    r7.cortar();
+    ["s7-caja-a", "s7-caja-b", "s7-caja-aux"].forEach(function (id) { Caja.vaciar($(id)); });
+    $("s7-caja-aux").hidden = version7 !== "aux";
+    $("s7-de-paso").hidden = true;
+    $("s7-de-paso").classList.remove("de-paso--usada");
+    $("s7-de-paso").classList.toggle("de-paso--lugar", version7 === "tupla");
+    tupla7.valores([]);
+  }
+
+  function preparar7(version) {
+    version7 = version;
+    marcarBotones($("s7-elegir"), version);
+    escribir($("s7-codigo"), VERSIONES7[version]);
+    if (traza7) traza7.reiniciar();
+  }
+
+  function paso7(paso) {
+    var a = $("s7-caja-a");
+    var b = $("s7-caja-b");
+    var aux = $("s7-caja-aux");
+    if (paso.hacer === "a") Caja.poner(a, 9);
+    else if (paso.hacer === "b") Caja.poner(b, 14);
+    else if (paso.hacer === "aux") Caja.poner(aux, 9, valorDe(a));
+    else if (paso.hacer === "a-b") Caja.poner(a, 14, valorDe(b));
+    else if (paso.hacer === "b-aux") Caja.poner(b, 9, valorDe(aux));
+    else if (paso.hacer === "armar") {
+      $("s7-de-paso").hidden = false;
+      llenar(tupla7, [14, 9], r7, [function () { return valorDe(b); }, function () { return valorDe(a); }], 260);
+    } else if (paso.hacer === "repartir") {
+      r7.cortar();
+      if (tupla7.largo < 2) tupla7.valores([14, 9]);
+      Caja.poner(a, 14, tupla7.valor(0));
+      Caja.poner(b, 9, tupla7.valor(1));
+      r7.luego(function () { $("s7-de-paso").classList.add("de-paso--usada"); }, 700);
+    }
+  }
+
+  /* ---------- 8. Return two values ---------- */
+  escribir($("s8-codigo"), [
+    "def extremes(values):",
+    "    lowest = min(values)",
+    "    highest = max(values)",
+    "    return lowest, highest",
+    "",
+    "grades = [14, 9, 17, 11, 6]",
+    "lowest, highest = extremes(grades)",
+    'print(f"From {lowest} to {highest}")'
+  ]);
+  var NOTAS8 = [14, 9, 17, 11, 6];
+  var lista8 = Lista.crear($("s8-lista"), [], { nombres: ["grades"], indices: false, capacidad: 6 });
+  var tupla8 = Lista.crear($("s8-tupla"), [], { tupla: true });
+  var r8 = reloj();
+
+  function trazaFuncion() {
+    return [
+      { linea: 5, hacer: "crear", texto: "<code>grades</code> is a list with 5 grades." },
+      { linea: 6, texto: "<code>extremes(grades)</code> is called." },
+      { linea: 0, hacer: "entrar", texto: "The function opens: <code>values</code> is another name for the same list." },
+      { linea: 1, hacer: "menor", texto: "<code>min(values)</code> is 6: the function’s box <code>lowest</code> is born." },
+      { linea: 2, hacer: "mayor", texto: "<code>max(values)</code> is 17: <code>highest</code> is born." },
+      { linea: 3, hacer: "devolver", texto: "<code>return lowest, highest</code> builds <strong>one</strong> tuple with both: <code>(6, 17)</code>." },
+      { linea: 6, hacer: "recibir", flecha: true, texto: "Back in the program: the tuple is unpacked into the program’s <code>lowest</code> and <code>highest</code>. The function’s boxes are erased." },
+      { linea: 7, salida: "From 6 to 17", texto: "Two values from a single call." }
+    ];
+  }
+
+  // The tallest the zones get: with the function's boxes and the tuple it returns,
+  // or with the program's boxes on the way back
+  reservarLugar(document.querySelector("#paso-funcion .zonas"),
+    ["s8-vacia", "s8-fmenor", "s8-fmayor", "s8-devuelve", "s8-menor", "s8-mayor"],
+    [["s8-vacia"], ["s8-fmenor", "s8-fmayor"], ["s8-fmenor", "s8-fmayor", "s8-devuelve"], ["s8-vacia", "s8-menor", "s8-mayor"]]);
+
+  function limpiar8() {
+    r8.cortar();
+    lista8.valores([]);
+    lista8.nombres(["grades"]);   // hidden, it keeps its place with the name on
+    lista8.marcar(null);
+    $("s8-lista").hidden = true;
+    ["s8-menor", "s8-mayor", "s8-fmenor", "s8-fmayor"].forEach(function (id) { Caja.vaciar($(id)); $(id).hidden = true; });
+    $("s8-devuelve").hidden = true;
+    tupla8.valores([]);
+    $("s8-vacia").hidden = false;
+    $("s8-zona").classList.remove("zona--activa", "zona--cerrando");
+  }
+
+  function paso8(paso) {
+    if (paso.hacer === "crear") {
+      lista8.valores(NOTAS8);
+      aparecer(lista8, ["grades"]);
+    } else if (paso.hacer === "entrar") {
+      var zona = $("s8-zona");
+      zona.classList.remove("zona--cerrando");
+      zona.classList.add("zona--activa");
+      $("s8-vacia").hidden = true;
+      lista8.nombres(["grades", "values"]);
+      lista8.el.querySelectorAll(".lista__nombre").forEach(function (n) {
+        if (n.textContent === "values") n.classList.add("nombre--local");
+      });
+    } else if (paso.hacer === "menor") {
+      $("s8-fmenor").hidden = false;
+      lista8.marcar(4);
+      Caja.poner($("s8-fmenor"), 6, lista8.valor(4));
+    } else if (paso.hacer === "mayor") {
+      $("s8-fmayor").hidden = false;
+      lista8.marcar(2);
+      Caja.poner($("s8-fmayor"), 17, lista8.valor(2));
+    } else if (paso.hacer === "devolver") {
+      lista8.marcar(null);
+      $("s8-devuelve").hidden = false;
+      llenar(tupla8, [6, 17], r8, [
+        function () { return valorDe($("s8-fmenor")); },
+        function () { return valorDe($("s8-fmayor")); }
+      ], 260);
+    } else if (paso.hacer === "recibir") {
+      r8.cortar();
+      if (tupla8.largo < 2) tupla8.valores([6, 17]);
+      var origen0 = tupla8.valor(0).getBoundingClientRect();
+      var origen1 = tupla8.valor(1).getBoundingClientRect();
+      $("s8-menor").hidden = false;
+      $("s8-mayor").hidden = false;
+      Caja.poner($("s8-menor"), 6, origen0);
+      Caja.poner($("s8-mayor"), 17, origen1);
+      lista8.nombres(["grades"]);
+      var z = $("s8-zona");
+      z.classList.remove("zona--activa");
+      z.classList.add("zona--cerrando");
+      ["s8-fmenor", "s8-fmayor", "s8-devuelve"].forEach(function (id) { $(id).hidden = true; });
+      $("s8-vacia").hidden = false;
+    }
+  }
+
+  /* ---------- 9. Challenge ---------- */
+  escribir($("reto-codigo"), [
+    "def to_hours(total):",
+    "    hours = total // 60",
+    "    minutes = total % 60",
+    "    ▢",
+    "",
+    "▢ = to_hours(135)",
+    'print(f"{h} h {m} min")'
+  ], ["reto-h1", "reto-h2"]);
+  var r9 = reloj();
+  var DEVUELVE = { ok: [2, 15], alreves: [15, 2], solo: 2 };
+  var NOMBRES9 = { ok: ["h", "m"], uno: ["h"], tres: ["h", "m", "s"] };
+  var PISTAS9 = {
+    h1: {
+      solo: "return hours gives back a single number, the 2: where do the minutes go?",
+      alreves: "It came out backwards: the first value of the return goes to the first variable. Which one has to go first?"
+    },
+    h2: {
+      uno: "With a single name, nothing is unpacked: h keeps the whole tuple, and m doesn’t exist.",
+      tres: "Three names for two values: they have to match."
+    }
+  };
+
+  // The challenge's boxes appear when you check: their row keeps the place
+  Codigo.reservarAlto($("reto-cajas"), [0], function (copia) {
+    copia.textContent = "";
+    copia.appendChild(nuevaCaja("h"));
+  });
+
+  function elegido(nombre) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    return r ? r.value : null;
+  }
+
+  // What Python does with the two chosen options
+  function simular(h1, h2) {
+    var dev = DEVUELVE[h1];
+    var nombres = NOMBRES9[h2];
+    var vars = {};
+    if (nombres.length === 1) vars.h = dev;
+    else if (!Array.isArray(dev)) return { dev: dev, error: "TypeError: cannot unpack non-iterable int object" };
+    else if (dev.length !== nombres.length) return { dev: dev, error: "ValueError: not enough values to unpack (expected " + nombres.length + ", got " + dev.length + ")" };
+    else nombres.forEach(function (n, k) { vars[n] = dev[k]; });
+    if (vars.m === undefined) return { dev: dev, vars: vars, error: "NameError: name 'm' is not defined", enPrint: true };
+    var ver = function (v) { return Array.isArray(v) ? tupla(v) : String(v); };
+    return { dev: dev, vars: vars, salida: ver(vars.h) + " h " + ver(vars.m) + " min" };
+  }
+
+  function limpiarReto() {
+    r9.cortar();
+    Codigo.limpiar($("reto-codigo"));
+    $("reto-devuelve").textContent = "";
+    $("reto-cajas").textContent = "";
+    Codigo.consola($("reto-consola"), []);
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  function cambiarReto(e) {
+    var r = e.target;
+    $(r.name).textContent = r.nextElementSibling.textContent;
+    document.querySelectorAll("#paso-reto .opcion").forEach(function (o) {
+      o.classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    limpiarReto();
+    leccion.listoParaComprobar(!!(elegido("reto-h1") && elegido("reto-h2")));
+  }
+
+  function entrarReto(paso) {
+    $("reto-otra").hidden = true;
+    paso.querySelectorAll('input[type="radio"]').forEach(function (r) { r.checked = false; r.disabled = false; });
+    paso.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    $("reto-h1").textContent = "?";
+    $("reto-h2").textContent = "?";
+    limpiarReto();
+  }
+
+  // Runs the program with the chosen options: call, return, unpacking and print
+  function ejecutarReto(h1, h2, res) {
+    var pre = $("reto-codigo");
+    var lineas = pre.querySelectorAll(".linea");
+    var dev = $("reto-devuelve");
+    var zona = $("reto-cajas");
+    Codigo.marcar(pre, { activas: [5] });
+    r9.luego(function () { Codigo.marcar(pre, { activas: [1] }); }, 450);
+    r9.luego(function () { Codigo.marcar(pre, { activas: [2] }); }, 800);
+    r9.luego(function () {
+      Codigo.marcar(pre, { activas: [3] });
+      var texto = Array.isArray(res.dev) ? tupla(res.dev) : String(res.dev);
+      dev.textContent = texto;
+      Codigo.volar(Codigo.piezaEnLinea(lineas[3], [texto]), dev, texto, "vuelo--salida");
+    }, 1150);
+    r9.luego(function () {
+      Codigo.marcar(pre, { activas: [5] });
+      Codigo.salto(pre, 3, 5);
+      if (res.error && !res.enPrint) {
+        Codigo.marcar(pre, { activas: [5], saltadas: [6] });
+        imprimir($("reto-consola"), res.error, null, true);
+        return;
+      }
+      var cajas = NOMBRES9[h2].map(function (n) { var c = nuevaCaja(n); zona.appendChild(c); return c; });
+      var origen = dev.getBoundingClientRect();
+      cajas.forEach(function (c, k) {
+        var v = res.vars[NOMBRES9[h2][k]];
+        if (Array.isArray(v)) c.classList.add("caja--ancha");
+        Caja.poner(c, Array.isArray(v) ? tupla(v) : v, origen);
+      });
+    }, 1800);
+    if (res.error && !res.enPrint) return;
+    r9.luego(function () {
+      Codigo.quitarSalto(pre);
+      Codigo.marcar(pre, { activas: [6] });
+      if (res.error) imprimir($("reto-consola"), res.error, null, true);
+      else imprimir($("reto-consola"), res.salida, Codigo.piezaEnLinea($("reto-codigo").querySelectorAll(".linea")[6], ["print"]));
+    }, 2700);
+  }
+
+  function comprobarReto(paso) {
+    var h1 = elegido("reto-h1");
+    var h2 = elegido("reto-h2");
+    if (!h1 || !h2) return false;
+    limpiarReto();
+    var res = simular(h1, h2);
+    ejecutarReto(h1, h2, res);
+    var fb = $("reto-fb");
+    var o1 = document.querySelector('input[name="reto-h1"]:checked').closest(".opcion");
+    var o2 = document.querySelector('input[name="reto-h2"]:checked').closest(".opcion");
+    if (h1 === "ok" && h2 === "ok") {
+      o1.classList.add("opcion--correcta");
+      o2.classList.add("opcion--correcta");
+      r9.luego(function () {
+        Pasos.feedback(fb, "ok", "Exactly! return hours, minutes gives back the tuple (2, 15), and h, m unpacks it: h gets 2 and m gets 15. Try another combination if you want to see what fails.");
+      }, 2700);
+      paso.querySelectorAll('input[type="radio"]').forEach(function (r) { r.disabled = true; });
+      $("reto-otra").hidden = false;
+      return true;
+    }
+    var pistas = [];
+    if (h1 !== "ok") { o1.classList.add("opcion--incorrecta"); pistas.push(PISTAS9.h1[h1]); }
+    if (h2 !== "ok") { o2.classList.add("opcion--incorrecta"); pistas.push(PISTAS9.h2[h2]); }
+    Pasos.feedback(fb, "pista", pistas.join(" "));
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  escribir($("resumen-codigo"), [
+    "date = (21, 10, 2026)    # a tuple",
+    "date[0]                  # 21: reads the same",
+    "date[0] = 22             # TypeError: no change",
+    "day, month, year = date  # unpack",
+    "a, b = b, a              # swap",
+    "return lowest, highest   # return two values"
+  ]);
+
+  /* ---------- Wiring ---------- */
+  var traza1 = Traza.crear({
+    codigo: $("s1-codigo"),
+    explicacion: $("s1-explicacion"),
+    consola: $("s1-consola"),
+    ejecutar: $("s1-ejecutar"),
+    reproducir: $("s1-reproducir"),
+    reiniciar: $("s1-reiniciar"),
+    generar: trazaTupla,
+    intervalo: 1200,
+    alReiniciar: function () {
+      r1.cortar();
+      punto1.valores([]);
+      fecha1.valores([]);
+      punto1.rango(null);
+      fecha1.rango(null);
+      $("s1-punto").hidden = true;
+      $("s1-fecha").hidden = true;
+      Pasos.limpiarFeedback($("s1-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.hacer === "punto") { aparecer(punto1, ["point"]); llenar(punto1, [3, 5], r1); }
+      else if (paso.hacer === "fecha") { aparecer(fecha1, ["date"]); llenar(fecha1, FECHA, r1); }
+      else if (paso.ver === "punto") { punto1.rango(0, 2); }
+      else if (paso.ver === "fecha") { punto1.rango(null); fecha1.rango(0, 3); }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s1-fb"), "ok", "Like a list, but with parentheses and a padlock 🔒: a tuple’s values go together and don’t change.");
+      leccion.desbloquear();
+    }
+  });
+
+  armarPredicciones($("s2-predicciones"), PRED2, $("s2-fb"), function (ultima) {
+    fecha2.marcar(null);
+    fecha2.rango(null);
+    fecha2.clases(null);
+    fecha2.mostrar({ indices: true, negativos: true });
+    Pasos.feedback($("s2-fb"), "ok", ultima.ok + " All correct! Here are the numbers: for reading, a tuple is just like a list.");
+    leccion.desbloquear();
+  });
+
+  $("s3-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar3(b.getAttribute("data-valor")); });
+  });
+  $("s3-ejecutar").addEventListener("click", function () { ejecutar3(leccion); });
+
+  armarPredicciones($("s4-predicciones"), PRED4, $("s4-fb"), function (ultima) {
+    Pasos.feedback($("s4-fb"), "ok", ultima.ok + " In short: what only reads works; what changes the tuple inside doesn’t.");
+    leccion.desbloquear();
+  });
+
+  var traza5 = Traza.crear({
+    codigo: $("s5-codigo"),
+    explicacion: $("s5-explicacion"),
+    consola: $("s5-consola"),
+    ejecutar: $("s5-ejecutar"),
+    reproducir: $("s5-reproducir"),
+    reiniciar: $("s5-reiniciar"),
+    generar: trazaDesempaquetar,
+    intervalo: 1500,
+    alReiniciar: function () {
+      r5.cortar();
+      fecha5.valores([]);
+      fecha5.marcar(null);
+      $("s5-fecha").hidden = true;
+      $("s5-cajas").hidden = true;
+      cajas5.forEach(function (c) { Caja.vaciar(c); c.classList.remove("caja--resaltada"); });
+      Pasos.limpiarFeedback($("s5-fb"));
+    },
+    alPaso: function (paso) {
+      cajas5.forEach(function (c, k) { c.classList.toggle("caja--resaltada", paso.ver === k); });
+      if (paso.hacer === "crear") {
+        aparecer(fecha5, ["date"]);
+        llenar(fecha5, FECHA, r5);
+      } else if (paso.hacer === "repartir") {
+        r5.cortar();
+        if (fecha5.largo < 3) fecha5.valores(FECHA);
+        $("s5-cajas").hidden = false;
+        cajas5.forEach(function (c, k) {
+          r5.luego(function () {
+            fecha5.marcar(k);
+            Caja.poner(c, FECHA[k], fecha5.valor(k));
+          }, k * 350);
+        });
+        r5.luego(function () { fecha5.marcar(null); }, 1300);
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s5-fb"), "ok", "Unpacking is handing out: value 0 to the first variable, value 1 to the second… One line instead of three.");
+      leccion.desbloquear();
+    }
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar6(b.getAttribute("data-valor")); });
+  });
+  $("s6-ejecutar").addEventListener("click", function () { ejecutar6(leccion); });
+
+  traza7 = Traza.crear({
+    codigo: $("s7-codigo"),
+    explicacion: $("s7-explicacion"),
+    consola: $("s7-consola"),
+    ejecutar: $("s7-ejecutar"),
+    reproducir: $("s7-reproducir"),
+    reiniciar: $("s7-reiniciar"),
+    generar: trazaIntercambiar,
+    intervalo: 1300,
+    alReiniciar: function () {
+      limpiar7();
+      Pasos.limpiarFeedback($("s7-fb"));
+    },
+    alPaso: paso7,
+    alTerminar: function () {
+      s7.marcar(version7);
+      $("s7-elegir").querySelector('[data-valor="' + version7 + '"]').classList.add("hecho");
+      var fb = $("s7-fb");
+      if (s7.todos(["aux", "tupla"])) {
+        Pasos.feedback(fb, "ok", "Same result. With a, b = b, a, Python first builds the tuple on the right with the old values and then hands it out: nobody loses their value.");
+        leccion.desbloquear();
+      } else if (version7 === "aux") {
+        Pasos.feedback(fb, "pista", "It works, but it took the temp box and three lines. Now try it with a tuple.");
+      } else {
+        Pasos.feedback(fb, "pista", "Just one line! Also try the version with an extra box to compare.");
+      }
+    }
+  });
+  escribir($("s7-codigo"), VERSIONES7.aux);
+  traza7.reiniciar();
+  $("s7-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar7(b.getAttribute("data-valor")); });
+  });
+
+  var traza8 = Traza.crear({
+    codigo: $("s8-codigo"),
+    explicacion: $("s8-explicacion"),
+    consola: $("s8-consola"),
+    ejecutar: $("s8-ejecutar"),
+    reproducir: $("s8-reproducir"),
+    reiniciar: $("s8-reiniciar"),
+    generar: trazaFuncion,
+    intervalo: 1400,
+    alReiniciar: function () {
+      limpiar8();
+      Pasos.limpiarFeedback($("s8-fb"));
+    },
+    alPaso: paso8,
+    alTerminar: function () {
+      Pasos.feedback($("s8-fb"), "ok", "return lowest, highest gives back a tuple, and lowest, highest = extremes(grades) unpacks it. That’s how a function returns two values.");
+      leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-otra-btn").addEventListener("click", function () {
+    var paso = $("paso-reto");
+    entrarReto(paso);
+    paso.querySelector('input[type="radio"]').focus();
+  });
+
+  // Initial state
+  preparar3("lista");
+  preparar6("3");
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-tupla": function () { traza1.detener(); },
+      "paso-cambiar": function () { preparar3(version3); },
+      "paso-desempaquetar": function () { traza5.detener(); },
+      "paso-cantidad": function () { preparar6(version6); },
+      "paso-intercambiar": function () { traza7.detener(); },
+      "paso-funcion": function () { traza8.detener(); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
