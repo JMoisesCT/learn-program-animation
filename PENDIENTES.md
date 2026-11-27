@@ -140,6 +140,13 @@ Con Playwright, que ya está en el entorno de la nube (`/opt/node-tools/node_mod
 
 El autor notó que en «¿Qué da cada una?» (paso 4, con los números escondidos) la franja verde de las filas contadas no quedaba encuadrada: los números de fila y de columna, escondidos, guardan su lugar, y la franja pintaba la fila entera (corrida a la izquierda y más alta en la primera fila). Ahora pinta solo los casilleros de cada fila, con un `::before` que no ocupa lugar (así tampoco salta nada cuando aparecen los números al acertar las tres). En español e inglés. Segundo arreglo (el autor aún veía los casilleros cortados): la franja de una fila tapaba el borde de abajo de la de arriba y subía más de lo que bajaba. Ahora todas las franjas van detrás de todos los casilleros (`isolation` en la fila de filas), su alto es el de un casillero (`--alto-casillero`, que mide la lección con un `ResizeObserver`) y las filas de ese tablero se separan 0.8rem: el mismo margen arriba, abajo y a los lados.
 
+### 2026-11-27 · Botones del resumen descentrados en Leer un mensaje de error (inglés)
+
+- **Causa**: `en/lessons/errors/index.html` tenía `<style>` escrito dos veces seguidas. El segundo queda como texto dentro del CSS y anula la primera regla que le sigue, que era `.fila-botones` (sin `display: flex` ni `justify-content: center`): los botones del resumen quedaban pegados a la izquierda. Se quitó el repetido.
+- **Lo mismo en el tres en raya en inglés** (`en/lessons/lists/project/`): `<style>` y `</style>` repetidos; la regla anulada era la de `:root` con `--color-o` (la ficha O se veía sin su color). Arreglado.
+- **Revisión de todo el sitio**: un script abre el resumen de cada lección (español e inglés) a 2000×640 y compara el centro de los botones con el de la tarjeta: solo estaba descentrada esa. Otro revisa que ningún `<style>` tenga una etiqueta HTML adentro y que `<style>` y `</style>` estén parejos: ya no queda ninguno (el `<module>` de Cada error con su nombre es un comentario de CSS).
+- La guía de traducción (`herramientas/TRADUCIR-UNA-LECCION.md`) pide ahora revisar que el archivo tenga un solo `<style>` y un solo `</style>`.
+
 ### 2026-11-27 · Curso en inglés: Errores
 
 - **Las 7 lecciones de Errores en inglés** (`en/lessons/errors/`, `syntax/`, `types/`, `traceback/`, `try/`, `ask/`, `project/`), con su tarjeta en `en/index.html` (el aviso ahora dice «Matrices and the solved problems are being translated»); la tabla de posiciones termina en «Next: Errors →» y la calculadora en «Back to the course →». Mismas claves de progreso, mismos pasos y mismos ids.

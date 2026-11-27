@@ -42,6 +42,7 @@ Run, for your lesson (`<path>` is e.g. `en/lists/change`; the Spanish one is `li
 - `node herramientas/seguir-consola.js <path> detalle` and the Spanish one; the console must not move in English if it doesn't in Spanish.
 - `node herramientas/responder-retos.js <path>` (answers every «Check» until right, measures after answering); compare with Spanish `node herramientas/responder-retos.js listas/<folder>` — differences that only English has must be fixed.
 - A quick Playwright pass (Chromium is preinstalled: `require('playwright')`) going through every step, answering challenges right and wrong, checking there are no page errors and no Spanish text visible (search the rendered text for á é í ó ú ñ ¿ ¡ and common Spanish words like « la », « el », « de », «Toca», «línea», «vuelve», «espera», «sigue»). Screenshots go in `capturas/<your-lesson>/` (git-ignored). The scratchpad is shared with other translators working in parallel: name your scratch files with your lesson's folder as a prefix (e.g. `lists-change-pw.js`) so nobody overwrites them.
+- Check the `<head>` of your file: exactly one `<style>` and one `</style>`. A doubled `<style>` line (easy to get with a copy-and-replace script) turns into text inside the CSS and silently cancels the first rule after it (in Errors 1/7 the buttons of the summary lost their centering; in the tic-tac-toe, the color of the O).
 These tools take minutes; run them in the background if useful.
 
 ## Final answer
