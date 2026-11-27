@@ -75,13 +75,15 @@
     return window.Python ? Python.colorear(texto) : String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   }
 
-  var ROTULOS = { donde: "dónde", codigo: "qué línea", final: "qué pasó" };
+  var EN = /^en/i.test(document.documentElement.lang || "");
+  var ROTULOS = EN ? { donde: "where", codigo: "which line", final: "what happened" }
+    : { donde: "dónde", codigo: "qué línea", final: "qué pasó" };
 
   /* ---------- El mensaje ---------- */
   function crear(el, o) {
     var raiz = nuevo("div", "traceback");
     raiz.setAttribute("role", "group");
-    raiz.setAttribute("aria-label", "Mensaje de error de Python");
+    raiz.setAttribute("aria-label", EN ? "Python error message" : "Mensaje de error de Python");
     raiz.hidden = true;
     var tocables = [];
     var conPartes = !!o.partes;
@@ -116,7 +118,7 @@
       raiz.appendChild(cab);
     }
 
-    var archivo = o.archivo || "programa.py";
+    var archivo = o.archivo || (EN ? "program.py" : "programa.py");
     (o.marcos || []).forEach(function (mc, i) {
       var donde = renglon("traceback__donde", i === 0 ? ROTULOS.donde : null);
       var cuerpo = nuevo("span", "traceback__texto");
@@ -124,7 +126,7 @@
       cuerpo.appendChild(parteEl("archivo", archivo, i));
       cuerpo.appendChild(document.createTextNode("\", "));
       var ln = parteEl("linea", "line " + mc.linea, i);
-      ln.setAttribute("aria-label", "line " + mc.linea + ": la línea " + mc.linea + " del programa");
+      ln.setAttribute("aria-label", "line " + mc.linea + (EN ? ": line " + mc.linea + " of the program" : ": la línea " + mc.linea + " del programa"));
       cuerpo.appendChild(ln);
       if (!o.sintaxis) cuerpo.appendChild(document.createTextNode(", in " + (mc.funcion || "<module>")));
       donde.insertBefore(cuerpo, donde.firstChild);
@@ -167,7 +169,7 @@
     var trad = null;
     if (o.traduccion) {
       trad = nuevo("p", "traceback__traduccion");
-      trad.innerHTML = '<span class="traceback__es">En español</span> ' + o.traduccion;
+      trad.innerHTML = '<span class="traceback__es">' + (EN ? "In plain words" : "En español") + '</span> ' + o.traduccion;
       raiz.appendChild(trad);
     }
 
