@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>try and except: a safety net · Learn to program</title>
+  <meta name="description" content="Interactive lesson: try and except in Python. If a line in the try fails, the error flies to its except and the program goes on; it only catches its type, several excepts, a short try and the trap of an except with no type.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    /* The trace explanation goes above the output (on desktop, on the right) */
+    .explicacion--arriba { min-height: 0; margin: 0 0 var(--esp-3); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); text-align: left; }
+    .explicacion--arriba + .consola { margin-top: 0; }
+    /* The explanation goes above the console: its zone keeps the height of the longest text of
+       all the inputs (conDatos; Traza only keeps the one of the chosen input) and the console
+       does not move down when the input changes */
+    .explicacion-zona { display: flex; flex-direction: column; }
+    .explicacion-zona > .explicacion { flex: 1 0 auto; }
+    .explicacion-zona + .consola { margin-top: 0; }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); font-size: 0.95rem; }
+    .rotulo { margin: 0 0 var(--esp-2); text-align: center; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo code { text-transform: none; letter-spacing: 0; }
+    .leyenda-red { justify-content: center; }
+
+    /* ---------- Choosing the input or the version ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .elegir__titulo { font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto-suave); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .elegir--datos .btn { font-family: var(--fuente-codigo); }
+    .elegir .btn.hecho::after { content: " ✓"; color: var(--color-ok); }
+
+    /* What the student types in input(), in the console */
+    .consola__tecleado { color: var(--color-azul); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+    .consola__linea--red { color: var(--color-pista); }
+    .consola .consola__linea--error { color: var(--color-error); white-space: normal; }
+    .consola .consola__linea--espera { visibility: hidden; }
+
+    /* The error message waits, invisible, for the chip to arrive */
+    .traceback.traceback--esperando { visibility: hidden; }
+    .zona-error:empty { display: none; }
+
+    /* ---------- Visual: the expression and the boxes ---------- */
+    .expresion--chica { font-size: var(--texto-md); margin-top: var(--esp-2); }
+    .expresion__final:empty::before { content: "?"; color: var(--color-texto-suave); }
+    .expresion__final--error { color: var(--color-error); }
+    .cajas--fila { gap: var(--esp-3) 2.6rem; padding: var(--esp-4) 0 var(--esp-2); }
+    .cajas--fila .caja { gap: var(--esp-1); }
+    .cajas--fila .caja__cuerpo { width: 5rem; height: 3.9rem; padding-bottom: var(--esp-2); }
+    .cajas--fila .caja__valor { max-width: 4.6rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-lg); }
+    .caja--sin-valor .caja__cuerpo { border-style: dashed; }
+    .caja__nota { margin: 0; font-size: var(--texto-xs); font-weight: 700; color: var(--color-pista); text-align: center; min-height: 1.3em; }
+    .caja__nota:empty::before { content: "\200b"; }   /* empty, it already takes its line */
+
+    /* ---------- The trapeze artist ---------- */
+    /* --alto: height of the scene; --tam: size of the trapeze artist. The falls are computed from them */
+    .escena { --alto: 11rem; --tam: 2.4rem; position: relative; height: var(--alto); overflow: hidden; border-radius: var(--radio); background: linear-gradient(to bottom, #eaf2ff, #fbfcff 70%); }
+    .escena__palo { position: absolute; top: 0; width: 0.5rem; height: 100%; background: #c9d2dd; }
+    .escena__palo--izq { left: 8%; }
+    .escena__palo--der { right: 8%; }
+    .escena__columpio { position: absolute; top: 0; left: 50%; width: 5.5rem; height: calc(var(--alto) * 0.3); margin-left: -2.75rem; transform-origin: 50% 0; border-left: 2px solid #8a929c; border-right: 2px solid #8a929c; border-bottom: 5px solid #54606e; border-radius: 0 0 4px 4px; animation: columpio 2.2s ease-in-out infinite alternate; }
+    .escena__artista { --cae-red: calc(var(--alto) * 0.7 - 2.1rem - var(--tam)); --cae-suelo: calc(var(--alto) * 0.7 - 0.9rem - var(--tam)); position: absolute; top: 100%; left: 50%; font-size: var(--tam); line-height: 1; transform: translateX(-50%); }
+    .escena__red { position: absolute; left: 14%; right: 14%; bottom: 1.4rem; height: 1.3rem; border: 3px solid #ffb35c; border-top: 0; border-radius: 0 0 50% 50% / 0 0 100% 100%; background: repeating-linear-gradient(45deg, transparent 0 7px, rgba(255, 179, 92, 0.55) 7px 9px), repeating-linear-gradient(-45deg, transparent 0 7px, rgba(255, 179, 92, 0.55) 7px 9px); transform-origin: 50% 0; }
+    .escena__red[hidden] { display: none; }
+    .escena__suelo { position: absolute; left: 0; right: 0; bottom: 0; height: 1.1rem; background: #d9dee5; }
+    .escena__golpe { position: absolute; left: 50%; bottom: 0.5rem; font-size: 1.6rem; transform: translateX(-50%); opacity: 0; }
+    .escena--cae .escena__columpio, .escena--atrapa .escena__columpio { animation-play-state: paused; }
+    .escena--cae .escena__artista { animation: cae-suelo 800ms ease-in forwards; }
+    .escena--cae .escena__golpe { animation: golpe 500ms 700ms ease-out forwards; }
+    .escena--atrapa .escena__artista { animation: cae-red 1100ms ease-in forwards; }
+    .escena--atrapa .escena__red { animation: red-estira 700ms 380ms ease-out; }
+    @keyframes columpio { from { transform: rotate(-11deg); } to { transform: rotate(11deg); } }
+    @keyframes cae-suelo { 0% { transform: translate(-50%, 0) rotate(0); } 100% { transform: translate(-50%, var(--cae-suelo)) rotate(90deg); } }
+    @keyframes cae-red { 0% { transform: translate(-50%, 0); } 40% { transform: translate(-50%, calc(var(--cae-red) + 0.5rem)); } 60% { transform: translate(-50%, calc(var(--cae-red) - 0.7rem)); } 80% { transform: translate(-50%, calc(var(--cae-red) + 0.25rem)); } 100% { transform: translate(-50%, var(--cae-red)); } }
+    @keyframes red-estira { 30% { transform: scaleY(1.7); } 60% { transform: scaleY(0.85); } }
+    @keyframes golpe { from { opacity: 0; transform: translateX(-50%) scale(0.4); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+    @media (min-width: 1024px) {
+      .escena { --alto: 9rem; --tam: 2rem; }
+    }
+    .escena__rotulo { min-height: 1.5em; margin: var(--esp-2) 0 0; text-align: center; font-weight: 700; color: var(--color-texto-suave); }
+    .escena__rotulo--mal { color: var(--color-error); }
+    .escena__rotulo--ok { color: var(--color-pista); }
+
+    /* ---------- Predictions ---------- */
+    .predicciones { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-3); }
+    .prediccion { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); }
+    .prediccion__expr { font-weight: 700; font-size: var(--texto-md); }
+    .prediccion__expr code { font-size: inherit; }
+    .prediccion .elegir { margin: 0; }
+    .prediccion .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); white-space: pre; line-height: 1.3; text-align: left; border-radius: var(--radio-sm); }
+    .prediccion .feedback { margin-top: var(--esp-3); padding: var(--esp-3); }
+    .lab .predicciones { margin-top: 0; }
+    .lab .prediccion__fila { flex-direction: column; align-items: flex-start; }
+    .lab .prediccion .elegir { justify-content: flex-start; }
+    @media (min-width: 1024px) {
+      .lab .prediccion .elegir { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; width: 100%; }
+      .lab .prediccion .btn { padding: var(--esp-1) var(--esp-2); font-size: 0.78rem; }
+    }
+
+    /* ---------- Challenge ---------- */
+    .interruptores { display: grid; gap: var(--esp-2); margin: 0 0 var(--esp-4); }
+    .interruptor { display: flex; align-items: center; gap: var(--esp-3); width: 100%; min-height: 2.6rem; padding: var(--esp-1) var(--esp-3); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); font: inherit; text-align: left; cursor: pointer; transition: border-color var(--dur-rapida), background-color var(--dur-rapida), padding var(--dur-rapida); }
+    .interruptor:hover { border-color: #b8c0ca; }
+    .interruptor:focus-visible { outline: none; box-shadow: var(--foco); }
+    .interruptor code { flex: 1 1 auto; min-width: 0; padding: 0; background: none; font-size: var(--texto-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .interruptor__marca { flex: none; padding: 0.1em 0.6em; border-radius: 999px; border: 2px solid var(--color-borde); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); white-space: nowrap; }
+    .interruptor[aria-pressed="true"] { padding-left: calc(var(--esp-3) + 1.25rem); border-color: #7db8ff; border-left: 6px solid #7db8ff; background: #eef5ff; }
+    .interruptor[aria-pressed="true"] .interruptor__marca { border-color: #7db8ff; background: #7db8ff; color: #0b2a5e; }
+    .interruptor[aria-pressed="false"] .interruptor__marca::before { content: "outside"; }
+    .interruptor[aria-pressed="true"] .interruptor__marca::before { content: "🛡 in the try"; }
+    .interruptor:disabled { cursor: default; opacity: 0.8; }
+    .paso-titulo-chico { margin: 0 0 var(--esp-2); font-size: var(--texto-sm); font-weight: 700; color: var(--color-texto); }
+    .tipos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin: 0; border: 0; padding: 0; }
+    .tipos legend { padding: 0; margin-bottom: var(--esp-2); }
+    .tipos .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .pruebas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-3); }
+    .pruebas .consola { margin-top: 0; font-size: var(--texto-sm); }
+    .prueba { min-width: 0; }
+    .pruebas + .feedback { margin-top: var(--esp-3); }
+
+    /* RETO-LAB */
+    /* Challenge: the panel of what you see is not stretched to the end of the left column (pasos.js does
+       it so the output ends at the bottom): here what shows up when you answer goes below it and would end
+       up under the footer. Both test consoles keep from the start the place of the 4 lines they print
+       (pasos.js caps the first one otherwise), and the line switches and the types are a little tighter so
+       the left column fits on a short screen */
+    @media (min-width: 1024px) {
+      #paso-reto .lab__visual { min-height: 0 !important; }
+      #paso-reto .pruebas .consola { min-height: calc(5lh + 2 * var(--esp-3) + 4px); }
+      #paso-reto .interruptores { gap: 0.35rem; margin-bottom: var(--esp-3); }
+      #paso-reto .interruptor { min-height: 2.2rem; padding-block: 0.15rem; }
+      #paso-reto .interruptor__marca { line-height: 1.35; }
+      #paso-reto .tipos .opcion span { padding-inline: var(--esp-2); }
+    }
+    /* On mobile, when it's right, the answer already reads in the program: the line switches, the types
+       and the button hide, and the program, the tests and the message stay together */
+    @media (max-width: 1023.98px) {
+      #paso-reto:has(.feedback--ok) #reto-titulo-lineas,
+      #paso-reto:has(.feedback--ok) #reto-lineas,
+      #paso-reto:has(.feedback--ok) #reto-tipo,
+      #paso-reto:has(.feedback--ok) .lab__principal > .fila-botones { display: none; }
+      #paso-reto:has(.feedback--ok) .lab__principal + .lab__visual { margin-top: 0; min-height: 0 !important; padding-block: var(--esp-3); }
+      #paso-reto:has(.feedback--ok) .lab__visual .leyenda-red { display: none; }
+      #paso-reto #reto-fb { font-size: var(--texto-sm); }
+      #paso-reto .pruebas { gap: var(--esp-2); }
+      #paso-reto .pruebas .consola { padding: var(--esp-2) var(--esp-3); line-height: 1.4; }
+    }
+    /* /RETO-LAB */
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual { margin-top: var(--esp-4); }
+    }
+    @media (min-width: 1024px) {
+      .lab .codigo--reto, .lab .codigo--largo { font-size: 1rem; }
+    }
+    /* Short desktop (e.g. 1366×657): a little more compact */
+    @media (min-width: 1024px) and (max-height: 720px) {
+      .lab .codigo { font-size: 1rem; }
+      .lab .codigo--largo, .lab .codigo--reto { font-size: 0.92rem; }
+      .elegir { margin-bottom: var(--esp-3); }
+      .fila-botones { margin-top: var(--esp-3); }
+      .paso__intro p { margin-bottom: 0; }
+    }
+    @media (max-width: 600px) {
+      .pruebas { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .tipos { grid-template-columns: minmax(0, 1fr); }
+      .escena { height: 11rem; }
+      .cajas--fila .caja__cuerpo { width: 4rem; height: 3.4rem; }
+      .cajas--fila .caja__valor { font-size: var(--texto-md); }
+      .prediccion .btn { font-size: var(--texto-xs); }
+      .interruptor { gap: var(--esp-2); padding-inline: var(--esp-2); }
+      .interruptor[aria-pressed="true"] { padding-left: calc(var(--esp-2) + 0.9rem); }
+      .interruptor code { font-size: 0.75rem; white-space: pre; overflow-wrap: normal; }
+      .interruptor__marca { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; padding: 0; }
+      .interruptor[aria-pressed="false"] .interruptor__marca::before { content: ""; }
+      .interruptor[aria-pressed="true"] .interruptor__marca::before { content: "🛡"; }
+      .elegir--datos { gap: var(--esp-2) var(--esp-1); }
+      /* The ✓ of “you already tried it” has its place from the start: when it shows up, the row
+         of inputs does not wrap to two lines (it pushed the code and the console) */
+      .elegir--datos .btn::after { content: " ✓"; color: var(--color-ok); visibility: hidden; }
+      .elegir--datos .btn.hecho::after { visibility: visible; }
+      .elegir--datos .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="errores-try">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos partir-codigo">
+
+    <!-- 1. Intuition: the trapeze artist with a net -->
+    <section class="paso" id="paso-red" data-requiere aria-labelledby="h-red">
+      <span class="paso__etiqueta">Errors 5/7 · try and except</span>
+      <h1 class="paso__titulo" id="h-red">A trapeze artist with a net</h1>
+      <p>Someone types “fifteen” and <code>int()</code> fails. A trapeze artist practices with a <strong>net</strong>: if they fall, the net catches them and the show goes on. In Python, the net is <code>try</code> and <code>except</code>. Try it without a net and with a net.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" id="s1-elegir" role="group" aria-label="With or without a net?">
+            <button type="button" class="btn btn-secundario" data-valor="sin" aria-pressed="true">No net</button>
+            <button type="button" class="btn btn-secundario" data-valor="con" aria-pressed="false">With a net</button>
+          </div>
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red" id="s1-leyenda" hidden><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">▶ Run with “fifteen”</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="escena" id="s1-escena" aria-hidden="true">
+            <span class="escena__palo escena__palo--izq"></span>
+            <span class="escena__palo escena__palo--der"></span>
+            <div class="escena__columpio"><span class="escena__artista">🤸</span></div>
+            <div class="escena__red" id="s1-red" hidden></div>
+            <div class="escena__suelo"></div>
+            <span class="escena__golpe">💥</span>
+          </div>
+          <p class="escena__rotulo" id="s1-rotulo" aria-live="polite">All good… for now.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="zona-error" id="s1-error"></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. The two paths -->
+    <section class="paso" id="paso-caminos" data-requiere aria-labelledby="h-caminos">
+      <h2 class="paso__titulo" id="h-caminos">Two paths</h2>
+      <p>Choose what the student types and run it line by line. Try an input that works and one that fails.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--datos" id="s2-datos" role="group" aria-label="What the student types">
+            <span class="elegir__titulo">Types:</span>
+            <button type="button" class="btn btn-secundario" data-valor="15" aria-pressed="true">15</button>
+            <button type="button" class="btn btn-secundario" data-valor="fifteen" aria-pressed="false">fifteen</button>
+            <button type="button" class="btn btn-secundario" data-valor="12.5" aria-pressed="false">12.5</button>
+          </div>
+          <pre class="codigo" id="s2-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s2-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s2-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <div class="expresion expresion--chica" aria-live="polite">
+            <span id="s2-expr">int("15")</span>
+            <span class="expresion__flecha" aria-hidden="true">→</span>
+            <span class="expresion__final" id="s2-res"></span>
+          </div>
+          <div class="cajas cajas--fila">
+            <div class="caja" id="s2-caja">
+              <div class="caja__cuerpo"><span class="caja__valor caja__valor--vacia"></span></div>
+              <code class="caja__nombre">grade</code>
+            </div>
+          </div>
+          <p class="caja__nota" id="s2-caja-nota"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="explicacion-zona"><p class="explicacion explicacion--arriba" id="s2-explicacion" aria-live="polite"></p></div>
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. What does it print? -->
+    <section class="paso" id="paso-predecir" data-requiere aria-labelledby="h-predecir">
+      <h2 class="paso__titulo" id="h-predecir">What does it print?</h2>
+      <p>The same program with three inputs. Look at what happens <strong>before</strong> the line that fails.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+        </div>
+        <div class="lab__resultado">
+          <ol class="predicciones" id="s3-predicciones"></ol>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. It only catches its type -->
+    <section class="paso" id="paso-tipo" data-requiere aria-labelledby="h-tipo">
+      <h2 class="paso__titulo" id="h-tipo">Each net has its type</h2>
+      <p>Two things can fail here: they don’t type a number, or they type 0. Try the three inputs. Does the net catch everything?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--datos" id="s4-datos" role="group" aria-label="What the student types">
+            <span class="elegir__titulo">Types:</span>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="true">3</button>
+            <button type="button" class="btn btn-secundario" data-valor="three" aria-pressed="false">three</button>
+            <button type="button" class="btn btn-secundario" data-valor="0" aria-pressed="false">0</button>
+          </div>
+          <pre class="codigo codigo--largo" id="s4-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s4-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s4-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s4-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="explicacion-zona"><p class="explicacion explicacion--arriba" id="s4-explicacion" aria-live="polite"></p></div>
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="zona-error" id="s4-error"></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Several excepts -->
+    <section class="paso" id="paso-varios" data-requiere aria-labelledby="h-varios">
+      <h2 class="paso__titulo" id="h-varios">A net for each error</h2>
+      <p>You can have several <code>except</code>, one for each type. The error tries net by net, from top to bottom. Try “three” and “0”.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir elegir--datos" id="s5-datos" role="group" aria-label="What the student types">
+            <span class="elegir__titulo">Types:</span>
+            <button type="button" class="btn btn-secundario" data-valor="3" aria-pressed="false">3</button>
+            <button type="button" class="btn btn-secundario" data-valor="three" aria-pressed="true">three</button>
+            <button type="button" class="btn btn-secundario" data-valor="0" aria-pressed="false">0</button>
+          </div>
+          <pre class="codigo codigo--largo" id="s5-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the nets</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s5-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="explicacion-zona"><p class="explicacion explicacion--arriba" id="s5-explicacion" aria-live="polite"></p></div>
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. A short try -->
+    <section class="paso" id="paso-corto" data-requiere aria-labelledby="h-corto">
+      <h2 class="paso__titulo" id="h-corto">A short try</h2>
+      <p>What if you put the whole program in the <code>try</code>, just in case? Someone types only “Ana”, with no last name. Run both versions and read what each one says.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" id="s6-elegir" role="group" aria-label="What goes in the try?">
+            <button type="button" class="btn btn-secundario" data-valor="largo" aria-pressed="true">All in the try</button>
+            <button type="button" class="btn btn-secundario" data-valor="corto" aria-pressed="false">Only what fails</button>
+          </div>
+          <pre class="codigo" id="s6-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar">▶ Run with “Ana”</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="zona-error" id="s6-error"></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. The trap: except with no type -->
+    <section class="paso" id="paso-trampa" data-requiere aria-labelledby="h-trampa">
+      <h2 class="paso__titulo" id="h-trampa">The trap: <code>except:</code> with no type</h2>
+      <p>This program has a misspelled name. It runs with “15”, which is a number. Compare a net with no type and a <code>ValueError</code> net.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="elegir" id="s7-elegir" role="group" aria-label="Which net?">
+            <button type="button" class="btn btn-secundario" data-valor="todo" aria-pressed="true">except:</button>
+            <button type="button" class="btn btn-secundario" data-valor="tipo" aria-pressed="false">except ValueError:</button>
+          </div>
+          <pre class="codigo" id="s7-codigo" aria-label="Code"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s7-ejecutar">▶ Run with “15”</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="zona-error" id="s7-error"></div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Challenge: build the net -->
+    <section class="paso" id="paso-reto" data-comprobar aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Build the net</h2>
+      <p>With “17” it must print the grade; with “seventeen”, “That’s not a number”. And always “Thanks”. Build the <code>try</code> and choose the type of the net.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="paso-titulo-chico" id="reto-titulo-lineas">1. Tap the lines that go inside the <code>try</code>:</p>
+          <div class="interruptores" id="reto-lineas" role="group" aria-labelledby="reto-titulo-lineas"></div>
+          <fieldset class="opciones opciones--codigo tipos" id="reto-tipo">
+            <legend class="paso-titulo-chico">2. The type of the net:</legend>
+            <label class="opcion"><input type="radio" name="reto-tipo" value="ValueError"><span>except ValueError:</span></label>
+            <label class="opcion"><input type="radio" name="reto-tipo" value="ZeroDivisionError"><span>except ZeroDivisionError:</span></label>
+            <label class="opcion"><input type="radio" name="reto-tipo" value="NameError"><span>except NameError:</span></label>
+            <label class="opcion"><input type="radio" name="reto-tipo" value=""><span>except:</span></label>
+          </fieldset>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="reto-probar">▶ Test with both inputs</button>
+          </div>
+        </div>
+        <div class="lab__visual">
+          <pre class="codigo codigo--reto" id="reto-codigo" aria-label="Your program"></pre>
+          <p class="leyenda-red"><span class="leyenda-red__try">try: the protected zone</span><span class="leyenda-red__except">except: the net</span></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="pruebas">
+            <div class="prueba">
+              <div class="consola" id="reto-consola-a" aria-live="polite"><span class="consola__titulo">With “17”</span></div>
+            </div>
+            <div class="prueba">
+              <div class="consola" id="reto-consola-b" aria-live="polite"><span class="consola__titulo">With “seventeen”</span></div>
+            </div>
+          </div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">try is the net: if a line inside fails with the error of its except, the program doesn’t fall and goes on.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../ask/index.html">Next: Asking again →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/caja.js"></script>
+<script src="../../../../assets/js/traza.js"></script>
+<script src="../../../../assets/js/python.js"></script>
+<script src="../../../../assets/js/mensaje-error.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function lineasDe(pre) { return pre.querySelectorAll(".linea"); }
+  function esEntero(t) { return /^\d+$/.test(t); }
+
+  // Timers of a step, to cut them on reset. Each run has its number:
+  // whatever arrives late (a chip still flying) from an old run is ignored.
+  function reloj() {
+    var ids = [];
+    var corrida = 0;
+    return {
+      luego: function (fn, ms) { ids.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { ids.forEach(clearTimeout); ids = []; corrida++; },
+      vigente: function (fn) {
+        var mia = corrida;
+        return function () { if (mia === corrida) fn.apply(null, arguments); };
+      }
+    };
+  }
+
+  /* What print prints: the line flies out from the active line of the code */
+  function imprimir(consola, pre, texto, clase) {
+    Codigo.agregar(consola, texto);
+    var l = consola.lastElementChild;
+    if (clase) l.classList.add(clase);
+    if (pre) Codigo.volarDesdeLinea(pre, l, texto, "vuelo--salida");
+  }
+
+  /* input(): the prompt and what the student types (underlined, in blue) */
+  function teclear(consola, pregunta, dato) {
+    Codigo.agregar(consola, pregunta);
+    var s = document.createElement("span");
+    s.className = "consola__tecleado";
+    s.textContent = dato;
+    consola.lastElementChild.appendChild(s);
+  }
+
+  function marcarBotones(grupo, valor) {
+    grupo.querySelectorAll("button[data-valor]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+  }
+
+  function vistos() {
+    var s = {};
+    return {
+      marcar: function (k) { s[k] = true; },
+      todos: function (ks) { return ks.every(function (k) { return s[k]; }); },
+      alguno: function (ks) { return ks.some(function (k) { return s[k]; }); }
+    };
+  }
+
+  /* An error message in its place: it erases the previous one. invisible: it takes its place but
+     can't be seen (so the error chip can fly to its type before showing it). */
+  function mensaje(zona, o, invisible) {
+    zona.textContent = "";
+    var m = MensajeError.crear(zona, o);
+    // Python marks operations with ~ and the ^ under the operator (e.g. ~~~~~~^~~~~~~)
+    if (o.tildes) {
+      var marca = m.el.querySelector(".traceback__marca .traceback__texto");
+      if (marca) marca.textContent = marca.textContent.replace(/\^+$/, o.tildes);
+    }
+    if (invisible) { m.el.hidden = false; m.el.classList.add("traceback--esperando"); }
+    return m;
+  }
+
+  function aparecer(m) {
+    m.el.classList.remove("traceback--esperando");
+    m.mostrar();
+  }
+
+  var ERR_INT = function (dato) {
+    return {
+      tipo: "ValueError",
+      mensaje: "invalid literal for int() with base 10: '" + dato + "'",
+      traduccion: "The text <code>'" + dato + "'</code> can’t be turned into a whole number."
+    };
+  };
+
+  /* ---------- 1. A trapeze artist with a net ---------- */
+  var VERSIONES1 = {
+    sin: ['grade = int(input("Your grade: "))', 'print("Your grade is", grade)', 'print("Done")'],
+    con: ["try:", '    grade = int(input("Your grade: "))', '    print("Your grade is", grade)', "except ValueError:", '    print("That\'s not a number")', 'print("Done")']
+  };
+  var version1 = "sin";
+  var r1 = reloj();
+  var s1 = vistos();
+
+  function preparar1(version) {
+    r1.cortar();
+    version1 = version;
+    marcarBotones($("s1-elegir"), version);
+    var pre = $("s1-codigo");
+    Python.escribir(pre, VERSIONES1[version]);
+    MensajeError.zona(pre, version === "con" ? { proteger: [0, 2], atrapar: [3, 4] } : null);
+    $("s1-leyenda").hidden = version !== "con";
+    $("s1-red").hidden = version !== "con";
+    $("s1-escena").classList.remove("escena--cae", "escena--atrapa");
+    $("s1-rotulo").textContent = "All good… for now.";
+    $("s1-rotulo").className = "escena__rotulo";
+    $("s1-error").textContent = "";
+    $("s1-ejecutar").disabled = false;
+    Codigo.consola($("s1-consola"), []);
+    Pasos.limpiarFeedback($("s1-fb"));
+  }
+
+  function rotulo1(texto, clase) {
+    var r = $("s1-rotulo");
+    r.textContent = texto;
+    r.className = "escena__rotulo escena__rotulo--" + clase;
+  }
+
+  function ejecutar1(leccion) {
+    preparar1(version1);
+    $("s1-ejecutar").disabled = true;
+    var pre = $("s1-codigo");
+    var consola = $("s1-consola");
+    var escena = $("s1-escena");
+    if (version1 === "sin") {
+      Codigo.marcar(pre, { activas: [0] });
+      teclear(consola, "Your grade: ", "fifteen");
+      r1.luego(function () {
+        Codigo.marcar(pre, {});
+        MensajeError.romper(pre, 0, { marca: 'int(input("Your grade: "))' });
+        escena.classList.add("escena--cae");
+        rotulo1("They fell! With no net, the show is over.", "mal");
+        var m = mensaje($("s1-error"), Object.assign(ERR_INT("fifteen"), {
+          marcos: [{ linea: 1, codigo: VERSIONES1.sin[0], marca: 'int(input("Your grade: "))' }]
+        }));
+        m.mostrar();
+        s1.marcar("sin");
+        terminar1(leccion);
+      }, 800);
+      return;
+    }
+    Codigo.marcar(pre, { activas: [0] });
+    r1.luego(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      teclear(consola, "Your grade: ", "fifteen");
+    }, 600);
+    r1.luego(function () {
+      escena.classList.add("escena--atrapa");
+      rotulo1("They’re falling!", "mal");
+      MensajeError.lanzar(pre, 1, "ValueError", 3, {
+        alLlegar: r1.vigente(function () {
+          Codigo.marcar(pre, { activas: [3], saltadas: [2] });
+          Codigo.salto(pre, 1, 3);
+          rotulo1("The net caught them! The show goes on.", "ok");
+        })
+      });
+    }, 1400);
+    r1.luego(function () {
+      Codigo.quitarSalto(pre);
+      Codigo.marcar(pre, { activas: [4], saltadas: [2] });
+      imprimir(consola, pre, "That's not a number");
+    }, 3000);
+    r1.luego(function () {
+      Codigo.marcar(pre, { activas: [5], saltadas: [2] });
+      imprimir(consola, pre, "Done");
+      s1.marcar("con");
+      terminar1(leccion);
+    }, 3800);
+  }
+
+  function terminar1(leccion) {
+    $("s1-ejecutar").disabled = false;
+    $("s1-elegir").querySelector('[data-valor="' + version1 + '"]').classList.add("hecho");
+    var fb = $("s1-fb");
+    if (s1.todos(["sin", "con"])) {
+      Pasos.feedback(fb, "ok", "With no net, the error stops the program and “Done” never shows. With a net, the error falls into the except: a warning is printed and the program goes on to the end.");
+      leccion.desbloquear();
+    } else if (version1 === "sin") {
+      Pasos.feedback(fb, "pista", "Python stopped at line 1: “Done” was not printed. Now try it with a net.");
+    } else {
+      Pasos.feedback(fb, "pista", "The net caught the error and the program reached “Done”. Also try it with no net to compare.");
+    }
+  }
+
+  /* ---------- 2. Two paths ---------- */
+  var COD2 = VERSIONES1.con;
+  Python.escribir($("s2-codigo"), COD2);
+  MensajeError.zona($("s2-codigo"), { proteger: [0, 2], atrapar: [3, 4] });
+  var dato2 = "15";
+  var r2 = reloj();
+  var s2 = vistos();
+
+  function traza2() {
+    var d = dato2;
+    var p = [{ linea: 0, texto: "<code>try:</code> opens the protected zone: what goes inside has a net." }];
+    if (esEntero(d)) {
+      p.push({ linea: 1, entrada: ["Your grade: ", d], res: d, caja: Number(d), texto: "They type “" + d + "”. <code>int(\"" + d + "\")</code> gives " + d + ": no error." });
+      p.push({ linea: 2, salida: "Your grade is " + d, texto: "The grade is printed. The try ended with no errors." });
+      p.push({ linea: 5, flecha: true, saltadas: [3, 4], salida: "Done", texto: "Nothing failed: the whole <code>except</code> is skipped and the program goes on." });
+    } else {
+      p.push({ linea: 1, entrada: ["Your grade: ", d], res: "error", lanzar: { desde: 1, hacia: 3 }, texto: "<code>int(\"" + d + "\")</code> fails: <strong>ValueError</strong>. The error jumps to the net." });
+      p.push({ linea: 3, flecha: true, saltadas: [2], texto: "<code>except ValueError:</code> is its type and catches it. Line 3 is skipped: <code>grade</code> never got a value." });
+      p.push({ linea: 4, saltadas: [2], salida: "That's not a number", texto: "What is in the net runs." });
+      p.push({ linea: 5, saltadas: [2], salida: "Done", texto: "And the program goes on: it didn’t stop." });
+    }
+    return p;
+  }
+
+  function limpiar2() {
+    r2.cortar();
+    $("s2-expr").textContent = 'int("' + dato2 + '")';
+    var res = $("s2-res");
+    res.textContent = "";
+    res.classList.remove("expresion__final--error");
+    Caja.vaciar($("s2-caja"));
+    $("s2-caja").classList.remove("caja--sin-valor");
+    $("s2-caja-nota").textContent = "";
+    Pasos.limpiarFeedback($("s2-fb"));
+  }
+
+  function paso2(paso) {
+    var pre = $("s2-codigo");
+    Codigo.marcar(pre, { activas: [paso.linea], saltadas: paso.saltadas || [] });
+    if (paso.entrada) teclear($("s2-consola"), paso.entrada[0], paso.entrada[1]);
+    if (paso.res === "error") {
+      var res = $("s2-res");
+      res.textContent = "💥 ValueError";
+      res.classList.add("expresion__final--error");
+      $("s2-caja").classList.add("caja--sin-valor");
+      $("s2-caja-nota").textContent = "grade stays empty";
+    } else if (paso.res) {
+      $("s2-res").textContent = paso.res;
+      Caja.poner($("s2-caja"), paso.caja);
+    }
+    if (paso.lanzar) MensajeError.lanzar(pre, paso.lanzar.desde, "ValueError", paso.lanzar.hacia);
+  }
+
+  /* ---------- 3. What does it print? ---------- */
+  var COD3 = ["text = input()", "try:", '    print("Reading...")', "    grade = int(text)", '    print("Grade:", grade)', "except ValueError:", '    print("That\'s not a number")', 'print("Done")'];
+  Python.escribir($("s3-codigo"), COD3);
+  MensajeError.zona($("s3-codigo"), { proteger: [1, 4], atrapar: [5, 6] });
+  var BIEN3 = "Reading...\nGrade: 17\nDone";
+  var FALLA3 = "Reading...\nThat's not a number\nDone";
+  var PRED3 = [
+    {
+      dato: "17", opciones: [BIEN3, "Grade: 17\nDone", "Reading...\nGrade: 17"], correcta: BIEN3, falla: false,
+      ok: "Nothing fails: the whole try runs, the except is skipped and “Done” shows.",
+      pistas: {
+        "Grade: 17\nDone": "print(\"Reading...\") is in the try too, and it doesn’t fail: it’s printed.",
+        "Reading...\nGrade: 17": "print(\"Done\") is outside the try: it always runs, whether something fails or not."
+      }
+    },
+    {
+      dato: "ten", opciones: ["That's not a number\nDone", FALLA3, "Reading...\nGrade: ten\nThat's not a number\nDone"], correcta: FALLA3, falla: true,
+      ok: "“Reading...” already showed before the error: what comes before the line that fails does run. What comes after doesn’t.",
+      pistas: {
+        "That's not a number\nDone": "print(\"Reading...\") comes before the line that fails: it was already printed.",
+        "Reading...\nGrade: ten\nThat's not a number\nDone": "When int(text) fails, the rest of the try is skipped: print(\"Grade:\", grade) doesn’t run."
+      }
+    },
+    {
+      dato: "12.5", opciones: ["Reading...\nGrade: 12\nDone", "Reading...\nGrade: 12.5\nDone", FALLA3], correcta: FALLA3, falla: true,
+      ok: "int() doesn’t accept a text with a dot: int(\"12.5\") gives ValueError, and the net catches it.",
+      pistas: {
+        "Reading...\nGrade: 12\nDone": "int() doesn’t round or cut a text with a dot: int(\"12.5\") gives ValueError.",
+        "Reading...\nGrade: 12.5\nDone": "int() gives whole numbers: with \"12.5\" it gives ValueError."
+      }
+    }
+  ];
+
+  function mostrarCamino3(p) {
+    var pre = $("s3-codigo");
+    Codigo.limpiar(pre);
+    if (!p.falla) {
+      Codigo.marcar(pre, { activas: [0, 1, 2, 3, 4, 7], saltadas: [5, 6] });
+      return;
+    }
+    Codigo.marcar(pre, { activas: [0, 1, 2, 3], saltadas: [4] });
+    MensajeError.lanzar(pre, 3, "ValueError", 5, {
+      alLlegar: function () { Codigo.marcar(pre, { activas: [0, 1, 2, 3, 5, 6, 7], saltadas: [4] }); }
+    });
+  }
+
+  function armarPredicciones(ol, datos, fbGeneral, alTerminar) {
+    var aciertos = datos.map(function () { return false; });
+    datos.forEach(function (p, k) {
+      var li = document.createElement("li");
+      li.className = "prediccion";
+      li.innerHTML = '<div class="prediccion__fila"><p class="prediccion__expr">Types <code></code></p>' +
+        '<div class="elegir" role="group"></div></div>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>';
+      li.querySelector(".prediccion__expr code").textContent = "“" + p.dato + "”";
+      var grupo = li.querySelector(".elegir");
+      grupo.setAttribute("aria-label", "What does it print if they type " + p.dato + "?");
+      p.opciones.forEach(function (op) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("aria-pressed", "false");
+        b.textContent = op;
+        grupo.appendChild(b);
+      });
+      var botones = grupo.querySelectorAll("button");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var valor = btn.textContent;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          var fbFila = li.querySelector(".feedback");
+          if (valor !== p.correcta) { Pasos.feedback(fbFila, "pista", p.pistas[valor]); return; }
+          Pasos.limpiarFeedback(fbFila);
+          li.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          mostrarCamino3(p);
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) alTerminar(p);
+          else Pasos.feedback(fbGeneral, "ok", p.ok);
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  /* ---------- 4. Each net has its type ---------- */
+  var COD4 = ["total = 45", "try:", '    count = int(input("How many grades? "))', '    print("Average:", total / count)', "except ValueError:", '    print("That\'s not a number")', 'print("Done")'];
+  Python.escribir($("s4-codigo"), COD4);
+  MensajeError.zona($("s4-codigo"), { proteger: [1, 3], atrapar: [4, 5] });
+  var dato4 = "3";
+  var r4 = reloj();
+  var s4 = vistos();
+  var ERR_CERO = {
+    tipo: "ZeroDivisionError",
+    mensaje: "division by zero",
+    traduccion: "You divided by zero: <code>count</code> is 0, and you can’t divide by 0.",
+    marcos: [{ linea: 4, codigo: 'print("Average:", total / count)', marca: "total / count" }],
+    tildes: "~~~~~~^~~~~~~"
+  };
+
+  function traza4() {
+    var d = dato4;
+    var p = [
+      { linea: 0, texto: "<code>total</code> stores 45: the sum of the grades." },
+      { linea: 1, texto: "It enters the protected zone." }
+    ];
+    if (!esEntero(d)) {
+      p.push({ linea: 2, entrada: ["How many grades? ", d], lanzar: { desde: 2, hacia: 4, tipo: "ValueError" }, texto: "<code>int(\"" + d + "\")</code> fails: <strong>ValueError</strong>." });
+      p.push({ linea: 4, flecha: true, saltadas: [3], texto: "The net is <code>ValueError</code>: it’s its type, so it catches it." });
+      p.push({ linea: 5, saltadas: [3], salida: "That's not a number", texto: "The warning is printed." });
+      p.push({ linea: 6, saltadas: [3], salida: "Done", texto: "And the program goes on." });
+      return p;
+    }
+    p.push({ linea: 2, entrada: ["How many grades? ", d], texto: "<code>int(\"" + d + "\")</code> gives " + d + ": it’s a number, no error." });
+    if (d !== "0") {
+      p.push({ linea: 3, salida: "Average: " + (45 / Number(d)).toFixed(1), texto: "45 / " + d + " gives " + (45 / Number(d)).toFixed(1) + " (dividing with <code>/</code> always gives a decimal)." });
+      p.push({ linea: 6, flecha: true, saltadas: [4, 5], salida: "Done", texto: "Nothing failed: the <code>except</code> is skipped." });
+      return p;
+    }
+    p.push({ linea: 3, cero: true, texto: "45 / 0: you can’t divide by 0. <strong>ZeroDivisionError</strong> is not <code>ValueError</code>: the net is not its type, the error bounces off… and the program stops." });
+    return p;
+  }
+
+  function limpiar4() {
+    r4.cortar();
+    $("s4-error").textContent = "";
+    Pasos.limpiarFeedback($("s4-fb"));
+  }
+
+  function paso4(paso) {
+    var pre = $("s4-codigo");
+    Codigo.marcar(pre, { activas: [paso.linea], saltadas: paso.saltadas || [] });
+    if (paso.entrada) teclear($("s4-consola"), paso.entrada[0], paso.entrada[1]);
+    if (paso.lanzar) MensajeError.lanzar(pre, paso.lanzar.desde, paso.lanzar.tipo, paso.lanzar.hacia);
+    if (paso.cero) {
+      Codigo.marcar(pre, {});
+      MensajeError.romper(pre, 3, { marca: "total / count" });
+      var m = mensaje($("s4-error"), ERR_CERO, true);
+      MensajeError.lanzar(pre, 3, "ZeroDivisionError", 4, {
+        atrapa: false,
+        siguiente: m.parte("tipo"),
+        alSeguir: r4.vigente(function () { aparecer(m); })
+      });
+    }
+  }
+
+  /* ---------- 5. A net for each error ---------- */
+  var COD5 = ["total = 45", "try:", '    count = int(input("How many grades? "))', '    print("Average:", total / count)', "except ValueError:", '    print("That\'s not a number")', "except ZeroDivisionError:", '    print("You can\'t divide by 0")', 'print("Done")'];
+  Python.escribir($("s5-codigo"), COD5);
+  MensajeError.zona($("s5-codigo"), { proteger: [1, 3], atrapar: [[4, 5], [6, 7]] });
+  var dato5 = "three";
+  var r5 = reloj();
+  var s5 = vistos();
+
+  function traza5() {
+    var d = dato5;
+    var p = [
+      { linea: 0, texto: "<code>total</code> stores 45." },
+      { linea: 1, texto: "It enters the protected zone." }
+    ];
+    if (!esEntero(d)) {
+      p.push({ linea: 2, entrada: ["How many grades? ", d], lanzar: "valor", texto: "<code>int(\"" + d + "\")</code> fails: <strong>ValueError</strong>. It tries the first net." });
+      p.push({ linea: 4, flecha: true, saltadas: [3], texto: "The first net is <code>ValueError</code>: it’s its type, so it catches it right there." });
+      p.push({ linea: 5, saltadas: [3], salida: "That's not a number", texto: "Its warning is printed." });
+      p.push({ linea: 8, flecha: true, saltadas: [3, 6, 7], salida: "Done", texto: "The other net is not used: it’s skipped. The program goes on." });
+      return p;
+    }
+    p.push({ linea: 2, entrada: ["How many grades? ", d], texto: "<code>int(\"" + d + "\")</code> gives " + d + ": no error yet." });
+    if (d !== "0") {
+      p.push({ linea: 3, salida: "Average: " + (45 / Number(d)).toFixed(1), texto: "45 / " + d + " gives " + (45 / Number(d)).toFixed(1) + "." });
+      p.push({ linea: 8, flecha: true, saltadas: [4, 5, 6, 7], salida: "Done", texto: "Nothing failed: both nets are skipped." });
+      return p;
+    }
+    p.push({ linea: 3, lanzar: "cero", texto: "45 / 0 gives <strong>ZeroDivisionError</strong>. The first net is <code>ValueError</code>: not its type, so it bounces off and tries the next one…" });
+    p.push({ linea: 6, flecha: true, saltadas: [4, 5], texto: "<code>except ZeroDivisionError:</code> is its type: it catches it." });
+    p.push({ linea: 7, saltadas: [4, 5], salida: "You can't divide by 0", texto: "This net’s warning is printed." });
+    p.push({ linea: 8, saltadas: [4, 5], salida: "Done", texto: "And the program goes on." });
+    return p;
+  }
+
+  function paso5(paso) {
+    var pre = $("s5-codigo");
+    Codigo.marcar(pre, { activas: [paso.linea], saltadas: paso.saltadas || [] });
+    if (paso.entrada) teclear($("s5-consola"), paso.entrada[0], paso.entrada[1]);
+    if (paso.lanzar === "valor") MensajeError.lanzar(pre, 2, "ValueError", 4);
+    if (paso.lanzar === "cero") {
+      var segunda = lineasDe(pre)[6];
+      MensajeError.lanzar(pre, 3, "ZeroDivisionError", 4, {
+        atrapa: false,
+        siguiente: segunda.querySelector(".tk-excepcion") || segunda,
+        alSeguir: r5.vigente(function () {
+          segunda.classList.remove("linea--atrapa");
+          void segunda.offsetWidth;
+          segunda.classList.add("linea--atrapa");
+        })
+      });
+    }
+  }
+
+  /* ---------- Steps with a chosen input and a trace (2, 4 and 5) ---------- */
+  function conDatos(o) {
+    var t = Traza.crear({
+      codigo: o.pre,
+      explicacion: o.explicacion,
+      consola: o.consola,
+      ejecutar: o.ejecutar,
+      reproducir: o.reproducir,
+      reiniciar: o.reiniciar,
+      generar: o.generar,
+      intervalo: o.intervalo,
+      alReiniciar: o.limpiar,
+      alPaso: o.alPaso,
+      alTerminar: function () {
+        var d = o.dato();
+        o.grupo.querySelector('[data-valor="' + d + '"]').classList.add("hecho");
+        o.vistos.marcar(d);
+        o.alTerminar(d);
+      }
+    });
+    // The height of the longest explanation, with any of the inputs
+    var zona = o.explicacion.parentNode;
+    var elegido = o.dato();
+    var textos = [];
+    o.grupo.querySelectorAll("button[data-valor]").forEach(function (b) {
+      o.elegir(b.getAttribute("data-valor"));
+      o.generar().forEach(function (p) { if (p.texto) textos.push(p.texto); });
+    });
+    o.elegir(elegido);
+    Codigo.reservarAlto(zona, textos, function (copia, texto) {
+      var p = copia.querySelector(".explicacion");
+      p.style.minHeight = "";
+      p.innerHTML = texto;
+    });
+    o.grupo.querySelectorAll("button[data-valor]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        o.elegir(b.getAttribute("data-valor"));
+        marcarBotones(o.grupo, b.getAttribute("data-valor"));
+        t.reiniciar();
+      });
+    });
+    return t;
+  }
+
+  /* ---------- 6. A short try ---------- */
+  var VERSIONES6 = {
+    largo: ["try:", '    name, surname = input("Name: ").split()', '    grade = int(input("Grade: "))', '    print(name, surname, "has", grade)', "except ValueError:", '    print("That\'s not a number")'],
+    corto: ['name, surname = input("Name: ").split()', "try:", '    grade = int(input("Grade: "))', '    print(name, surname, "has", grade)', "except ValueError:", '    print("That\'s not a number")']
+  };
+  var version6 = "largo";
+  var r6 = reloj();
+  var s6 = vistos();
+
+  function preparar6(version) {
+    r6.cortar();
+    version6 = version;
+    marcarBotones($("s6-elegir"), version);
+    var pre = $("s6-codigo");
+    Python.escribir(pre, VERSIONES6[version]);
+    MensajeError.zona(pre, version === "largo" ? { proteger: [0, 3], atrapar: [4, 5] } : { proteger: [1, 3], atrapar: [4, 5] });
+    $("s6-error").textContent = "";
+    $("s6-ejecutar").disabled = false;
+    Codigo.consola($("s6-consola"), []);
+    Pasos.limpiarFeedback($("s6-fb"));
+  }
+
+  function ejecutar6(leccion) {
+    preparar6(version6);
+    $("s6-ejecutar").disabled = true;
+    var pre = $("s6-codigo");
+    var consola = $("s6-consola");
+    if (version6 === "largo") {
+      Codigo.marcar(pre, { activas: [0] });
+      r6.luego(function () {
+        Codigo.marcar(pre, { activas: [1] });
+        teclear(consola, "Name: ", "Ana");
+      }, 600);
+      r6.luego(function () {
+        MensajeError.lanzar(pre, 1, "ValueError", 4, {
+          alLlegar: r6.vigente(function () {
+            Codigo.marcar(pre, { activas: [4], saltadas: [2, 3] });
+            Codigo.salto(pre, 1, 4);
+          })
+        });
+      }, 1300);
+      r6.luego(function () {
+        Codigo.quitarSalto(pre);
+        Codigo.marcar(pre, { activas: [5], saltadas: [2, 3] });
+        imprimir(consola, pre, "That's not a number");
+        s6.marcar("largo");
+        terminar6(leccion, "pista", "“That’s not a number”… but it didn’t even ask for the grade! The error was a different one: the last name was missing. The long try caught a ValueError it didn’t expect and gave a false warning.");
+      }, 2900);
+      return;
+    }
+    Codigo.marcar(pre, { activas: [0] });
+    teclear(consola, "Name: ", "Ana");
+    r6.luego(function () {
+      Codigo.marcar(pre, {});
+      MensajeError.romper(pre, 0, { marca: "name, surname" });
+      var m = mensaje($("s6-error"), {
+        tipo: "ValueError",
+        mensaje: "not enough values to unpack (expected 2, got 1)",
+        traduccion: "Not enough values to unpack: it needed 2 (<code>name</code> and <code>surname</code>) and got 1.",
+        marcos: [{ linea: 1, codigo: VERSIONES6.corto[0], marca: "name, surname" }]
+      });
+      m.mostrar();
+      s6.marcar("corto");
+      terminar6(leccion, "ok", "Now the message tells the truth and where to look: on line 1 a value was missing, the last name. You didn’t expect that error: better to see it than to hide it.");
+    }, 800);
+  }
+
+  function terminar6(leccion, tipo, texto) {
+    $("s6-ejecutar").disabled = false;
+    $("s6-elegir").querySelector('[data-valor="' + version6 + '"]').classList.add("hecho");
+    var fb = $("s6-fb");
+    if (s6.todos(["largo", "corto"])) {
+      Pasos.feedback(fb, "ok", texto + " Put in the try only what can fail with the error you expect, and what needs it.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, tipo, texto + " Now try “" + (version6 === "largo" ? "Only what fails" : "All in the try") + "”.");
+    }
+  }
+
+  /* ---------- 7. The trap: except with no type ---------- */
+  function codigo7(red) {
+    return ["try:", '    grade = int(input("Your grade: "))', '    print("Your grade is", grde)', red, '    print("That\'s not a number")'];
+  }
+  var VERSIONES7 = { todo: codigo7("except:"), tipo: codigo7("except ValueError:") };
+  var version7 = "todo";
+  var r7 = reloj();
+  var s7 = vistos();
+
+  function preparar7(version) {
+    r7.cortar();
+    version7 = version;
+    marcarBotones($("s7-elegir"), version);
+    var pre = $("s7-codigo");
+    Python.escribir(pre, VERSIONES7[version]);
+    MensajeError.zona(pre, { proteger: [0, 2], atrapar: [3, 4] });
+    $("s7-error").textContent = "";
+    $("s7-ejecutar").disabled = false;
+    Codigo.consola($("s7-consola"), []);
+    Pasos.limpiarFeedback($("s7-fb"));
+  }
+
+  function ejecutar7(leccion) {
+    preparar7(version7);
+    $("s7-ejecutar").disabled = true;
+    var pre = $("s7-codigo");
+    var consola = $("s7-consola");
+    Codigo.marcar(pre, { activas: [0] });
+    r7.luego(function () {
+      Codigo.marcar(pre, { activas: [1] });
+      teclear(consola, "Your grade: ", "15");
+    }, 600);
+    r7.luego(function () { Codigo.marcar(pre, { activas: [2] }); }, 1300);
+    if (version7 === "todo") {
+      r7.luego(function () {
+        MensajeError.lanzar(pre, 2, "NameError", 3, {
+          alLlegar: r7.vigente(function () {
+            Codigo.marcar(pre, { activas: [3] });
+            Codigo.salto(pre, 2, 3);
+          })
+        });
+      }, 1900);
+      r7.luego(function () {
+        Codigo.quitarSalto(pre);
+        Codigo.marcar(pre, { activas: [4] });
+        imprimir(consola, pre, "That's not a number");
+        s7.marcar("todo");
+        terminar7(leccion, "pista", "“That’s not a number”? 15 is a number! The problem was grde, a misspelled name (NameError). except: with no type catches everything, your mistakes too, and hides them.");
+      }, 3500);
+      return;
+    }
+    r7.luego(function () {
+      Codigo.marcar(pre, {});
+      MensajeError.romper(pre, 2, { marca: "grde" });
+      var m = mensaje($("s7-error"), {
+        tipo: "NameError",
+        mensaje: "name 'grde' is not defined",
+        sugerencia: "grade",
+        traduccion: "There is no box called <code>grde</code>. You probably meant <code>grade</code>.",
+        marcos: [{ linea: 3, codigo: VERSIONES7.tipo[2], marca: "grde" }]
+      }, true);
+      MensajeError.lanzar(pre, 2, "NameError", 3, {
+        atrapa: false,
+        siguiente: m.parte("tipo"),
+        alSeguir: r7.vigente(function () {
+          aparecer(m);
+          s7.marcar("tipo");
+          terminar7(leccion, "ok", "With except ValueError:, the NameError is not its type: it bounces off, and Python tells you where to look: line 3, grde. “Did you mean: 'grade'?”: it guesses the name you wanted.");
+        })
+      });
+    }, 1900);
+  }
+
+  function terminar7(leccion, tipo, texto) {
+    $("s7-ejecutar").disabled = false;
+    $("s7-elegir").querySelector('[data-valor="' + version7 + '"]').classList.add("hecho");
+    var fb = $("s7-fb");
+    if (s7.todos(["todo", "tipo"])) {
+      Pasos.feedback(fb, "ok", texto + " That’s why a net always gets its type: it catches what you expect and lets you see the rest.");
+      leccion.desbloquear();
+    } else {
+      Pasos.feedback(fb, tipo, texto + " Now try " + (version7 === "todo" ? "except ValueError:" : "except:") + ".");
+    }
+  }
+
+  /* ---------- 8. Challenge: build the net ---------- */
+  var ORIGINAL = [
+    { id: 1, codigo: 'name = input("Your name: ")' },
+    { id: 2, codigo: 'grade = int(input("Your grade: "))' },
+    { id: 3, codigo: 'print(name, "has", grade)' },
+    { id: 4, codigo: 'print("Thanks")' }
+  ];
+  var dentro = {};
+  var r8 = reloj();
+
+  ORIGINAL.forEach(function (o) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "interruptor";
+    b.setAttribute("aria-pressed", "false");
+    b.setAttribute("data-linea", String(o.id));
+    b.innerHTML = "<code></code><span class=\"interruptor__marca\" aria-hidden=\"true\"></span>";
+    b.querySelector("code").textContent = o.codigo;
+    b.setAttribute("aria-label", o.codigo + ": inside the try");
+    $("reto-lineas").appendChild(b);
+  });
+
+  function tipoReto() {
+    var r = document.querySelector('input[name="reto-tipo"]:checked');
+    return r ? r.value : null;
+  }
+
+  // The built program: one try for each group of consecutive lines that are inside
+  function armar(tipo) {
+    var lineas = [];
+    var donde = {};
+    var bloques = [];
+    var actual = null;
+    ORIGINAL.forEach(function (o, k) {
+      var adentro = !!dentro[o.id];
+      if (adentro && !actual) {
+        actual = { ids: [], tryEn: lineas.length };
+        lineas.push("try:");
+      }
+      if (adentro) {
+        actual.ids.push(o.id);
+        donde[o.id] = lineas.length;
+        lineas.push("    " + o.codigo);
+        var sigue = ORIGINAL[k + 1] && dentro[ORIGINAL[k + 1].id];
+        if (!sigue) {
+          actual.exceptEn = lineas.length;
+          lineas.push("except" + (tipo === null ? " ▢" : tipo ? " " + tipo : "") + ":");
+          lineas.push('    print("That\'s not a number")');
+          bloques.push(actual);
+          actual = null;
+        }
+      } else {
+        donde[o.id] = lineas.length;
+        lineas.push(o.codigo);
+      }
+    });
+    return { lineas: lineas, donde: donde, bloques: bloques };
+  }
+
+  // Runs the built program with a grade: what it prints and, if any, the error (caught or not)
+  function ejecutarArmado(prog, tipo, dato) {
+    var hay = {};
+    var salida = [];
+    var atrapados = [];
+    var corte = null;
+    function bloqueDe(id) {
+      for (var k = 0; k < prog.bloques.length; k++) if (prog.bloques[k].ids.indexOf(id) !== -1) return prog.bloques[k];
+      return null;
+    }
+    var saltar = null;
+    for (var k = 0; k < ORIGINAL.length && !corte; k++) {
+      var id = ORIGINAL[k].id;
+      if (saltar && saltar.ids.indexOf(id) !== -1) continue;
+      var err = null;
+      if (id === 1) { salida.push({ pregunta: "Your name: ", dato: "Ana" }); hay.nombre = true; }
+      else if (id === 2) {
+        salida.push({ pregunta: "Your grade: ", dato: dato });
+        if (esEntero(dato)) hay.nota = dato;
+        else err = ERR_INT(dato);
+      } else if (id === 3) {
+        if (hay.nota === undefined) {
+          err = { tipo: "NameError", mensaje: "name 'grade' is not defined", marca: "grade",
+            traduccion: "There is no box called <code>grade</code>: <code>int()</code> failed, so <code>grade</code> never got a value." };
+        } else salida.push({ texto: "Ana has " + hay.nota });
+      } else salida.push({ texto: "Thanks" });
+      if (!err) continue;
+      var b = bloqueDe(id);
+      if (b && (tipo === "" || tipo === err.tipo)) {
+        atrapados.push({ desde: prog.donde[id], hacia: b.exceptEn, tipo: err.tipo, en: salida.length });
+        salida.push({ texto: "That's not a number", red: true });
+        saltar = b;
+      } else {
+        corte = { err: err, linea: prog.donde[id], id: id, en: salida.length, rebota: b ? b.exceptEn : null };
+      }
+    }
+    return { salida: salida, atrapados: atrapados, corte: corte };
+  }
+
+  function pintarReto() {
+    r8.cortar();
+    var tipo = tipoReto();
+    var prog = armar(tipo);
+    var pre = $("reto-codigo");
+    Python.escribir(pre, prog.lineas);
+    var atrapar = prog.bloques.map(function (b) { return [b.exceptEn, b.exceptEn + 1]; });
+    MensajeError.zona(pre, null);
+    var ls = lineasDe(pre);
+    prog.bloques.forEach(function (b) {
+      for (var k = b.tryEn; k < b.exceptEn; k++) ls[k].classList.add("linea--protegida");
+    });
+    atrapar.forEach(function (r) { ls[r[0]].classList.add("linea--except"); ls[r[1]].classList.add("linea--except"); });
+    ["a", "b"].forEach(function (x) { Codigo.consola($("reto-consola-" + x), []); });
+    $("reto-probar").disabled = !prog.bloques.length || tipo === null;
+    return prog;
+  }
+
+  // Runs both tests at once; the “seventeen” one shows the error in the code
+  function probarReto() {
+    var tipo = tipoReto();
+    var prog = pintarReto();
+    if (tipo === null || !prog.bloques.length) return null;
+    var pre = $("reto-codigo");
+    var res = { a: ejecutarArmado(prog, tipo, "17"), b: ejecutarArmado(prog, tipo, "seventeen") };
+    ["a", "b"].forEach(function (x) {
+      var r = res[x];
+      var consola = $("reto-consola-" + x);
+      r.salida.forEach(function (s, k) {
+        r8.luego(function () {
+          if (s.pregunta) teclear(consola, s.pregunta, s.dato);
+          else Codigo.agregar(consola, s.texto);
+          if (s.red) consola.lastElementChild.classList.add("consola__linea--red");
+        }, 300 + k * 450);
+      });
+      if (x === "b") r.atrapados.forEach(function (a) {
+        r8.luego(function () { MensajeError.lanzar(pre, a.desde, a.tipo, a.hacia); }, 300 + (a.en - 1) * 450 + 150);
+      });
+      // If the program stops, the console ends with the last line of the error message
+      if (r.corte) {
+        var c = r.corte;
+        r8.luego(function () {
+          Codigo.agregar(consola, c.err.tipo + ": " + c.err.mensaje);
+          var l = consola.lastElementChild;
+          l.classList.add("consola__linea--error");
+          if (x !== "b") return;
+          l.classList.add("consola__linea--espera");
+          var ver = r8.vigente(function () { l.classList.remove("consola__linea--espera"); });
+          MensajeError.romper(pre, c.linea, { marca: c.err.marca });
+          if (c.rebota !== null) {
+            MensajeError.lanzar(pre, c.linea, c.err.tipo, c.rebota, { atrapa: false, siguiente: l, alSeguir: ver });
+          } else {
+            MensajeError.lanzar(pre, c.linea, c.err.tipo, l, { alLlegar: ver });
+          }
+        }, 300 + (c.en - 1) * 450 + 200);
+      }
+    });
+    return { prog: prog, res: res, tipo: tipo };
+  }
+
+  function cambiarReto() {
+    pintarReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+    document.querySelectorAll("#reto-tipo .opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    var hayLineas = ORIGINAL.some(function (o) { return dentro[o.id]; });
+    leccion.listoParaComprobar(hayLineas && tipoReto() !== null);
+  }
+
+  function entrarReto() {
+    $("reto-lineas").querySelectorAll(".interruptor").forEach(function (b) { b.disabled = false; });
+    document.querySelectorAll('input[name="reto-tipo"]').forEach(function (r) { r.disabled = false; });
+    pintarReto();
+  }
+
+  function texto(r) {
+    return r.salida.map(function (s) { return s.pregunta ? s.pregunta + s.dato : s.texto; }).join("\n");
+  }
+
+  function comprobarReto() {
+    var corrida = probarReto();
+    if (!corrida) return false;
+    var res = corrida.res;
+    var tipo = corrida.tipo;
+    var fb = $("reto-fb");
+    var opcion = document.querySelector('input[name="reto-tipo"]:checked').closest(".opcion");
+    var esperado = {
+      a: "Your name: Ana\nYour grade: 17\nAna has 17\nThanks",
+      b: "Your name: Ana\nYour grade: seventeen\nThat's not a number\nThanks"
+    };
+    var pistas = [];
+    var corte = res.b.corte || res.a.corte;
+    if (corte) {
+      if (corte.err.tipo === "NameError") pistas.push("print(name, \"has\", grade) was left outside the try: if int() fails, grade doesn’t exist and you get NameError. What needs the line that fails goes inside.");
+      else if (!dentro[2]) pistas.push("The int() line was left outside the try: it’s the one that can fail, and with no net the program stops.");
+      else pistas.push("int(\"seventeen\") gives ValueError, but your net is of another type: it bounces off and the program stops.");
+    } else if (texto(res.b) !== esperado.b) {
+      pistas.push("With “seventeen”, “Thanks” didn’t show: it was inside the try, after the line that fails, so it was skipped. Take it out of the try.");
+    }
+    if (!corte && dentro[1]) pistas.push("input() alone never fails: take it out of the try, keep it short.");
+    if (!corte && tipo === "") pistas.push("It works, but except: with no type would also catch a misspelled name and hide it. Give it its type.");
+    if (tipo && tipo !== "ValueError" && !corte) pistas.push("The net must be the type that int() gives: ValueError.");
+    var bien = !pistas.length && texto(res.a) === esperado.a && texto(res.b) === esperado.b;
+    if (bien) {
+      opcion.classList.add("opcion--correcta");
+      Pasos.feedback(fb, "ok", "Well-built net! With “17”, the except is skipped. With “seventeen”, the ValueError falls into its net, line 4 is skipped and the program goes on to “Thanks”.");
+      $("reto-lineas").querySelectorAll(".interruptor").forEach(function (b) { b.disabled = true; });
+      document.querySelectorAll('input[name="reto-tipo"]').forEach(function (r) { r.disabled = true; });
+      return true;
+    }
+    if (tipo !== "ValueError") opcion.classList.add("opcion--incorrecta");
+    Pasos.feedback(fb, "pista", pistas.join(" ") || "Look at both outputs: are they the ones the task asks for?");
+    return false;
+  }
+
+  /* ---------- Summary ---------- */
+  Python.escribir($("resumen-codigo"), [
+    "try:",
+    '    grade = int(input("Your grade: "))  # may fail',
+    '    print("Your grade is", grade)       # needs grade',
+    "except ValueError:                      # the net and its type",
+    '    print("That\'s not a number")',
+    'print("Done")                           # and it goes on'
+  ]);
+  MensajeError.zona($("resumen-codigo"), { proteger: [0, 2], atrapar: [3, 4] });
+
+  /* ---------- Wiring ---------- */
+  $("s1-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar1(b.getAttribute("data-valor")); });
+  });
+  $("s1-ejecutar").addEventListener("click", function () { ejecutar1(leccion); });
+
+  var traza2 = conDatos({
+    pre: $("s2-codigo"), explicacion: $("s2-explicacion"), consola: $("s2-consola"),
+    ejecutar: $("s2-ejecutar"), reproducir: $("s2-reproducir"), reiniciar: $("s2-reiniciar"),
+    grupo: $("s2-datos"), vistos: s2, intervalo: 1700,
+    dato: function () { return dato2; },
+    elegir: function (d) { dato2 = d; },
+    generar: traza2, limpiar: limpiar2, alPaso: paso2,
+    alTerminar: function (d) {
+      var fb = $("s2-fb");
+      var vioBien = s2.alguno(["15"]);
+      var vioMal = s2.alguno(["fifteen", "12.5"]);
+      if (vioBien && vioMal) {
+        Pasos.feedback(fb, "ok", "Two paths: if nothing fails, the whole try runs and the except is skipped. If a line fails, the rest of the try is skipped and the except runs. Either way, the program goes on.");
+        leccion.desbloquear();
+      } else if (esEntero(d)) {
+        Pasos.feedback(fb, "pista", "Nothing failed and the except was skipped. Now try an input that is not a whole number.");
+      } else {
+        Pasos.feedback(fb, "pista", "The error jumped to the net and the program went on. Now try “15”.");
+      }
+    }
+  });
+
+  armarPredicciones($("s3-predicciones"), PRED3, $("s3-fb"), function (ultima) {
+    Pasos.feedback($("s3-fb"), "ok", ultima.ok + " All three right! What comes before the error runs; what comes after, in the try, is skipped.");
+    leccion.desbloquear();
+  });
+
+  var traza4 = conDatos({
+    pre: $("s4-codigo"), explicacion: $("s4-explicacion"), consola: $("s4-consola"),
+    ejecutar: $("s4-ejecutar"), reproducir: $("s4-reproducir"), reiniciar: $("s4-reiniciar"),
+    grupo: $("s4-datos"), vistos: s4, intervalo: 1800,
+    dato: function () { return dato4; },
+    elegir: function (d) { dato4 = d; },
+    generar: traza4, limpiar: limpiar4, alPaso: paso4,
+    alTerminar: function (d) {
+      var fb = $("s4-fb");
+      var textos = {
+        "3": "With 3 nothing fails: the except is skipped.",
+        "three": "With “three”, the ValueError falls into its net.",
+        "0": "With 0, the ZeroDivisionError bounces off: the net is only for ValueError. The program stops and “Done” never shows."
+      };
+      var faltan = ["3", "three", "0"].filter(function (k) { return !s4.alguno([k]); });
+      if (!faltan.length) {
+        Pasos.feedback(fb, "ok", textos[d] + " An except ValueError: net only catches ValueError: the other errors go right past it.");
+        leccion.desbloquear();
+      } else {
+        Pasos.feedback(fb, d === "0" ? "pista" : "ok", textos[d] + " Also try “" + faltan.join("” and “") + "”.");
+      }
+    }
+  });
+
+  var traza5 = conDatos({
+    pre: $("s5-codigo"), explicacion: $("s5-explicacion"), consola: $("s5-consola"),
+    ejecutar: $("s5-ejecutar"), reproducir: $("s5-reproducir"), reiniciar: $("s5-reiniciar"),
+    grupo: $("s5-datos"), vistos: s5, intervalo: 2300,
+    dato: function () { return dato5; },
+    elegir: function (d) { dato5 = d; },
+    generar: traza5,
+    limpiar: function () { r5.cortar(); Pasos.limpiarFeedback($("s5-fb")); },
+    alPaso: paso5,
+    alTerminar: function (d) {
+      var fb = $("s5-fb");
+      if (s5.todos(["three", "0"])) {
+        Pasos.feedback(fb, "ok", "Each error found its net: ValueError in the first one and ZeroDivisionError in the second, each with its warning. Only one net runs: the first one of its type.");
+        leccion.desbloquear();
+      } else if (d === "3") {
+        Pasos.feedback(fb, "pista", "With no errors, both nets are skipped. Try “three” and “0”.");
+      } else {
+        Pasos.feedback(fb, "pista", (d === "0" ? "The ZeroDivisionError bounced off the first net and fell into the second." : "The ValueError fell into the first net.") + " Now try “" + (d === "0" ? "three" : "0") + "”.");
+      }
+    }
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar6(b.getAttribute("data-valor")); });
+  });
+  $("s6-ejecutar").addEventListener("click", function () { ejecutar6(leccion); });
+
+  $("s7-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { preparar7(b.getAttribute("data-valor")); });
+  });
+  $("s7-ejecutar").addEventListener("click", function () { ejecutar7(leccion); });
+
+  $("reto-lineas").querySelectorAll(".interruptor").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var id = Number(b.getAttribute("data-linea"));
+      dentro[id] = !dentro[id];
+      b.setAttribute("aria-pressed", String(dentro[id]));
+      cambiarReto();
+    });
+  });
+  document.querySelectorAll('input[name="reto-tipo"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-probar").addEventListener("click", function () {
+    Pasos.limpiarFeedback($("reto-fb"));
+    probarReto();
+  });
+
+  // Initial state
+  preparar1("sin");
+  preparar6("largo");
+  preparar7("todo");
+  pintarReto();
+
+  var leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-red": function () { preparar1(version1); },
+      "paso-caminos": function () { traza2.detener(); },
+      "paso-tipo": function () { traza4.detener(); },
+      "paso-varios": function () { traza5.detener(); },
+      "paso-corto": function () { preparar6(version6); },
+      "paso-trampa": function () { preparar7(version7); },
+      "paso-reto": entrarReto
+    },
+    comprobar: { "paso-reto": comprobarReto }
+  });
+})();
+</script>
+</body>
+</html>
