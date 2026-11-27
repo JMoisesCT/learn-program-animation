@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typing errors · Learn to program</title>
+  <meta name="description" content="Interactive lesson: typing errors in Python. Python reads the whole program before running it: with a SyntaxError or an IndentationError not even the first line runs. Colons, parentheses, quotes, = and ==, and indentation.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../../assets/css/base.css">
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .pregunta { margin: var(--esp-4) 0 0; font-weight: 600; text-align: center; }
+    .pregunta code { font-weight: 700; }
+
+    /* ---------- The two phases: read it all, then run ---------- */
+    .fases { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: 0; padding: 0; list-style: none; }
+    .fase { display: inline-flex; align-items: center; gap: 0; padding: 0.2em 0.8em; border: 2px solid var(--color-borde); border-radius: 999px; background: var(--color-superficie); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); transition: border-color var(--dur-rapida), background-color var(--dur-rapida), color var(--dur-rapida), opacity var(--dur-rapida); }
+    .fase__estado:empty { display: none; }
+    .fase__estado { font-weight: 600; }
+    .fase--activa { border-color: var(--color-azul); color: var(--color-azul); background: var(--color-azul-suave); }
+    .fase--ok { border-color: var(--color-ok); color: var(--color-ok); background: var(--color-ok-suave); }
+    .fase--error { border-color: var(--color-error); color: var(--color-error); background: #fff6f5; animation: sacudir 380ms ease; }
+    .fase--apagada { border-style: dashed; color: #6b7480; }
+    .fases + .consola { margin-top: var(--esp-3); }
+
+    /* ---------- The scanner: a band that moves down reading the lines ---------- */
+    .codigo .escaner { position: absolute; left: 0; right: 0; top: 0; height: 1.7em; pointer-events: none; border-bottom: 2px solid #6ee7a0; background: linear-gradient(to bottom, rgba(110, 231, 160, 0), rgba(110, 231, 160, 0.22)); opacity: 0; transition: transform 150ms linear, opacity 260ms ease, border-color 200ms, background 200ms; }
+    .codigo .escaner--visible { opacity: 1; }
+    .codigo .escaner__rotulo { position: absolute; right: var(--esp-3); top: 50%; transform: translateY(-50%); padding: 0 0.55em; border-radius: 999px; background: #233041; font-family: var(--fuente); font-size: 0.7rem; font-weight: 700; line-height: 1.6; color: #6ee7a0; white-space: nowrap; }
+    .codigo .escaner--busca { border-color: #ffb35c; background: linear-gradient(to bottom, rgba(255, 179, 92, 0), rgba(255, 179, 92, 0.22)); }
+    .codigo .escaner--busca .escaner__rotulo { color: #ffd7a8; }
+    .codigo .escaner--error { border-color: #ff6358; background: linear-gradient(to bottom, rgba(255, 99, 88, 0), rgba(255, 99, 88, 0.28)); }
+    .codigo .escaner--error .escaner__rotulo { color: #ffb4ae; }
+    .codigo .linea--leida::before { color: #6ee7a0; }
+    /* “Look here too”: the line the message names (after 'if' statement on line 2) */
+    .codigo .linea--mira { outline: 2px dashed #ffd479; outline-offset: -2px; }
+    .codigo .linea--mira.linea--no-corre { opacity: 0.8; filter: none; }
+
+    /* ---------- Tapping where something is missing ---------- */
+    .codigo .toque { display: inline-block; width: 1em; height: 1.3em; margin: 0 0.1em; padding: 0; vertical-align: -0.3em; border: 2px dashed #7db8ff; border-radius: 4px; background: rgba(125, 184, 255, 0.14); cursor: pointer; font: inherit; color: #cfe4ff; animation: toque-entra 300ms var(--curva-rebote) both; }
+    .codigo .toque:hover { background: rgba(125, 184, 255, 0.4); }
+    .codigo .toque:focus-visible { outline: 3px solid #7db8ff; outline-offset: 2px; }
+    .codigo .toque--mal { border-color: #ffb35c; background: rgba(255, 179, 92, 0.25); animation: sacudir 380ms ease; }
+    .codigo .puesto { display: inline-block; border-radius: 3px; background: rgba(80, 200, 130, 0.3); color: #b7f5cf; font-weight: 700; animation: puesto-entra 500ms var(--curva-rebote) both; }
+    @keyframes toque-entra { from { transform: scale(0.3); opacity: 0; } }
+    @keyframes puesto-entra { from { transform: translateY(-0.6em) scale(1.6); opacity: 0; } }
+    /* The parentheses you tap to see their partner */
+    .codigo .paren { display: inline-block; min-width: 1.1em; margin: 0 0.05em; padding: 0; border: 2px solid #5f6b7a; border-radius: 4px; background: rgba(255, 255, 255, 0.06); font: inherit; color: inherit; cursor: pointer; line-height: 1.25; }
+    .codigo .paren:hover { border-color: #b8c0ca; }
+    .codigo .paren:focus-visible { outline: 3px solid #7db8ff; outline-offset: 2px; }
+    .codigo .paren--pareja { border-color: #7db8ff; background: rgba(125, 184, 255, 0.3); color: #fff; }
+    .codigo .paren--sola { border-color: #ff6358; background: rgba(255, 99, 88, 0.3); color: #fff; animation: sacudir 380ms ease; }
+
+    /* ---------- Choosing a line (indentation and challenge) ---------- */
+    .codigo--tocable .linea { cursor: pointer; }
+    .codigo--tocable .linea:hover { background: rgba(255, 255, 255, 0.07); }
+    .codigo--tocable .linea:focus-visible { outline: 3px solid #7db8ff; outline-offset: -3px; }
+    .codigo .linea--elegida { background: rgba(125, 184, 255, 0.16); box-shadow: inset 0 0 0 2px #7db8ff; }
+    .codigo .linea--movida { animation: linea-movida 320ms ease; }
+    @keyframes linea-movida { from { background: rgba(125, 184, 255, 0.35); } }
+    .elegida { margin: var(--esp-3) 0 0; min-height: 1.5em; text-align: center; font-size: var(--texto-sm); color: var(--color-texto-suave); }
+    .elegida strong { color: var(--color-texto); }
+
+    /* ---------- Options that are code ---------- */
+    .opciones--lista { grid-template-columns: 1fr; gap: var(--esp-2); }
+    .opciones--lista .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); text-align: left; white-space: pre; overflow-x: auto; }
+    .reto-opciones { margin: 0; gap: var(--esp-2); }
+    .reto-opciones .opcion span { padding: var(--esp-1) var(--esp-3); font-size: var(--texto-xs); line-height: 1.5; }
+    .reto-panel { margin-bottom: var(--esp-3); padding: var(--esp-3) var(--esp-4); border-radius: var(--radio); background: var(--color-superficie-2); }
+    .reto-panel .op-leyenda { display: none; }
+    #reto-codigo .linea--no-corre::after { content: none; }
+    #reto-fb { margin-top: var(--esp-3); padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .reto-opciones legend { margin-bottom: var(--esp-2); font-weight: 700; font-size: var(--texto-sm); }
+    .reto-ayuda { margin: 0; text-align: center; color: var(--color-texto-suave); }
+    .contador { display: inline-block; padding: 0.15em 0.8em; border-radius: 999px; background: var(--color-superficie-2); font-size: var(--texto-xs); font-weight: 700; color: var(--color-texto-suave); }
+    .contador--lleno { background: var(--color-ok-suave); color: var(--color-ok); }
+    .reto-cabeza { display: flex; justify-content: center; margin-bottom: var(--esp-3); }
+    .ronda { margin: 0 0 var(--esp-3); text-align: center; }
+
+    /* ---------- Predictions ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); margin-top: var(--esp-4); }
+    .elegir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .predicciones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-3); }
+    .prediccion { padding: var(--esp-2) var(--esp-3); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .prediccion__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-2) var(--esp-3); }
+    .prediccion__expr { display: block; padding: 0; background: none; font-family: var(--fuente-codigo); font-size: var(--texto-sm); font-weight: 700; white-space: pre; }
+    .prediccion .elegir { margin-top: 0; }
+    .prediccion .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); font-family: var(--fuente-codigo); font-size: var(--texto-sm); }
+    .prediccion .feedback { margin-top: var(--esp-2); padding: var(--esp-2) var(--esp-3); }
+    .prediccion__salida { margin: var(--esp-1) 0 0; font-family: var(--fuente-codigo); font-size: var(--texto-xs); font-weight: 700; }
+    .prediccion__salida--error { color: var(--color-error); }
+    .prediccion__salida:empty { display: none; }
+    @media (min-width: 1024px) {
+      .predicciones { gap: var(--esp-2); }
+      .prediccion__fila { flex-wrap: nowrap; }
+      .prediccion__expr { min-width: 0; }
+      .prediccion .elegir { flex: none; flex-wrap: nowrap; gap: var(--esp-1); }
+      .prediccion .btn { padding: var(--esp-1) var(--esp-2); font-size: var(--texto-xs); }
+      .prediccion__expr { font-size: var(--texto-xs); }
+    }
+
+    /* The challenge panel. On desktop it goes on top and keeps the height of its options
+       (Codigo.reservarAlto): the phases and the console, below it, don't move when they appear.
+       On mobile it goes after the console, as in the HTML, and grows without pushing it. */
+    .reto-panel { display: flex; flex-direction: column; justify-content: center; }
+    @media (min-width: 1024px) {
+      #paso-reto .reto-derecha { display: flex; flex-direction: column; }
+      #paso-reto .reto-derecha > * { flex: none; }
+      #paso-reto .reto-panel { order: -1; }
+    }
+    /* RETO-LAB */
+    /* Challenge: on desktop the message goes under the code (on the right it pushed the page under
+       the footer) and the fixes for line 5 go two by two: the panel keeps less height above the console */
+    @media (min-width: 1024px) {
+      #paso-reto { grid-template-rows: auto auto 1fr; grid-template-areas: "intro resultado" "principal resultado" "notas resultado"; }
+      #paso-reto .lab__resultado { display: contents; }
+      #paso-reto .reto-derecha { grid-area: resultado; align-self: start; min-width: 0; }
+      #paso-reto #reto-fb { grid-area: notas; align-self: start; margin-top: var(--esp-4); }
+      #reto-op-4 { grid-template-columns: 1fr 1fr; }
+    }
+    /* /RETO-LAB */
+    @media (max-width: 1023.98px) {
+      .reto-panel { margin: var(--esp-3) 0 0; }
+    }
+    /* The question and the button of “A parenthesis left open” take turns in the same place */
+    .turno { display: grid; }
+    .turno > * { grid-area: 1 / 1; }
+
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__resultado { margin-top: var(--esp-4); }
+      /* Stacked, the console goes below the code and its buttons: whatever appears or goes
+         away above it keeps its place */
+      .fila-botones--fija { min-height: 3rem; }
+      /* Indentation: two fixed rows. Remove and add on top; run (or “Next
+         program”) below, and its row stays even when there is neither */
+      #paso-sangria .fila-botones { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(3rem, auto); justify-items: center; align-items: center; }
+      #paso-sangria .fila-botones > :nth-child(n+3) { grid-column: 1 / -1; }
+    }
+    /* The two phases, one per row: with their state (“: typing error”) they don't fit in
+       one (it takes about 430 px), and when they wrapped they pushed the console */
+    @media (max-width: 520px), (min-width: 1024px) and (max-width: 1099.98px) {
+      .fases { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+      .codigo .escaner__rotulo { font-size: 0.65rem; }
+      .opciones--lista .opcion span { font-size: var(--texto-xs); }
+      .prediccion .btn { padding: var(--esp-1) var(--esp-2); font-size: var(--texto-xs); }
+      .fila-botones { gap: var(--esp-2); }
+      .fila-botones .btn { padding: var(--esp-2) var(--esp-3); }
+      #paso-sangria .fila-botones .btn { padding-inline: var(--esp-2); font-size: var(--texto-sm); }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="errores-sintaxis">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos partir-codigo">
+
+    <!-- 1. First it reads, then it runs (an error while running) -->
+    <section class="paso" id="paso-correr" data-requiere aria-labelledby="h-correr">
+      <span class="paso__etiqueta">Errors 2/7 · Typing errors</span>
+      <h1 class="paso__titulo" id="h-correr">First it reads, then it runs</h1>
+      <p>Before running, Python <strong>reads the whole program</strong> to check that it is written correctly. This one has a misspelled name, like in the last lesson. Run it and watch the two phases.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s1-fases"></ol>
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. A typing error: nothing runs -->
+    <section class="paso" id="paso-escribir" data-requiere aria-labelledby="h-escribir">
+      <h2 class="paso__titulo" id="h-escribir">A typing error</h2>
+      <p>We fixed <code>grde</code>, but the <code>:</code> on line 4 got erased. Before you run it, think:</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Code"></pre>
+          <p class="pregunta" id="s2-pregunta">Will line 3 print <code>Hello, Ana</code>?</p>
+          <div class="elegir" id="s2-elegir" role="group" aria-labelledby="s2-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="si" aria-pressed="false">Yes, before the error</button>
+            <button type="button" class="btn btn-secundario" data-valor="no" aria-pressed="false">No, nothing</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s2-ejecutar" disabled>▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s2-fases"></ol>
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. The colon is missing -->
+    <section class="paso" id="paso-dospuntos" data-requiere aria-labelledby="h-dospuntos">
+      <h2 class="paso__titulo" id="h-dospuntos">The colon is missing</h2>
+      <p><code>expected ':'</code> means Python was waiting for a colon. Run it, then <strong>tap the spot</strong> in the line where it is missing. The <code>^</code> in the message help you.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="ronda"><span class="contador" id="s3-ronda">Program 1 of 3</span></p>
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <div class="fila-botones fila-botones--fija">
+            <button type="button" class="btn btn-secundario" id="s3-ejecutar">▶ Run</button>
+            <button type="button" class="btn btn-secundario" id="s3-siguiente" hidden>Next program ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s3-fases"></ol>
+          <div class="consola" id="s3-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. A parenthesis that was never closed -->
+    <section class="paso" id="paso-parentesis" data-requiere aria-labelledby="h-parentesis">
+      <h2 class="paso__titulo" id="h-parentesis">A parenthesis left open</h2>
+      <p>Every <code>(</code> needs its <code>)</code>. Run it and watch the scanner closely: how far does Python read before it complains?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Code"></pre>
+          <div class="turno">
+            <p class="pregunta" id="s4-pregunta" aria-live="polite"></p>
+            <div class="fila-botones">
+              <button type="button" class="btn btn-secundario" id="s4-ejecutar">▶ Run</button>
+            </div>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s4-fases"></ol>
+          <div class="consola" id="s4-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. A text left open -->
+    <section class="paso" id="paso-comillas" data-requiere aria-labelledby="h-comillas">
+      <h2 class="paso__titulo" id="h-comillas">A text left open</h2>
+      <p>Quotes come in pairs too. Run it, read the message and try some fixes: choose one and run it. Which one prints <code>Hello, Ana</code>?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Code"></pre>
+          <fieldset class="opciones opciones--codigo opciones--lista" id="s5-opciones" disabled>
+            <legend class="visualmente-oculto">Fix for line 2</legend>
+            <label class="opcion"><input type="radio" name="s5" value="com_b"><span>print("Hello, + name")</span></label>
+            <label class="opcion"><input type="radio" name="s5" value="com_c"><span>print(Hello, + name)</span></label>
+            <label class="opcion"><input type="radio" name="s5" value="com_a"><span>print("Hello, " + name)</span></label>
+          </fieldset>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s5-fases"></ol>
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. = instead of == -->
+    <section class="paso" id="paso-igual" data-requiere aria-labelledby="h-igual">
+      <h2 class="paso__titulo" id="h-igual"><code>=</code> or <code>==</code>?</h2>
+      <p>An <code>if</code> compares. Look at line 2 and think before you run it:</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s6-codigo" aria-label="Code"></pre>
+          <p class="pregunta" id="s6-pregunta">What will happen?</p>
+          <div class="elegir" id="s6-elegir" role="group" aria-labelledby="s6-pregunta">
+            <button type="button" class="btn btn-secundario" data-valor="funciona" aria-pressed="false">It prints Perfect!</button>
+            <button type="button" class="btn btn-secundario" data-valor="escribir" aria-pressed="false">Typing error: it doesn’t run</button>
+            <button type="button" class="btn btn-secundario" data-valor="correr" aria-pressed="false">It runs and fails on line 2</button>
+          </div>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s6-ejecutar" disabled>▶ Run</button>
+            <button type="button" class="btn btn-secundario" id="s6-arreglar" hidden>Do what the message suggests</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s6-fases"></ol>
+          <div class="consola" id="s6-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Indentation -->
+    <section class="paso" id="paso-sangria" data-requiere aria-labelledby="h-sangria">
+      <h2 class="paso__titulo" id="h-sangria">Indentation is part of the writing</h2>
+      <p>The spaces at the start tell which lines go <strong>inside</strong> the <code>if</code>. Run it, tap a line and add or remove indentation until it runs.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="ronda"><span class="contador" id="s7-ronda">Program 1 of 2</span></p>
+          <pre class="codigo codigo--tocable" id="s7-codigo" aria-label="Code: tap a line to choose it"></pre>
+          <p class="elegida" id="s7-elegida" aria-live="polite">Tap a line to choose it.</p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s7-quitar" disabled>⇤ Remove indent</button>
+            <button type="button" class="btn btn-secundario" id="s7-poner" disabled>Add indent ⇥</button>
+            <button type="button" class="btn btn-secundario" id="s7-ejecutar">▶ Run</button>
+            <button type="button" class="btn btn-secundario" id="s7-siguiente" hidden>Next program ▸</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <ol class="fases" id="s7-fases"></ol>
+          <div class="consola" id="s7-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Which error is it? -->
+    <section class="paso" id="paso-cual" data-requiere aria-labelledby="h-cual">
+      <h2 class="paso__titulo" id="h-cual">Which error is it?</h2>
+      <p>For each program, say which error it gives or whether it works. Remember: <code>SyntaxError</code> and <code>IndentationError</code> show up while <strong>reading</strong>; <code>NameError</code>, while <strong>running</strong>.</p>
+
+      <div class="tarjeta">
+        <ol class="predicciones" id="s8-predicciones"></ol>
+        <div class="feedback" id="s8-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 9. Challenge: three typing errors -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Three errors, one at a time</h2>
+      <p>This program has <strong>three</strong> typing errors, but Python only shows the first one it finds. Run it, tap the line the message points to and choose the fix, until it runs.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <div class="reto-cabeza"><span class="contador" id="reto-contador">Fixed: 0 of 3</span></div>
+          <pre class="codigo" id="reto-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="reto-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="reto-derecha">
+            <ol class="fases" id="reto-fases"></ol>
+            <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+            <!-- On mobile, the panel goes after the console (it grows without pushing it); on desktop, on top, with the height of its options kept -->
+            <div class="reto-panel" id="reto-panel">
+              <p class="reto-ayuda" id="reto-ayuda">Run it to see the first message.</p>
+              <fieldset class="opciones opciones--codigo opciones--lista reto-opciones" id="reto-op-2" hidden>
+                <legend>Fix for line 3</legend>
+                <label class="opcion"><input type="radio" name="reto-2" value="punto"><span>for grade in grades;</span></label>
+                <label class="opcion"><input type="radio" name="reto-2" value="medio"><span>for grade: in grades</span></label>
+                <label class="opcion"><input type="radio" name="reto-2" value="ok"><span>for grade in grades:</span></label>
+              </fieldset>
+              <fieldset class="opciones opciones--codigo opciones--lista reto-opciones" id="reto-op-4" hidden>
+                <legend>Fix for line 5</legend>
+                <label class="opcion"><input type="radio" name="reto-4" value="ok"><span>    if grade >= 11:
+        print(grade, "passed")</span></label>
+                <label class="opcion"><input type="radio" name="reto-4" value="fuera"><span>    if grade >= 11:
+print(grade, "passed")</span></label>
+                <label class="opcion"><input type="radio" name="reto-4" value="puntos"><span>    if grade >= 11:
+    print(grade, "passed"):</span></label>
+              </fieldset>
+              <fieldset class="opciones opciones--codigo opciones--lista reto-opciones" id="reto-op-5" hidden>
+                <legend>Fix for line 6</legend>
+                <label class="opcion"><input type="radio" name="reto-5" value="antes"><span>print("Average:", sum(grades)) / len(grades)</span></label>
+                <label class="opcion"><input type="radio" name="reto-5" value="otro"><span>print("Average:", sum(grades) / len(grades()</span></label>
+                <label class="opcion"><input type="radio" name="reto-5" value="ok"><span>print("Average:", sum(grades) / len(grades))</span></label>
+              </fieldset>
+            </div>
+          </div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">Python reads the whole program before running it: with a typing error not even the first line runs, and the message tells you where to look.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="../types/index.html">Next: Each error has a name →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../../assets/js/progreso.js"></script>
+<script src="../../../../assets/js/python.js"></script>
+<script src="../../../../assets/js/codigo.js"></script>
+<script src="../../../../assets/js/mensaje-error.js"></script>
+<script src="../../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* What Python 3.12 really gives with each program of the lesson: its lines, what it
+     prints and the error (type, message, line, the line as Python shows it and the columns
+     of the ^). Generated by running each program; don't write it by hand. */
+  var PY = {"correr":{"lineas":["name = \"Ana\"","grade = 15","print(\"Hello,\", name)","if grade >= 11:","    print(\"You passed with\", grde)"],"salida":["Hello, Ana"],"error":{"tipo":"NameError","mensaje":"name 'grde' is not defined. Did you mean: 'grade'?","linea":5,"codigo":"print(\"You passed with\", grde)","marca":[25,29],"sintaxis":false}},"escribir":{"lineas":["name = \"Ana\"","grade = 15","print(\"Hello,\", name)","if grade >= 11","    print(\"You passed with\", grade)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":4,"codigo":"if grade >= 11","marca":[14,15],"sintaxis":true}},"escribir_ok":{"lineas":["name = \"Ana\"","grade = 15","print(\"Hello,\", name)","if grade >= 11:","    print(\"You passed with\", grade)"],"salida":["Hello, Ana","You passed with 15"],"error":null},"dp_for":{"lineas":["for i in range(3)","    print(\"Round\", i)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":1,"codigo":"for i in range(3)","marca":[17,18],"sintaxis":true}},"dp_for_ok":{"lineas":["for i in range(3):","    print(\"Round\", i)"],"salida":["Round 0","Round 1","Round 2"],"error":null},"dp_while":{"lineas":["grade = 8","while grade < 11","    grade = grade + 1","print(\"Reached\", grade)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":2,"codigo":"while grade < 11","marca":[16,17],"sintaxis":true}},"dp_while_ok":{"lineas":["grade = 8","while grade < 11:","    grade = grade + 1","print(\"Reached\", grade)"],"salida":["Reached 11"],"error":null},"dp_def":{"lineas":["def greet(name)","    print(\"Hello,\", name)","greet(\"Ana\")"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":1,"codigo":"def greet(name)","marca":[15,16],"sintaxis":true}},"dp_def_ok":{"lineas":["def greet(name):","    print(\"Hello,\", name)","greet(\"Ana\")"],"salida":["Hello, Ana"],"error":null},"par":{"lineas":["grade = 15","print(\"Grade: \" + str(grade)","print(\"Done\")"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"'(' was never closed","linea":2,"codigo":"print(\"Grade: \" + str(grade)","marca":[5,6],"sintaxis":true}},"par_ok":{"lineas":["grade = 15","print(\"Grade: \" + str(grade))","print(\"Done\")"],"salida":["Grade: 15","Done"],"error":null},"com":{"lineas":["name = \"Ana\"","print(\"Hello, + name)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"unterminated string literal (detected at line 2)","linea":2,"codigo":"print(\"Hello, + name)","marca":[6,7],"sintaxis":true}},"com_a":{"lineas":["name = \"Ana\"","print(\"Hello, \" + name)"],"salida":["Hello, Ana"],"error":null},"com_b":{"lineas":["name = \"Ana\"","print(\"Hello, + name\")"],"salida":["Hello, + name"],"error":null},"com_c":{"lineas":["name = \"Ana\"","print(Hello, + name)"],"salida":[],"error":{"tipo":"NameError","mensaje":"name 'Hello' is not defined","linea":2,"codigo":"print(Hello, + name)","marca":[6,11],"sintaxis":false}},"igual":{"lineas":["grade = 20","if grade = 20:","    print(\"Perfect!\")"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"invalid syntax. Maybe you meant '==' or ':=' instead of '='?","linea":2,"codigo":"if grade = 20:","marca":[3,13],"sintaxis":true}},"igual_ok":{"lineas":["grade = 20","if grade == 20:","    print(\"Perfect!\")"],"salida":["Perfect!"],"error":null},"sangA_0000":{"lineas":["grade = 15","if grade >= 11:","print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"expected an indented block after 'if' statement on line 2","linea":3,"codigo":"print(\"You passed\")","marca":[0,1],"sintaxis":true}},"sangA_0001":{"lineas":["grade = 15","if grade >= 11:","print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"expected an indented block after 'if' statement on line 2","linea":3,"codigo":"print(\"You passed\")","marca":[0,1],"sintaxis":true}},"sangA_0010":{"lineas":["grade = 15","if grade >= 11:","    print(\"You passed\")","print(\"Done\")"],"salida":["You passed","Done"],"error":null},"sangA_0011":{"lineas":["grade = 15","if grade >= 11:","    print(\"You passed\")","    print(\"Done\")"],"salida":["You passed","Done"],"error":null},"sangA_0100":{"lineas":["grade = 15","    if grade >= 11:","print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"if grade >= 11:","marca":null,"sintaxis":true}},"sangA_0101":{"lineas":["grade = 15","    if grade >= 11:","print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"if grade >= 11:","marca":null,"sintaxis":true}},"sangA_0110":{"lineas":["grade = 15","    if grade >= 11:","    print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"if grade >= 11:","marca":null,"sintaxis":true}},"sangA_0111":{"lineas":["grade = 15","    if grade >= 11:","    print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"if grade >= 11:","marca":null,"sintaxis":true}},"sangA_1000":{"lineas":["    grade = 15","if grade >= 11:","print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1001":{"lineas":["    grade = 15","if grade >= 11:","print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1010":{"lineas":["    grade = 15","if grade >= 11:","    print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1011":{"lineas":["    grade = 15","if grade >= 11:","    print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1100":{"lineas":["    grade = 15","    if grade >= 11:","print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1101":{"lineas":["    grade = 15","    if grade >= 11:","print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1110":{"lineas":["    grade = 15","    if grade >= 11:","    print(\"You passed\")","print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangA_1111":{"lineas":["    grade = 15","    if grade >= 11:","    print(\"You passed\")","    print(\"Done\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_0000":{"lineas":["grade = 15","print(\"Your grade:\", grade)","if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"expected an indented block after 'if' statement on line 3","linea":4,"codigo":"print(\"You passed\")","marca":[0,1],"sintaxis":true}},"sangB_0001":{"lineas":["grade = 15","print(\"Your grade:\", grade)","if grade >= 11:","    print(\"You passed\")"],"salida":["Your grade: 15","You passed"],"error":null},"sangB_0010":{"lineas":["grade = 15","print(\"Your grade:\", grade)","    if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":3,"codigo":"if grade >= 11:","marca":null,"sintaxis":true}},"sangB_0011":{"lineas":["grade = 15","print(\"Your grade:\", grade)","    if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":3,"codigo":"if grade >= 11:","marca":null,"sintaxis":true}},"sangB_0100":{"lineas":["grade = 15","    print(\"Your grade:\", grade)","if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"print(\"Your grade:\", grade)","marca":null,"sintaxis":true}},"sangB_0101":{"lineas":["grade = 15","    print(\"Your grade:\", grade)","if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"print(\"Your grade:\", grade)","marca":null,"sintaxis":true}},"sangB_0110":{"lineas":["grade = 15","    print(\"Your grade:\", grade)","    if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"print(\"Your grade:\", grade)","marca":null,"sintaxis":true}},"sangB_0111":{"lineas":["grade = 15","    print(\"Your grade:\", grade)","    if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":2,"codigo":"print(\"Your grade:\", grade)","marca":null,"sintaxis":true}},"sangB_1000":{"lineas":["    grade = 15","print(\"Your grade:\", grade)","if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1001":{"lineas":["    grade = 15","print(\"Your grade:\", grade)","if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1010":{"lineas":["    grade = 15","print(\"Your grade:\", grade)","    if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1011":{"lineas":["    grade = 15","print(\"Your grade:\", grade)","    if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1100":{"lineas":["    grade = 15","    print(\"Your grade:\", grade)","if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1101":{"lineas":["    grade = 15","    print(\"Your grade:\", grade)","if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1110":{"lineas":["    grade = 15","    print(\"Your grade:\", grade)","    if grade >= 11:","print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"sangB_1111":{"lineas":["    grade = 15","    print(\"Your grade:\", grade)","    if grade >= 11:","    print(\"You passed\")"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"unexpected indent","linea":1,"codigo":"grade = 15","marca":null,"sintaxis":true}},"pred1":{"lineas":["for i in range(3):","print(i)"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"expected an indented block after 'for' statement on line 1","linea":2,"codigo":"print(i)","marca":[0,1],"sintaxis":true}},"pred2":{"lineas":["grade = 15","print(\"Your grade:\", grade"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"'(' was never closed","linea":2,"codigo":"print(\"Your grade:\", grade","marca":[5,6],"sintaxis":true}},"pred3":{"lineas":["grade = 15","if grade >= 11:","    print(Grade)"],"salida":[],"error":{"tipo":"NameError","mensaje":"name 'Grade' is not defined. Did you mean: 'grade'?","linea":3,"codigo":"print(Grade)","marca":[6,11],"sintaxis":false}},"pred4":{"lineas":["age = 15","if age == 15:","    print(\"You are 15\")"],"salida":["You are 15"],"error":null},"pred5":{"lineas":["print('Hello\")"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"unterminated string literal (detected at line 1)","linea":1,"codigo":"print('Hello\")","marca":[6,7],"sintaxis":true}},"reto_0":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades","    if grade >= 11:","    print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":3,"codigo":"for grade in grades","marca":[19,20],"sintaxis":true}},"reto_1":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades:","    if grade >= 11:","    print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades)"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"expected an indented block after 'if' statement on line 4","linea":5,"codigo":"print(grade, \"passed\")","marca":[0,1],"sintaxis":true}},"reto_2":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades:","    if grade >= 11:","        print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"'(' was never closed","linea":6,"codigo":"print(\"Average:\", sum(grades) / len(grades)","marca":[5,6],"sintaxis":true}},"reto_3":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades:","    if grade >= 11:","        print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades))"],"salida":["Class grades","14 passed","16 passed","Average: 13.0"],"error":null},"reto_b":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades","    if grade >= 11:","        print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades)"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":3,"codigo":"for grade in grades","marca":[19,20],"sintaxis":true}},"reto_c":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades","    if grade >= 11:","    print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades))"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":3,"codigo":"for grade in grades","marca":[19,20],"sintaxis":true}},"reto_bc":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades","    if grade >= 11:","        print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades))"],"salida":[],"error":{"tipo":"SyntaxError","mensaje":"expected ':'","linea":3,"codigo":"for grade in grades","marca":[19,20],"sintaxis":true}},"reto_ac":{"lineas":["grades = [14, 9, 16]","print(\"Class grades\")","for grade in grades:","    if grade >= 11:","    print(grade, \"passed\")","print(\"Average:\", sum(grades) / len(grades))"],"salida":[],"error":{"tipo":"IndentationError","mensaje":"expected an indented block after 'if' statement on line 4","linea":5,"codigo":"print(grade, \"passed\")","marca":[0,1],"sintaxis":true}}};
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+
+  // Feedback with code inside (Pasos.feedback only sets text)
+  function fb(el, tipo, html) {
+    Pasos.feedback(el, tipo, "");
+    el.lastElementChild.innerHTML = html;
+  }
+
+  // A step’s timers, to cut them when resetting
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) { ids.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  function marcarBotones(grupo, valor) {
+    grupo.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-valor") === valor));
+    });
+  }
+
+  function lineasDe(pre) { return pre.querySelectorAll(".linea"); }
+
+  /* ---------- Inserting into a colored line, by column ---------- */
+  // Walks the line’s text nodes and puts nodo at column k (without breaking the colors)
+  function insertarEn(l, k, nodo) {
+    var w = document.createTreeWalker(l, NodeFilter.SHOW_TEXT, null);
+    var pos = 0, ultimo = null;
+    while (w.nextNode()) {
+      var n = w.currentNode, largo = n.nodeValue.length;
+      if (k < pos + largo) {
+        var resto = n.splitText(k - pos);
+        resto.parentNode.insertBefore(nodo, resto);
+        return;
+      }
+      pos += largo;
+      ultimo = n;
+    }
+    if (ultimo) ultimo.parentNode.insertBefore(nodo, ultimo.nextSibling);
+    else l.appendChild(nodo);
+  }
+
+  // Replaces the character at column k with nodo (which holds it)
+  function envolverEn(l, k, nodo) {
+    var w = document.createTreeWalker(l, NodeFilter.SHOW_TEXT, null);
+    var pos = 0;
+    while (w.nextNode()) {
+      var n = w.currentNode, largo = n.nodeValue.length;
+      if (k < pos + largo) {
+        var medio = n.splitText(k - pos);
+        medio.splitText(1);
+        nodo.textContent = medio.nodeValue;
+        medio.parentNode.replaceChild(nodo, medio);
+        return;
+      }
+      pos += largo;
+    }
+  }
+
+  /* ---------- The messages in plain words ---------- */
+  function traducir(e) {
+    var m = e.mensaje, x;
+    if (m === "expected ':'") return "Python was waiting for a <code>:</code>. The colon at the end of the line is missing.";
+    if ((x = /^'(.)' was never closed$/.exec(m))) return "This <code>" + x[1] + "</code> was opened and never closed: it is missing its partner.";
+    if ((x = /^unterminated string literal \(detected at line (\d+)\)$/.exec(m))) return "A text that never ends: the quotes were opened and never closed (Python noticed on line " + x[1] + ").";
+    if (/^invalid syntax\. Maybe you meant '=='/.test(m)) return "Python can’t read this. Did you mean <code>==</code> or <code>:=</code> instead of <code>=</code>?";
+    if ((x = /^expected an indented block after '(\w+)' statement on line (\d+)$/.exec(m))) return "After the <code>" + x[1] + "</code> on line " + x[2] + ", Python was waiting for an indented block.";
+    if (m === "unexpected indent") return "Indentation Python didn’t expect: this line starts with spaces, but it isn’t inside anything.";
+    if ((x = /^name '(\w+)' is not defined\. Did you mean: '(\w+)'\?$/.exec(m))) return "There is no variable called <code>" + x[1] + "</code>. Did you mean <code>" + x[2] + "</code>?";
+    if ((x = /^name '(\w+)' is not defined$/.exec(m))) return "There is no variable called <code>" + x[1] + "</code>.";
+    return "";
+  }
+
+  /* ---------- The two phases ---------- */
+  function crearFases(ol) {
+    ol.setAttribute("aria-label", "Phases");
+    ol.innerHTML = '<li class="fase" data-fase="leer">1 · Read it all<span class="fase__estado"></span></li>' +
+      '<li class="fase" data-fase="correr">2 · Run<span class="fase__estado"></span></li>';
+    function poner(nombre, estado, texto) {
+      var li = ol.querySelector('[data-fase="' + nombre + '"]');
+      li.className = "fase" + (estado ? " fase--" + estado : "");
+      li.querySelector(".fase__estado").textContent = texto || "";
+    }
+    return {
+      poner: poner,
+      borrar: function () { poner("leer", null); poner("correr", null); }
+    };
+  }
+
+  /* ---------- A program that Python reads and then runs ----------
+     prog.correr(resultado, { traza, alTerminar }): the scanner moves down the lines; if it
+     finds a typing error it stops, marks the line and runs nothing. Otherwise it runs the
+     trace (line indexes; by default, all of them in order): each print takes the next line
+     of the real output, and an error while running cuts the program off there. */
+  var LEER = 230, CORRER = 620;
+
+  function crearPrograma(pre, consola, olFases) {
+    var r = reloj();
+    var fases = crearFases(olFases);
+    var banda = null;
+
+    function escribir(lineas) {
+      r.cortar();
+      Python.escribir(pre, lineas);
+      banda = null;
+    }
+
+    function ponerBanda() {
+      if (banda && banda.parentNode === pre) return banda;
+      banda = document.createElement("div");
+      banda.className = "escaner";
+      banda.setAttribute("aria-hidden", "true");
+      banda.innerHTML = '<span class="escaner__rotulo"></span>';
+      pre.appendChild(banda);
+      return banda;
+    }
+
+    function moverBanda(i, rotulo, clase) {
+      var l = lineasDe(pre)[i];
+      if (!l) return;
+      var b = ponerBanda();
+      b.style.height = l.offsetHeight + "px";
+      b.style.transform = "translateY(" + l.offsetTop + "px)";
+      b.className = "escaner escaner--visible" + (clase ? " escaner--" + clase : "");
+      b.firstChild.textContent = rotulo;
+      l.classList.add("linea--leida");
+    }
+
+    function quitarBanda() { if (banda) banda.classList.remove("escaner--visible"); }
+
+    function limpiar() {
+      r.cortar();
+      Codigo.limpiar(pre);
+      lineasDe(pre).forEach(function (l) { l.classList.remove("linea--leida", "linea--mira"); });
+      quitarBanda();
+      Codigo.consola(consola, []);
+      fases.borrar();
+    }
+
+    function mensaje(e) {
+      var m = MensajeError.crear(consola, {
+        tipo: e.tipo,
+        mensaje: e.mensaje,
+        sintaxis: e.sintaxis,
+        traduccion: traducir(e),
+        marcos: [{ linea: e.linea, codigo: e.codigo, marca: e.marca || undefined }],
+        codigo: pre
+      });
+      m.mostrar();
+      return m;
+    }
+
+    // The piece the ^ point to, if it falls inside the line (to underline it in the code)
+    function pieza(e) {
+      if (!e.marca || e.tipo === "IndentationError") return undefined;
+      var t = e.codigo.slice(e.marca[0], e.marca[1]);
+      return t.trim() ? t : undefined;
+    }
+
+    function correr(res, o) {
+      o = o || {};
+      limpiar();
+      var ls = lineasDe(pre);
+      var n = ls.length;
+      var e = res.error;
+      var t = 0;
+      fases.poner("leer", "activa", ": reading…");
+
+      // 1) Read: the scanner moves down line by line
+      if (e && e.sintaxis) {
+        var k = e.linea - 1;
+        for (var i = 0; i <= k; i++) {
+          (function (i) { r.luego(function () { moverBanda(i, i === k ? "✖ something’s wrong" : "reading…", i === k ? "error" : null); }, t); })(i);
+          t += LEER;
+        }
+        // An open parenthesis: Python keeps reading to the end looking for the closing one…
+        if (/was never closed/.test(e.mensaje) && k < n - 1) {
+          for (var j = k + 1; j < n; j++) {
+            (function (j) { r.luego(function () { moverBanda(j, "looking for )", "busca"); }, t); })(j);
+            t += 560;
+          }
+          // …and doesn’t find it: it goes back to mark where it was opened
+          r.luego(function () { moverBanda(k, "✖ opened here", "error"); }, t);
+          t += 700;
+        }
+        r.luego(function () {
+          quitarBanda();
+          var cortadas = [];
+          for (var c = 0; c < n; c++) if (c !== k) cortadas.push(c);
+          MensajeError.romper(pre, k, { marca: pieza(e), cortadas: cortadas });
+          var otra = /on line (\d+)/.exec(e.mensaje);
+          if (otra && ls[Number(otra[1]) - 1]) ls[Number(otra[1]) - 1].classList.add("linea--mira");
+          fases.poner("leer", "error", ": typing error");
+          fases.poner("correr", "apagada", ": doesn’t start");
+          mensaje(e);
+          if (o.alTerminar) o.alTerminar(res);
+        }, t + 250);
+        return;
+      }
+
+      for (var a = 0; a < n; a++) {
+        (function (a) { r.luego(function () { moverBanda(a, "reading…"); }, t); })(a);
+        t += LEER;
+      }
+      r.luego(function () {
+        if (banda) { banda.firstChild.textContent = "✓ written correctly"; }
+        fases.poner("leer", "ok", "");
+      }, t);
+      t += 450;
+      r.luego(function () {
+        quitarBanda();
+        fases.poner("correr", "activa", ": line by line");
+      }, t);
+      t += 250;
+
+      // 2) Run
+      var traza = o.traza || Array.prototype.map.call(ls, function (_, i) { return i; });
+      var salida = res.salida.slice();
+      var falla = e ? e.linea - 1 : -1;
+      traza.every(function (i) {
+        var corta = i === falla;
+        r.luego(function () {
+          Codigo.marcar(pre, { activas: [i] });
+          if (corta) {
+            MensajeError.romper(pre, i, { marca: pieza(e) });
+            fases.poner("correr", "error", ": stopped at line " + (i + 1));
+            mensaje(e);
+            if (o.alTerminar) o.alTerminar(res);
+            return;
+          }
+          if (/^\s*print\(/.test(res.lineas[i]) && salida.length) {
+            var texto = salida.shift();
+            Codigo.agregar(consola, texto);
+            Codigo.volar(ls[i], consola.lastElementChild, texto, "vuelo--salida");
+          }
+        }, t);
+        t += CORRER;
+        return !corta;
+      });
+      if (falla !== -1) return;
+      r.luego(function () {
+        Codigo.marcar(pre, {});
+        fases.poner("correr", "ok", ": finished");
+        if (o.alTerminar) o.alTerminar(res);
+      }, t);
+    }
+
+    return { pre: pre, escribir: escribir, correr: correr, limpiar: limpiar, cortar: r.cortar, fases: fases };
+  }
+
+  /* ---------- Spots to tap where something is missing ---------- */
+  // huecos: [{ col, ok, pista, nombre }] on line i; alAcertar(col)
+  function ponerToques(pre, i, huecos, fbEl, alAcertar) {
+    var l = lineasDe(pre)[i];
+    huecos.slice().sort(function (a, b) { return b.col - a.col; }).forEach(function (h) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "toque";
+      b.setAttribute("aria-label", h.nombre);
+      b.addEventListener("click", function () {
+        if (!h.ok) {
+          b.classList.remove("toque--mal");
+          void b.offsetWidth;
+          b.classList.add("toque--mal");
+          fb(fbEl, "pista", h.pista);
+          return;
+        }
+        l.querySelectorAll(".toque").forEach(function (x) { x.remove(); });
+        alAcertar(h.col);
+      });
+      insertarEn(l, h.col, b);
+    });
+    var primero = l.querySelector(".toque");
+    if (primero) primero.focus({ preventScroll: true });
+  }
+
+  // After writing the fixed code, the new character pops in with a jump
+  function lucir(pre, i, col) {
+    var l = lineasDe(pre)[i];
+    if (!l) return;
+    var s = document.createElement("span");
+    s.className = "puesto";
+    envolverEn(l, col, s);
+  }
+
+  /* ---------- 1. First it reads, then it runs ---------- */
+  var p1 = crearPrograma($("s1-codigo"), $("s1-consola"), $("s1-fases"));
+  p1.escribir(PY.correr.lineas);
+  Codigo.consola($("s1-consola"), []);
+
+  /* ---------- 2. A typing error ---------- */
+  var p2 = crearPrograma($("s2-codigo"), $("s2-consola"), $("s2-fases"));
+  p2.escribir(PY.escribir.lineas);
+  Codigo.consola($("s2-consola"), []);
+  var prediccion2 = null;
+
+  /* ---------- 3. The colon is missing ---------- */
+  var p3 = crearPrograma($("s3-codigo"), $("s3-consola"), $("s3-fases"));
+  var PISTA_FINAL = function (que) { return "Not there. Look at the <code>^</code> in the message: they point to the <strong>end</strong> of the line. The <code>:</code> closes the <code>" + que + "</code> line."; };
+  var RONDAS3 = [
+    { clave: "dp_for", ok: "dp_for_ok", traza: [0, 1, 0, 1, 0, 1], huecos: [
+      { col: 3, nombre: "After for", pista: PISTA_FINAL("for") },
+      { col: 5, nombre: "After i", pista: PISTA_FINAL("for") },
+      { col: 8, nombre: "After in", pista: PISTA_FINAL("for") },
+      { col: 17, ok: true, nombre: "At the end, after range(3)" }] },
+    { clave: "dp_while", ok: "dp_while_ok", traza: [0, 1, 2, 1, 2, 1, 2, 1, 3], huecos: [
+      { col: 5, nombre: "After while", pista: PISTA_FINAL("while") },
+      { col: 11, nombre: "After grade", pista: PISTA_FINAL("while") },
+      { col: 13, nombre: "After <", pista: PISTA_FINAL("while") },
+      { col: 16, ok: true, nombre: "At the end, after 11" }] },
+    { clave: "dp_def", ok: "dp_def_ok", traza: [0, 2, 1], huecos: [
+      { col: 3, nombre: "After def", pista: PISTA_FINAL("def") },
+      { col: 9, nombre: "After greet, before the parenthesis", pista: PISTA_FINAL("def") },
+      { col: 14, nombre: "Inside the parenthesis, after name", pista: "Close. The parameters go inside the parenthesis; the <code>:</code> goes after you close it." },
+      { col: 15, ok: true, nombre: "At the end, after the parenthesis" }] }
+  ];
+  var ronda3 = 0;
+
+  function cargar3() {
+    var rd = RONDAS3[ronda3];
+    $("s3-ronda").textContent = "Program " + (ronda3 + 1) + " of " + RONDAS3.length;
+    p3.escribir(PY[rd.clave].lineas);
+    p3.limpiar();
+    $("s3-ejecutar").hidden = false;
+    $("s3-ejecutar").disabled = false;
+    $("s3-siguiente").hidden = true;
+  }
+
+  function ejecutar3(leccion) {
+    var rd = RONDAS3[ronda3];
+    $("s3-ejecutar").disabled = true;
+    Pasos.limpiarFeedback($("s3-fb"));
+    p3.correr(PY[rd.clave], {
+      alTerminar: function (res) {
+        $("s3-ejecutar").hidden = true;
+        fb($("s3-fb"), "pista", "Nothing ran. Tap the spot on line " + res.error.linea + " where the <code>:</code> is missing.");
+        ponerToques(p3.pre, res.error.linea - 1, rd.huecos, $("s3-fb"), function (col) {
+          var arreglado = PY[rd.ok];
+          p3.escribir(arreglado.lineas);
+          lucir(p3.pre, res.error.linea - 1, col);
+          fb($("s3-fb"), "ok", "There it goes! Now Python reads it again…");
+          p3.correr(arreglado, {
+            traza: rd.traza,
+            alTerminar: function () {
+              if (ronda3 < RONDAS3.length - 1) {
+                fb($("s3-fb"), "ok", "With the <code>:</code> in place, it read fine and ran. Now another program.");
+                $("s3-siguiente").hidden = false;
+                $("s3-siguiente").focus({ preventScroll: true });
+              } else {
+                fb($("s3-fb"), "ok", "<code>if</code>, <code>for</code>, <code>while</code>, <code>def</code> (and <code>else</code>, <code>elif</code>): a line that opens a block ends in <code>:</code>.");
+                leccion.desbloquear();
+              }
+            }
+          });
+        });
+      }
+    });
+  }
+
+  /* ---------- 4. A parenthesis left open ---------- */
+  var p4 = crearPrograma($("s4-codigo"), $("s4-consola"), $("s4-fases"));
+  p4.escribir(PY.par.lineas);
+  Codigo.consola($("s4-consola"), []);
+  // In print("Grade: " + str(grade): the ( of print (col 5) has no partner; the one of str (21) closes at 27
+  var PARENS4 = [{ col: 5, pareja: null }, { col: 21, pareja: 27 }, { col: 27, pareja: 21 }];
+  var HUECOS4 = [
+    { col: 15, nombre: "After \"Grade: \"", pista: "Then the <code>print</code> would close before <code>+ str(grade)</code>, and that part would be left out. The <code>)</code> of <code>print</code> closes everything it prints." },
+    { col: 28, ok: true, nombre: "At the end of the line" }
+  ];
+  var hecho4 = false;
+
+  function ponerParens(leccion) {
+    var l = lineasDe(p4.pre)[1];
+    var botones = {};
+    PARENS4.slice().sort(function (a, b) { return b.col - a.col; }).forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "paren";
+      envolverEn(l, p.col, b);
+      b.setAttribute("aria-label", (b.textContent === "(" ? "Opening parenthesis" : "Closing parenthesis") + ", column " + (p.col + 1));
+      botones[p.col] = b;
+    });
+    PARENS4.forEach(function (p) {
+      botones[p.col].addEventListener("click", function () {
+        l.querySelectorAll(".paren").forEach(function (x) { x.classList.remove("paren--pareja", "paren--sola"); });
+        if (p.pareja !== null) {
+          botones[p.col].classList.add("paren--pareja");
+          botones[p.pareja].classList.add("paren--pareja");
+          fb($("s4-fb"), "pista", "These two are partners: the <code>(</code> of <code>str</code> closes with that <code>)</code>. Look for a parenthesis that has none.");
+          return;
+        }
+        void botones[p.col].offsetWidth;
+        botones[p.col].classList.add("paren--sola");
+        fb($("s4-fb"), "ok", "That one! The <code>(</code> of <code>print</code> has no partner: it’s the one the <code>^</code> point to.");
+        setTimeout(function () {
+          p4.escribir(PY.par.lineas);
+          MensajeError.romper(p4.pre, 1, { cortadas: [] });
+          var sola = document.createElement("span");
+          sola.className = "paren paren--sola";
+          envolverEn(lineasDe(p4.pre)[1], 5, sola);
+          $("s4-pregunta").innerHTML = "Where does the missing <code>)</code> of <code>print</code> go? Tap the spot.";
+          ponerToques(p4.pre, 1, HUECOS4, $("s4-fb"), function (col) {
+            p4.escribir(PY.par_ok.lineas);
+            lucir(p4.pre, 1, col);
+            $("s4-pregunta").textContent = "";
+            fb($("s4-fb"), "ok", "Closed. Now Python reads it again…");
+            p4.correr(PY.par_ok, {
+              alTerminar: function () {
+                fb($("s4-fb"), "ok", "Every <code>(</code> with its <code>)</code>. When one is missing, the <code>^</code> mark where it <strong>was opened</strong>, not where it should close: look around it.");
+                hecho4 = true;
+                leccion.desbloquear();
+              }
+            });
+          });
+        }, espera(900));
+      });
+    });
+    $("s4-pregunta").textContent = "Tap the parentheses on line 2: which one has no partner?";
+    var primero = l.querySelector(".paren");
+    if (primero) primero.focus({ preventScroll: true });
+  }
+
+  /* Line 2 with the tappable parentheses or the spots to tap is wider: on mobile it
+     wraps onto two rows. The code keeps that height from the start. */
+  Codigo.reservarAlto(p4.pre, ["parens", "toques"], function (copia, estado) {
+    Python.escribir(copia, PY.par.lineas);
+    var l = lineasDe(copia)[1];
+    if (estado === "parens") {
+      PARENS4.slice().sort(function (a, b) { return b.col - a.col; }).forEach(function (p) {
+        var b = document.createElement("button");
+        b.className = "paren";
+        envolverEn(l, p.col, b);
+      });
+      return;
+    }
+    var sola = document.createElement("span");
+    sola.className = "paren paren--sola";
+    HUECOS4.slice().sort(function (a, b) { return b.col - a.col; }).forEach(function (h) {
+      var b = document.createElement("button");
+      b.className = "toque";
+      insertarEn(l, h.col, b);
+    });
+    envolverEn(l, 5, sola);
+  });
+
+  // The question shares its place with the “Run” button: it keeps the height of the longer one
+  Codigo.reservarAlto($("s4-pregunta"), [
+    "Tap the parentheses on line 2: which one has no partner?",
+    "Where does the missing <code>)</code> of <code>print</code> go? Tap the spot."
+  ], function (copia, html) { copia.innerHTML = html; });
+
+  function ejecutar4(leccion) {
+    $("s4-ejecutar").disabled = true;
+    Pasos.limpiarFeedback($("s4-fb"));
+    $("s4-pregunta").textContent = "";
+    p4.correr(PY.par, {
+      alTerminar: function () {
+        $("s4-ejecutar").hidden = true;
+        fb($("s4-fb"), "pista", "Python read <strong>to the end</strong> looking for the <code>)</code>. Since it never came, Python went back to line 2 and marked where the parenthesis was opened.");
+        ponerParens(leccion);
+      }
+    });
+  }
+
+  /* ---------- 5. A text left open ---------- */
+  var p5 = crearPrograma($("s5-codigo"), $("s5-consola"), $("s5-fases"));
+  p5.escribir(PY.com.lineas);
+  Codigo.consola($("s5-consola"), []);
+  var visto5 = false;
+  var FB5 = {
+    com_b: ["pista", "No error! But it printed <code>Hello, + name</code> just as it is: everything stayed inside the quotes. No error doesn’t mean it’s right. Try another one."],
+    com_c: ["pista", "Now the program was read, but it failed while running: without quotes, Python thinks <code>Hello</code> is a variable. Try another one."],
+    com_a: ["ok", "That’s it! The text <code>\"Hello, \"</code> opens and closes its quotes, and then <code>name</code> is added to it."]
+  };
+
+  function ejecutar5(leccion) {
+    var op = $("s5-opciones").querySelector("input:checked");
+    var clave = visto5 && op ? op.value : "com";
+    var res = PY[clave];
+    p5.escribir(res.lineas);
+    $("s5-ejecutar").disabled = true;
+    $("s5-opciones").disabled = true;
+    Pasos.limpiarFeedback($("s5-fb"));
+    p5.correr(res, {
+      alTerminar: function () {
+        $("s5-ejecutar").disabled = false;
+        $("s5-opciones").disabled = false;
+        if (clave === "com") {
+          visto5 = true;
+          fb($("s5-fb"), "pista", "The quotes of <code>\"Hello,</code> never close: Python reached the end of the line without finding the other one. Choose a fix and run it.");
+          $("s5-ejecutar").disabled = true;
+          return;
+        }
+        var f = FB5[clave];
+        fb($("s5-fb"), f[0], f[1]);
+        $("s5-opciones").querySelectorAll(".opcion").forEach(function (o) {
+          o.classList.toggle("opcion--correcta", o.querySelector("input").checked && f[0] === "ok");
+          o.classList.toggle("opcion--incorrecta", o.querySelector("input").checked && f[0] !== "ok");
+        });
+        if (clave === "com_a") leccion.desbloquear();
+      }
+    });
+  }
+
+  /* ---------- 6. = or ==? ---------- */
+  var p6 = crearPrograma($("s6-codigo"), $("s6-consola"), $("s6-fases"));
+  p6.escribir(PY.igual.lineas);
+  Codigo.consola($("s6-consola"), []);
+  var prediccion6 = null;
+
+  function ejecutar6() {
+    $("s6-ejecutar").disabled = true;
+    $("s6-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    Pasos.limpiarFeedback($("s6-fb"));
+    p6.escribir(PY.igual.lineas);
+    p6.correr(PY.igual, {
+      alTerminar: function () {
+        var texto = "A single <code>=</code> <strong>stores</strong> a value; to compare you use <code>==</code>. It’s a typing error, so nothing ran. And look: the message comes with a suggestion.";
+        fb($("s6-fb"), prediccion6 === "escribir" ? "ok" : "pista", (prediccion6 === "escribir" ? "Well thought! " : "Not this time. ") + texto);
+        $("s6-ejecutar").hidden = true;
+        $("s6-arreglar").hidden = false;
+        $("s6-arreglar").focus({ preventScroll: true });
+      }
+    });
+  }
+
+  function arreglar6(leccion) {
+    $("s6-arreglar").disabled = true;
+    p6.escribir(PY.igual_ok.lineas);
+    lucir(p6.pre, 1, 9);
+    p6.correr(PY.igual_ok, {
+      alTerminar: function () {
+        fb($("s6-fb"), "ok", "With <code>==</code> it compares, and the condition is <code>True</code>. Error messages sometimes tell you what to change: read them to the end.");
+        leccion.desbloquear();
+      }
+    });
+  }
+
+  /* ---------- 7. Indentation ---------- */
+  var p7 = crearPrograma($("s7-codigo"), $("s7-consola"), $("s7-fases"));
+  var RONDAS7 = [
+    { pref: "sangA", inicio: [0, 0, 0, 0] },
+    { pref: "sangB", inicio: [0, 1, 0, 1] }
+  ];
+  var ronda7 = 0, sangria7 = [], elegida7 = -1, corriendo7 = false, listo7 = false;
+
+  function base7() {
+    return PY[RONDAS7[ronda7].pref + "_0000"].lineas.map(function (l) { return l.trim(); });
+  }
+  function clave7() { return RONDAS7[ronda7].pref + "_" + sangria7.join(""); }
+
+  function pintar7(movida) {
+    var b = base7();
+    p7.escribir(b.map(function (t, i) { return (sangria7[i] ? "    " : "") + t; }));
+    lineasDe(p7.pre).forEach(function (l, i) {
+      l.tabIndex = 0;
+      l.setAttribute("role", "button");
+      l.setAttribute("aria-label", "Line " + (i + 1) + (sangria7[i] ? ", indented" : ", not indented") + ": " + b[i]);
+      if (i === movida) l.classList.add("linea--movida");
+      l.addEventListener("click", function () { elegir7(i); });
+      l.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); elegir7(i); }
+      });
+    });
+    actualizar7();
+  }
+
+  // Without rewriting the code: that way the error marks stay in view
+  function actualizar7() {
+    lineasDe(p7.pre).forEach(function (l, i) {
+      l.setAttribute("aria-pressed", String(i === elegida7));
+      l.classList.toggle("linea--elegida", i === elegida7);
+    });
+    var hay = elegida7 !== -1 && !corriendo7 && !listo7;
+    $("s7-poner").disabled = !hay || sangria7[elegida7] === 1;
+    $("s7-quitar").disabled = !hay || sangria7[elegida7] === 0;
+    $("s7-elegida").innerHTML = elegida7 === -1 ? "Tap a line to choose it." :
+      "You chose <strong>line " + (elegida7 + 1) + "</strong>" + (sangria7[elegida7] ? " (indented)." : " (not indented).");
+  }
+
+  function elegir7(i) {
+    if (corriendo7 || listo7) return;
+    elegida7 = i;
+    actualizar7();
+    var l = lineasDe(p7.pre)[i];
+    if (l) l.focus({ preventScroll: true });
+  }
+
+  function cambiar7(valor) {
+    if (elegida7 === -1 || corriendo7 || listo7) return;
+    sangria7[elegida7] = valor;
+    var foco = elegida7;
+    p7.limpiar();
+    pintar7(foco);
+    Pasos.limpiarFeedback($("s7-fb"));
+  }
+
+  function cargar7() {
+    $("s7-ronda").textContent = "Program " + (ronda7 + 1) + " of " + RONDAS7.length;
+    sangria7 = RONDAS7[ronda7].inicio.slice();
+    elegida7 = -1;
+    corriendo7 = false;
+    listo7 = false;
+    pintar7();
+    p7.limpiar();
+    $("s7-ejecutar").hidden = false;
+    $("s7-ejecutar").disabled = false;
+    $("s7-siguiente").hidden = true;
+    Pasos.limpiarFeedback($("s7-fb"));
+  }
+
+  function ejecutar7(leccion) {
+    var res = PY[clave7()];
+    corriendo7 = true;
+    $("s7-ejecutar").disabled = true;
+    actualizar7();
+    Pasos.limpiarFeedback($("s7-fb"));
+    p7.correr(res, {
+      alTerminar: function () {
+        corriendo7 = false;
+        $("s7-ejecutar").disabled = false;
+        actualizar7();
+        var e = res.error;
+        if (e) {
+          if (/^expected an indented block/.test(e.mensaje)) {
+            var arriba = /on line (\d+)/.exec(e.mensaje)[1];
+            fb($("s7-fb"), "pista", "Line " + arriba + " ends in <code>:</code>, so the line below it must go further in. The message marks line " + e.linea + " and names line " + arriba + ": look at both. Choose line " + e.linea + " and indent it.");
+          } else {
+            fb($("s7-fb"), "pista", "Line " + e.linea + " is indented, but it isn’t inside any <code>if</code>: there is no <code>:</code> right above it. Choose it and remove the indentation.");
+          }
+          return;
+        }
+        $("s7-ejecutar").hidden = true;
+        listo7 = true;
+        elegida7 = -1;
+        actualizar7();
+        $("s7-elegida").textContent = "\u00a0";   // keeps its row
+        if (ronda7 < RONDAS7.length - 1) {
+          fb($("s7-fb"), "ok", "It runs! Indentation tells what goes inside the <code>if</code>. Now another program.");
+          $("s7-siguiente").hidden = false;
+          $("s7-siguiente").focus({ preventScroll: true });
+        } else {
+          fb($("s7-fb"), "ok", "Inside a block, indentation; outside it, none. Both errors are called <code>IndentationError</code>: an indentation error.");
+          leccion.desbloquear();
+        }
+      }
+    });
+  }
+
+  /* ---------- 8. Which error is it? ---------- */
+  var OPCIONES8 = ["SyntaxError", "IndentationError", "NameError", "✓ It works"];
+  var PRED8 = [
+    { clave: "pred1", correcta: "IndentationError", pistas: {
+      "SyntaxError": "Close: it’s a typing error, but a kind with its own name. Look at the start of line 2.",
+      "NameError": "i does exist. Look at the start of line 2: is it inside the for?",
+      "✓ It works": "Look at line 2: is it inside the for?" } },
+    { clave: "pred2", correcta: "SyntaxError", pistas: {
+      "IndentationError": "The indentation is fine. Count the parentheses.",
+      "NameError": "grade exists. Count the parentheses of print.",
+      "✓ It works": "Count the parentheses of print: does it close?" } },
+    { clave: "pred3", correcta: "NameError", pistas: {
+      "SyntaxError": "It’s written correctly: it has the : and the indentation. But does Grade with a capital G exist?",
+      "IndentationError": "The indentation is fine. But does Grade with a capital G exist?",
+      "✓ It works": "Python tells capital letters apart: grade and Grade are not the same name." } },
+    { clave: "pred5", correcta: "SyntaxError", pistas: {
+      "IndentationError": "There is no indentation to check. Look at the quotes: does it open and close with the same one?",
+      "NameError": "Look at the quotes: it opens with ' and closes with \". Are they the same?",
+      "✓ It works": "It opens with ' and closes with \": they are not the same quote." } },
+    { clave: "pred4", correcta: "✓ It works", ancha: true, pistas: {
+      "SyntaxError": "Check it again: == compares, the if has its : and the print is indented.",
+      "IndentationError": "The print goes inside the if, indented: that’s right.",
+      "NameError": "age exists and is spelled the same on both lines." } }
+  ];
+
+  function armar8(ol, leccion) {
+    var aciertos = PRED8.map(function () { return false; });
+    PRED8.forEach(function (p, k) {
+      var res = PY[p.clave];
+      var li = document.createElement("li");
+      li.className = "prediccion" + (p.ancha ? " prediccion--ancha" : "");
+      li.innerHTML = '<div class="prediccion__fila"><code class="prediccion__expr"></code>' +
+        '<div class="elegir" role="group"></div></div>' +
+        '<p class="prediccion__salida" aria-live="polite"></p>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>';
+      li.querySelector(".prediccion__expr").textContent = res.lineas.join("\n");
+      var grupo = li.querySelector(".elegir");
+      grupo.setAttribute("aria-label", "What does program " + (k + 1) + " give?");
+      OPCIONES8.forEach(function (op) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("aria-pressed", "false");
+        b.textContent = op;
+        grupo.appendChild(b);
+      });
+      var botones = grupo.querySelectorAll("button");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var valor = btn.textContent;
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          var fbFila = li.querySelector(".feedback");
+          if (valor !== p.correcta) { Pasos.feedback(fbFila, "pista", p.pistas[valor]); return; }
+          Pasos.limpiarFeedback(fbFila);
+          li.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          var salida = li.querySelector(".prediccion__salida");
+          if (res.error) {
+            salida.textContent = res.error.tipo + ": " + res.error.mensaje;
+            salida.classList.add("prediccion__salida--error");
+          } else {
+            salida.textContent = res.salida.join("\n");
+          }
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) {
+            fb($("s8-fb"), "ok", "<code>SyntaxError</code> and <code>IndentationError</code> show up while reading, before anything runs. <code>NameError</code> shows up while running, when Python reaches that line.");
+            leccion.desbloquear();
+          }
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  /* ---------- 9. Challenge: three errors, one at a time ---------- */
+  var pr = crearPrograma($("reto-codigo"), $("reto-consola"), $("reto-fases"));
+  var estadoReto = 0;           // how many fixes so far (0 to 3): the program is PY["reto_" + estadoReto]
+  var tocableReto = false;
+  var ARREGLOS = {
+    2: { ok: "for grade in grades:", pistas: {
+      punto: "Close: it’s <code>:</code> (a colon), not <code>;</code>.",
+      medio: "The <code>:</code> goes at the end of the line, after <code>grades</code>." } },
+    4: { ok: "        print(grade, \"passed\")", pistas: {
+      fuera: "Without indentation, the <code>print</code> ends up outside the <code>for</code>, and the <code>if</code> is left with nothing inside.",
+      puntos: "The <code>if</code> already has its <code>:</code>. What’s missing is for the <code>print</code> to go <strong>further in</strong> than the <code>if</code>." } },
+    5: { ok: "print(\"Average:\", sum(grades) / len(grades))", pistas: {
+      antes: "Then the <code>print</code> closes before <code>/ len(grades)</code>: the division would be left out.",
+      otro: "That opens another <code>(</code>: now two <code>)</code> would be missing." } }
+  };
+  var TRAZA_RETO = [0, 1, 2, 3, 4, 2, 3, 2, 3, 4, 5];
+
+  /* On desktop, the panel measures from the start what its tallest option group does:
+     it goes above the console. On mobile it goes below it: no need. */
+  var panelArriba = window.matchMedia("(min-width: 1024px)");
+
+  /* On mobile (everything in one column), the page scrolls down just enough to show «abajo»
+     (the message, the options) without «arriba» (the line the error marks, the panel) going
+     up under the header. On desktop nothing moves: the challenge fits on the screen. */
+  function bajarHasta(abajo, arriba) {
+    if (panelArriba.matches || !abajo || !abajo.offsetParent) return;
+    requestAnimationFrame(function () {
+      var cab = document.querySelector(".leccion-cabecera");
+      var pie = document.querySelector(".leccion-pie");
+      var techo = (cab ? cab.getBoundingClientRect().bottom : 0) + 8;
+      var piso = window.innerHeight - (pie ? pie.offsetHeight : 0) - 8;
+      var delta = abajo.getBoundingClientRect().bottom - piso;
+      if (arriba) delta = Math.min(delta, arriba.getBoundingClientRect().top - techo);
+      if (delta > 0) window.scrollBy({ top: delta, behavior: Pasos.reducirMovimiento ? "auto" : "smooth" });
+    });
+  }
+  Codigo.reservarAlto($("reto-panel"), ["ayuda", 2, 4, 5], function (copia, estado) {
+    if (!panelArriba.matches) estado = "ayuda";
+    copia.querySelector("#reto-ayuda").hidden = estado !== "ayuda";
+    [2, 4, 5].forEach(function (i) { copia.querySelector("#reto-op-" + i).hidden = i !== estado; });
+  });
+
+  function pintarReto() {
+    var res = PY["reto_" + estadoReto];
+    pr.escribir(res.lineas);
+    var c = $("reto-contador");
+    c.textContent = "Fixed: " + estadoReto + " of 3";
+    c.classList.toggle("contador--lleno", estadoReto === 3);
+  }
+
+  function hacerTocable(si) {
+    tocableReto = si;
+    var pre = pr.pre;
+    pre.classList.toggle("codigo--tocable", si);
+    lineasDe(pre).forEach(function (l, i) {
+      if (si) {
+        l.tabIndex = 0;
+        l.setAttribute("role", "button");
+        l.setAttribute("aria-label", "Line " + (i + 1) + ": " + l.textContent.trim());
+      } else {
+        l.removeAttribute("tabindex");
+        l.removeAttribute("role");
+        l.removeAttribute("aria-label");
+      }
+    });
+  }
+
+  function ocultarOpciones() {
+    ["reto-op-2", "reto-op-4", "reto-op-5"].forEach(function (id) {
+      var f = $(id);
+      f.hidden = true;
+      f.querySelectorAll("input").forEach(function (x) { x.checked = false; });
+      f.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    });
+  }
+
+  function tocarLineaReto(i) {
+    if (!tocableReto) return;
+    var e = PY["reto_" + estadoReto].error;
+    var debe = e.linea - 1;
+    if (i !== debe) {
+      fb($("reto-fb"), "pista", "Not that one. Look at <code>line " + e.linea + "</code> in the message: Python marks line " + e.linea + ".");
+      return;
+    }
+    Pasos.limpiarFeedback($("reto-fb"));
+    lineasDe(pr.pre).forEach(function (l, k) { l.classList.toggle("linea--elegida", k === i); });
+    ocultarOpciones();
+    $("reto-ayuda").hidden = true;
+    var f = $("reto-op-" + i);
+    f.hidden = false;
+    var primero = f.querySelector("input");
+    if (primero) primero.focus({ preventScroll: true });
+    bajarHasta($("reto-panel"), $("reto-panel"));
+  }
+
+  function elegirArreglo(i, input, leccion) {
+    var a = ARREGLOS[i];
+    var op = input.closest(".opcion");
+    var f = $("reto-op-" + i);
+    f.querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    if (input.value !== "ok") {
+      op.classList.add("opcion--incorrecta");
+      fb($("reto-fb"), "pista", a.pistas[input.value]);
+      return;
+    }
+    op.classList.add("opcion--correcta");
+    estadoReto++;
+    hacerTocable(false);
+    setTimeout(function () {
+      ocultarOpciones();
+      pintarReto();
+      var l = lineasDe(pr.pre)[i];
+      if (l) l.classList.add("linea--movida");
+      pr.limpiar();
+      $("reto-ayuda").hidden = false;
+      $("reto-ayuda").textContent = estadoReto < 3 ? "Fixed. Was it the only one? Run it again." : "Three fixes. Run it again.";
+      fb($("reto-fb"), "ok", estadoReto < 3 ? "One down! Python only showed the first one it found: run it again to see if there are more." : "All three! Will it run now? Run it.");
+      $("reto-ejecutar").disabled = false;
+      $("reto-ejecutar").focus({ preventScroll: true });
+    }, espera(700));
+  }
+
+  function ejecutarReto(leccion) {
+    var res = PY["reto_" + estadoReto];
+    $("reto-ejecutar").disabled = true;
+    hacerTocable(false);
+    ocultarOpciones();
+    Pasos.limpiarFeedback($("reto-fb"));
+    $("reto-ayuda").hidden = false;
+    $("reto-ayuda").textContent = "Python is reading…";
+    pintarReto();
+    pr.correr(res, {
+      traza: TRAZA_RETO,
+      alTerminar: function () {
+        if (res.error) {
+          $("reto-ayuda").textContent = "Tap the line the message points to (line " + res.error.linea + ").";
+          hacerTocable(true);
+          bajarHasta($("reto-consola").querySelector(".traceback"), lineasDe(pr.pre)[res.error.linea - 1]);
+          return;
+        }
+        $("reto-ayuda").textContent = "The whole program ran!";
+        fb($("reto-fb"), "ok", "It ran! Three errors, three messages: Python shows one at a time. Fix, run, read the next one: that’s how you debug a program.");
+        leccion.desbloquear();
+      }
+    });
+  }
+
+  /* ---------- 10. Summary ---------- */
+  Python.escribir($("resumen-codigo"), [
+    "if grade >= 11:           # ends in :",
+    "    print(\"You passed\")   # indented",
+    "print(\"Hello, \" + name)   # ( and \" get closed",
+    "if grade == 20:           # == compares"
+  ]);
+
+  /* ---------- Steps ---------- */
+  var leccionActual = null;
+
+  $("s1-ejecutar").addEventListener("click", function () {
+    $("s1-ejecutar").disabled = true;
+    Pasos.limpiarFeedback($("s1-fb"));
+    p1.correr(PY.correr, {
+      alTerminar: function () {
+        $("s1-ejecutar").disabled = false;
+        $("s1-ejecutar").textContent = "↺ Run again";
+        fb($("s1-fb"), "ok", "It read everything: it was <strong>written correctly</strong>. Then it ran: it printed <code>Hello, Ana</code> and stopped at line 5. The <code>NameError</code> shows up <strong>while running</strong>.");
+        if (leccionActual) leccionActual.desbloquear();
+      }
+    });
+  });
+
+  $("s2-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion2 = b.getAttribute("data-valor");
+      marcarBotones($("s2-elegir"), prediccion2);
+      $("s2-ejecutar").disabled = false;
+    });
+  });
+  $("s2-ejecutar").addEventListener("click", function () {
+    $("s2-ejecutar").disabled = true;
+    $("s2-elegir").querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    Pasos.limpiarFeedback($("s2-fb"));
+    p2.correr(PY.escribir, {
+      alTerminar: function () {
+        var texto = "Python found the error <strong>while reading</strong>, so it ran nothing: not even line 1. That’s why the message doesn’t start with <code>Traceback</code>: it’s a <code>SyntaxError</code>, a typing error.";
+        fb($("s2-fb"), prediccion2 === "no" ? "ok" : "pista", (prediccion2 === "no" ? "Exactly! " : "Nothing was printed this time. ") + texto);
+        if (leccionActual) leccionActual.desbloquear();
+      }
+    });
+  });
+
+  $("s3-ejecutar").addEventListener("click", function () { ejecutar3(leccionActual); });
+  $("s3-siguiente").addEventListener("click", function () {
+    ronda3++;
+    cargar3();
+    Pasos.limpiarFeedback($("s3-fb"));
+    ejecutar3(leccionActual);
+  });
+
+  $("s4-ejecutar").addEventListener("click", function () { ejecutar4(leccionActual); });
+
+  $("s5-ejecutar").addEventListener("click", function () { ejecutar5(leccionActual); });
+  $("s5-opciones").addEventListener("change", function () {
+    $("s5-ejecutar").disabled = false;
+    $("s5-opciones").querySelectorAll(".opcion").forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+    var op = $("s5-opciones").querySelector("input:checked");
+    if (op) {
+      p5.escribir(PY[op.value].lineas);
+      p5.limpiar();
+      lineasDe(p5.pre)[1].classList.add("linea--movida");
+    }
+  });
+
+  $("s6-elegir").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      prediccion6 = b.getAttribute("data-valor");
+      marcarBotones($("s6-elegir"), prediccion6);
+      $("s6-ejecutar").disabled = false;
+    });
+  });
+  $("s6-ejecutar").addEventListener("click", ejecutar6);
+  $("s6-arreglar").addEventListener("click", function () { arreglar6(leccionActual); });
+
+  $("s7-poner").addEventListener("click", function () { cambiar7(1); });
+  $("s7-quitar").addEventListener("click", function () { cambiar7(0); });
+  $("s7-ejecutar").addEventListener("click", function () { ejecutar7(leccionActual); });
+  $("s7-siguiente").addEventListener("click", function () { ronda7++; cargar7(); });
+
+  $("reto-ejecutar").addEventListener("click", function () { ejecutarReto(leccionActual); });
+  $("reto-codigo").addEventListener("click", function (e) {
+    var l = e.target.closest(".linea");
+    if (!l) return;
+    tocarLineaReto(Array.prototype.indexOf.call(lineasDe(pr.pre), l));
+  });
+  $("reto-codigo").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var l = e.target.closest && e.target.closest(".linea");
+    if (!l || !tocableReto) return;
+    e.preventDefault();
+    e.stopPropagation();
+    tocarLineaReto(Array.prototype.indexOf.call(lineasDe(pr.pre), l));
+  });
+  [2, 4, 5].forEach(function (i) {
+    $("reto-op-" + i).addEventListener("change", function (e) {
+      if (e.target.matches("input")) elegirArreglo(i, e.target, leccionActual);
+    });
+  });
+
+  var armado8 = false;
+
+  leccionActual = Pasos.iniciar({
+    alEntrar: {
+      "paso-correr": function (paso, leccion) { leccionActual = leccion; },
+      "paso-escribir": function (paso, leccion) { leccionActual = leccion; },
+      "paso-dospuntos": function (paso, leccion, info) {
+        leccionActual = leccion;
+        if (info.primeraVez) { ronda3 = 0; cargar3(); }
+      },
+      "paso-parentesis": function (paso, leccion) { leccionActual = leccion; },
+      "paso-comillas": function (paso, leccion) { leccionActual = leccion; },
+      "paso-igual": function (paso, leccion) { leccionActual = leccion; },
+      "paso-sangria": function (paso, leccion, info) {
+        leccionActual = leccion;
+        if (info.primeraVez) { ronda7 = 0; cargar7(); }
+      },
+      "paso-cual": function (paso, leccion) {
+        leccionActual = leccion;
+        if (!armado8) { armado8 = true; armar8($("s8-predicciones"), leccion); }
+      },
+      "paso-reto": function (paso, leccion, info) {
+        leccionActual = leccion;
+        if (info.primeraVez) { estadoReto = 0; pintarReto(); Codigo.consola($("reto-consola"), []); }
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

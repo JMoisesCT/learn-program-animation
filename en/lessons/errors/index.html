@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reading an error message · Learn to program</title>
+  <meta name="description" content="Interactive lesson: the program runs until the line that fails and stops there. The parts of a Python error message, which you read from the bottom up, and the first error: NameError.">
+  <meta name="author" content="Moisés C.">
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+  <style>
+    .fila-botones { display: flex; flex-wrap: wrap; gap: var(--esp-3); justify-content: center; margin-top: var(--esp-4); }
+    .fila-botones .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .explicacion { min-height: 3.2em; margin: var(--esp-4) 0 0; text-align: center; color: var(--color-texto-suave); }
+    .explicacion strong, .explicacion code { color: var(--color-texto); }
+    .resumen-linea { font-size: var(--texto-lg); font-weight: 600; text-align: center; margin: 0; }
+    .resumen-codigo { margin-top: var(--esp-5); }
+    .rotulo { margin: 0; font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rotulo code { text-transform: none; letter-spacing: 0; }
+    .error-zona:empty { display: none; }
+    .lab__resultado .consola { margin-top: 0; }
+
+    /* ---------- Boxes ---------- */
+    .cajas--fila { gap: var(--esp-2) 2.6rem; padding: var(--esp-3) 0 0; }
+    .lab .cajas--fila { padding: var(--esp-2) 0 0; }
+    .cajas--fila .caja { gap: var(--esp-1); }
+    .cajas--fila .caja__cuerpo { width: 5.4rem; height: 3.4rem; padding-bottom: var(--esp-2); }
+    .cajas--fila .caja__valor { max-width: 5rem; min-width: 2.4rem; padding: 0 var(--esp-2); font-size: var(--texto-md); }
+    /* The box Python looks for and can't find */
+    .caja--falta .caja__cuerpo { border-color: var(--color-error); border-style: dashed; background: linear-gradient(to bottom, transparent 30%, #fdecea 30%); }
+    .caja--falta .caja__cuerpo::before, .caja--falta .caja__cuerpo::after { background: var(--color-error); opacity: 0.55; }
+    .caja--falta .caja__valor { border-color: var(--color-error); border-style: dashed; color: var(--color-error); }
+    .caja--falta .caja__nombre { color: var(--color-error); background: #fdecea; }
+    .caja__aviso { font-size: var(--texto-xs); font-weight: 700; line-height: 1.2; color: var(--color-error); }
+    .caja--sacude { animation: sacudir 420ms ease; }
+    .caja[hidden] { display: none; }
+
+    /* ---------- Checklist of parts and order ---------- */
+    .marcas { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; gap: var(--esp-2); }
+    .marcas li { display: flex; align-items: center; gap: var(--esp-3); padding: var(--esp-2) var(--esp-3); border-radius: var(--radio-sm); border: 2px solid var(--color-borde); font-weight: 600; font-size: var(--texto-sm); transition: border-color var(--dur), background-color var(--dur); }
+    .marcas li::before { content: ""; flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 2px solid var(--color-borde); display: grid; place-items: center; font-size: var(--texto-xs); }
+    .marcas--orden { counter-reset: orden; }
+    .marcas--orden li { counter-increment: orden; }
+    .marcas--orden li::before { content: counter(orden); color: var(--color-texto-suave); }
+    .marcas li.marca--actual { border-color: var(--color-azul); background: var(--color-azul-suave); }
+    .marcas li.marca--actual::before { border-color: var(--color-azul); color: var(--color-azul); }
+    .marcas li.marca--hecha { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .marcas li.marca--hecha::before { content: "✓"; color: #fff; background: var(--color-ok); border-color: var(--color-ok); animation: valor-pulso 300ms ease-out; }
+    @media (min-width: 1024px) {
+      .marcas--fila { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .marcas--fila li { padding: var(--esp-2); font-size: var(--texto-xs); }
+      .marcas--fila small { display: none; }
+    }
+    .cajas--fijas { min-height: 7.25rem; align-content: flex-start; }
+    .lab__visual--cajas .cajas--fila { padding: 0; }
+    @media (min-width: 1024px) {
+      .paso .lab__visual--cajas { padding-block: var(--esp-3) var(--esp-2); }
+      /* Step 1: the message and the feedback appear under the console; the boxes panel doesn't stretch, so they fit */
+      #paso-corre .lab__visual { min-height: 0 !important; }
+    }
+    .marcas small { margin-left: auto; font-weight: 400; color: var(--color-texto-suave); }
+    .marcas li.marca--hecha small { color: var(--color-ok); }
+    .marca-carets { border-radius: 3px; transition: background-color var(--dur-rapida), box-shadow var(--dur-rapida); }
+    .traceback__marca.marca--resaltada .marca-carets { background: #ffe58f; box-shadow: 0 0 0 3px #ffe58f; color: #5c2a00; }
+    .codigo .pieza--senalada { animation: pieza-senala 900ms ease 2; border-radius: 3px; }
+    @keyframes pieza-senala { 50% { background: rgba(255, 212, 121, 0.4); } }
+    .traceback .traceback__traduccion--nueva { animation: aparecer var(--dur) ease; }
+
+    /* ---------- What stays in the console? ---------- */
+    .opciones--salida { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .opciones--salida .opcion span { height: 100%; padding: var(--esp-3); white-space: pre-line; font-size: var(--texto-md); line-height: 1.45; }
+    .opciones--salida .opcion span.op-vacia { display: grid; place-items: center; font-family: var(--fuente); font-style: italic; font-weight: 600; }
+
+    /* ---------- Typing a name ---------- */
+    .escribir { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--esp-2) var(--esp-3); margin-top: var(--esp-4); }
+    .escribir__linea { display: flex; align-items: center; gap: 0.15em; font-family: var(--fuente-codigo); font-size: var(--texto-lg); font-weight: 700; }
+    .escribir input { width: 9.5rem; font: inherit; font-weight: 600; padding: var(--esp-1) var(--esp-2); border: 2px solid var(--color-borde); border-radius: var(--radio-sm); background: var(--color-superficie); color: var(--color-texto); }
+    .escribir input:focus-visible { outline: none; border-color: var(--color-azul); box-shadow: var(--foco); }
+    .escribir .btn { min-height: 2.75rem; padding: var(--esp-2) var(--esp-4); }
+    .sugerencias { margin: var(--esp-3) 0 0; text-align: center; font-size: var(--texto-xs); color: var(--color-texto-suave); }
+    .sugerencias button { margin: 0.15rem; padding: 0.1rem 0.6rem; border: 1px solid var(--color-borde); border-radius: 999px; background: var(--color-superficie); font-family: var(--fuente-codigo); font-size: var(--texto-xs); color: var(--color-texto); cursor: pointer; }
+    .sugerencias button:hover { border-color: #b8c0ca; }
+    .sugerencias button:focus-visible { outline: none; box-shadow: var(--foco); }
+
+    /* ---------- Predictions ---------- */
+    .elegir { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--esp-2); }
+    .elegir .btn { min-height: 2.5rem; padding: var(--esp-1) var(--esp-3); }
+    .predicciones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-3); align-items: start; }
+    @media (min-width: 1024px) {
+      .predicciones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .prediccion { display: grid; gap: var(--esp-2); align-content: start; padding: var(--esp-3); border-radius: var(--radio); border: 2px solid var(--color-borde); transition: border-color var(--dur-rapida), background-color var(--dur-rapida); }
+    .prediccion--ok { border-color: var(--color-ok); background: var(--color-ok-suave); }
+    .codigo--mini { padding: var(--esp-2) 0; font-size: 0.95rem; line-height: 1.6; }
+    .prediccion .feedback { margin-top: 0; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion .elegir { justify-content: flex-start; gap: var(--esp-2); }
+    .prediccion .elegir .btn { min-height: 2.25rem; padding: var(--esp-1) var(--esp-3); font-size: var(--texto-sm); }
+    .prediccion__salida { margin: 0; font-family: var(--fuente-codigo); font-weight: 700; font-size: var(--texto-xs); overflow-wrap: anywhere; }
+    .prediccion__salida--error { color: var(--color-error); }
+    .prediccion__salida:empty { display: none; }
+
+    /* ---------- Why doesn't it exist? ---------- */
+    .contador-msj { margin: 0 0 var(--esp-3); font-size: var(--texto-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .causas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-2); margin-top: var(--esp-4); }
+    .causas .btn { min-height: 3rem; padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); line-height: 1.25; }
+    .causas .btn.causa--ok { border-color: var(--color-ok); background: var(--color-ok-suave); color: var(--color-ok); }
+    .causas .btn.causa--mal { border-color: var(--color-pista); color: var(--color-pista); animation: sacudir 360ms ease; }
+    .pregunta { margin: var(--esp-4) 0 0; font-weight: 700; text-align: center; }
+
+    /* ---------- Challenge ---------- */
+    .arreglo { margin-top: var(--esp-4); }
+    .arreglo .opciones { margin: var(--esp-2) 0 0; grid-template-columns: 1fr; gap: var(--esp-2); }
+    .arreglo .opcion span { padding: var(--esp-2) var(--esp-3); font-size: var(--texto-sm); text-align: left; }
+    .arreglo legend { margin-bottom: var(--esp-2); padding: 0; font-weight: 700; }
+    .arreglo legend code { font-size: 0.95em; }
+    @media (min-width: 1024px) {
+      .arreglo { margin-top: var(--esp-3); }
+      .arreglo .opcion span { padding: 0.3rem var(--esp-3); }
+      .arreglo legend { margin-bottom: var(--esp-1); }
+    }
+    @media (min-width: 1024px) {
+      .reto-abajo { display: none; }
+      /* A fourth group (.lab__arreglo): on mobile it goes after the message; here, under the code */
+      #paso-reto, #paso-causa { grid-template-rows: auto auto 1fr; grid-template-areas: "intro resultado" "principal resultado" "arreglo resultado"; }
+      .lab__arreglo { grid-area: arreglo; min-width: 0; }
+      #paso-reto .lab__arreglo > .arreglo, #paso-causa .lab__arreglo > .pregunta { margin-top: var(--esp-4); }
+    }
+    .codigo .linea--cambiada { animation: linea-cambiada 900ms ease; }
+    @keyframes linea-cambiada { 30% { background: rgba(110, 231, 160, 0.28); } }
+
+    @media (max-width: 1023.98px) {
+      .lab__principal + .lab__visual, .lab__principal + .lab__resultado { margin-top: var(--esp-4); }
+      .lab__arreglo > .pregunta:first-child { margin-top: var(--esp-5); }
+      .lab__visual + .lab__resultado { margin-top: var(--esp-2); }
+      /* Challenge: with “Run again” under the fixes, the one above is not needed (the code and the message stay closer) */
+      #paso-reto:has(#reto-abajo:not([hidden])) .lab__principal .fila-botones { display: none; }
+    }
+    @media (max-width: 480px) {
+      .cajas--fila .caja__cuerpo { width: 4.4rem; height: 3.4rem; }
+      .cajas--fila .caja__valor { font-size: var(--texto-md); }
+      /* The “doesn't exist” box is taller (its note): its place is kept from the start */
+      .cajas--fijas { min-height: 7.25rem; }
+      .opciones--salida { gap: var(--esp-2); }
+      .opciones--salida .opcion span { padding: var(--esp-2); font-size: var(--texto-sm); }
+      .causas { grid-template-columns: 1fr; }
+      .escribir__linea { font-size: var(--texto-md); }
+      .escribir input { width: 8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="leccion" data-leccion="errores">
+
+  <header class="leccion-cabecera">
+    <a class="leccion-cabecera__cerrar" href="../../index.html" aria-label="Leave the lesson">&times;</a>
+    <div class="barra-progreso" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="barra-progreso__relleno"></div>
+    </div>
+    <span class="leccion-cabecera__contador" aria-hidden="true"></span>
+  </header>
+
+  <main class="leccion-pasos partir-codigo">
+
+    <!-- 1. The program runs until the line that fails -->
+    <section class="paso" id="paso-corre" data-requiere aria-labelledby="h-corre">
+      <span class="paso__etiqueta">Errors 1/7 · Reading an error message</span>
+      <h1 class="paso__titulo" id="h-corre">This is as far as it got</h1>
+      <p>This program has a hidden error. Run it and watch the console.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s1-codigo" aria-label="Code"></pre>
+          <p class="explicacion" id="s1-explicacion" aria-live="polite"></p>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="s1-reiniciar" hidden>↺ Reset</button>
+            <button type="button" class="btn btn-secundario" id="s1-reproducir" aria-pressed="false">▶ Run all</button>
+            <button type="button" class="btn btn-secundario" id="s1-ejecutar">Run line ▸</button>
+          </div>
+        </div>
+        <div class="lab__visual lab__visual--cajas">
+          <div class="cajas cajas--fila cajas--fijas" id="s1-cajas" aria-label="Variables"></div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s1-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="s1-error" aria-live="polite"></div>
+          <div class="feedback" id="s1-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. What came before stays; what comes after doesn't run -->
+    <section class="paso" id="paso-consola" data-comprobar aria-labelledby="h-consola">
+      <h2 class="paso__titulo" id="h-consola">What stays in the console?</h2>
+      <p>Line 3 has an error: <code>three</code> doesn't exist. What do you see in the console when the program ends?</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s2-codigo" aria-label="Code"></pre>
+          <fieldset class="opciones opciones--salida" id="s2-opciones">
+            <legend class="visualmente-oculto">What stays in the console</legend>
+            <label class="opcion"><input type="radio" name="s2" value="todo"><span>One
+Two
+Four</span></label>
+            <label class="opcion"><input type="radio" name="s2" value="nada"><span class="op-vacia">(no output)</span></label>
+            <label class="opcion"><input type="radio" name="s2" value="dos"><span>One
+Two</span></label>
+          </fieldset>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s2-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="s2-error" aria-live="polite"></div>
+          <div class="feedback" id="s2-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. The parts of the message -->
+    <section class="paso" id="paso-partes" data-requiere aria-labelledby="h-partes">
+      <h2 class="paso__titulo" id="h-partes">The parts of the message</h2>
+      <p>Python’s message is not a punishment: it tells you <strong>where to look</strong>. Tap each part of the message to see what it says. Start at the bottom.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s3-codigo" aria-label="Code"></pre>
+          <ul class="marcas marcas--fila" id="s3-marcas" aria-label="Parts you found">
+            <li data-marca="paso">What happened <small>at the very bottom</small></li>
+            <li data-marca="linea">Which line <small>line …</small></li>
+            <li data-marca="pedazo">Which piece <small>the ^^^</small></li>
+          </ul>
+          <p class="explicacion" id="s3-explicacion" aria-live="polite">Tap a part of the message.</p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s3-consola"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="s3-error"></div>
+          <div class="feedback" id="s3-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. From the bottom up, in order -->
+    <section class="paso" id="paso-orden" data-requiere aria-labelledby="h-orden">
+      <h2 class="paso__titulo" id="h-orden">From the bottom up</h2>
+      <p>Another program, another message, now without labels. Read it like a programmer: tap the three parts <strong>in order</strong>.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s4-codigo" aria-label="Code"></pre>
+          <div class="cajas cajas--fila" id="s4-cajas" aria-label="Variables"></div>
+          <ol class="marcas marcas--orden marcas--fila" id="s4-orden" aria-label="Order to read the message">
+            <li>What happened</li>
+            <li>Which line</li>
+            <li>Which piece</li>
+          </ol>
+          <p class="explicacion" id="s4-explicacion" aria-live="polite"></p>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s4-consola"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="s4-error"></div>
+          <div class="feedback" id="s4-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Did you mean: Python suggests a similar name -->
+    <section class="paso" id="paso-sugiere" data-requiere aria-labelledby="h-sugiere">
+      <h2 class="paso__titulo" id="h-sugiere">Did you mean…?</h2>
+      <p>Type a name inside the <code>print</code> and run it. Complete the three missions.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="s5-codigo" aria-label="Code"></pre>
+          <div class="cajas cajas--fila" id="s5-cajas" aria-label="Variables"></div>
+          <div class="escribir">
+            <span class="escribir__linea">
+              <span aria-hidden="true">print(</span>
+              <input type="text" id="s5-nombre" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="What goes inside print( )">
+              <span aria-hidden="true">)</span>
+            </span>
+            <button type="button" class="btn btn-secundario" id="s5-ejecutar">▶ Run</button>
+          </div>
+          <p class="sugerencias" id="s5-ideas">Ideas: <button type="button">name</button><button type="button">nme</button><button type="button">Grade</button><button type="button">lastname</button></p>
+          <ul class="marcas marcas--fila" id="s5-misiones" aria-label="Missions">
+            <li data-marca="existe">A name that exists</li>
+            <li data-marca="sugiere">A misspelled one</li>
+            <li data-marca="nada">One that looks like nothing</li>
+          </ul>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s5-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="s5-error" aria-live="polite"></div>
+          <div class="feedback" id="s5-fb" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Where does it stop? -->
+    <section class="paso" id="paso-donde" data-requiere aria-labelledby="h-donde">
+      <h2 class="paso__titulo" id="h-donde">Where does it stop?</h2>
+      <p>Three programs have a <code>NameError</code> and one works. For each one: does it work, or on which line does it stop?</p>
+
+      <div class="tarjeta">
+        <ol class="predicciones" id="s6-predicciones"></ol>
+        <div class="feedback" id="s6-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 7. Why doesn't it exist? -->
+    <section class="paso" id="paso-causa" data-requiere aria-labelledby="h-causa">
+      <h2 class="paso__titulo" id="h-causa">Why doesn’t it exist?</h2>
+      <p>A <code>NameError</code> can come from four slips. Read the message, look at the line it points to and pick the cause.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <p class="contador-msj" id="s7-contador" aria-live="polite">Message 1 of 4</p>
+          <pre class="codigo" id="s7-codigo" aria-label="Code"></pre>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="s7-consola"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="s7-error"></div>
+        </div>
+        <!-- On mobile, the question goes after the message; on desktop, under the code -->
+        <div class="lab__arreglo">
+          <p class="pregunta" id="s7-pregunta">Why can’t Python find that name?</p>
+          <div class="causas" id="s7-causas" role="group" aria-labelledby="s7-pregunta">
+            <button type="button" class="btn btn-secundario" data-causa="mal">Misspelled name</button>
+            <button type="button" class="btn btn-secundario" data-causa="mayus">An extra capital letter</button>
+            <button type="button" class="btn btn-secundario" data-causa="comillas">Missing quotes</button>
+            <button type="button" class="btn btn-secundario" data-causa="antes">Used before it’s created</button>
+          </div>
+          <div class="feedback" id="s7-fb" role="status" aria-live="polite"></div>
+          <div class="fila-botones" id="s7-seguir" hidden>
+            <button type="button" class="btn btn-secundario" id="s7-siguiente">Next message →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Challenge: fix it until it works -->
+    <section class="paso" id="paso-reto" data-requiere aria-labelledby="h-reto">
+      <span class="paso__etiqueta">Challenge</span>
+      <h2 class="paso__titulo" id="h-reto">Fix it until it works</h2>
+      <p>This program must print <code>Student: Luis</code> and <code>Passed</code>. Run it, read the message and pick the fix. Repeat until it works.</p>
+
+      <div class="tarjeta lab">
+        <div class="lab__principal">
+          <pre class="codigo" id="reto-codigo" aria-label="Code"></pre>
+          <div class="fila-botones">
+            <button type="button" class="btn btn-secundario" id="reto-otra" hidden>↺ Start over</button>
+            <button type="button" class="btn btn-secundario" id="reto-ejecutar">▶ Run</button>
+          </div>
+        </div>
+        <div class="lab__resultado">
+          <div class="consola" id="reto-consola" aria-live="polite"><span class="consola__titulo">Output</span></div>
+          <div class="error-zona" id="reto-error" aria-live="polite"></div>
+          <div class="feedback" id="reto-fb" role="status" aria-live="polite"></div>
+        </div>
+        <!-- On mobile, the fixes go after the message; on desktop, under the code -->
+        <div class="lab__arreglo">
+          <div class="arreglo" id="reto-arreglo3" hidden>
+            <fieldset class="opciones opciones--codigo">
+              <legend>Change line 3 to:</legend>
+              <label class="opcion"><input type="radio" name="reto-l3" value="may"><span>print("Student:", Name)</span></label>
+              <label class="opcion"><input type="radio" name="reto-l3" value="com"><span>print("Student:", "nme")</span></label>
+              <label class="opcion"><input type="radio" name="reto-l3" value="ok"><span>print("Student:", name)</span></label>
+            </fieldset>
+          </div>
+          <div class="arreglo" id="reto-arreglo5" hidden>
+            <fieldset class="opciones opciones--codigo">
+              <legend>Change line 5 to:</legend>
+              <label class="opcion"><input type="radio" name="reto-l5" value="com"><span>print(Passed)</span></label>
+              <label class="opcion"><input type="radio" name="reto-l5" value="ok"><span>print("Passed")</span></label>
+              <label class="opcion"><input type="radio" name="reto-l5" value="may"><span>PRINT("Passed")</span></label>
+            </fieldset>
+          </div>
+          <div class="fila-botones reto-abajo" id="reto-abajo" hidden>
+            <button type="button" class="btn btn-secundario" id="reto-ejecutar2">▶ Run again</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Summary -->
+    <section class="paso" id="paso-resumen" aria-labelledby="h-resumen">
+      <div class="celebracion" aria-hidden="true">🎉</div>
+      <h2 class="paso__titulo" id="h-resumen" style="text-align:center">Lesson complete!</h2>
+      <div class="tarjeta">
+        <p class="resumen-linea">An error is not a punishment: the program stops at the line that fails, and the message, read from the bottom up, tells you what happened, which line and which piece.</p>
+        <pre class="codigo resumen-codigo" id="resumen-codigo" aria-label="Summary in code"></pre>
+      </div>
+      <div class="fila-botones" id="resumen-botones">
+        <button type="button" class="btn btn-secundario" data-accion="reiniciar">↺ Repeat the lesson</button>
+        <a class="btn btn-secundario" href="syntax/index.html">Next: Typing errors →</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="leccion-pie">
+    <div class="leccion-pie__interior">
+      <button type="button" class="btn btn-secundario" data-accion="atras">Back</button>
+      <button type="button" class="btn btn-primario" data-accion="continuar">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<script src="../../../assets/js/progreso.js"></script>
+<script src="../../../assets/js/codigo.js"></script>
+<script src="../../../assets/js/caja.js"></script>
+<script src="../../../assets/js/traza.js"></script>
+<script src="../../../assets/js/python.js"></script>
+<script src="../../../assets/js/mensaje-error.js"></script>
+<script src="../../../assets/js/opciones-codigo.js"></script>
+<script src="../../../assets/js/pasos.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+  function espera(ms) { return Pasos.reducirMovimiento ? 0 : ms; }
+  function esc(t) { return Python.escapar(t); }
+
+  // The timers of a step, so they can be stopped on reset
+  function reloj() {
+    var ids = [];
+    return {
+      luego: function (fn, ms) { ids.push(setTimeout(fn, espera(ms))); },
+      cortar: function () { ids.forEach(clearTimeout); ids = []; }
+    };
+  }
+
+  /* What print prints: the line flies from wherever it is told (or from the active line) */
+  function imprimir(consola, texto, desde, pre) {
+    Codigo.agregar(consola, texto);
+    var linea = consola.lastElementChild;
+    if (desde) Codigo.volar(desde, linea, texto, "vuelo--salida");
+    else if (pre) Codigo.volarDesdeLinea(pre, linea, texto, "vuelo--salida");
+  }
+
+  /* A variable box; with falta, the box Python looks for and that doesn't exist */
+  function nuevaCaja(nombre, falta) {
+    var caja = document.createElement("div");
+    caja.className = "caja" + (falta ? " caja--falta" : "");
+    caja.innerHTML = '<div class="caja__cuerpo"><span class="caja__valor' + (falta ? "" : " caja__valor--vacia") + '">' +
+      (falta ? "?" : "") + '</span></div><code class="caja__nombre"></code>' +
+      (falta ? '<span class="caja__aviso">' + falta + "</span>" : "");
+    caja.querySelector(".caja__nombre").textContent = nombre;
+    return caja;
+  }
+
+  function sacudir(el, clase) {
+    clase = clase || "caja--sacude";
+    el.classList.remove(clase);
+    void el.offsetWidth;
+    el.classList.add(clase);
+  }
+
+  function valorDe(caja) { return caja.querySelector(".caja__valor:not(.caja__valor--saliendo)"); }
+
+  /* The data of a NameError, as Python writes it */
+  function nameError(nombre, linea, codigo, opciones) {
+    opciones = opciones || {};
+    var sug = opciones.sugerencia || null;
+    var traduccion = "Python knows nothing called <code>" + esc(nombre) + "</code>" +
+      (sug ? ". You probably meant <code>" + esc(sug) + "</code>." : (opciones.explicacion || ": no variable or function has that name."));
+    return {
+      tipo: "NameError",
+      mensaje: "name '" + nombre + "' is not defined",
+      sugerencia: sug,
+      marcos: [{ linea: linea, codigo: codigo, marca: opciones.marca || nombre }],
+      traduccion: traduccion
+    };
+  }
+
+  /* Puts the message in its zone (after what was printed) and shows it */
+  function mostrarError(zona, datos, extra) {
+    zona.textContent = "";
+    var o = {};
+    Object.keys(datos).forEach(function (k) { o[k] = datos[k]; });
+    if (extra) Object.keys(extra).forEach(function (k) { o[k] = extra[k]; });
+    var m = MensajeError.crear(zona, o);
+    envolverCarets(m);
+    m.mostrar();
+    return m;
+  }
+
+  /* The ^^^ of the message in their own span, to light them up without the spaces in front */
+  function envolverCarets(m) {
+    var t = m.el.querySelector(".traceback__marca .traceback__texto");
+    if (!t) return;
+    var partes = /^(\s*)(\^+)$/.exec(t.textContent);
+    if (!partes) return;
+    t.textContent = partes[1];
+    var c = document.createElement("span");
+    c.className = "marca-carets";
+    c.textContent = partes[2];
+    t.appendChild(c);
+  }
+
+  /* Line i of the program is cut: the piece marca (or the n-th appearance of a name) */
+  function cortar(pre, i, marca, aparicion) {
+    Codigo.marcar(pre, {});
+    if (!aparicion) { MensajeError.romper(pre, i, { marca: marca }); return; }
+    MensajeError.romper(pre, i, {});
+    var piezas = Array.prototype.filter.call(Python.linea(pre, i).querySelectorAll("span"), function (s) {
+      return s.textContent === marca;
+    });
+    var s = piezas[aparicion];
+    if (!s) return;
+    var envoltura = document.createElement("span");
+    envoltura.className = "pieza--error";
+    s.parentNode.insertBefore(envoltura, s);
+    envoltura.appendChild(s);
+  }
+
+  /* On mobile the explanation goes above the console: keep from the start the height of its
+     longest text, so it doesn't push it. On desktop it goes in another column and isn't needed. */
+  var apilado = window.matchMedia("(max-width: 1023.98px)");
+  function reservarExplicacion(el, textos) {
+    Codigo.reservarAlto(el, textos, function (copia, html) {
+      copia.style.minHeight = "";   // the CSS minimum still counts
+      copia.innerHTML = apilado.matches ? html : textos[0];
+    });
+  }
+
+  function marcarHecha(lista, clave) {
+    var li = lista.querySelector('[data-marca="' + clave + '"]');
+    if (li) li.classList.add("marca--hecha");
+  }
+
+  /* ---------- 1. This is as far as it got ---------- */
+  var P1 = ['name = "Ana"', 'print("Hello")', "grade = 17", 'print(nme, "got", grade)', 'print("End")'];
+  var M1 = nameError("nme", 4, 'print(nme, "got", grade)', { sugerencia: "name" });
+  Python.escribir($("s1-codigo"), P1);
+  var cajas1 = { name: nuevaCaja("name"), grade: nuevaCaja("grade"), nme: nuevaCaja("nme", "doesn’t exist") };
+  Object.keys(cajas1).forEach(function (k) { $("s1-cajas").appendChild(cajas1[k]); });
+
+  function trazaCorre() {
+    return [
+      { linea: 0, hacer: "name", texto: "The box <code>name</code> is born with <code>\"Ana\"</code>." },
+      { linea: 1, salida: "Hello", texto: "<code>print</code> shows Hello in the console." },
+      { linea: 2, hacer: "grade", texto: "<code>grade</code> is born with 17." },
+      { linea: 3, hacer: "error", texto: "Python looks for a box called <code>nme</code>… and there is none. <strong>The program stops here</strong> and leaves a message." }
+    ];
+  }
+
+  /* ---------- 2. What stays in the console? ---------- */
+  var P2 = ['print("One")', 'print("Two")', "print(three)", 'print("Four")'];
+  var M2 = nameError("three", 3, "print(three)", { explicacion: ": it looks for a variable called <code>three</code>. With quotes, <code>\"three\"</code> would be a text." });
+  Python.escribir($("s2-codigo"), P2);
+  var r2 = reloj();
+  var PISTAS2 = {
+    todo: "Close: “Four” doesn’t show up. When line 3 fails, the program stops and line 4 never runs.",
+    nada: "Lines 1 and 2 have nothing wrong: they run before Python reaches line 3, and what they print stays in the console."
+  };
+
+  function limpiar2() {
+    r2.cortar();
+    Codigo.limpiar($("s2-codigo"));
+    Codigo.consola($("s2-consola"), []);
+    $("s2-error").textContent = "";
+    Pasos.limpiarFeedback($("s2-fb"));
+    document.querySelectorAll('#s2-opciones .opcion').forEach(function (o) { o.classList.remove("opcion--correcta", "opcion--incorrecta"); });
+  }
+
+  function ejecutar2() {
+    var pre = $("s2-codigo");
+    var consola = $("s2-consola");
+    Codigo.marcar(pre, { activas: [0] });
+    imprimir(consola, "One", null, pre);
+    r2.luego(function () { Codigo.marcar(pre, { activas: [1] }); imprimir(consola, "Two", null, pre); }, 550);
+    r2.luego(function () { Codigo.marcar(pre, { activas: [2] }); }, 1100);
+    r2.luego(function () {
+      cortar(pre, 2, "three");
+      mostrarError($("s2-error"), M2);
+    }, 1450);
+  }
+
+  function comprobar2() {
+    var r = document.querySelector('input[name="s2"]:checked');
+    if (!r) return false;
+    limpiar2();
+    ejecutar2();
+    var op = r.closest(".opcion");
+    if (r.value === "dos") {
+      op.classList.add("opcion--correcta");
+      Pasos.feedback($("s2-fb"), "ok", "That’s it! One and Two were already printed, and they stay. At line 3 the program stops, so Four never shows up.");
+      return true;
+    }
+    op.classList.add("opcion--incorrecta");
+    Pasos.feedback($("s2-fb"), "pista", PISTAS2[r.value]);
+    return false;
+  }
+
+  /* ---------- 3. The parts of the message ---------- */
+  Python.escribir($("s3-codigo"), P1);
+  var vistos3 = {};
+  var m3 = null;
+  var TEXTOS3 = {
+    tipo: { marca: "paso", html: "<code>NameError</code> is the type: a <strong>name error</strong>. Python doesn’t know a name you used." },
+    mensaje: { marca: "paso", html: "<code>name 'nme' is not defined</code>: nothing is called <code>nme</code>. And <code>Did you mean: 'name'?</code>: Python found a similar name, <code>name</code>, and suggests it." },
+    linea: { marca: "linea", html: "<code>line 4</code>: the error is on <strong>line 4</strong>. Look: it lit up in the program." },
+    codigo: { marca: "pedazo", html: "Python copies the line that failed, and the <code>^^^</code> under it point at the <strong>exact piece</strong>: <code>nme</code>." },
+    archivo: { html: "<code>program.py</code> is the name of the program’s file. With only one file, it’s always the same: you can skip it." }
+  };
+
+  reservarExplicacion($("s3-explicacion"), [$("s3-explicacion").innerHTML].concat(Object.keys(TEXTOS3).map(function (k) { return TEXTOS3[k].html; })));
+
+  function preparar3() {
+    var pre = $("s3-codigo");
+    cortar(pre, 3, "nme");
+    Codigo.consola($("s3-consola"), ["Hello"]);
+    if (!m3) {
+      m3 = MensajeError.crear($("s3-error"), Object.assign({}, M1, { partes: true, codigo: pre, alTocar: tocar3 }));
+      envolverCarets(m3);
+    }
+    m3.mostrar();
+  }
+
+  function tocar3(parte, i) {
+    var datos = TEXTOS3[parte];
+    if (!datos) return;
+    m3.resaltar(parte, i);
+    var marcaRenglon = m3.el.querySelector(".traceback__marca");
+    if (marcaRenglon) marcaRenglon.classList.toggle("marca--resaltada", parte === "codigo");
+    if (parte === "codigo") {
+      var pieza = $("s3-codigo").querySelector(".pieza--error");
+      if (pieza) sacudir(pieza, "pieza--senalada");
+    }
+    $("s3-explicacion").innerHTML = datos.html;
+    if (!datos.marca) return;
+    vistos3[datos.marca] = true;
+    marcarHecha($("s3-marcas"), datos.marca);
+    var faltan = ["paso", "linea", "pedazo"].filter(function (k) { return !vistos3[k]; });
+    if (!faltan.length) {
+      Pasos.feedback($("s3-fb"), "ok", "That’s how you read it: at the bottom, what happened; above it, which line and which piece. The first line, “Traceback (most recent call last):”, only says the message starts.");
+      leccion.desbloquear();
+    }
+  }
+
+  /* ---------- 4. From the bottom up ---------- */
+  var P4 = ["grade = 15", 'print("Starting")', "total = grade + bonus", "bonus = 2", "print(total)"];
+  Python.escribir($("s4-codigo"), P4);
+  var M4 = nameError("bonus", 3, "total = grade + bonus");
+  delete M4.traduccion;
+  var cajas4 = { grade: nuevaCaja("grade"), bonus: nuevaCaja("bonus", "doesn’t exist yet") };
+  $("s4-cajas").appendChild(cajas4.grade);
+  $("s4-cajas").appendChild(cajas4.bonus);
+  var m4 = null;
+  var paso4 = 0;
+  var ORDEN4 = [["tipo", "mensaje"], ["linea"], ["codigo"]];
+  var TEXTOS4 = [
+    "1. <code>NameError: name 'bonus' is not defined</code>: the name <code>bonus</code> doesn’t exist.",
+    "2. <code>line 3</code>: on line 3, <code>total = grade + bonus</code>.",
+    "3. The <code>^^^^^</code> point at <code>bonus</code>: that’s the piece."
+  ];
+  var CONSIGNAS4 = [
+    "First, <strong>what happened</strong>.",
+    "Now, <strong>which line</strong>.",
+    "Last, <strong>which piece</strong>."
+  ];
+
+  reservarExplicacion($("s4-explicacion"), [CONSIGNAS4[0], TEXTOS4[0] + " " + CONSIGNAS4[1], TEXTOS4[1] + " " + CONSIGNAS4[2], TEXTOS4[2]]);
+
+  function pista4(parte) {
+    if (paso4 === 0) {
+      if (parte === "linea") return "That says which line: it comes later. First, what happened: it’s the last line, at the very bottom.";
+      if (parte === "codigo") return "That’s the copied line: it comes later. First, what happened: at the very bottom.";
+      return "That’s the file name. What happened is at the very bottom.";
+    }
+    if (paso4 === 1) {
+      if (parte === "codigo") return "That’s the copied line, but what line number is it? Look for “line …” a bit higher.";
+      if (parte === "archivo") return "That’s the file name. The line number is on the same row: “line …”.";
+      return "You already have what happened. Now go up a bit: which line?";
+    }
+    if (parte === "archivo") return "That’s the file name. The piece is the copied line, the one with the ^^^ under it.";
+    return "You already read that. Still missing: which piece, the copied line with the ^^^ under it.";
+  }
+
+  function pintarOrden4() {
+    $("s4-orden").querySelectorAll("li").forEach(function (li, k) {
+      li.classList.toggle("marca--hecha", k < paso4);
+      li.classList.toggle("marca--actual", k === paso4);
+    });
+  }
+
+  function preparar4() {
+    var pre = $("s4-codigo");
+    cortar(pre, 2, "bonus");
+    Codigo.consola($("s4-consola"), ["Starting"]);
+    if (!m4) {
+      m4 = MensajeError.crear($("s4-error"), Object.assign({}, M4, { codigo: pre, alTocar: tocar4 }));
+      envolverCarets(m4);
+      Caja.actualizar(cajas4.grade, 15);
+    }
+    m4.mostrar();
+    pintarOrden4();
+    if (paso4 < 3) $("s4-explicacion").innerHTML = CONSIGNAS4[paso4];
+  }
+
+  function tocar4(parte, i) {
+    if (paso4 >= 3) { m4.resaltar(parte, i); return; }
+    var fb = $("s4-fb");
+    if (ORDEN4[paso4].indexOf(parte) === -1) {
+      m4.marcar(parte, "mal", i);
+      Pasos.feedback(fb, "pista", pista4(parte));
+      return;
+    }
+    Pasos.limpiarFeedback(fb);
+    ORDEN4[paso4].forEach(function (p) { m4.marcar(p, "ok"); });
+    m4.resaltar(parte, i);
+    var hecho = TEXTOS4[paso4];
+    paso4++;
+    pintarOrden4();
+    $("s4-explicacion").innerHTML = hecho + (paso4 < 3 ? " " + CONSIGNAS4[paso4] : "");
+    if (paso4 < 3) return;
+    var trad = document.createElement("p");
+    trad.className = "traceback__traduccion traceback__traduccion--nueva";
+    trad.innerHTML = '<span class="traceback__es">In plain words</span> There is no box called <code>bonus</code> yet: when Python reaches line 3, <code>bonus</code> doesn’t exist.';
+    m4.el.appendChild(trad);
+    sacudir(cajas4.bonus);
+    Pasos.feedback(fb, "ok", "In order! bonus is born on line 4, but line 3 already uses it: when Python gets there, that box doesn’t exist yet. The fix: create it first.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 5. Did you mean…? ---------- */
+  // The names Python knows in this program (as in Python 3.12 and 3.13)
+  var GLOBALES = ["__name__", "__doc__", "__package__", "__loader__", "__spec__", "__annotations__", "__builtins__", "__file__", "__cached__", "name", "grade"];
+  var INTERNOS = ["__name__", "__doc__", "__package__", "__loader__", "__spec__", "__build_class__", "__import__", "abs", "all", "any", "ascii", "bin", "breakpoint", "callable", "chr", "compile", "delattr", "dir", "divmod", "eval", "exec", "format", "getattr", "globals", "hasattr", "hash", "hex", "id", "input", "isinstance", "issubclass", "iter", "aiter", "len", "locals", "max", "min", "next", "anext", "oct", "ord", "pow", "print", "repr", "round", "setattr", "sorted", "sum", "vars", "None", "Ellipsis", "NotImplemented", "False", "True", "bool", "memoryview", "bytearray", "bytes", "classmethod", "complex", "dict", "enumerate", "filter", "float", "frozenset", "property", "int", "list", "map", "object", "range", "reversed", "set", "slice", "staticmethod", "str", "super", "tuple", "type", "zip", "__debug__", "BaseException", "BaseExceptionGroup", "Exception", "GeneratorExit", "KeyboardInterrupt", "SystemExit", "ArithmeticError", "AssertionError", "AttributeError", "BufferError", "EOFError", "ImportError", "LookupError", "MemoryError", "NameError", "OSError", "ReferenceError", "RuntimeError", "StopAsyncIteration", "StopIteration", "SyntaxError", "SystemError", "TypeError", "ValueError", "Warning", "FloatingPointError", "OverflowError", "ZeroDivisionError", "BytesWarning", "DeprecationWarning", "EncodingWarning", "FutureWarning", "ImportWarning", "PendingDeprecationWarning", "ResourceWarning", "RuntimeWarning", "SyntaxWarning", "UnicodeWarning", "UserWarning", "BlockingIOError", "ChildProcessError", "ConnectionError", "FileExistsError", "FileNotFoundError", "InterruptedError", "IsADirectoryError", "NotADirectoryError", "PermissionError", "ProcessLookupError", "TimeoutError", "IndentationError", "IndexError", "KeyError", "ModuleNotFoundError", "NotImplementedError", "RecursionError", "UnboundLocalError", "UnicodeError", "BrokenPipeError", "ConnectionAbortedError", "ConnectionRefusedError", "ConnectionResetError", "TabError", "UnicodeDecodeError", "UnicodeEncodeError", "UnicodeTranslateError", "ExceptionGroup", "EnvironmentError", "IOError", "open", "quit", "exit", "copyright", "credits", "license", "help"];
+  var MODULOS = ["abc", "antigravity", "argparse", "array", "ast", "asyncio", "atexit", "base64", "bdb", "binascii", "bisect", "builtins", "bz2", "cProfile", "calendar", "cmath", "cmd", "code", "codecs", "codeop", "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib", "contextvars", "copy", "copyreg", "csv", "ctypes", "curses", "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "doctest", "email", "encodings", "ensurepip", "enum", "errno", "faulthandler", "fcntl", "filecmp", "fileinput", "fnmatch", "fractions", "ftplib", "functools", "gc", "genericpath", "getopt", "getpass", "gettext", "glob", "graphlib", "grp", "gzip", "hashlib", "heapq", "hmac", "html", "http", "idlelib", "imaplib", "importlib", "inspect", "io", "ipaddress", "itertools", "json", "keyword", "linecache", "locale", "logging", "lzma", "mailbox", "marshal", "math", "mimetypes", "mmap", "modulefinder", "msvcrt", "multiprocessing", "netrc", "nt", "ntpath", "nturl2path", "numbers", "opcode", "operator", "optparse", "os", "pathlib", "pdb", "pickle", "pickletools", "pkgutil", "platform", "plistlib", "poplib", "posix", "posixpath", "pprint", "profile", "pstats", "pty", "pwd", "py_compile", "pyclbr", "pydoc", "pydoc_data", "pyexpat", "queue", "quopri", "random", "re", "readline", "reprlib", "resource", "rlcompleter", "runpy", "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal", "site", "smtplib", "socket", "socketserver", "sqlite3", "sre_compile", "sre_constants", "sre_parse", "ssl", "stat", "statistics", "string", "stringprep", "struct", "subprocess", "symtable", "sys", "sysconfig", "syslog", "tabnanny", "tarfile", "tempfile", "termios", "textwrap", "this", "threading", "time", "timeit", "tkinter", "token", "tokenize", "tomllib", "trace", "traceback", "tracemalloc", "tty", "turtle", "turtledemo", "types", "typing", "unicodedata", "unittest", "urllib", "uuid", "venv", "warnings", "wave", "weakref", "webbrowser", "winreg", "winsound", "wsgiref", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib", "zoneinfo"];
+  var FUNCIONES = ["abs", "all", "any", "ascii", "bin", "breakpoint", "callable", "chr", "compile", "delattr", "dir", "divmod", "eval", "exec", "format", "getattr", "globals", "hasattr", "hash", "hex", "id", "input", "isinstance", "issubclass", "iter", "aiter", "len", "locals", "max", "min", "next", "anext", "oct", "ord", "pow", "print", "repr", "round", "setattr", "sorted", "sum", "vars"];
+  var CLASES = ["bool", "memoryview", "bytearray", "bytes", "classmethod", "complex", "dict", "enumerate", "filter", "float", "frozenset", "property", "int", "list", "map", "object", "range", "reversed", "set", "slice", "staticmethod", "str", "super", "tuple", "type", "zip"];
+  var PALABRAS = ["and", "as", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield"];
+  var VALORES5 = { name: "Ana", grade: "17" };
+
+  // Python's “Did you mean”: the most similar known name (an edit distance in which
+  // changing a letter costs 2 and changing only its case, 1), as in Python/suggestions.c
+  var MOVER = 2, MAYUS = 1, MAX_LARGO = 40;
+  function costo(a, b) { if (a === b) return 0; if (a.toLowerCase() === b.toLowerCase()) return MAYUS; return MOVER; }
+  function distancia(a, b, max) {
+    if (a === b) return 0;
+    var pre = 0;
+    while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++;
+    a = a.slice(pre); b = b.slice(pre);
+    var post = 0;
+    while (post < a.length && post < b.length && a[a.length - 1 - post] === b[b.length - 1 - post]) post++;
+    a = a.slice(0, a.length - post); b = b.slice(0, b.length - post);
+    if (!a.length || !b.length) return MOVER * (a.length + b.length);
+    if (a.length > MAX_LARGO || b.length > MAX_LARGO) return max + 1;
+    if (b.length < a.length) { var t = a; a = b; b = t; }
+    if ((b.length - a.length) * MOVER > max) return max + 1;
+    var fila = [];
+    for (var k = 0; k < a.length; k++) fila.push((k + 1) * MOVER);
+    var resultado = 0;
+    for (var bi = 0; bi < b.length; bi++) {
+      var dist = resultado = bi * MOVER;
+      var minimo = Infinity;
+      for (var i = 0; i < a.length; i++) {
+        var sust = dist + costo(b[bi], a[i]);
+        dist = fila[i];
+        resultado = Math.min(Math.min(resultado, dist) + MOVER, sust);
+        fila[i] = resultado;
+        if (resultado < minimo) minimo = resultado;
+      }
+      if (minimo > max) return max + 1;
+    }
+    return resultado;
+  }
+  function sugerir(mal) {
+    if (mal.length > MAX_LARGO) return null;
+    var mejor = Infinity, sug = null;
+    GLOBALES.concat(INTERNOS).forEach(function (c) {
+      if (c === mal) return;
+      var max = Math.min(Math.floor((c.length + mal.length + 3) * MOVER / 6), mejor - 1);
+      var d = distancia(mal, c, max);
+      if (d > max) return;
+      if (!sug || d < mejor) { sug = c; mejor = d; }
+    });
+    return sug;
+  }
+
+  // What print(texto) does in this program
+  function evaluar(texto) {
+    if (!texto) return { pista: "Type something between the parentheses: a name, a number or a text in quotes." };
+    if (/^"[^"\\]*"$|^'[^'\\]*'$/.test(texto)) return { salida: texto.slice(1, -1), tipo: "texto" };
+    if (/^-?(0|[1-9]\d*)$/.test(texto)) return { salida: String(Number(texto)), tipo: "numero" };
+    if (!/^[\p{L}_][\p{L}\p{N}_]*$/u.test(texto)) {
+      return { pista: "Type a single name (like name), a number or a text in quotes, with no spaces or symbols." };
+    }
+    if (PALABRAS.indexOf(texto) !== -1) {
+      return { pista: texto + " is a Python reserved word: it can’t be the name of a variable (that would be another error, a typing error). Try another one." };
+    }
+    if (VALORES5[texto] !== undefined) return { salida: VALORES5[texto], tipo: "existe" };
+    if (texto === "True" || texto === "False" || texto === "None") return { salida: texto, tipo: "python" };
+    if (FUNCIONES.indexOf(texto) !== -1) return { salida: "<built-in function " + texto + ">", tipo: "python" };
+    if (CLASES.indexOf(texto) !== -1 || (/^[A-Z]/.test(texto) && INTERNOS.indexOf(texto) !== -1 && texto !== "Ellipsis" && texto !== "NotImplemented")) {
+      return { salida: "<class '" + texto + "'>", tipo: "python" };
+    }
+    if (GLOBALES.indexOf(texto) !== -1 || INTERNOS.indexOf(texto) !== -1) {
+      return { pista: texto + " is a name Python already has, not a variable of yours. Try another one." };
+    }
+    var sug = sugerir(texto);
+    var modulo = MODULOS.indexOf(texto) !== -1;
+    var mensaje = "name '" + texto + "' is not defined";
+    if (sug) mensaje += ". Did you mean: '" + sug + "'?";
+    if (modulo) mensaje += sug ? " Or did you forget to import '" + texto + "'?" : ". Did you forget to import '" + texto + "'?";
+    var traduccion = "Python knows nothing called <code>" + esc(texto) + "</code>" +
+      (sug ? ". You probably meant <code>" + esc(sug) + "</code>." : "") +
+      (modulo ? (sug ? " Or you forgot" : ". You forgot") + " to bring it in with <code>import " + esc(texto) + "</code>." : "") +
+      (!sug && !modulo ? ", and it doesn’t look like any name Python knows." : "");
+    return {
+      tipo: sug ? "sugiere" : (modulo ? "modulo" : "nada"),
+      sugerencia: sug,
+      error: {
+        tipo: "NameError",
+        mensaje: mensaje,
+        marcos: [{ linea: 3, codigo: "print(" + texto + ")", marca: texto }],
+        traduccion: traduccion
+      }
+    };
+  }
+
+  var cajas5 = { name: nuevaCaja("name"), grade: nuevaCaja("grade") };
+  $("s5-cajas").appendChild(cajas5.name);
+  $("s5-cajas").appendChild(cajas5.grade);
+  var misiones5 = {};
+  var r5 = reloj();
+  var NOMBRES_MISION5 = { existe: "a name that exists", sugiere: "a misspelled one (Python suggests the right one)", nada: "one that looks like nothing" };
+
+  function escribir5(texto) {
+    Python.escribir($("s5-codigo"), ['name = "Ana"', "grade = 17", "print(" + (texto === null ? "▢" : texto) + ")"]);
+  }
+
+  function preparar5() {
+    r5.cortar();
+    if (!valorDe(cajas5.name).textContent) {
+      Caja.actualizar(cajas5.name, '"Ana"');
+      Caja.actualizar(cajas5.grade, 17);
+    }
+  }
+
+  function ejecutar5() {
+    var entrada = $("s5-nombre");
+    var texto = entrada.value.trim();
+    var res = evaluar(texto);
+    var fb = $("s5-fb");
+    if (res.pista) {
+      entrada.setAttribute("aria-invalid", "true");
+      Pasos.feedback(fb, "pista", res.pista);
+      return;
+    }
+    entrada.removeAttribute("aria-invalid");
+    r5.cortar();
+    var pre = $("s5-codigo");
+    escribir5(texto);
+    Codigo.consola($("s5-consola"), []);
+    $("s5-error").textContent = "";
+    Pasos.limpiarFeedback(fb);
+    Object.keys(cajas5).forEach(function (k) { cajas5[k].classList.remove("caja--resaltada"); });
+    $("s5-ejecutar").disabled = true;
+    Codigo.marcar(pre, { activas: [0] });
+    r5.luego(function () { Codigo.marcar(pre, { activas: [1] }); }, 200);
+    r5.luego(function () { Codigo.marcar(pre, { activas: [2] }); }, 400);
+    r5.luego(function () {
+      $("s5-ejecutar").disabled = false;
+      if (res.error) {
+        cortar(pre, 2, texto);
+        mostrarError($("s5-error"), res.error);
+        if (cajas5[res.sugerencia]) cajas5[res.sugerencia].classList.add("caja--resaltada");
+      } else {
+        var desde = cajas5[texto] ? valorDe(cajas5[texto]) : null;
+        imprimir($("s5-consola"), res.salida, desde, pre);
+      }
+      responder5(texto, res);
+    }, 650);
+  }
+
+  function responder5(texto, res) {
+    var textos = {
+      existe: texto + " exists: print shows what its box holds.",
+      sugiere: texto + " doesn’t exist, but it looks like " + res.sugerencia + (cajas5[res.sugerencia] ? "" : ", which Python already has") + ": Python suggests it on the last line, “Did you mean”.",
+      nada: texto + " doesn’t exist and doesn’t look like any known name: Python can’t suggest anything.",
+      modulo: texto + " is a Python module: the message reminds you to bring it in with import.",
+      texto: "In quotes it’s a text: it’s printed as is, without looking for any box.",
+      numero: "A number is printed as is, without looking for any box.",
+      python: texto + " comes with Python: it exists, so there’s no error. print shows you what it is."
+    };
+    var nueva = (res.tipo === "existe" || res.tipo === "sugiere" || res.tipo === "nada") && !misiones5[res.tipo];
+    if (NOMBRES_MISION5[res.tipo]) {
+      misiones5[res.tipo] = true;
+      marcarHecha($("s5-misiones"), res.tipo);
+    }
+    var faltan = Object.keys(NOMBRES_MISION5).filter(function (k) { return !misiones5[k]; });
+    var fb = $("s5-fb");
+    if (!faltan.length) {
+      Pasos.feedback(fb, "ok", nueva ? "All three missions! When a name is misspelled, the last line of the message often already has the fix." : textos[res.tipo]);
+      if (nueva) leccion.desbloquear();
+      return;
+    }
+    Pasos.feedback(fb, nueva ? "ok" : "pista", textos[res.tipo] + " Still to do: " + faltan.map(function (k) { return NOMBRES_MISION5[k]; }).join(" and ") + ".");
+  }
+
+  /* ---------- 6. Where does it stop? ---------- */
+  var PRED6 = [
+    {
+      codigo: ['print("Hello")', 'Print("Bye")'], correcta: "Line 2",
+      error: { linea: 1, marca: "Print", texto: "NameError: name 'Print' is not defined. Did you mean: 'print'?" },
+      ok: "Print with a capital letter doesn’t exist: Python tells capital and small letters apart. “Hello” did get printed.",
+      pistas: { "Works": "Look at the capital letters: are print and Print the same name for Python?", "Line 1": "Line 1 is written fine. Look at line 2 letter by letter." }
+    },
+    {
+      codigo: ["print(age)", "age = 12"], correcta: "Line 1",
+      error: { linea: 0, marca: "age", texto: "NameError: name 'age' is not defined" },
+      ok: "age is created on line 2, but line 1 uses it earlier. Python goes from top to bottom.",
+      pistas: { "Works": "Python runs from top to bottom. When it reaches line 1, does age exist yet?", "Line 2": "Line 2 creates age: that doesn’t fail. What about line 1, which uses it before?" }
+    },
+    {
+      codigo: ['greeting = "hello"', "print(greeting)"], correcta: "Works",
+      salida: "hello",
+      ok: "It works: greeting already exists when it’s printed, and \"hello\" has its quotes.",
+      pistas: { "Line 1": "greeting = \"hello\" creates the variable with a text in quotes: that’s fine.", "Line 2": "greeting was created on line 1, just before: it exists." }
+    },
+    {
+      codigo: ["total = 0", "print(totl + 5)"], correcta: "Line 2",
+      error: { linea: 1, marca: "totl", texto: "NameError: name 'totl' is not defined. Did you mean: 'total'?" },
+      ok: "totl is not total: a letter is missing. Python finds the similar name and suggests it.",
+      pistas: { "Works": "Read the name on line 2 letter by letter. Is it the same as on line 1?", "Line 1": "total = 0 is fine. Does line 2 use the same name?" }
+    }
+  ];
+  var OPCIONES6 = ["Works", "Line 1", "Line 2"];
+  var ETIQUETAS6 = { "Works": "✓ Works", "Line 1": "💥 Line 1", "Line 2": "💥 Line 2" };
+
+  function armarPredicciones() {
+    var ol = $("s6-predicciones");
+    var aciertos = PRED6.map(function () { return false; });
+    PRED6.forEach(function (p, k) {
+      var li = document.createElement("li");
+      li.className = "prediccion";
+      li.innerHTML = '<pre class="codigo codigo--mini" aria-label="Program ' + (k + 1) + '"></pre>' +
+        '<div class="elegir" role="group" aria-label="Does program ' + (k + 1) + ' work, or on which line does it stop?"></div>' +
+        '<p class="prediccion__salida" aria-live="polite"></p>' +
+        '<div class="feedback" role="status" aria-live="polite"></div>';
+      var pre = li.querySelector("pre");
+      Python.escribir(pre, p.codigo);
+      var grupo = li.querySelector(".elegir");
+      OPCIONES6.forEach(function (op) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-secundario";
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("data-valor", op);
+        b.textContent = ETIQUETAS6[op];
+        grupo.appendChild(b);
+      });
+      var botones = grupo.querySelectorAll("button");
+      var fbFila = li.querySelector(".feedback");
+      botones.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var valor = btn.getAttribute("data-valor");
+          botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+          if (valor !== p.correcta) { Pasos.feedback(fbFila, "pista", p.pistas[valor]); return; }
+          Pasos.limpiarFeedback(fbFila);
+          li.classList.add("prediccion--ok");
+          botones.forEach(function (b) { b.disabled = true; });
+          var salida = li.querySelector(".prediccion__salida");
+          if (p.error) {
+            cortar(pre, p.error.linea, p.error.marca);
+            salida.textContent = p.error.texto;
+            salida.classList.add("prediccion__salida--error");
+          } else {
+            salida.textContent = "Output: " + p.salida;
+          }
+          aciertos[k] = true;
+          if (aciertos.every(Boolean)) {
+            Pasos.feedback($("s6-fb"), "ok", p.ok + " All correct! Python goes from top to bottom and stops at the first line it can’t run.");
+            leccion.desbloquear();
+          } else {
+            Pasos.feedback($("s6-fb"), "ok", p.ok);
+          }
+        });
+      });
+      ol.appendChild(li);
+    });
+  }
+
+  /* ---------- 7. Why doesn't it exist? ---------- */
+  var C7 = [
+    {
+      codigo: ["color = blue", "print(color)"], causa: "comillas",
+      error: nameError("blue", 1, "color = blue", { explicacion: ": it looks for a variable called <code>blue</code> and can’t find one." }), corte: 0,
+      ok: "blue was meant to be a text, but without quotes Python looks for it as a name. The fix: color = \"blue\".",
+      pistas: {
+        mal: "Is there any variable similar to blue? Python didn’t suggest one. What is blue here: a name or a written color?",
+        mayus: "blue is all in small letters. What was blue meant to be?",
+        antes: "blue isn’t created anywhere, not before and not after. Was it meant to be a variable or a text?"
+      }
+    },
+    {
+      codigo: ["grades = 18", 'print("Grade:", grade)'], causa: "mal",
+      error: nameError("grade", 2, 'print("Grade:", grade)', { sugerencia: "grades" }), corte: 1,
+      ok: "grade is not grades: the s is missing. Python found the similar name and suggests it.",
+      pistas: {
+        mayus: "The capital letters are fine. Compare grade with grades, letter by letter.",
+        comillas: "Here grade is a variable, not a text. Look at the “Did you mean”: which similar name does exist?",
+        antes: "No grade is created further down. Look at the “Did you mean”: which similar name does exist?"
+      }
+    },
+    {
+      codigo: ["score = score + 10", "print(score)"], causa: "antes",
+      error: nameError("score", 1, "score = score + 10", { marca: [8, 13], explicacion: ": to work out <code>score + 10</code>, Python needs the value of <code>score</code>, and it has none yet." }),
+      corte: 0, pieza: "score", aparicion: 1,
+      ok: "To work out score + 10, Python needs the value of score, and it doesn’t exist yet. The fix: before that, score = 0.",
+      pistas: {
+        mal: "score is spelled the same everywhere. Does it exist when Python works out score + 10?",
+        mayus: "There are no capital letters. Does score exist when Python works out score + 10?",
+        comillas: "score is a variable (10 is added to it), not a text. Did it have a value yet?"
+      }
+    },
+    {
+      codigo: ['name = "Eva"', "Print(name)"], causa: "mayus",
+      error: nameError("Print", 2, "Print(name)", { sugerencia: "print" }), corte: 1,
+      ok: "Print with a capital P doesn’t exist: the function is print, in small letters. Python tells capital and small letters apart.",
+      pistas: {
+        mal: "Close: the letters are the same and only one changes. Compare Print with the “Did you mean”: what’s different?",
+        comillas: "Print was meant to be a function, not a text. Compare it with the “Did you mean”.",
+        antes: "print isn’t created: it comes with Python. Compare Print with the “Did you mean”."
+      }
+    }
+  ];
+  var actual7 = 0;
+  var hechos7 = 0;
+
+  function mostrar7(k) {
+    actual7 = k;
+    var c = C7[k];
+    var pre = $("s7-codigo");
+    Python.escribir(pre, c.codigo);
+    cortar(pre, c.corte, c.pieza || c.error.marcos[0].marca, c.aparicion);
+    Codigo.consola($("s7-consola"), []);
+    mostrarError($("s7-error"), c.error, { codigo: pre });
+    $("s7-contador").textContent = "Message " + (k + 1) + " of " + C7.length;
+    $("s7-causas").querySelectorAll("button").forEach(function (b) {
+      b.disabled = false;
+      b.classList.remove("causa--ok", "causa--mal");
+      b.setAttribute("aria-pressed", "false");
+    });
+    $("s7-seguir").hidden = true;
+    Pasos.limpiarFeedback($("s7-fb"));
+  }
+
+  function elegir7(btn) {
+    var c = C7[actual7];
+    var causa = btn.getAttribute("data-causa");
+    var fb = $("s7-fb");
+    var botones = $("s7-causas").querySelectorAll("button");
+    botones.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); b.classList.remove("causa--mal"); });
+    if (causa !== c.causa) {
+      void btn.offsetWidth;
+      btn.classList.add("causa--mal");
+      Pasos.feedback(fb, "pista", c.pistas[causa]);
+      return;
+    }
+    btn.classList.add("causa--ok");
+    botones.forEach(function (b) { b.disabled = true; });
+    hechos7 = Math.max(hechos7, actual7 + 1);
+    if (actual7 < C7.length - 1) {
+      Pasos.feedback(fb, "ok", c.ok);
+      $("s7-seguir").hidden = false;
+      $("s7-siguiente").focus();
+      return;
+    }
+    Pasos.feedback(fb, "ok", c.ok + " All four! Misspelled, a capital letter, no quotes or used before it’s created: the message and the line give you the clue.");
+    leccion.desbloquear();
+  }
+
+  /* ---------- 8. Challenge ---------- */
+  var L3 = { orig: 'print("Student:", nme)', ok: 'print("Student:", name)', may: 'print("Student:", Name)', com: 'print("Student:", "nme")' };
+  var L5 = { orig: '    Print("Passed")', ok: '    print("Passed")', may: '    PRINT("Passed")', com: "    print(Passed)" };
+  var E3 = { orig: ["nme", "name"], may: ["Name", "name"] };
+  var E5 = { orig: ["Print", "print"], may: ["PRINT", null], com: ["Passed", null] };
+  var reto = { l3: "orig", l5: "orig", resuelto: false };
+  var r8 = reloj();
+
+  function escribirReto(cambiada) {
+    var pre = $("reto-codigo");
+    Python.escribir(pre, ['name = "Luis"', "grade = 12", L3[reto.l3], "if grade >= 11:", L5[reto.l5]]);
+    if (cambiada !== undefined) sacudir(Python.linea(pre, cambiada), "linea--cambiada");
+  }
+
+  function limpiarReto() {
+    r8.cortar();
+    Codigo.limpiar($("reto-codigo"));
+    Codigo.consola($("reto-consola"), []);
+    $("reto-error").textContent = "";
+  }
+
+  function marcarOpciones(nombre, estado) {
+    var r = document.querySelector('input[name="' + nombre + '"]:checked');
+    document.querySelectorAll('input[name="' + nombre + '"]').forEach(function (i) {
+      i.closest(".opcion").classList.remove("opcion--correcta", "opcion--incorrecta");
+    });
+    if (r && estado) r.closest(".opcion").classList.add("opcion--" + estado);
+  }
+
+  function errorReto(linea, datos) {
+    var codigo = linea === 3 ? L3[reto.l3] : L5[reto.l5];
+    var e = nameError(datos[0], linea, codigo.trim(), { sugerencia: datos[1] });
+    if (datos[0] === "Passed") e.traduccion = "Python knows nothing called <code>Passed</code>: without quotes, it looks for a variable.";
+    return e;
+  }
+
+  // Runs the program as it is: finds where it failed (or null) after animating it
+  function ejecutarReto() {
+    if (reto.resuelto) return;
+    limpiarReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+    $("reto-ejecutar").disabled = true;
+    $("reto-ejecutar2").disabled = true;
+    var pre = $("reto-codigo");
+    var consola = $("reto-consola");
+    var t = 0;
+    function paso(fn, ms) { t += ms; r8.luego(fn, t); }
+    var falla = null;
+    Codigo.marcar(pre, { activas: [0] });
+    paso(function () { Codigo.marcar(pre, { activas: [1] }); }, 350);
+    paso(function () { Codigo.marcar(pre, { activas: [2] }); }, 350);
+    if (E3[reto.l3]) falla = 3;
+    else {
+      paso(function () { imprimir(consola, "Student: " + (reto.l3 === "ok" ? "Luis" : "nme"), null, pre); }, 250);
+      paso(function () { Codigo.marcar(pre, { activas: [3] }); }, 450);
+      paso(function () { Codigo.marcar(pre, { activas: [4] }); }, 400);
+      if (E5[reto.l5]) falla = 5;
+      else paso(function () { imprimir(consola, "Passed", null, pre); }, 250);
+    }
+    paso(function () {
+      $("reto-ejecutar").disabled = false;
+      $("reto-ejecutar2").disabled = false;
+      $("reto-ejecutar").textContent = "▶ Run again";
+      if (falla) {
+        var datos = falla === 3 ? E3[reto.l3] : E5[reto.l5];
+        cortar(pre, falla - 1, datos[0]);
+        mostrarError($("reto-error"), errorReto(falla, datos), { codigo: pre });
+      } else {
+        Codigo.marcar(pre, {});
+      }
+      despuesReto(falla);
+    }, falla ? 350 : 500);
+  }
+
+  function despuesReto(falla) {
+    var fb = $("reto-fb");
+    var a3 = $("reto-arreglo3");
+    var a5 = $("reto-arreglo5");
+    if (falla === 3) {
+      a3.hidden = false;
+      a5.hidden = true;
+      if (reto.l3 === "orig") {
+        Pasos.feedback(fb, "pista", "Read the message from the bottom up: which name doesn’t exist, and what does Python suggest? Pick the fix.");
+      } else {
+        marcarOpciones("reto-l3", "incorrecta");
+        Pasos.feedback(fb, "pista", "A new message: now Name doesn’t exist. Capital letters count: look at the “Did you mean”.");
+      }
+      return;
+    }
+    if (reto.l3 === "ok") marcarOpciones("reto-l3", "correcta");
+    if (falla === 5) {
+      a5.hidden = false;
+      a3.hidden = true;
+      var aviso = reto.l3 === "com" ? " Careful: the output says “Student: nme”." : "";
+      if (reto.l5 === "orig") {
+        Pasos.feedback(fb, "pista", "Line 3 no longer gives an error! The program moved on: now the message points to line 5." + aviso);
+      } else {
+        marcarOpciones("reto-l5", "incorrecta");
+        Pasos.feedback(fb, "pista", (reto.l5 === "may"
+          ? "A new message: PRINT doesn’t exist either, and Python suggests nothing. print goes in small letters."
+          : "A new message: without quotes, Passed is a name, not a text.") + aviso);
+      }
+      return;
+    }
+    marcarOpciones("reto-l5", "correcta");
+    if (reto.l3 === "com") {
+      a3.hidden = false;
+      a5.hidden = true;
+      marcarOpciones("reto-l3", "incorrecta");
+      Pasos.feedback(fb, "pista", "No errors! But the output says “Student: nme”: in quotes, \"nme\" is a text, not the variable. Fix line 3.");
+      return;
+    }
+    reto.resuelto = true;
+    a3.hidden = true;
+    a5.hidden = true;
+    $("reto-abajo").hidden = true;
+    $("reto-ejecutar").hidden = true;
+    $("reto-otra").hidden = false;
+    Pasos.feedback(fb, "ok", "It works! You read each message, went to the line it named and fixed the piece under the ^^^. That’s how you debug a program.");
+    leccion.desbloquear();
+  }
+
+  function cambiarReto(e) {
+    var r = e.target;
+    var linea = r.name === "reto-l3" ? 3 : 5;
+    reto[linea === 3 ? "l3" : "l5"] = r.value;
+    marcarOpciones(r.name, null);
+    r8.cortar();
+    escribirReto(linea - 1);
+    $("reto-abajo").hidden = false;
+    Pasos.feedback($("reto-fb"), "ok", "Line " + linea + " changed. Now run it again.");
+  }
+
+  function reiniciarReto() {
+    reto = { l3: "orig", l5: "orig", resuelto: false };
+    document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) { r.checked = false; });
+    marcarOpciones("reto-l3", null);
+    marcarOpciones("reto-l5", null);
+    $("reto-arreglo3").hidden = true;
+    $("reto-arreglo5").hidden = true;
+    $("reto-abajo").hidden = true;
+    $("reto-otra").hidden = true;
+    $("reto-ejecutar").disabled = false;
+    $("reto-ejecutar").hidden = false;
+    $("reto-ejecutar").textContent = "▶ Run";
+    escribirReto();
+    limpiarReto();
+    Pasos.limpiarFeedback($("reto-fb"));
+  }
+
+  /* ---------- Summary ---------- */
+  Python.escribir($("resumen-codigo"), [
+    'print("Hello")   # runs and stays',
+    "print(nme)       # NameError: it stops",
+    'print("End")     # not run',
+    "# The message, from the bottom up:",
+    "# NameError: …  what happened",
+    "# line 2        which line",
+    "# ^^^           which piece"
+  ]);
+
+  /* ---------- Connections ---------- */
+  var leccion = null;
+
+  var traza1 = Traza.crear({
+    codigo: $("s1-codigo"),
+    explicacion: $("s1-explicacion"),
+    consola: $("s1-consola"),
+    ejecutar: $("s1-ejecutar"),
+    reproducir: $("s1-reproducir"),
+    reiniciar: $("s1-reiniciar"),
+    generar: trazaCorre,
+    intervalo: 1300,
+    alReiniciar: function () {
+      Object.keys(cajas1).forEach(function (k) {
+        cajas1[k].hidden = true;
+        if (k !== "nme") Caja.vaciar(cajas1[k]);
+      });
+      $("s1-error").textContent = "";
+      Pasos.limpiarFeedback($("s1-fb"));
+    },
+    alPaso: function (paso) {
+      if (paso.hacer === "name") { cajas1.name.hidden = false; Caja.poner(cajas1.name, '"Ana"'); }
+      else if (paso.hacer === "grade") { cajas1.grade.hidden = false; Caja.poner(cajas1.grade, 17); }
+      else if (paso.hacer === "error") {
+        cortar($("s1-codigo"), 3, "nme");
+        cajas1.nme.hidden = false;
+        sacudir(cajas1.nme);
+        mostrarError($("s1-error"), M1);
+      }
+    },
+    alTerminar: function () {
+      Pasos.feedback($("s1-fb"), "ok", "“Hello” stayed in the console; “End” never showed up: whatever comes after the line that fails doesn’t run.");
+      if (leccion) leccion.desbloquear();
+    }
+  });
+
+  document.querySelectorAll('input[name="s2"]').forEach(function (r) {
+    r.addEventListener("change", function () { limpiar2(); leccion.listoParaComprobar(true); });
+  });
+
+  armarPredicciones();
+
+  $("s5-ejecutar").addEventListener("click", ejecutar5);
+  $("s5-nombre").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); ejecutar5(); }
+  });
+  $("s5-ideas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { $("s5-nombre").value = b.textContent; ejecutar5(); });
+  });
+  escribir5(null);
+
+  $("s7-causas").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { elegir7(b); });
+  });
+  $("s7-siguiente").addEventListener("click", function () {
+    mostrar7(actual7 + 1);
+    $("s7-causas").querySelector("button").focus();
+  });
+
+  document.querySelectorAll('#paso-reto input[type="radio"]').forEach(function (r) {
+    r.addEventListener("change", cambiarReto);
+  });
+  $("reto-ejecutar").addEventListener("click", ejecutarReto);
+  $("reto-ejecutar2").addEventListener("click", function () {
+    ejecutarReto();
+    $("reto-consola").scrollIntoView({ block: "center", behavior: Pasos.reducirMovimiento ? "auto" : "smooth" });
+  });
+  $("reto-otra").addEventListener("click", function () { reiniciarReto(); $("reto-ejecutar").focus(); });
+  escribirReto();
+
+  leccion = Pasos.iniciar({
+    alEntrar: {
+      "paso-corre": function () { traza1.detener(); },
+      "paso-consola": function () {
+        document.querySelectorAll('input[name="s2"]').forEach(function (r) { r.checked = false; });
+        limpiar2();
+      },
+      "paso-partes": preparar3,
+      "paso-orden": preparar4,
+      "paso-sugiere": preparar5,
+      "paso-causa": function () { mostrar7(Math.min(hechos7, C7.length - 1)); },
+      "paso-reto": function () { if (!reto.resuelto) reiniciarReto(); }
+    },
+    comprobar: { "paso-consola": comprobar2 }
+  });
+})();
+</script>
+</body>
+</html>
