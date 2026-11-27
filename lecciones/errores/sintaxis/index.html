@@ -1182,6 +1182,22 @@ print(nota, "aprobada")</span></label>
   /* En escritorio, el panel mide desde el principio lo que su grupo de opciones más alto:
      va encima de la consola. En el móvil va debajo de ella: no hace falta. */
   var panelArriba = window.matchMedia("(min-width: 1024px)");
+
+  /* En el móvil (todo en una columna), la página baja lo justo para que se vea «abajo»
+     (el mensaje, las opciones) sin que «arriba» (la línea que marca el error, el panel) se
+     salga por la cabecera. En escritorio no se mueve nada: el reto cabe en la pantalla. */
+  function bajarHasta(abajo, arriba) {
+    if (panelArriba.matches || !abajo || !abajo.offsetParent) return;
+    requestAnimationFrame(function () {
+      var cab = document.querySelector(".leccion-cabecera");
+      var pie = document.querySelector(".leccion-pie");
+      var techo = (cab ? cab.getBoundingClientRect().bottom : 0) + 8;
+      var piso = window.innerHeight - (pie ? pie.offsetHeight : 0) - 8;
+      var delta = abajo.getBoundingClientRect().bottom - piso;
+      if (arriba) delta = Math.min(delta, arriba.getBoundingClientRect().top - techo);
+      if (delta > 0) window.scrollBy({ top: delta, behavior: Pasos.reducirMovimiento ? "auto" : "smooth" });
+    });
+  }
   Codigo.reservarAlto($("reto-panel"), ["ayuda", 2, 4, 5], function (copia, estado) {
     if (!panelArriba.matches) estado = "ayuda";
     copia.querySelector("#reto-ayuda").hidden = estado !== "ayuda";
@@ -1238,6 +1254,7 @@ print(nota, "aprobada")</span></label>
     f.hidden = false;
     var primero = f.querySelector("input");
     if (primero) primero.focus({ preventScroll: true });
+    bajarHasta($("reto-panel"), $("reto-panel"));
   }
 
   function elegirArreglo(i, input, leccion) {
@@ -1282,6 +1299,7 @@ print(nota, "aprobada")</span></label>
         if (res.error) {
           $("reto-ayuda").textContent = "Toca la línea que marca el mensaje (line " + res.error.linea + ").";
           hacerTocable(true);
+          bajarHasta($("reto-consola").querySelector(".traceback"), lineasDe(pr.pre)[res.error.linea - 1]);
           return;
         }
         $("reto-ayuda").textContent = "¡El programa corrió entero!";
